@@ -130,7 +130,7 @@ struct SetShopCard: View {
                 title: "Buy Booster Box",
                 subtitle: "\(Economy.boxPacks) packs · \(boxPrice.money) · ≥\(Economy.boxGuaranteeUltras) ultra, ≥\(Economy.boxGuaranteeFoils) foil",
                 systemImage: "cube.box.fill",
-                tint: [Color(hex: "b06cf7"), Color(hex: "6d5cf7")],
+                tint: [element.palette[2], element.palette[3]],
                 enabled: game.canAffordBox(set: set),
                 action: onBuyBox
             )
