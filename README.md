@@ -8,11 +8,6 @@ your best pulls, and completing sets — but with a wholly original world (the
 Start with **$100**, rip packs, flip duplicates back to the shop, grade your hits,
 and try to collect all **250** cards across **5 sets** — without going broke.
 
-> Status: fully playable first build. All game logic is verified by an automated
-> simulation (see [Testing](#testing)). Each of the 250 cards has its own
-> name-aligned creature illustration, rendered as a flat‑vector scene tinted to the
-> card's element (with the procedural "sigil" kept as an automatic fallback).
-
 ---
 
 ## Contents
