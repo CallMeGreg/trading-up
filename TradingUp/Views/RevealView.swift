@@ -417,11 +417,8 @@ private struct PackCardSlot: View {
 
     private var badge: (text: String, color: Color)? {
         switch slot {
-        case .newCard:        return ("✦ NEW", Color(hex: "ffd54a"))
-        case .keeperExisting: return ("✦ FOIL", Color(hex: "ff8ad6"))
-        case .pendingDup:     return ("DUPLICATE", Color(hex: "e0a23b"))
-        case .keptDup:        return ("KEPT", Color(hex: "3b82f6"))
-        case .sold:           return nil
+        case .newCard: return ("✦ NEW", Color(hex: "ffd54a"))
+        default:       return nil
         }
     }
 
