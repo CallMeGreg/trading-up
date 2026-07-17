@@ -34,6 +34,8 @@ final class GameState: ObservableObject {
     func canAffordPack(set: Int) -> Bool { core.cash >= Economy.packPrice(set: set) }
     func canAffordBox(set: Int) -> Bool { core.cash >= Economy.boxPrice(set: set) }
     func canAffordGrade(set: Int) -> Bool { core.cash >= Economy.gradeFee(set: set) }
+    func isSetUnlocked(_ set: Int) -> Bool { core.isUnlocked(set: set) }
+    func uniquesToUnlock(set: Int) -> Int { Economy.uniquesToUnlock(set: set) }
     func ownedCount(inSet set: Int) -> Int { core.ownedCount(inSet: set) }
     func instances(of cardId: String) -> [CardInstance] { core.instances(of: cardId) }
     func owns(_ id: String) -> Bool { core.owns(id) }

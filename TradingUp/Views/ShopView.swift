@@ -88,45 +88,80 @@ struct SetShopCard: View {
     private var owned: Int { game.ownedCount(inSet: set) }
     private var packPrice: Double { Economy.packPrice(set: set) }
     private var boxPrice: Double { Economy.boxPrice(set: set) }
+    private var unlocked: Bool { game.isSetUnlocked(set) }
+    private var unlockThreshold: Int { game.uniquesToUnlock(set: set) }
 
     var body: some View {
         VStack(spacing: 0) {
             banner
-            VStack(spacing: 12) {
-                HStack {
-                    Text("\(owned) / 50 collected")
-                        .font(.system(size: 12, weight: .semibold)).foregroundStyle(Palette.subtle)
-                    Spacer()
-                    if owned == 50 {
-                        Label("Complete", systemImage: "checkmark.seal.fill")
-                            .font(.system(size: 12, weight: .bold))
-                            .foregroundStyle(Palette.money)
-                    }
-                }
-                ProgressBar(value: Double(owned), total: 50, tint: element.palette[1])
-
-                BigButton(
-                    title: "Buy Pack",
-                    subtitle: "6 cards · \(packPrice.money)",
-                    systemImage: "shippingbox.fill",
-                    tint: [element.palette[1], element.palette[2]],
-                    enabled: game.canAffordPack(set: set),
-                    action: onBuyPack
-                )
-                BigButton(
-                    title: "Buy Booster Box",
-                    subtitle: "\(Economy.boxPacks) packs · \(boxPrice.money) · ≥\(Economy.boxGuaranteeUltras) ultra, ≥\(Economy.boxGuaranteeFoils) foil",
-                    systemImage: "cube.box.fill",
-                    tint: [Color(hex: "b06cf7"), Color(hex: "6d5cf7")],
-                    enabled: game.canAffordBox(set: set),
-                    action: onBuyBox
-                )
+            if unlocked {
+                unlockedBody
+            } else {
+                lockedBody
             }
-            .padding(16)
         }
         .background(RoundedRectangle(cornerRadius: 18).fill(Palette.panel))
         .overlay(RoundedRectangle(cornerRadius: 18).strokeBorder(Palette.stroke, lineWidth: 1))
         .clipShape(RoundedRectangle(cornerRadius: 18))
+    }
+
+    private var unlockedBody: some View {
+        VStack(spacing: 12) {
+            HStack {
+                Text("\(owned) / 50 collected")
+                    .font(.system(size: 12, weight: .semibold)).foregroundStyle(Palette.subtle)
+                Spacer()
+                if owned == 50 {
+                    Label("Complete", systemImage: "checkmark.seal.fill")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(Palette.money)
+                }
+            }
+            ProgressBar(value: Double(owned), total: 50, tint: element.palette[1])
+
+            BigButton(
+                title: "Buy Pack",
+                subtitle: "6 cards · \(packPrice.money)",
+                systemImage: "shippingbox.fill",
+                tint: [element.palette[1], element.palette[2]],
+                enabled: game.canAffordPack(set: set),
+                action: onBuyPack
+            )
+            BigButton(
+                title: "Buy Booster Box",
+                subtitle: "\(Economy.boxPacks) packs · \(boxPrice.money) · ≥\(Economy.boxGuaranteeUltras) ultra, ≥\(Economy.boxGuaranteeFoils) foil",
+                systemImage: "cube.box.fill",
+                tint: [Color(hex: "b06cf7"), Color(hex: "6d5cf7")],
+                enabled: game.canAffordBox(set: set),
+                action: onBuyBox
+            )
+        }
+        .padding(16)
+    }
+
+    private var lockedBody: some View {
+        let have = min(game.uniqueCount, unlockThreshold)
+        let remaining = max(0, unlockThreshold - game.uniqueCount)
+        return VStack(spacing: 12) {
+            HStack(spacing: 6) {
+                Image(systemName: "lock.fill").font(.system(size: 13, weight: .bold))
+                Text("Locked").font(.system(size: 14, weight: .bold))
+                Spacer()
+                Text("\(have) / \(unlockThreshold)")
+                    .font(.system(size: 12, weight: .bold, design: .monospaced))
+                    .foregroundStyle(Palette.text)
+            }
+            .foregroundStyle(Palette.subtle)
+
+            Text("Collect **\(remaining) more** unique card\(remaining == 1 ? "" : "s") (\(unlockThreshold) total) to unlock \(CardDatabase.setName(set)).")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(Palette.subtle)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            ProgressBar(value: Double(have), total: Double(unlockThreshold), tint: element.palette[1])
+        }
+        .padding(16)
     }
 
     private var banner: some View {
@@ -141,11 +176,13 @@ struct SetShopCard: View {
                         .foregroundStyle(.white)
                 }
                 Spacer()
-                Text(element.emoji).font(.system(size: 40))
+                Text(unlocked ? element.emoji : "🔒").font(.system(size: 40))
             }
             .padding(.horizontal, 16)
         }
         .frame(height: 74)
+        .saturation(unlocked ? 1 : 0.3)
+        .opacity(unlocked ? 1 : 0.85)
     }
 }
 

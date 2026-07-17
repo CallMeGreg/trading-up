@@ -19,6 +19,11 @@ enum Economy {
     static let boxGuaranteeFoils = 4
     static func boxPrice(set: Int) -> Double { packPrice(set: set) * 20 }
 
+    // Set unlocking: set N stays locked until this many *unique* cards are owned.
+    // Set 1 is free; each later set costs 25 more uniques (2→25, 3→50, 4→75, 5→100).
+    static let uniquesToUnlockPerSet = 25
+    static func uniquesToUnlock(set: Int) -> Int { max(0, (set - 1) * uniquesToUnlockPerSet) }
+
     // Pack composition
     static let commonsPerPack = 3
     static let uncommonsPerPack = 2

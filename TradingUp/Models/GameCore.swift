@@ -84,6 +84,10 @@ struct GameCore: Codable {
         return CardDatabase.cards(inSet: set).reduce(0) { $0 + (ids.contains($1.id) ? 1 : 0) }
     }
 
+    /// A set is playable only once enough *unique* cards have been collected.
+    /// Set 1 is always unlocked; later sets gate on Economy.uniquesToUnlock(set:).
+    func isUnlocked(set: Int) -> Bool { uniqueCount >= Economy.uniquesToUnlock(set: set) }
+
     var isGameOver: Bool {
         guard !hasWon else { return false }
         return cash < Economy.packPrice(set: 1) && sellableInstances.isEmpty
@@ -117,6 +121,7 @@ struct GameCore: Codable {
     // MARK: Buying
 
     mutating func buyPack<G: RandomNumberGenerator>(set: Int, using rng: inout G) -> OpenResult? {
+        guard isUnlocked(set: set) else { return nil }
         let price = Economy.packPrice(set: set)
         guard cash >= price else { return nil }
         cash -= price
@@ -129,6 +134,7 @@ struct GameCore: Codable {
     }
 
     mutating func buyBox<G: RandomNumberGenerator>(set: Int, using rng: inout G) -> OpenResult? {
+        guard isUnlocked(set: set) else { return nil }
         let price = Economy.boxPrice(set: set)
         guard cash >= price else { return nil }
         cash -= price

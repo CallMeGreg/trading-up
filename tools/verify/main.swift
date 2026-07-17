@@ -167,5 +167,32 @@ do {
           "keeps the most valuable (foil) copy when selling duplicates")
 }
 
+print("\n== Set unlocking ==")
+do {
+    check(Economy.uniquesToUnlock(set: 1) == 0,   "set 1 needs 0 uniques")
+    check(Economy.uniquesToUnlock(set: 2) == 25,  "set 2 needs 25 uniques")
+    check(Economy.uniquesToUnlock(set: 3) == 50,  "set 3 needs 50 uniques")
+    check(Economy.uniquesToUnlock(set: 4) == 75,  "set 4 needs 75 uniques")
+    check(Economy.uniquesToUnlock(set: 5) == 100, "set 5 needs 100 uniques")
+
+    var rng = SeededRNG(99)
+    var core = GameCore()
+    core.cash = 100_000   // take affordability out of the picture
+    check(core.isUnlocked(set: 1), "fresh game: set 1 unlocked")
+    check(!core.isUnlocked(set: 2) && !core.isUnlocked(set: 5), "fresh game: sets 2–5 locked")
+
+    let before = core.cash
+    check(core.buyPack(set: 2, using: &rng) == nil, "cannot buy pack from a locked set")
+    check(core.buyBox(set: 2, using: &rng) == nil, "cannot buy box from a locked set")
+    check(core.cash == before, "locked purchase spends no cash")
+
+    // Collect 25 uniques (all from set 1) → set 2 unlocks, set 3 still gated.
+    for i in 1...25 { core.instances.append(CardInstance(cardId: String(format: "S1-%03d", i))) }
+    check(core.uniqueCount == 25, "collected 25 unique cards")
+    check(core.isUnlocked(set: 2), "set 2 unlocks at 25 uniques")
+    check(!core.isUnlocked(set: 3), "set 3 still locked at 25 uniques (needs 50)")
+    check(core.buyPack(set: 2, using: &rng) != nil, "can buy from set 2 once unlocked")
+}
+
 print("\n\(failures == 0 ? "ALL CHECKS PASSED ✅" : "\(failures) CHECK(S) FAILED ❌")")
 exit(failures == 0 ? 0 : 1)
