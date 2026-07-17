@@ -68,6 +68,7 @@ struct RevealView: View {
 
     private func revealingView(_ result: OpenResult, _ i: Int) -> some View {
         let inst = result.pulled[i]
+        let isNew = !result.preOwnedIds.contains(inst.cardId)
         return VStack(spacing: 20) {
             if isBox {
                 Text("Pack \(packIndex + 1) of \(packCount)")
@@ -86,7 +87,7 @@ struct RevealView: View {
 
             Spacer()
 
-            RevealingCardView(inst: inst, width: 280)
+            RevealingCardView(inst: inst, isNew: isNew, width: 280)
                 .id(i)
                 .transition(.opacity)
 

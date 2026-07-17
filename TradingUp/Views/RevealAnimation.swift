@@ -150,6 +150,7 @@ struct ParticleBurst: View {
 /// matching audio sting at the moment it turns face-up.
 struct RevealingCardView: View {
     let inst: CardInstance
+    var isNew: Bool = false
     var width: CGFloat = 280
 
     @State private var rotation: Double = 180   // 180 = back showing, 0 = face-up
@@ -157,6 +158,7 @@ struct RevealingCardView: View {
     @State private var showParticles = false
     @State private var sheen = false
 
+    private var s: CGFloat { width / 230 }
     private var rarity: Rarity { inst.card.rarity }
     private var isSpecial: Bool { inst.foil || rarity == .rare || rarity == .ultra }
     private var isBig: Bool { rarity == .ultra || inst.foil }
@@ -208,8 +210,31 @@ struct RevealingCardView: View {
                 .blendMode(.plusLighter)
                 .allowsHitTesting(false)
                 .ignoresSafeArea()
+
+            if isNew {
+                Color.clear
+                    .frame(width: width, height: width * 1.4)
+                    .overlay(alignment: .topTrailing) { newBadge }
+                    .allowsHitTesting(false)
+            }
         }
         .onAppear(perform: run)
+    }
+
+    /// The gold "NEW" flag that pops onto a brand-new card as it turns face-up —
+    /// the same badge shown on the pack summary, so the reveal reads consistently.
+    private var newBadge: some View {
+        Text("✦ NEW")
+            .font(.system(size: 13 * s, weight: .black))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 11 * s).padding(.vertical, 5 * s)
+            .background(Capsule().fill(Color(hex: "ffd54a")))
+            .overlay(Capsule().strokeBorder(.white.opacity(0.4), lineWidth: 0.8))
+            .shadow(color: .black.opacity(0.5), radius: 3 * s, y: 1)
+            .offset(x: 10 * s, y: -10 * s)
+            .scaleEffect(faceUp ? 1 : 0.4, anchor: .center)
+            .opacity(faceUp ? 1 : 0)
+            .animation(.spring(response: 0.4, dampingFraction: 0.55), value: faceUp)
     }
 
     /// A quick diagonal light sweep across the freshly-revealed hero card.

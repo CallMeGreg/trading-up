@@ -3,14 +3,18 @@ import SwiftUI
 struct ShopView: View {
     @EnvironmentObject var game: GameState
     @State private var pending: PendingOpen?
+    /// Collection counts captured at purchase time. While a reveal is on screen
+    /// the shop shows these frozen values so the fullScreenCover sliding in/out
+    /// never briefly spoilers how many new uniques the pack contained.
+    @State private var freeze: ShopFreeze?
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 16) {
-                    CashHeader()
+                    CashHeader(freeze: freeze)
                     ForEach(1...CardDatabase.setCount, id: \.self) { set in
-                        SetShopCard(set: set) { buyPack(set) } onBuyBox: { buyBox(set) }
+                        SetShopCard(set: set, freeze: freeze) { buyPack(set) } onBuyBox: { buyBox(set) }
                     }
                 }
                 .padding(16)
@@ -19,22 +23,41 @@ struct ShopView: View {
             .toolbar(.hidden, for: .navigationBar)
         }
         .fullScreenCover(item: $pending) { p in
-            RevealView(content: p.content, set: p.set) { pending = nil }
+            RevealView(content: p.content, set: p.set) { pending = nil; freeze = nil }
         }
     }
 
     private func buyPack(_ set: Int) {
+        let snapshot = ShopFreeze(game)
         guard let r = game.buyPack(set: set) else { Haptics.play(.error); return }
+        freeze = snapshot
         Haptics.play(.medium)
         Sound.play(.purchase)
         pending = PendingOpen(content: .pack(r), set: set)
     }
 
     private func buyBox(_ set: Int) {
+        let snapshot = ShopFreeze(game)
         guard let results = game.buyBoxPacks(set: set) else { Haptics.play(.error); return }
+        freeze = snapshot
         Haptics.play(.heavy)
         Sound.play(.purchase)
         pending = PendingOpen(content: .box(results: results), set: set)
+    }
+}
+
+/// A snapshot of the collection counts the Shop displays, captured just before a
+/// pack/box is opened. Held while the reveal is on screen so the underlying shop
+/// doesn't reveal the pull's new-unique count during the cover transition.
+struct ShopFreeze {
+    let uniqueCount: Int
+    let ownedInSet: [Int: Int]
+
+    init(_ game: GameState) {
+        uniqueCount = game.uniqueCount
+        var owned: [Int: Int] = [:]
+        for set in 1...CardDatabase.setCount { owned[set] = game.ownedCount(inSet: set) }
+        ownedInSet = owned
     }
 }
 
@@ -42,6 +65,9 @@ struct ShopView: View {
 
 struct CashHeader: View {
     @EnvironmentObject var game: GameState
+    var freeze: ShopFreeze? = nil
+
+    private var uniqueCount: Int { freeze?.uniqueCount ?? game.uniqueCount }
 
     var body: some View {
         VStack(spacing: 12) {
@@ -65,11 +91,11 @@ struct CashHeader: View {
                 HStack {
                     Text("Collection").font(.system(size: 12, weight: .semibold)).foregroundStyle(Palette.subtle)
                     Spacer()
-                    Text("\(game.uniqueCount) / \(game.totalCards)")
+                    Text("\(uniqueCount) / \(game.totalCards)")
                         .font(.system(size: 12, weight: .bold, design: .monospaced))
                         .foregroundStyle(Palette.text)
                 }
-                ProgressBar(value: Double(game.uniqueCount), total: Double(game.totalCards),
+                ProgressBar(value: Double(uniqueCount), total: Double(game.totalCards),
                             tint: .white)
             }
         }
@@ -82,15 +108,17 @@ struct CashHeader: View {
 struct SetShopCard: View {
     @EnvironmentObject var game: GameState
     let set: Int
+    var freeze: ShopFreeze? = nil
     let onBuyPack: () -> Void
     let onBuyBox: () -> Void
 
     private var element: Element { Element.theme(forSet: set) }
-    private var owned: Int { game.ownedCount(inSet: set) }
+    private var displayUnique: Int { freeze?.uniqueCount ?? game.uniqueCount }
+    private var owned: Int { freeze?.ownedInSet[set] ?? game.ownedCount(inSet: set) }
     private var packPrice: Double { Economy.packPrice(set: set) }
     private var boxPrice: Double { Economy.boxPrice(set: set) }
-    private var unlocked: Bool { game.isSetUnlocked(set) }
     private var unlockThreshold: Int { game.uniquesToUnlock(set: set) }
+    private var unlocked: Bool { displayUnique >= unlockThreshold }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -141,8 +169,8 @@ struct SetShopCard: View {
     }
 
     private var lockedBody: some View {
-        let have = min(game.uniqueCount, unlockThreshold)
-        let remaining = max(0, unlockThreshold - game.uniqueCount)
+        let have = min(displayUnique, unlockThreshold)
+        let remaining = max(0, unlockThreshold - displayUnique)
         return VStack(spacing: 12) {
             HStack(spacing: 6) {
                 Image(systemName: "lock.fill").font(.system(size: 13, weight: .bold))
