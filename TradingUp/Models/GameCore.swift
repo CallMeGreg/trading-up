@@ -184,6 +184,43 @@ struct GameCore: Codable {
         return v
     }
 
+    /// Non-mutating preview: how many duplicate copies exist across the given
+    /// cards (every copy except the single most valuable one of each) and what
+    /// they would sell for. Used to label the "Sell duplicates" action.
+    func duplicateSummary(of cardIds: Set<String>) -> (count: Int, proceeds: Double) {
+        var count = 0
+        var proceeds = 0.0
+        for cardId in cardIds {
+            let copies = instances(of: cardId).sorted { $0.currentValue > $1.currentValue }
+            guard copies.count > 1 else { continue }
+            for extra in copies.dropFirst() {   // keep copies[0] (best), the rest are extras
+                count += 1
+                proceeds += extra.currentValue
+            }
+        }
+        return (count, proceeds)
+    }
+
+    /// Sells every duplicate copy across the given cards, always keeping the
+    /// single most valuable copy of each (so the collection is never reduced
+    /// below one of a card). Returns the number sold and total proceeds.
+    @discardableResult
+    mutating func sellDuplicates(of cardIds: Set<String>) -> (count: Int, proceeds: Double) {
+        var count = 0
+        var proceeds = 0.0
+        for cardId in cardIds {
+            let copies = instances(of: cardId).sorted { $0.currentValue > $1.currentValue }
+            guard copies.count > 1 else { continue }
+            for extra in copies.dropFirst() {   // reuses sell(): keeps last-copy protection + stats
+                if let v = sell(instanceId: extra.id) {
+                    count += 1
+                    proceeds += v
+                }
+            }
+        }
+        return (count, proceeds)
+    }
+
     // MARK: Grading
 
     mutating func grade<G: RandomNumberGenerator>(instanceId: UUID, using rng: inout G) -> GradeResult? {

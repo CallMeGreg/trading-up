@@ -156,6 +156,38 @@ private struct SummaryView: View {
             : result.pulled
     }
 
+    /// Duplicates among the just-opened cards (all but the best copy of each).
+    private var duplicates: (count: Int, proceeds: Double) { game.duplicateSummary(from: result) }
+
+    /// Bottom action(s): offer to auto-sell duplicates when there are any,
+    /// otherwise a single confirm. Uniques are always kept either way.
+    private var finishButtons: some View {
+        let dup = duplicates
+        return VStack(spacing: 10) {
+            if dup.count > 0 {
+                BigButton(title: "Sell \(dup.count) Duplicate\(dup.count == 1 ? "" : "s")",
+                          subtitle: "Keep 1 of each · +\(dup.proceeds.moneyShort)",
+                          systemImage: "dollarsign.circle.fill",
+                          tint: [Palette.money, Color(hex: "2fae63")]) {
+                    Haptics.play(.success)
+                    game.sellDuplicates(from: result)
+                    onDone()
+                }
+                BigButton(title: "Keep All", systemImage: "tray.and.arrow.down.fill",
+                          tint: [Color(hex: "3b82f6"), Color(hex: "6d5cf7")]) {
+                    Haptics.play(.light)
+                    onDone()
+                }
+            } else {
+                BigButton(title: "Add to Collection", systemImage: "checkmark.circle.fill",
+                          tint: [Palette.money, Color(hex: "2fae63")]) {
+                    Haptics.play(.light)
+                    onDone()
+                }
+            }
+        }
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             ScrollView {
@@ -193,12 +225,8 @@ private struct SummaryView: View {
                 .padding(16)
             }
 
-            BigButton(title: "Add to Collection", systemImage: "checkmark.circle.fill",
-                      tint: [Palette.money, Color(hex: "2fae63")]) {
-                Haptics.play(.light)
-                onDone()
-            }
-            .padding(16)
+            finishButtons
+                .padding(16)
         }
         .background(Palette.bg0.ignoresSafeArea())
     }

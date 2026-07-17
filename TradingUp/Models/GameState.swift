@@ -63,6 +63,17 @@ final class GameState: ObservableObject {
         return v
     }
 
+    func duplicateSummary(from result: OpenResult) -> (count: Int, proceeds: Double) {
+        core.duplicateSummary(of: Set(result.pulled.map { $0.cardId }))
+    }
+
+    @discardableResult
+    func sellDuplicates(from result: OpenResult) -> (count: Int, proceeds: Double) {
+        let r = core.sellDuplicates(of: Set(result.pulled.map { $0.cardId }))
+        if r.count > 0 { save() }
+        return r
+    }
+
     @discardableResult
     func grade(_ instanceId: UUID) -> GradeResult? {
         let r = core.grade(instanceId: instanceId, using: &rng)

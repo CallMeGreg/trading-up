@@ -134,5 +134,38 @@ do {
     check(again.isEmpty, "bonuses are not paid twice")
 }
 
+print("\n== Sell duplicates ==")
+do {
+    var core = GameCore()
+    // 3x S1-001, 1x S1-002 (unique), 2x S1-003
+    core.instances = [
+        CardInstance(cardId: "S1-001"), CardInstance(cardId: "S1-001"), CardInstance(cardId: "S1-001"),
+        CardInstance(cardId: "S1-002"),
+        CardInstance(cardId: "S1-003"), CardInstance(cardId: "S1-003"),
+    ]
+    let ids: Set<String> = ["S1-001", "S1-002", "S1-003"]
+    let preview = core.duplicateSummary(of: ids)
+    check(preview.count == 3, "preview: 3 duplicate copies (2×S1-001 + 1×S1-003)")
+
+    let startCash = core.cash
+    let uniquesBefore = core.uniqueCount
+    let sold = core.sellDuplicates(of: ids)
+    check(sold.count == 3, "sold 3 duplicate copies")
+    check(abs(sold.proceeds - preview.proceeds) < 0.001, "actual proceeds match preview")
+    check(abs(core.cash - (startCash + sold.proceeds)) < 0.001, "cash increased by proceeds")
+    check(core.count(of: "S1-001") == 1 && core.count(of: "S1-002") == 1 && core.count(of: "S1-003") == 1,
+          "exactly one copy of each card kept")
+    check(core.uniqueCount == uniquesBefore, "no unique cards lost")
+    check(core.instances.count == 3, "collection reduced to the 3 kept uniques")
+
+    // Best copy (foil) is kept, plain copies are the ones sold.
+    var core2 = GameCore()
+    var foilCopy = CardInstance(cardId: "S1-050"); foilCopy.foil = true
+    core2.instances = [CardInstance(cardId: "S1-050"), CardInstance(cardId: "S1-050"), foilCopy]
+    _ = core2.sellDuplicates(of: ["S1-050"])
+    check(core2.count(of: "S1-050") == 1 && core2.instances(of: "S1-050").first?.foil == true,
+          "keeps the most valuable (foil) copy when selling duplicates")
+}
+
 print("\n\(failures == 0 ? "ALL CHECKS PASSED ✅" : "\(failures) CHECK(S) FAILED ❌")")
 exit(failures == 0 ? 0 : 1)
