@@ -2,6 +2,7 @@ import SwiftUI
 
 struct StatsView: View {
     @EnvironmentObject var game: GameState
+    @ObservedObject private var sound = SoundManager.shared
     @State private var confirmNew = false
 
     private var s: Stats { game.stats }
@@ -52,6 +53,23 @@ struct StatsView: View {
                             ("Cards Sold", "\(s.cardsSold)"),
                             ("Peak Cash", s.peakCash.moneyShort),
                         ])
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .panel()
+
+                    VStack(alignment: .leading, spacing: 12) {
+                        header("Settings")
+                        Toggle(isOn: $sound.isEnabled) {
+                            Label("Sound Effects",
+                                  systemImage: sound.isEnabled ? "speaker.wave.2.fill" : "speaker.slash.fill")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(Palette.text)
+                        }
+                        .tint(Palette.money)
+                        .onChange(of: sound.isEnabled) { _, on in
+                            Haptics.play(.light)
+                            if on { Sound.play(.coin) }   // brief confirmation you can hear
+                        }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .panel()
