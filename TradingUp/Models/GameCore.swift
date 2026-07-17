@@ -61,6 +61,8 @@ struct GameCore: Codable {
     var claimedSets: Set<Int> = []
     var stats = Stats()
     var hasWon = false
+    /// Optional so older saves (which lack the key) decode cleanly to `nil`.
+    var welcomeSeen: Bool? = nil
 
     // MARK: Derived
 
@@ -92,6 +94,17 @@ struct GameCore: Codable {
         guard !hasWon else { return false }
         return cash < Economy.packPrice(set: 1) && sellableInstances.isEmpty
     }
+
+    // MARK: Welcome / onboarding
+
+    var hasSeenWelcome: Bool { welcomeSeen ?? false }
+
+    /// Show the intro only on a brand-new game (fresh, no progress yet) that
+    /// hasn't been dismissed — so it appears on first launch and after New Game,
+    /// but never interrupts an in-progress collection.
+    var shouldShowWelcome: Bool { !hasSeenWelcome && instances.isEmpty && stats.packsOpened == 0 }
+
+    mutating func markWelcomeSeen() { welcomeSeen = true }
 
     // MARK: Pack building
 

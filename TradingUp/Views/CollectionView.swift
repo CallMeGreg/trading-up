@@ -40,9 +40,9 @@ struct CollectionView: View {
                     .padding(16)
                 }
             }
+            .padding(.top, 8)
             .background(Palette.screen.ignoresSafeArea())
-            .navigationTitle("Collection")
-            .navigationBarTitleDisplayMode(.inline)
+            .toolbar(.hidden, for: .navigationBar)
             .sheet(item: $selected) { card in
                 CardDetailView(card: card)
             }

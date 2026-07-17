@@ -30,6 +30,7 @@ final class GameState: ObservableObject {
     var netWorth: Double { core.netWorth }
     var hasWon: Bool { core.hasWon }
     var isGameOver: Bool { core.isGameOver }
+    var shouldShowWelcome: Bool { core.shouldShowWelcome }
 
     func canAffordPack(set: Int) -> Bool { core.cash >= Economy.packPrice(set: set) }
     func canAffordBox(set: Int) -> Bool { core.cash >= Economy.boxPrice(set: set) }
@@ -85,6 +86,11 @@ final class GameState: ObservableObject {
 
     func newGame() {
         core = GameCore()
+        save()
+    }
+
+    func markWelcomeSeen() {
+        core.markWelcomeSeen()
         save()
     }
 

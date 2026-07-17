@@ -13,18 +13,34 @@ struct ContentView: View {
                 .tabItem { Label("Stats", systemImage: "chart.bar.fill") }
         }
         .tint(Palette.money)
-        .fullScreenCover(isPresented: endBinding) {
-            if game.hasWon {
-                WinView()
-            } else {
-                LoseView()
+        .fullScreenCover(item: overlayBinding) { overlay in
+            switch overlay {
+            case .welcome: WelcomeView()
+            case .win:     WinView()
+            case .lose:    LoseView()
             }
         }
     }
 
-    /// Terminal states are driven by the model; dismissal happens when `newGame()`
-    /// clears the condition, so the setter is intentionally a no-op.
-    private var endBinding: Binding<Bool> {
-        Binding(get: { game.hasWon || game.isGameOver }, set: { _ in })
+    /// Which full-screen overlay (if any) the current model state calls for.
+    /// A single cover handles all three so transitions like Game Over →
+    /// New Game → Welcome swap content in place instead of fighting over
+    /// two separate presentations.
+    private var activeOverlay: AppOverlay? {
+        if game.shouldShowWelcome { return .welcome }
+        if game.hasWon { return .win }
+        if game.isGameOver { return .lose }
+        return nil
     }
+
+    /// Model-driven; dismissal happens when the state clears (markWelcomeSeen /
+    /// newGame), so the setter is intentionally a no-op.
+    private var overlayBinding: Binding<AppOverlay?> {
+        Binding(get: { activeOverlay }, set: { _ in })
+    }
+}
+
+enum AppOverlay: Int, Identifiable {
+    case welcome, win, lose
+    var id: Int { rawValue }
 }

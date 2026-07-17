@@ -71,8 +71,7 @@ struct StatsView: View {
                 .padding(16)
             }
             .background(Palette.screen.ignoresSafeArea())
-            .navigationTitle("Stats")
-            .navigationBarTitleDisplayMode(.inline)
+            .toolbar(.hidden, for: .navigationBar)
             .alert("Start a new game?", isPresented: $confirmNew) {
                 Button("Cancel", role: .cancel) {}
                 Button("Reset", role: .destructive) { game.newGame() }
