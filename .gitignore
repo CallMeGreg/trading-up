@@ -20,5 +20,9 @@ xcuserdata/
 # Node (mockup tooling, if any)
 node_modules/
 
+# Python (icon tooling)
+.venv/
+__pycache__/
+
 # Misc
 *.log
