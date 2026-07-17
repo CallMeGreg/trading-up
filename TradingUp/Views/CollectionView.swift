@@ -4,9 +4,23 @@ struct CollectionView: View {
     @EnvironmentObject var game: GameState
     @State private var set = 1
     @State private var selected: Card?
+    @State private var activeFilters: Set<CardFilter> = []
 
     private var cards: [Card] { CardDatabase.cards(inSet: set) }
     private var owned: Int { game.ownedCount(inSet: set) }
+    private var filteredCards: [Card] { cards.filter(matches) }
+
+    /// A card is shown only if it satisfies *every* active filter (AND).
+    private func matches(_ card: Card) -> Bool {
+        for f in activeFilters {
+            switch f {
+            case .dupes: if game.count(of: card.id) <= 1 { return false }
+            case .foils: if !game.instances(of: card.id).contains(where: { $0.foil }) { return false }
+            case .rare:  if card.rarity != .rare && card.rarity != .ultra { return false }
+            }
+        }
+        return true
+    }
 
     var body: some View {
         NavigationStack {
@@ -31,13 +45,19 @@ struct CollectionView: View {
                 }
                 .padding(.horizontal, 16)
 
+                filterBar
+
                 ScrollView {
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 104), spacing: 12)], spacing: 14) {
-                        ForEach(cards) { card in
-                            slot(for: card)
+                    if filteredCards.isEmpty {
+                        emptyState
+                    } else {
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 104), spacing: 12)], spacing: 14) {
+                            ForEach(filteredCards) { card in
+                                slot(for: card)
+                            }
                         }
+                        .padding(16)
                     }
-                    .padding(16)
                 }
             }
             .padding(.top, 8)
@@ -47,6 +67,35 @@ struct CollectionView: View {
                 CardDetailView(card: card)
             }
         }
+    }
+
+    private var filterBar: some View {
+        HStack(spacing: 8) {
+            ForEach(CardFilter.allCases) { f in
+                FilterChip(title: f.rawValue, systemImage: f.icon, isOn: activeFilters.contains(f)) {
+                    toggle(f)
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+    }
+
+    private var emptyState: some View {
+        VStack(spacing: 8) {
+            Image(systemName: "line.3.horizontal.decrease.circle")
+                .font(.system(size: 34))
+                .foregroundStyle(Palette.subtle)
+            Text("No cards match these filters")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(Palette.subtle)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 64)
+    }
+
+    private func toggle(_ f: CardFilter) {
+        Haptics.play(.light)
+        if activeFilters.contains(f) { activeFilters.remove(f) } else { activeFilters.insert(f) }
     }
 
     @ViewBuilder
@@ -80,5 +129,53 @@ struct CollectionView: View {
     /// The most valuable owned copy (so graded/foil copies show off in the grid).
     private func bestInstance(_ card: Card) -> CardInstance? {
         game.instances(of: card.id).max { $0.currentValue < $1.currentValue }
+    }
+}
+
+/// Collection grid filters. Multiple active filters combine with AND.
+enum CardFilter: String, CaseIterable, Identifiable {
+    case dupes = "Dupes"
+    case foils = "Foils"
+    case rare  = "Rare+"
+
+    var id: String { rawValue }
+    var icon: String {
+        switch self {
+        case .dupes: return "rectangle.stack.fill"
+        case .foils: return "sparkles"
+        case .rare:  return "diamond.fill"
+        }
+    }
+}
+
+private struct FilterChip: View {
+    let title: String
+    let systemImage: String
+    let isOn: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 5) {
+                Image(systemName: systemImage).font(.system(size: 11, weight: .bold))
+                Text(title).font(.system(size: 13, weight: .bold))
+            }
+            .foregroundStyle(isOn ? .white : Palette.subtle)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 9)
+            .background(
+                RoundedRectangle(cornerRadius: 11)
+                    .fill(isOn
+                          ? LinearGradient(colors: [Color(hex: "3b82f6"), Color(hex: "6d5cf7")],
+                                           startPoint: .leading, endPoint: .trailing)
+                          : LinearGradient(colors: [Palette.bg0.opacity(0.5), Palette.bg0.opacity(0.5)],
+                                           startPoint: .leading, endPoint: .trailing))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 11)
+                    .strokeBorder(isOn ? Color.clear : Palette.stroke, lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
     }
 }

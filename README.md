@@ -70,7 +70,9 @@ all 250 cards are embedded in the app.
   bottom (blue = keep, green = sell). The sell total updates live as you decide
   each card.
 - **Collection** — browse all 50 cards per set. Owned cards show off their best
-  copy; unowned cards are locked silhouettes. Tap a card for details.
+  copy; unowned cards are locked silhouettes. Tap a card for details. Filter the
+  grid by **Dupes**, **Foils**, and **Rare+** — combine filters to narrow further
+  (e.g. Dupes + Foils shows only foil duplicates).
 - **Sell** — flip duplicate cards back to the shop for cash. You can **never sell
   your last copy** of a card, so your collection is safe.
 - **Grade** — send a rare/ultra to grading for a fee. The PSA grade you roll
