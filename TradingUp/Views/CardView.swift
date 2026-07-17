@@ -67,18 +67,25 @@ struct CardView: View {
                 Text(card.element.emoji).font(.system(size: 10 * s))
                 Text(card.element.display)
                     .font(.system(size: 9 * s, weight: .bold))
-                    .foregroundStyle(Palette.subtle)
+                    .foregroundStyle(card.element.badgeTint)
             }
             .padding(.horizontal, 6 * s).padding(.vertical, 3 * s)
-            .background(Capsule().fill(Palette.bg0.opacity(0.6)))
+            .background(Capsule().fill(card.element.badgeTint.opacity(0.14)))
         }
     }
 
     private var artWindow: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 10 * s).fill(card.element.artGradient)
-            SigilView(seed: card.name + card.element.rawValue, element: card.element)
-                .padding(6 * s)
+            if let art = UIImage(named: card.id) {
+                Image(uiImage: art)
+                    .resizable()
+                    .interpolation(.high)
+                    .scaledToFill()
+            } else {
+                SigilView(seed: card.name + card.element.rawValue, element: card.element)
+                    .padding(6 * s)
+            }
             RoundedRectangle(cornerRadius: 10 * s)
                 .strokeBorder(Color.white.opacity(0.08), lineWidth: 1)
         }

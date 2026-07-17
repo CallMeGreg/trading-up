@@ -89,9 +89,9 @@ function cardHTML(c) {
     ${foil}
     <div class="card-top">
       <span class="card-name">${c.name}</span>
-      <span class="type-badge">${t.emoji} ${t.label}</span>
+      <span class="type-badge type-${c.type}">${t.emoji} ${t.label}</span>
     </div>
-    <div class="art-window aw-${c.type}">${makeSigil(c.name + c.type, c.type)}</div>
+    <div class="art-window aw-${c.type}">${c.art ? `<img class="art-img" src="art/${c.art}.svg" alt="${c.name}">` : makeSigil(c.name + c.type, c.type)}</div>
     <div class="card-meta">
       <span><span class="rarity-gem gem-${c.rarity}"></span>Emberfall</span>
       <span>${pad3(c.number)} / 050</span>
@@ -119,11 +119,11 @@ function slabHTML(c) {
 }
 
 // ---- Sample Set 1 (Emberfall) cards ----
-const emberpup    = { name: 'Emberpup',    type: 'fire', rarity: 'common',   number: 12, value: 0.40, flavor: 'A pup with a permanently singed tail.' };
-const cinderhound = { name: 'Cinderhound', type: 'fire', rarity: 'uncommon', number: 13, value: 1.60, flavor: 'Its bark smolders the morning fog.' };
-const pyrewolf    = { name: 'Pyrewolf',    type: 'fire', rarity: 'rare',     number: 14, value: 6.50, flavor: 'A single howl can melt a glacier.' };
-const ignarok     = { name: 'Ignarok',     type: 'fire', rarity: 'ultra',    number: 48, value: 22.00, flavor: 'The Everflame stirs beneath Emberfall.' };
-const magmalith   = { name: 'Magmalith',   type: 'rock', rarity: 'rare',     number: 9,  value: 5.00, flavor: 'A mountain that decided to walk.' };
+const emberpup    = { name: 'Emberpup',    type: 'fire', rarity: 'common',   number: 1,  value: 0.40, art: 'S1-001', flavor: 'A pup with a permanently singed tail.' };
+const cinderhound = { name: 'Cinderhound', type: 'fire', rarity: 'uncommon', number: 2,  value: 1.60, art: 'S1-002', flavor: 'Its bark smolders the morning fog.' };
+const pyrewolf    = { name: 'Pyrewolf',    type: 'fire', rarity: 'rare',     number: 3,  value: 6.50, art: 'S1-003', flavor: 'A single howl can melt a glacier.' };
+const ignarok     = { name: 'Ignarok',     type: 'fire', rarity: 'ultra',    number: 48, value: 22.00, art: 'S1-048', flavor: 'The Everflame stirs beneath Emberfall.' };
+const magmalith   = { name: 'Magmalith',   type: 'rock', rarity: 'rare',     number: 6,  value: 5.00, art: 'S1-006', flavor: 'A mountain that decided to walk.' };
 
 function render() {
   const grade10 = { gradeMult: 5 };

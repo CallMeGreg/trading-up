@@ -1,0 +1,35 @@
+<svg viewBox="0 0 216 150" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bodyS2_003" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#c2f0ff"/><stop offset="55%" stop-color="#4bb6ff"/>
+      <stop offset="100%" stop-color="#1e5bd6"/>
+    </linearGradient>
+    <linearGradient id="body2S2_003" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#4bb6ff"/><stop offset="100%" stop-color="#08245c"/>
+    </linearGradient>
+    <linearGradient id="bellyS2_003" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity=".92"/><stop offset="100%" stop-color="#c2f0ff"/>
+    </linearGradient>
+    <radialGradient id="stageS2_003" cx="50%" cy="62%" r="55%">
+      <stop offset="0%" stop-color="#bff0ff" stop-opacity=".55"/><stop offset="70%" stop-color="#bff0ff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="orbS2_003" cx="42%" cy="38%" r="65%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity=".95"/>
+      <stop offset="45%" stop-color="#c2f0ff"/><stop offset="100%" stop-color="#1e5bd6"/>
+    </radialGradient>
+  </defs>
+  <defs>
+    <linearGradient id="skyS2_003" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0e5aa8"/><stop offset="55%" stop-color="#0b336e"/><stop offset="100%" stop-color="#03102e"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="216" height="150" fill="url(#skyS2_003)"/>
+  <polygon points="24,0 40,0 74,150 42,150" fill="#bfeaff" opacity=".08"/><polygon points="70,0 92,0 126,150 88,150" fill="#bfeaff" opacity=".08"/><polygon points="120,0 134,0 168,150 138,150" fill="#bfeaff" opacity=".08"/><polygon points="168,0 194,0 228,150 186,150" fill="#bfeaff" opacity=".08"/>
+  <path d="M0,150 L0,120 Q40,132 78,122 Q120,110 150,124 Q186,136 216,122 L216,150 Z" fill="#06255a"/>
+  <path d="M0,150 L0,134 Q52,144 108,134 T216,136 L216,150 Z" fill="#041a44"/>
+  <g fill="#0a2f66" opacity=".9">
+    <path d="M150,150 C150,128 140,120 146,110 C152,120 156,116 156,108 C162,120 160,132 166,150 Z"/>
+    <path d="M40,150 C40,132 34,126 40,116 C46,126 48,122 50,116 C54,128 54,138 58,150 Z"/>
+  </g>
+  <circle cx="34" cy="44" r="2.4" fill="#dff6ff" opacity="0.5"/><circle cx="58" cy="80" r="1.6" fill="#dff6ff" opacity="0.4"/><circle cx="180" cy="40" r="2.8" fill="#dff6ff" opacity="0.5"/><circle cx="150" cy="96" r="1.8" fill="#dff6ff" opacity="0.4"/><circle cx="196" cy="110" r="2.2" fill="#dff6ff" opacity="0.45"/><circle cx="90" cy="30" r="1.4" fill="#dff6ff" opacity="0.4"/><circle cx="120" cy="120" r="1.6" fill="#dff6ff" opacity="0.4"/>
+  <ellipse cx="108" cy="86" rx="92" ry="46" fill="url(#stageS2_003)"/><ellipse cx="108" cy="143.7" rx="46.5" ry="8.0" fill="#000" opacity=".22"/><g stroke="#08245c" stroke-width="2.3" stroke-linejoin="round" stroke-linecap="round"><rect x="87.5" y="94.2" width="13.7" height="44.6" rx="6.8" fill="url(#body2S2_003)"/><rect x="116.7" y="94.2" width="13.7" height="44.6" rx="6.8" fill="url(#body2S2_003)"/><g transform="rotate(35 152.688 79.3816)" stroke="#08245c" stroke-width="1.1" stroke-linejoin="round"><path d="M152.688,51.06400000000001 L173.07667199999997,107.6992 Q152.688,92.12452 132.299328,107.6992 Z" fill="#c2f0ff"/><line x1="152.688" y1="65.2228" x2="152.688" y2="99.20392000000001" stroke="#1e5bd6" stroke-width="0.9"/></g><ellipse cx="108" cy="88" rx="45.599999999999994" ry="30.779999999999998" fill="url(#bodyS2_003)"/><ellipse cx="105.72" cy="98.4652" rx="25.08" ry="16.005599999999998" fill="url(#bellyS2_003)" stroke="none"/><g fill="url(#body2S2_003)" stroke="#08245c" stroke-width="1.6" stroke-linejoin="round"><path d="M80.2,64.915 L85.2,52.915000000000006 L90.2,64.915 Z"/><path d="M92.88,58.759 L98.88,43.759 L104.88,58.759 Z"/><path d="M107.472,60.298 L113.472,46.298 L119.472,60.298 Z"/><path d="M122.152,66.45400000000001 L127.152,55.45400000000001 L132.152,66.45400000000001 Z"/></g><rect x="77.4" y="95.7" width="13.7" height="46.2" rx="6.8" fill="url(#bodyS2_003)"/><ellipse cx="84.28800000000001" cy="142.3" rx="8.5" ry="5.5" fill="#1e5bd6"/><rect x="126.7" y="95.7" width="13.7" height="46.2" rx="6.8" fill="url(#bodyS2_003)"/><ellipse cx="133.536" cy="142.3" rx="8.5" ry="5.5" fill="#1e5bd6"/><circle cx="77.9" cy="72.0" r="22.8" fill="url(#bodyS2_003)"/><g transform="rotate(-14 75.624 54.2104)" stroke="#08245c" stroke-width="1.1" stroke-linejoin="round"><path d="M75.624,38.2504 L87.11519999999999,70.1704 Q75.624,61.392399999999995 64.1328,70.1704 Z" fill="#c2f0ff"/><line x1="75.624" y1="46.2304" x2="75.624" y2="65.38239999999999" stroke="#1e5bd6" stroke-width="0.9"/></g><g transform="rotate(16 90.44399999999999 55.5784)" stroke="#08245c" stroke-width="1.1" stroke-linejoin="round"><path d="M90.44399999999999,39.61840000000001 L101.93519999999998,71.5384 Q90.44399999999999,62.760400000000004 78.9528,71.5384 Z" fill="#c2f0ff"/><line x1="90.44399999999999" y1="47.598400000000005" x2="90.44399999999999" y2="66.7504" stroke="#1e5bd6" stroke-width="0.9"/></g><ellipse cx="61.5" cy="79.7" rx="9.6" ry="7.3" fill="url(#bodyS2_003)"/><circle cx="54.6" cy="77.5" r="3.0" fill="#08245c"/><ellipse cx="70.152" cy="71.08239999999999" rx="5.4719999999999995" ry="6.238079999999999" fill="#ffffff"/><circle cx="65.7744" cy="71.73903999999999" r="3.2831999999999995" fill="#1a1020"/><circle cx="64.46112" cy="69.11247999999999" r="1.3132799999999998" fill="#fff"/><path d="M63.0384,62.874399999999994 L76.1712,68.34639999999999" stroke="#1a1020" stroke-width="2.7359999999999998" stroke-linecap="round"/><ellipse cx="81.55199999999999" cy="71.5384" rx="5.03424" ry="5.739033599999999" fill="#ffffff"/><circle cx="77.17439999999999" cy="72.1425088" r="3.0205439999999997" fill="#1a1020"/><circle cx="75.9661824" cy="69.72607359999999" r="1.2082175999999998" fill="#fff"/><path d="M75.007488,63.98703999999999 L87.089664,69.02127999999999" stroke="#1a1020" stroke-width="2.51712" stroke-linecap="round"/><path d="M55.1,82.3 q11.399999999999999,11.399999999999999 21.659999999999997,0.05" fill="#08245c" stroke="none"/><path d="M59.7,83.4 l2,6 l3,-6 Z" fill="#fff"/></g></svg>

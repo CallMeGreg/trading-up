@@ -1,0 +1,35 @@
+<svg viewBox="0 0 216 150" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bodyS2_005" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#c2f0ff"/><stop offset="55%" stop-color="#4bb6ff"/>
+      <stop offset="100%" stop-color="#1e5bd6"/>
+    </linearGradient>
+    <linearGradient id="body2S2_005" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#4bb6ff"/><stop offset="100%" stop-color="#08245c"/>
+    </linearGradient>
+    <linearGradient id="bellyS2_005" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity=".92"/><stop offset="100%" stop-color="#c2f0ff"/>
+    </linearGradient>
+    <radialGradient id="stageS2_005" cx="50%" cy="62%" r="55%">
+      <stop offset="0%" stop-color="#bff0ff" stop-opacity=".55"/><stop offset="70%" stop-color="#bff0ff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="orbS2_005" cx="42%" cy="38%" r="65%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity=".95"/>
+      <stop offset="45%" stop-color="#c2f0ff"/><stop offset="100%" stop-color="#1e5bd6"/>
+    </radialGradient>
+  </defs>
+  <defs>
+    <linearGradient id="skyS2_005" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0e5aa8"/><stop offset="55%" stop-color="#0b336e"/><stop offset="100%" stop-color="#03102e"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="216" height="150" fill="url(#skyS2_005)"/>
+  <polygon points="24,0 40,0 74,150 42,150" fill="#bfeaff" opacity=".08"/><polygon points="70,0 92,0 126,150 88,150" fill="#bfeaff" opacity=".08"/><polygon points="120,0 134,0 168,150 138,150" fill="#bfeaff" opacity=".08"/><polygon points="168,0 194,0 228,150 186,150" fill="#bfeaff" opacity=".08"/>
+  <path d="M0,150 L0,120 Q40,132 78,122 Q120,110 150,124 Q186,136 216,122 L216,150 Z" fill="#06255a"/>
+  <path d="M0,150 L0,134 Q52,144 108,134 T216,136 L216,150 Z" fill="#041a44"/>
+  <g fill="#0a2f66" opacity=".9">
+    <path d="M150,150 C150,128 140,120 146,110 C152,120 156,116 156,108 C162,120 160,132 166,150 Z"/>
+    <path d="M40,150 C40,132 34,126 40,116 C46,126 48,122 50,116 C54,128 54,138 58,150 Z"/>
+  </g>
+  <circle cx="34" cy="44" r="2.4" fill="#dff6ff" opacity="0.5"/><circle cx="58" cy="80" r="1.6" fill="#dff6ff" opacity="0.4"/><circle cx="180" cy="40" r="2.8" fill="#dff6ff" opacity="0.5"/><circle cx="150" cy="96" r="1.8" fill="#dff6ff" opacity="0.4"/><circle cx="196" cy="110" r="2.2" fill="#dff6ff" opacity="0.45"/><circle cx="90" cy="30" r="1.4" fill="#dff6ff" opacity="0.4"/><circle cx="120" cy="120" r="1.6" fill="#dff6ff" opacity="0.4"/>
+  <ellipse cx="108" cy="86" rx="92" ry="46" fill="url(#stageS2_005)"/><ellipse cx="108" cy="136.8" rx="40.7" ry="7.4" fill="#000" opacity=".22"/><g stroke="#08245c" stroke-width="2.3" stroke-linejoin="round"><rect x="80.1" y="101.1" width="17.1" height="23.3" rx="7" fill="url(#body2S2_005)"/><rect x="118.9" y="101.1" width="17.1" height="23.3" rx="7" fill="url(#body2S2_005)"/><rect x="63.0" y="77.8" width="13.2" height="29.5" rx="8" fill="url(#body2S2_005)"/><rect x="139.8" y="77.8" width="13.2" height="29.5" rx="8" fill="url(#body2S2_005)"/><rect x="69.2" y="53.0" width="77.6" height="59.0" rx="17.5" fill="url(#bodyS2_005)"/><g stroke="#08245c" stroke-width="1.4" fill="none" opacity=".5"><path d="M92.5,62.3 l8,10 l-5,8"/><path d="M127.4,90.2 l-7,8"/></g><circle cx="88.6" cy="77.792" r="2.4" fill="#c2f0ff" opacity=".6"/><rect x="83.9" y="66.9" width="48.1" height="27.9" rx="7.8" fill="#08245c" opacity=".55" stroke="none"/><ellipse cx="97.136" cy="80.896" rx="6.207999999999999" ry="7.077119999999999" fill="#bff0ff"/><circle cx="97.136" cy="81.64096" r="3.7247999999999992" fill="#1a1020"/><circle cx="95.64608" cy="78.66112" r="1.4899199999999997" fill="#fff"/><ellipse cx="118.864" cy="80.896" rx="6.207999999999999" ry="7.077119999999999" fill="#bff0ff"/><circle cx="118.864" cy="81.64096" r="3.7247999999999992" fill="#1a1020"/><circle cx="117.37408" cy="78.66112" r="1.4899199999999997" fill="#fff"/><path d="M96.4,94.9 q11.6,5.6 23.3,0" fill="none" stroke="#bff0ff" stroke-width="1.6" opacity=".8"/></g><g transform="rotate(-12 92.48 46.96)" stroke="#08245c" stroke-width="1.1" stroke-linejoin="round"><path d="M92.48,37.260000000000005 L99.464,56.66 Q92.48,51.325 85.49600000000001,56.66 Z" fill="#c2f0ff"/><line x1="92.48" y1="42.11" x2="92.48" y2="53.75" stroke="#1e5bd6" stroke-width="0.9"/></g><g transform="rotate(0 108 42.96)" stroke="#08245c" stroke-width="1.1" stroke-linejoin="round"><path d="M108,30.35 L117.0792,55.57 Q108,48.6345 98.9208,55.57 Z" fill="#c2f0ff"/><line x1="108" y1="36.655" x2="108" y2="51.787" stroke="#1e5bd6" stroke-width="0.9"/></g><g transform="rotate(12 123.52 46.96)" stroke="#08245c" stroke-width="1.1" stroke-linejoin="round"><path d="M123.52,37.260000000000005 L130.504,56.66 Q123.52,51.325 116.536,56.66 Z" fill="#c2f0ff"/><line x1="123.52" y1="42.11" x2="123.52" y2="53.75" stroke="#1e5bd6" stroke-width="0.9"/></g></svg>

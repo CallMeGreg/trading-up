@@ -73,6 +73,18 @@ extension Element {
         }
     }
 
+    /// Faint element color used to tint the type badge (text + capsule wash).
+    var badgeTint: Color {
+        switch self {
+        case .fire:     return Color(hex: "ff9a6b")
+        case .rock:     return Color(hex: "e0b483")
+        case .water:    return Color(hex: "8fd3ff")
+        case .grass:    return Color(hex: "9fe08a")
+        case .electric: return Color(hex: "ffdf66")
+        case .shadow:   return Color(hex: "c6a3ff")
+        }
+    }
+
     /// Background wash inside the art window.
     var artGradient: RadialGradient {
         RadialGradient(

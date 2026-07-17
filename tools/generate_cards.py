@@ -153,6 +153,79 @@ FLAVOR = {
     "Older than the dark it came from.","Dreams leak out of it as fog.","Where it sleeps, the stars go dim."],
 }
 
+# Additional, distinct flavor lines used only to break up duplicates. flavor_for()
+# still selects from FLAVOR (above), so every card that currently holds a unique or
+# first-use flavor keeps it exactly; only the surplus duplicates draw from here.
+FLAVOR_EXTRA = {
+  "fire": ["Coals rekindle at its passing.","Breathes out cinders on cold mornings.","Its mane sheds sparks in the wind.",
+    "Ash blooms into flowers where it steps.","Curls up in campfires to sleep.","Its growl smells of woodsmoke.",
+    "Melts frost with a single yawn.","Keeps the hearth lit through winter.","Its claws leave scorch marks on stone.",
+    "A furnace beats where its heart should be.","Basks on sun-baked rock for days.","Its tail draws embers in the dark.",
+    "Too hot for snow to ever settle on it.","Wakes when the first coal glows.","Carries summer wherever it roams.",
+    "Its breath shimmers the air like a mirage.","Sparks scatter when it shakes off dust.","Sleeps curled around a smouldering log.",
+    "Its eyes are twin banked coals.","Lava cools to glass beneath its paws.","Hums like a kettle about to boil.",
+    "The desert sun is its favourite den.","Its fur glows faintly after dark.","Chases the sunset to keep it warm.",
+    "Smoke curls from its nostrils when annoyed.","A single ember can spark its temper.","Warms cold hands from across a room.",
+    "Its snarl throws sparks like flint.","Born where two lava rivers meet.","Leaves handprints of ash on everything.",
+    "Its heat bends the horizon behind it.","Naps only where the coals still glow.","Kindled from a dying star, they say.",
+    "Its yawn could light a hundred lamps.","Rolls in hot ash to clean its coat.","The forge cools when it walks away.",
+    "Wildfires part to let it pass.","Its dreams flicker like candlelight."],
+  "rock": ["Moss grows thick along its back.","Its footsteps register as small quakes.",
+    "Gathers gemstones the way others hoard nuts.","Weathered smooth by a thousand storms."],
+  "water": ["Sleeps in the hollow of a wave.","Its breath fogs the coldest glass.","Trails glimmering light through the dark.",
+    "Rain follows it like a loyal pet.","Its fins catch the colour of the sky.","Counts the tides better than any clock.",
+    "Leaves dew on every leaf it passes.","Its call carries for leagues underwater.","Cool mist gathers where it rests.",
+    "Drinks from clouds when rivers run dry.","Its scales sing when the current shifts.","Nests in tide pools at low water.",
+    "Melts into sea foam when startled.","Its shadow ripples like a reflection.","Guides lost fish back to the reef.",
+    "Frost feathers the puddles it steps in.","Holds a storm's worth of rain inside.","Its eyes are the colour of deep water.",
+    "Swims circles around the fastest eel.","A gentle rain means it is near.","Its touch turns dust to clear water.",
+    "Rides river currents just for fun.","Bubbles rise wherever it hums.","Keeps a pearl tucked beneath its tongue.",
+    "Its coat never truly dries.","The tide comes in when it calls.","Naps adrift on its back at sea.",
+    "Its breath tastes of salt and rain.","Coaxes springs from bone-dry stone.","Moonlight pools in its wake.",
+    "Its whiskers twitch before a downpour.","Carries the hush of the deep with it.","Snow becomes rain in its warmth.",
+    "Its laughter sounds like a running brook.","Follows the river to wherever it ends.","Cups still water to see tomorrow.",
+    "Its scales mist over in the cold.","Born on the crest of a rogue wave."],
+  "grass": ["Vines curl toward it like old friends.","Its yawn scatters dandelion seeds.","Moss cushions every step it takes.",
+    "Wakes with the first warmth of spring.","Butterflies trail it through the meadow.","Its antlers sprout fresh buds each spring.",
+    "Fallen logs bloom where it naps.","Smells of clover after warm rain.","Its coat changes colour with the season.",
+    "Roots knit the soil wherever it walks.","Hums a tune the crickets answer.","Wildflowers lean to follow it by.",
+    "Its breath coaxes shy seeds to sprout.","Bees regard it as one of their own.","Curls beneath ferns to escape the noon.",
+    "Ivy climbs it as though it were a tree.","Leaves a trail of pressed-flower prints.","Its nap turns a clearing into a garden.",
+    "Orchards bear sweeter fruit where it rests.","Petals drift from its coat as it runs.","The oldest oak leans down to greet it.",
+    "Its whiskers are strung with morning dew.","Mushrooms ring the spot where it slept.","Sunlight always seems to find it first.",
+    "Its footprints fill with tiny sprouts.","Keeps the meadow green past autumn's end.","Birds weave its shed fur into nests.",
+    "A crown of new leaves marks each spring.","It naps and the brambles pull back.","Its heartbeat keeps time with the seasons.",
+    "Pollen glitters gold along its back.","Where it drinks, a spring garden grows.","Coaxes fruit from the most stubborn vine.",
+    "Its shade is cooler than any other.","Saplings straighten as it wanders past.","Smells faintly of honey and cut grass.",
+    "The forest holds its breath when it sings.","Rooted deep, it dreams of distant fields."],
+  "electric": ["Its fur snaps with tiny blue sparks.","Lightning bends to follow its leap.","Static clings to anyone it nuzzles.",
+    "Its heartbeat ticks like a busy clock.","Compasses spin when it draws near.","Rides thunderheads across the plains.",
+    "Its bark arrives a beat before the flash.","Streetlights flicker as it trots by.","Coils of energy ripple down its spine.",
+    "Its whiskers point toward the nearest storm.","Naps atop warm transformers to keep cosy.","A stormcloud follows it like a balloon.",
+    "Its sneeze can short a whole street.","Sparks trail its tail through the dark.","The air tastes of copper where it stands.",
+    "It races the lightning and often wins.","Its growl builds like a rising current.","Balloons cling to it without any rubbing.",
+    "It grounds itself by hugging iron posts.","Every hair doubles as a lightning rod.","Its glow brightens with its temper.",
+    "Wakes the instant thunder rolls in.","Batteries recharge in its presence.","Its leap leaves the grass faintly singed.",
+    "It hums louder as the storm draws close.","Coins stick to its staticky coat.","Its eyes spark when it is excited.",
+    "The kettle boils faster in its company.","Born the moment lightning split an old oak.","It chases thunder like a pup chases carts.",
+    "Its footsteps leave a tingle in the floor.","A live current runs beneath its fur.","It naps through storms it helped summon.",
+    "Sparks scatter when it shakes off the rain.","Its yawn dims every lamp in the house.","Follows the hum of the power lines home.",
+    "It crackles brightest just before dawn.","Its dreams flash like distant heat lightning."],
+  "shadow": ["Moonlight passes straight through it.","It pools like ink in the corners of a room.","Its footsteps make no sound at all.",
+    "Candles gutter when it enters.","It borrows the shapes of other shadows.","Night gathers close wherever it curls up.",
+    "Its purr is felt more than heard.","Stars reflect in its coal-dark coat.","It unspools from under the furniture at dusk.",
+    "The dark feels warmer where it has been.","Its outline blurs at the edges.","It counts secrets the way others count sheep.",
+    "Lanterns dim to a whisper near it.","It slips through keyholes without a sound.","Its eyes are the last light before sleep.",
+    "Dusk arrives early wherever it wanders.","It wears the midnight like a familiar coat.","Cold follows it as warmth follows fire.",
+    "It naps in the hollow beneath a stair.","Its yawn swallows the nearest candle flame.","Owls fall silent when it passes below.",
+    "It folds itself thin to hide in twilight.","The night sky misses a star while it wakes.","Its breath frosts the glass from within.",
+    "It leaves cold spots that linger till noon.","Shadows lengthen to point the way it went.","It drinks the last of the evening light.",
+    "Its whisper carries a chill down the spine.","Mirrors show it a heartbeat too late.","It is quietest just before it vanishes.",
+    "The dark rearranges itself to let it by.","Its eyes open like two new moons.","It gathers dusk into a place to sleep.",
+    "Clocks seem to slow while it is near.","It threads through the gaps in the lamplight.","Nightfall feels like it is coming home.",
+    "Its dreams spill out as creeping mist.","Born from the shadow a comet left behind."],
+}
+
 BANDS = {  # Set-1 base bands (min, max); scaled per set
   "common":   (0.25, 0.90),
   "uncommon": (1.00, 2.75),
@@ -182,6 +255,32 @@ def elem_of(card_name, s):
 def flavor_for(name, element):
     pool = FLAVOR[element]
     return pool[sum(ord(c) for c in name) % len(pool)]
+
+def assign_unique_flavors(cards):
+    """Make every card's flavor globally unique while changing only duplicates.
+
+    Cards keep the flavor_for() result they already hold as long as no earlier
+    card (in build order) claimed it. Surplus duplicates are reassigned to the
+    next unused line from FLAVOR + FLAVOR_EXTRA for their element. This preserves
+    every current first-use / unique flavor exactly."""
+    pools = {e: FLAVOR[e] + FLAVOR_EXTRA.get(e, []) for e in FLAVOR}
+    used = set()
+    need = []
+    for c in cards:
+        pref = c["flavor"]
+        if pref in used:
+            need.append(c)
+        else:
+            used.add(pref)
+    for c in need:
+        for line in pools[c["element"]]:
+            if line not in used:
+                c["flavor"] = line
+                used.add(line)
+                break
+        else:
+            raise SystemExit(f"flavor pool exhausted for element {c['element']}")
+    return cards
 
 def assign_values(cards, set_idx):
     """Assign baseValue per card within its scaled band, with 1-2 high outliers/tier.
@@ -274,6 +373,7 @@ def build():
         assign_values(set_cards, set_idx)
         normalize_set_ev(set_cards, set_idx)
         all_cards.extend(set_cards)
+    assign_unique_flavors(all_cards)
     return all_cards
 
 def validate(cards):
@@ -287,6 +387,10 @@ def validate(cards):
     ids = [c["id"] for c in cards]
     if len(set(ids)) != len(ids):
         errs.append("duplicate ids")
+    flavors = [c["flavor"] for c in cards]
+    if len(set(flavors)) != len(flavors):
+        dupes = sorted({f for f in flavors if flavors.count(f) > 1})
+        errs.append(f"duplicate flavors ({len(dupes)}): {dupes[:5]}...")
     for set_no in range(1, 6):
         sc = [c for c in cards if c["set"] == set_no]
         counts = {r: sum(1 for c in sc if c["rarity"] == r) for r in ["common","uncommon","rare","ultra"]}

@@ -1,0 +1,39 @@
+<svg viewBox="0 0 216 150" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bodyS1_033" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffe08a"/><stop offset="55%" stop-color="#ff8a2a"/>
+      <stop offset="100%" stop-color="#e01f1f"/>
+    </linearGradient>
+    <linearGradient id="body2S1_033" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ff8a2a"/><stop offset="100%" stop-color="#4a0f04"/>
+    </linearGradient>
+    <linearGradient id="bellyS1_033" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity=".92"/><stop offset="100%" stop-color="#ffe08a"/>
+    </linearGradient>
+    <radialGradient id="stageS1_033" cx="50%" cy="62%" r="55%">
+      <stop offset="0%" stop-color="#ffd15c" stop-opacity=".55"/><stop offset="70%" stop-color="#ffd15c" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="orbS1_033" cx="42%" cy="38%" r="65%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity=".95"/>
+      <stop offset="45%" stop-color="#ffe08a"/><stop offset="100%" stop-color="#e01f1f"/>
+    </radialGradient>
+  </defs>
+  <defs>
+    <linearGradient id="skyS1_033" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#3a0d05"/><stop offset="55%" stop-color="#7a1c06"/><stop offset="100%" stop-color="#20060a"/>
+    </linearGradient>
+    <radialGradient id="lavaS1_033" cx="50%" cy="100%" r="80%">
+      <stop offset="0%" stop-color="#ffd15c"/><stop offset="35%" stop-color="#ff6a1a"/><stop offset="100%" stop-color="#7a1c06" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect x="0" y="0" width="216" height="150" fill="url(#skyS1_033)"/>
+  <path d="M0,150 L0,96 L34,110 L70,88 L104,104 L150,86 L186,106 L216,92 L216,150 Z" fill="#2a0a06"/>
+  <path d="M56,150 L56,74 L74,56 L92,150 Z M150,150 L142,68 L162,52 L182,150 Z" fill="#1c0705" opacity=".8"/>
+  <g stroke="#ff7a1a" stroke-width="1" opacity=".5" fill="none">
+    <path d="M28,150 L34,120 L28,104 L38,84"/><path d="M120,150 L116,118 L126,100"/><path d="M176,150 L172,120 L182,102"/>
+  </g>
+  <rect x="0" y="118" width="216" height="32" fill="url(#lavaS1_033)"/>
+  <path d="M0,150 L0,138 Q54,128 108,138 T216,136 L216,150 Z" fill="#ffb24d" opacity=".9"/>
+  <path d="M0,150 L0,144 Q54,136 108,144 T216,142 L216,150 Z" fill="#fff0b0" opacity=".7"/>
+  <circle cx="30" cy="52" r="1.8" fill="#ffcf6a" opacity="0.9"/><circle cx="70" cy="34" r="1.3" fill="#ffcf6a" opacity="0.8"/><circle cx="120" cy="60" r="1.6" fill="#ffcf6a" opacity="0.85"/><circle cx="160" cy="30" r="1.2" fill="#ffcf6a" opacity="0.7"/><circle cx="188" cy="66" r="1.7" fill="#ffcf6a" opacity="0.8"/><circle cx="50" cy="84" r="1.2" fill="#ffcf6a" opacity="0.7"/><circle cx="96" cy="26" r="1.1" fill="#ffcf6a" opacity="0.7"/>
+  <ellipse cx="108" cy="118" rx="86" ry="30" fill="url(#stageS1_033)"/><ellipse cx="108" cy="128" rx="30" ry="6" fill="#000" opacity=".16"/><g stroke="#4a0f04" stroke-width="2.1" stroke-linejoin="round"><path d="M108.0,78.0 Q62.0,56.0 64.0,84.0 Q78.0,90.0 108.0,86.0 Z" fill="url(#bodyS1_033)"/><path d="M108.0,88.0 Q74.0,96.0 78.0,112.0 Q92.0,108.0 108.0,94.0 Z" fill="url(#body2S1_033)"/><circle cx="82" cy="74" r="3.2" fill="#ffd15c" opacity=".7"/><circle cx="86" cy="100" r="2.6" fill="#ffd15c" opacity=".7"/><path d="M108.0,78.0 Q154.0,56.0 152.0,84.0 Q138.0,90.0 108.0,86.0 Z" fill="url(#bodyS1_033)"/><path d="M108.0,88.0 Q142.0,96.0 138.0,112.0 Q124.0,108.0 108.0,94.0 Z" fill="url(#body2S1_033)"/><circle cx="134" cy="74" r="3.2" fill="#ffd15c" opacity=".7"/><circle cx="130" cy="100" r="2.6" fill="#ffd15c" opacity=".7"/><ellipse cx="108" cy="90" rx="7" ry="16" fill="url(#bellyS1_033)"/><circle cx="108" cy="72.0" r="7" fill="url(#bodyS1_033)"/><path d="M105.0,66.0 q-8,-10 -14,-8 M111.0,66.0 q8,-10 14,-8" fill="none" stroke="#4a0f04" stroke-width="1.5"/><ellipse cx="105" cy="72" rx="2.4" ry="2.7359999999999998" fill="#ffd15c"/><circle cx="105" cy="72.288" r="1.44" fill="#1a1020"/><circle cx="104.424" cy="71.136" r="0.576" fill="#fff"/><ellipse cx="111" cy="72" rx="2.4" ry="2.7359999999999998" fill="#ffd15c"/><circle cx="111" cy="72.288" r="1.44" fill="#1a1020"/><circle cx="110.424" cy="71.136" r="0.576" fill="#fff"/></g></svg>

@@ -41,7 +41,7 @@
     "stageCount": 3,
     "evolvesFromId": "S1-002",
     "evolvesToId": null,
-    "flavor": "Said to nap inside active volcanoes.",
+    "flavor": "Coals rekindle at its passing.",
     "baseValue": 5.1
   },
   {
@@ -146,7 +146,7 @@
     "stageCount": 3,
     "evolvesFromId": null,
     "evolvesToId": "S1-011",
-    "flavor": "Legends say it was born of the first flame.",
+    "flavor": "Breathes out cinders on cold mornings.",
     "baseValue": 0.39
   },
   {
@@ -161,7 +161,7 @@
     "stageCount": 3,
     "evolvesFromId": "S1-010",
     "evolvesToId": "S1-012",
-    "flavor": "Warms the coldest winter cave.",
+    "flavor": "Its mane sheds sparks in the wind.",
     "baseValue": 2.09
   },
   {
@@ -191,7 +191,7 @@
     "stageCount": 3,
     "evolvesFromId": null,
     "evolvesToId": "S1-014",
-    "flavor": "Dreams in shades of orange and gold.",
+    "flavor": "Ash blooms into flowers where it steps.",
     "baseValue": 0.61
   },
   {
@@ -206,7 +206,7 @@
     "stageCount": 3,
     "evolvesFromId": "S1-013",
     "evolvesToId": "S1-015",
-    "flavor": "Dreams in shades of orange and gold.",
+    "flavor": "Curls up in campfires to sleep.",
     "baseValue": 1.53
   },
   {
@@ -221,7 +221,7 @@
     "stageCount": 3,
     "evolvesFromId": "S1-014",
     "evolvesToId": null,
-    "flavor": "Legends say it was born of the first flame.",
+    "flavor": "Its growl smells of woodsmoke.",
     "baseValue": 5.75
   },
   {
@@ -266,7 +266,7 @@
     "stageCount": 3,
     "evolvesFromId": "S1-017",
     "evolvesToId": null,
-    "flavor": "Its heartbeat glows through its hide.",
+    "flavor": "Melts frost with a single yawn.",
     "baseValue": 5.98
   },
   {
@@ -296,7 +296,7 @@
     "stageCount": 2,
     "evolvesFromId": "S1-019",
     "evolvesToId": null,
-    "flavor": "Its heartbeat glows through its hide.",
+    "flavor": "Keeps the hearth lit through winter.",
     "baseValue": 1.8
   },
   {
@@ -326,7 +326,7 @@
     "stageCount": 2,
     "evolvesFromId": "S1-021",
     "evolvesToId": null,
-    "flavor": "Molten eyes see through smoke.",
+    "flavor": "Its claws leave scorch marks on stone.",
     "baseValue": 3.22
   },
   {
@@ -341,7 +341,7 @@
     "stageCount": 2,
     "evolvesFromId": null,
     "evolvesToId": "S1-024",
-    "flavor": "Sneezes send up little sparks.",
+    "flavor": "A furnace beats where its heart should be.",
     "baseValue": 0.53
   },
   {
@@ -356,7 +356,7 @@
     "stageCount": 2,
     "evolvesFromId": "S1-023",
     "evolvesToId": null,
-    "flavor": "A tail-flame that never gutters.",
+    "flavor": "Basks on sun-baked rock for days.",
     "baseValue": 1.89
   },
   {
@@ -386,7 +386,7 @@
     "stageCount": 2,
     "evolvesFromId": "S1-025",
     "evolvesToId": null,
-    "flavor": "Said to nap inside active volcanoes.",
+    "flavor": "Its tail draws embers in the dark.",
     "baseValue": 1.76
   },
   {
@@ -401,7 +401,7 @@
     "stageCount": 2,
     "evolvesFromId": null,
     "evolvesToId": "S1-028",
-    "flavor": "Its heartbeat glows through its hide.",
+    "flavor": "Too hot for snow to ever settle on it.",
     "baseValue": 0.44
   },
   {
@@ -416,7 +416,7 @@
     "stageCount": 2,
     "evolvesFromId": "S1-027",
     "evolvesToId": null,
-    "flavor": "Dreams in shades of orange and gold.",
+    "flavor": "Wakes when the first coal glows.",
     "baseValue": 3.57
   },
   {
@@ -431,7 +431,7 @@
     "stageCount": 2,
     "evolvesFromId": null,
     "evolvesToId": "S1-030",
-    "flavor": "Sneezes send up little sparks.",
+    "flavor": "Carries summer wherever it roams.",
     "baseValue": 0.45
   },
   {
@@ -446,7 +446,7 @@
     "stageCount": 2,
     "evolvesFromId": "S1-029",
     "evolvesToId": null,
-    "flavor": "Warms the coldest winter cave.",
+    "flavor": "Its breath shimmers the air like a mirage.",
     "baseValue": 1.6
   },
   {
@@ -461,7 +461,7 @@
     "stageCount": 2,
     "evolvesFromId": null,
     "evolvesToId": "S1-032",
-    "flavor": "Dreams in shades of orange and gold.",
+    "flavor": "Sparks scatter when it shakes off dust.",
     "baseValue": 0.38
   },
   {
@@ -476,7 +476,7 @@
     "stageCount": 2,
     "evolvesFromId": "S1-031",
     "evolvesToId": null,
-    "flavor": "Sneezes send up little sparks.",
+    "flavor": "Sleeps curled around a smouldering log.",
     "baseValue": 1.48
   },
   {
@@ -491,7 +491,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Legends say it was born of the first flame.",
+    "flavor": "Its eyes are twin banked coals.",
     "baseValue": 1.04
   },
   {
@@ -506,7 +506,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Cracks the earth where it treads.",
+    "flavor": "Older than the mountains it climbs.",
     "baseValue": 0.55
   },
   {
@@ -521,7 +521,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Molten eyes see through smoke.",
+    "flavor": "Lava cools to glass beneath its paws.",
     "baseValue": 0.48
   },
   {
@@ -536,7 +536,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Warms the coldest winter cave.",
+    "flavor": "Hums like a kettle about to boil.",
     "baseValue": 0.52
   },
   {
@@ -551,7 +551,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Warms the coldest winter cave.",
+    "flavor": "The desert sun is its favourite den.",
     "baseValue": 0.62
   },
   {
@@ -566,7 +566,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Said to nap inside active volcanoes.",
+    "flavor": "Its fur glows faintly after dark.",
     "baseValue": 0.4
   },
   {
@@ -581,7 +581,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Molten eyes see through smoke.",
+    "flavor": "Chases the sunset to keep it warm.",
     "baseValue": 0.44
   },
   {
@@ -596,7 +596,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "A tail-flame that never gutters.",
+    "flavor": "Smoke curls from its nostrils when annoyed.",
     "baseValue": 0.58
   },
   {
@@ -626,7 +626,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Embers drift wherever it wanders.",
+    "flavor": "A single ember can spark its temper.",
     "baseValue": 0.39
   },
   {
@@ -641,7 +641,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Sneezes send up little sparks.",
+    "flavor": "Warms cold hands from across a room.",
     "baseValue": 1.13
   },
   {
@@ -656,7 +656,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Legends say it was born of the first flame.",
+    "flavor": "Its snarl throws sparks like flint.",
     "baseValue": 0.41
   },
   {
@@ -671,7 +671,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "A tail-flame that never gutters.",
+    "flavor": "Born where two lava rivers meet.",
     "baseValue": 1.71
   },
   {
@@ -686,7 +686,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Legends say it was born of the first flame.",
+    "flavor": "Leaves handprints of ash on everything.",
     "baseValue": 1.57
   },
   {
@@ -701,7 +701,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Moves once a century, they say.",
+    "flavor": "Sleeps as still as a boulder.",
     "baseValue": 6.07
   },
   {
@@ -731,7 +731,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Its roar melts steel.",
+    "flavor": "Its heat bends the horizon behind it.",
     "baseValue": 33.4
   },
   {
@@ -746,7 +746,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Its footprints smoulder for hours.",
+    "flavor": "Naps only where the coals still glow.",
     "baseValue": 18.45
   },
   {
@@ -821,7 +821,7 @@
     "stageCount": 3,
     "evolvesFromId": "S2-004",
     "evolvesToId": "S2-006",
-    "flavor": "A single tear can fill a well.",
+    "flavor": "Sleeps in the hollow of a wave.",
     "baseValue": 2.65
   },
   {
@@ -866,7 +866,7 @@
     "stageCount": 3,
     "evolvesFromId": "S2-007",
     "evolvesToId": "S2-009",
-    "flavor": "A single tear can fill a well.",
+    "flavor": "Its breath fogs the coldest glass.",
     "baseValue": 3.81
   },
   {
@@ -896,7 +896,7 @@
     "stageCount": 3,
     "evolvesFromId": null,
     "evolvesToId": "S2-011",
-    "flavor": "Colder than the deepest trench.",
+    "flavor": "Trails glimmering light through the dark.",
     "baseValue": 0.67
   },
   {
@@ -911,7 +911,7 @@
     "stageCount": 3,
     "evolvesFromId": "S2-010",
     "evolvesToId": "S2-012",
-    "flavor": "Its song calms the roughest sea.",
+    "flavor": "Rain follows it like a loyal pet.",
     "baseValue": 2.9
   },
   {
@@ -941,7 +941,7 @@
     "stageCount": 3,
     "evolvesFromId": null,
     "evolvesToId": "S2-014",
-    "flavor": "Weeps salt when the ocean is far.",
+    "flavor": "Its fins catch the colour of the sky.",
     "baseValue": 0.79
   },
   {
@@ -956,7 +956,7 @@
     "stageCount": 3,
     "evolvesFromId": "S2-013",
     "evolvesToId": "S2-015",
-    "flavor": "Whispers of drowned kingdoms.",
+    "flavor": "Counts the tides better than any clock.",
     "baseValue": 3.75
   },
   {
@@ -971,7 +971,7 @@
     "stageCount": 3,
     "evolvesFromId": "S2-014",
     "evolvesToId": null,
-    "flavor": "A single tear can fill a well.",
+    "flavor": "Leaves dew on every leaf it passes.",
     "baseValue": 9.52
   },
   {
@@ -986,7 +986,7 @@
     "stageCount": 3,
     "evolvesFromId": null,
     "evolvesToId": "S2-017",
-    "flavor": "Its song calms the roughest sea.",
+    "flavor": "Its call carries for leagues underwater.",
     "baseValue": 0.92
   },
   {
@@ -1001,7 +1001,7 @@
     "stageCount": 3,
     "evolvesFromId": "S2-016",
     "evolvesToId": "S2-018",
-    "flavor": "Its song calms the roughest sea.",
+    "flavor": "Cool mist gathers where it rests.",
     "baseValue": 3.35
   },
   {
@@ -1046,7 +1046,7 @@
     "stageCount": 2,
     "evolvesFromId": "S2-019",
     "evolvesToId": null,
-    "flavor": "Dances in the surf at dawn.",
+    "flavor": "Drinks from clouds when rivers run dry.",
     "baseValue": 3.71
   },
   {
@@ -1061,7 +1061,7 @@
     "stageCount": 2,
     "evolvesFromId": null,
     "evolvesToId": "S2-022",
-    "flavor": "Dances in the surf at dawn.",
+    "flavor": "Its scales sing when the current shifts.",
     "baseValue": 1.01
   },
   {
@@ -1076,7 +1076,7 @@
     "stageCount": 2,
     "evolvesFromId": "S2-021",
     "evolvesToId": null,
-    "flavor": "Dives where light cannot reach.",
+    "flavor": "Nests in tide pools at low water.",
     "baseValue": 2.81
   },
   {
@@ -1091,7 +1091,7 @@
     "stageCount": 2,
     "evolvesFromId": null,
     "evolvesToId": "S2-024",
-    "flavor": "Dives where light cannot reach.",
+    "flavor": "Melts into sea foam when startled.",
     "baseValue": 0.79
   },
   {
@@ -1121,7 +1121,7 @@
     "stageCount": 2,
     "evolvesFromId": null,
     "evolvesToId": "S2-026",
-    "flavor": "Scales shimmer like wet pearl.",
+    "flavor": "Its shadow ripples like a reflection.",
     "baseValue": 0.87
   },
   {
@@ -1136,7 +1136,7 @@
     "stageCount": 2,
     "evolvesFromId": "S2-025",
     "evolvesToId": null,
-    "flavor": "Dances in the surf at dawn.",
+    "flavor": "Guides lost fish back to the reef.",
     "baseValue": 5.76
   },
   {
@@ -1166,7 +1166,7 @@
     "stageCount": 2,
     "evolvesFromId": "S2-027",
     "evolvesToId": null,
-    "flavor": "A single tear can fill a well.",
+    "flavor": "Frost feathers the puddles it steps in.",
     "baseValue": 2.9
   },
   {
@@ -1181,7 +1181,7 @@
     "stageCount": 2,
     "evolvesFromId": null,
     "evolvesToId": "S2-030",
-    "flavor": "Breathes in mist and out in rain.",
+    "flavor": "Holds a storm's worth of rain inside.",
     "baseValue": 0.89
   },
   {
@@ -1196,7 +1196,7 @@
     "stageCount": 2,
     "evolvesFromId": "S2-029",
     "evolvesToId": null,
-    "flavor": "Scales shimmer like wet pearl.",
+    "flavor": "Its eyes are the colour of deep water.",
     "baseValue": 3.65
   },
   {
@@ -1211,7 +1211,7 @@
     "stageCount": 2,
     "evolvesFromId": null,
     "evolvesToId": "S2-032",
-    "flavor": "Colder than the deepest trench.",
+    "flavor": "Swims circles around the fastest eel.",
     "baseValue": 1.02
   },
   {
@@ -1226,7 +1226,7 @@
     "stageCount": 2,
     "evolvesFromId": "S2-031",
     "evolvesToId": null,
-    "flavor": "Colder than the deepest trench.",
+    "flavor": "A gentle rain means it is near.",
     "baseValue": 3.54
   },
   {
@@ -1241,7 +1241,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Weeps salt when the ocean is far.",
+    "flavor": "Its touch turns dust to clear water.",
     "baseValue": 0.9
   },
   {
@@ -1256,7 +1256,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Dances in the surf at dawn.",
+    "flavor": "Rides river currents just for fun.",
     "baseValue": 1.0
   },
   {
@@ -1271,7 +1271,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Breathes in mist and out in rain.",
+    "flavor": "Bubbles rise wherever it hums.",
     "baseValue": 0.74
   },
   {
@@ -1286,7 +1286,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Its wake freezes into lace.",
+    "flavor": "Keeps a pearl tucked beneath its tongue.",
     "baseValue": 0.76
   },
   {
@@ -1301,7 +1301,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Dives where light cannot reach.",
+    "flavor": "Its coat never truly dries.",
     "baseValue": 0.81
   },
   {
@@ -1316,7 +1316,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Whispers of drowned kingdoms.",
+    "flavor": "The tide comes in when it calls.",
     "baseValue": 1.85
   },
   {
@@ -1331,7 +1331,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Dances in the surf at dawn.",
+    "flavor": "Naps adrift on its back at sea.",
     "baseValue": 1.02
   },
   {
@@ -1346,7 +1346,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Whispers of drowned kingdoms.",
+    "flavor": "Its breath tastes of salt and rain.",
     "baseValue": 0.97
   },
   {
@@ -1361,7 +1361,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Dives where light cannot reach.",
+    "flavor": "Coaxes springs from bone-dry stone.",
     "baseValue": 0.87
   },
   {
@@ -1376,7 +1376,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Whispers of drowned kingdoms.",
+    "flavor": "Moonlight pools in its wake.",
     "baseValue": 0.75
   },
   {
@@ -1391,7 +1391,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Scales shimmer like wet pearl.",
+    "flavor": "Its whiskers twitch before a downpour.",
     "baseValue": 0.84
   },
   {
@@ -1406,7 +1406,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Follows sailors home for company.",
+    "flavor": "Carries the hush of the deep with it.",
     "baseValue": 1.86
   },
   {
@@ -1421,7 +1421,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Rides the tide by moonlight.",
+    "flavor": "Snow becomes rain in its warmth.",
     "baseValue": 6.29
   },
   {
@@ -1436,7 +1436,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Follows sailors home for company.",
+    "flavor": "Its laughter sounds like a running brook.",
     "baseValue": 3.15
   },
   {
@@ -1451,7 +1451,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Breathes in mist and out in rain.",
+    "flavor": "Follows the river to wherever it ends.",
     "baseValue": 8.11
   },
   {
@@ -1466,7 +1466,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Weeps salt when the ocean is far.",
+    "flavor": "Cups still water to see tomorrow.",
     "baseValue": 26.18
   },
   {
@@ -1481,7 +1481,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Rides the tide by moonlight.",
+    "flavor": "Its scales mist over in the cold.",
     "baseValue": 57.27
   },
   {
@@ -1496,7 +1496,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Its wake freezes into lace.",
+    "flavor": "Born on the crest of a rogue wave.",
     "baseValue": 24.62
   },
   {
@@ -1526,7 +1526,7 @@
     "stageCount": 3,
     "evolvesFromId": "S3-001",
     "evolvesToId": "S3-003",
-    "flavor": "Its shadow makes flowers grow.",
+    "flavor": "Vines curl toward it like old friends.",
     "baseValue": 6.39
   },
   {
@@ -1586,7 +1586,7 @@
     "stageCount": 3,
     "evolvesFromId": "S3-005",
     "evolvesToId": null,
-    "flavor": "Petals close at the first frost.",
+    "flavor": "Its yawn scatters dandelion seeds.",
     "baseValue": 15.21
   },
   {
@@ -1601,7 +1601,7 @@
     "stageCount": 3,
     "evolvesFromId": null,
     "evolvesToId": "S3-008",
-    "flavor": "Its shadow makes flowers grow.",
+    "flavor": "Moss cushions every step it takes.",
     "baseValue": 1.81
   },
   {
@@ -1631,7 +1631,7 @@
     "stageCount": 3,
     "evolvesFromId": "S3-008",
     "evolvesToId": null,
-    "flavor": "Its shadow makes flowers grow.",
+    "flavor": "Wakes with the first warmth of spring.",
     "baseValue": 18.07
   },
   {
@@ -1646,7 +1646,7 @@
     "stageCount": 3,
     "evolvesFromId": null,
     "evolvesToId": "S3-011",
-    "flavor": "Petals close at the first frost.",
+    "flavor": "Butterflies trail it through the meadow.",
     "baseValue": 1.46
   },
   {
@@ -1661,7 +1661,7 @@
     "stageCount": 3,
     "evolvesFromId": "S3-010",
     "evolvesToId": "S3-012",
-    "flavor": "Petals close at the first frost.",
+    "flavor": "Its antlers sprout fresh buds each spring.",
     "baseValue": 10.08
   },
   {
@@ -1676,7 +1676,7 @@
     "stageCount": 3,
     "evolvesFromId": "S3-011",
     "evolvesToId": null,
-    "flavor": "Sap sweet enough to lure bees.",
+    "flavor": "Fallen logs bloom where it naps.",
     "baseValue": 29.78
   },
   {
@@ -1691,7 +1691,7 @@
     "stageCount": 3,
     "evolvesFromId": null,
     "evolvesToId": "S3-014",
-    "flavor": "Sap sweet enough to lure bees.",
+    "flavor": "Smells of clover after warm rain.",
     "baseValue": 1.72
   },
   {
@@ -1706,7 +1706,7 @@
     "stageCount": 3,
     "evolvesFromId": "S3-013",
     "evolvesToId": "S3-015",
-    "flavor": "Tends the woodland while others sleep.",
+    "flavor": "Its coat changes colour with the season.",
     "baseValue": 4.58
   },
   {
@@ -1721,7 +1721,7 @@
     "stageCount": 3,
     "evolvesFromId": "S3-014",
     "evolvesToId": null,
-    "flavor": "Sap sweet enough to lure bees.",
+    "flavor": "Roots knit the soil wherever it walks.",
     "baseValue": 15.48
   },
   {
@@ -1766,7 +1766,7 @@
     "stageCount": 3,
     "evolvesFromId": "S3-017",
     "evolvesToId": null,
-    "flavor": "Sap sweet enough to lure bees.",
+    "flavor": "Hums a tune the crickets answer.",
     "baseValue": 17.39
   },
   {
@@ -1781,7 +1781,7 @@
     "stageCount": 2,
     "evolvesFromId": null,
     "evolvesToId": "S3-020",
-    "flavor": "Seeds ride the wind for miles.",
+    "flavor": "Wildflowers lean to follow it by.",
     "baseValue": 1.57
   },
   {
@@ -1811,7 +1811,7 @@
     "stageCount": 2,
     "evolvesFromId": null,
     "evolvesToId": "S3-022",
-    "flavor": "Seeds ride the wind for miles.",
+    "flavor": "Its breath coaxes shy seeds to sprout.",
     "baseValue": 1.66
   },
   {
@@ -1826,7 +1826,7 @@
     "stageCount": 2,
     "evolvesFromId": "S3-021",
     "evolvesToId": null,
-    "flavor": "Its shadow makes flowers grow.",
+    "flavor": "Bees regard it as one of their own.",
     "baseValue": 4.51
   },
   {
@@ -1856,7 +1856,7 @@
     "stageCount": 2,
     "evolvesFromId": "S3-023",
     "evolvesToId": null,
-    "flavor": "Petals close at the first frost.",
+    "flavor": "Curls beneath ferns to escape the noon.",
     "baseValue": 4.76
   },
   {
@@ -1886,7 +1886,7 @@
     "stageCount": 2,
     "evolvesFromId": "S3-025",
     "evolvesToId": null,
-    "flavor": "Its shadow makes flowers grow.",
+    "flavor": "Ivy climbs it as though it were a tree.",
     "baseValue": 5.46
   },
   {
@@ -1916,7 +1916,7 @@
     "stageCount": 2,
     "evolvesFromId": "S3-027",
     "evolvesToId": null,
-    "flavor": "Roots itself to nap in the sun.",
+    "flavor": "Leaves a trail of pressed-flower prints.",
     "baseValue": 5.39
   },
   {
@@ -1931,7 +1931,7 @@
     "stageCount": 2,
     "evolvesFromId": null,
     "evolvesToId": "S3-030",
-    "flavor": "Sap sweet enough to lure bees.",
+    "flavor": "Its nap turns a clearing into a garden.",
     "baseValue": 1.84
   },
   {
@@ -1946,7 +1946,7 @@
     "stageCount": 2,
     "evolvesFromId": "S3-029",
     "evolvesToId": null,
-    "flavor": "Its breath smells of spring rain.",
+    "flavor": "Orchards bear sweeter fruit where it rests.",
     "baseValue": 5.16
   },
   {
@@ -1976,7 +1976,7 @@
     "stageCount": 2,
     "evolvesFromId": "S3-031",
     "evolvesToId": null,
-    "flavor": "Older forests hum when it passes.",
+    "flavor": "Petals drift from its coat as it runs.",
     "baseValue": 9.87
   },
   {
@@ -1991,7 +1991,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Its shadow makes flowers grow.",
+    "flavor": "The oldest oak leans down to greet it.",
     "baseValue": 1.64
   },
   {
@@ -2006,7 +2006,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Blooms only under a full moon.",
+    "flavor": "Its whiskers are strung with morning dew.",
     "baseValue": 1.84
   },
   {
@@ -2021,7 +2021,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Tends the woodland while others sleep.",
+    "flavor": "Mushrooms ring the spot where it slept.",
     "baseValue": 1.17
   },
   {
@@ -2036,7 +2036,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Its breath smells of spring rain.",
+    "flavor": "Sunlight always seems to find it first.",
     "baseValue": 1.62
   },
   {
@@ -2051,7 +2051,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Older forests hum when it passes.",
+    "flavor": "Its footprints fill with tiny sprouts.",
     "baseValue": 1.52
   },
   {
@@ -2066,7 +2066,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Petals close at the first frost.",
+    "flavor": "Keeps the meadow green past autumn's end.",
     "baseValue": 1.58
   },
   {
@@ -2081,7 +2081,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Grows a new leaf with each friend made.",
+    "flavor": "Birds weave its shed fur into nests.",
     "baseValue": 1.47
   },
   {
@@ -2096,7 +2096,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Its breath smells of spring rain.",
+    "flavor": "A crown of new leaves marks each spring.",
     "baseValue": 1.72
   },
   {
@@ -2111,7 +2111,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Its breath smells of spring rain.",
+    "flavor": "It naps and the brambles pull back.",
     "baseValue": 1.74
   },
   {
@@ -2126,7 +2126,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Its shadow makes flowers grow.",
+    "flavor": "Its heartbeat keeps time with the seasons.",
     "baseValue": 1.9
   },
   {
@@ -2141,7 +2141,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Roots itself to nap in the sun.",
+    "flavor": "Pollen glitters gold along its back.",
     "baseValue": 3.6
   },
   {
@@ -2156,7 +2156,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Roots itself to nap in the sun.",
+    "flavor": "Where it drinks, a spring garden grows.",
     "baseValue": 1.57
   },
   {
@@ -2171,7 +2171,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Grows a new leaf with each friend made.",
+    "flavor": "Coaxes fruit from the most stubborn vine.",
     "baseValue": 5.58
   },
   {
@@ -2186,7 +2186,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Blooms only under a full moon.",
+    "flavor": "Its shade is cooler than any other.",
     "baseValue": 5.42
   },
   {
@@ -2201,7 +2201,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Green as the first day of the world.",
+    "flavor": "Saplings straighten as it wanders past.",
     "baseValue": 14.59
   },
   {
@@ -2216,7 +2216,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Roots itself to nap in the sun.",
+    "flavor": "Smells faintly of honey and cut grass.",
     "baseValue": 50.49
   },
   {
@@ -2231,7 +2231,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Older forests hum when it passes.",
+    "flavor": "The forest holds its breath when it sings.",
     "baseValue": 46.55
   },
   {
@@ -2246,7 +2246,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Tends the woodland while others sleep.",
+    "flavor": "Rooted deep, it dreams of distant fields.",
     "baseValue": 90.23
   },
   {
@@ -2321,7 +2321,7 @@
     "stageCount": 3,
     "evolvesFromId": "S4-004",
     "evolvesToId": "S4-006",
-    "flavor": "Faster than the lightning it rides.",
+    "flavor": "Its fur snaps with tiny blue sparks.",
     "baseValue": 7.49
   },
   {
@@ -2381,7 +2381,7 @@
     "stageCount": 3,
     "evolvesFromId": "S4-008",
     "evolvesToId": null,
-    "flavor": "Hums the note of a live wire.",
+    "flavor": "Lightning bends to follow its leap.",
     "baseValue": 47.45
   },
   {
@@ -2441,7 +2441,7 @@
     "stageCount": 3,
     "evolvesFromId": null,
     "evolvesToId": "S4-014",
-    "flavor": "Hums the note of a live wire.",
+    "flavor": "Static clings to anyone it nuzzles.",
     "baseValue": 2.87
   },
   {
@@ -2456,7 +2456,7 @@
     "stageCount": 3,
     "evolvesFromId": "S4-013",
     "evolvesToId": "S4-015",
-    "flavor": "Faster than the lightning it rides.",
+    "flavor": "Its heartbeat ticks like a busy clock.",
     "baseValue": 10.4
   },
   {
@@ -2471,7 +2471,7 @@
     "stageCount": 3,
     "evolvesFromId": "S4-014",
     "evolvesToId": null,
-    "flavor": "Never needs to be plugged in.",
+    "flavor": "Compasses spin when it draws near.",
     "baseValue": 24.17
   },
   {
@@ -2486,7 +2486,7 @@
     "stageCount": 3,
     "evolvesFromId": null,
     "evolvesToId": "S4-017",
-    "flavor": "Its purr crackles with static.",
+    "flavor": "Rides thunderheads across the plains.",
     "baseValue": 2.72
   },
   {
@@ -2501,7 +2501,7 @@
     "stageCount": 3,
     "evolvesFromId": "S4-016",
     "evolvesToId": "S4-018",
-    "flavor": "Charges the air before a storm.",
+    "flavor": "Its bark arrives a beat before the flash.",
     "baseValue": 9.31
   },
   {
@@ -2516,7 +2516,7 @@
     "stageCount": 3,
     "evolvesFromId": "S4-017",
     "evolvesToId": null,
-    "flavor": "Its purr crackles with static.",
+    "flavor": "Streetlights flicker as it trots by.",
     "baseValue": 23.56
   },
   {
@@ -2531,7 +2531,7 @@
     "stageCount": 2,
     "evolvesFromId": null,
     "evolvesToId": "S4-020",
-    "flavor": "Charges the air before a storm.",
+    "flavor": "Coils of energy ripple down its spine.",
     "baseValue": 5.37
   },
   {
@@ -2546,7 +2546,7 @@
     "stageCount": 2,
     "evolvesFromId": "S4-019",
     "evolvesToId": null,
-    "flavor": "Hums the note of a live wire.",
+    "flavor": "Its whiskers point toward the nearest storm.",
     "baseValue": 7.87
   },
   {
@@ -2561,7 +2561,7 @@
     "stageCount": 2,
     "evolvesFromId": null,
     "evolvesToId": "S4-022",
-    "flavor": "Its purr crackles with static.",
+    "flavor": "Naps atop warm transformers to keep cosy.",
     "baseValue": 2.63
   },
   {
@@ -2576,7 +2576,7 @@
     "stageCount": 2,
     "evolvesFromId": "S4-021",
     "evolvesToId": null,
-    "flavor": "A single touch can light a lantern.",
+    "flavor": "A stormcloud follows it like a balloon.",
     "baseValue": 8.64
   },
   {
@@ -2591,7 +2591,7 @@
     "stageCount": 2,
     "evolvesFromId": null,
     "evolvesToId": "S4-024",
-    "flavor": "Faster than the lightning it rides.",
+    "flavor": "Its sneeze can short a whole street.",
     "baseValue": 1.86
   },
   {
@@ -2606,7 +2606,7 @@
     "stageCount": 2,
     "evolvesFromId": "S4-023",
     "evolvesToId": null,
-    "flavor": "Powers a village when it sleeps.",
+    "flavor": "Sparks trail its tail through the dark.",
     "baseValue": 8.94
   },
   {
@@ -2621,7 +2621,7 @@
     "stageCount": 2,
     "evolvesFromId": null,
     "evolvesToId": "S4-026",
-    "flavor": "Powers a village when it sleeps.",
+    "flavor": "The air tastes of copper where it stands.",
     "baseValue": 2.9
   },
   {
@@ -2651,7 +2651,7 @@
     "stageCount": 2,
     "evolvesFromId": null,
     "evolvesToId": "S4-028",
-    "flavor": "Its purr crackles with static.",
+    "flavor": "It races the lightning and often wins.",
     "baseValue": 2.58
   },
   {
@@ -2666,7 +2666,7 @@
     "stageCount": 2,
     "evolvesFromId": "S4-027",
     "evolvesToId": null,
-    "flavor": "Faster than the lightning it rides.",
+    "flavor": "Its growl builds like a rising current.",
     "baseValue": 16.53
   },
   {
@@ -2681,7 +2681,7 @@
     "stageCount": 2,
     "evolvesFromId": null,
     "evolvesToId": "S4-030",
-    "flavor": "Sparks leap from its whiskers.",
+    "flavor": "Balloons cling to it without any rubbing.",
     "baseValue": 1.84
   },
   {
@@ -2696,7 +2696,7 @@
     "stageCount": 2,
     "evolvesFromId": "S4-029",
     "evolvesToId": null,
-    "flavor": "Sparks leap from its whiskers.",
+    "flavor": "It grounds itself by hugging iron posts.",
     "baseValue": 10.37
   },
   {
@@ -2711,7 +2711,7 @@
     "stageCount": 2,
     "evolvesFromId": null,
     "evolvesToId": "S4-032",
-    "flavor": "Charges the air before a storm.",
+    "flavor": "Every hair doubles as a lightning rod.",
     "baseValue": 2.86
   },
   {
@@ -2726,7 +2726,7 @@
     "stageCount": 2,
     "evolvesFromId": "S4-031",
     "evolvesToId": null,
-    "flavor": "Never needs to be plugged in.",
+    "flavor": "Its glow brightens with its temper.",
     "baseValue": 8.46
   },
   {
@@ -2741,7 +2741,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Its eyes flicker like a busted bulb.",
+    "flavor": "Wakes the instant thunder rolls in.",
     "baseValue": 2.02
   },
   {
@@ -2756,7 +2756,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Its purr crackles with static.",
+    "flavor": "Batteries recharge in its presence.",
     "baseValue": 2.05
   },
   {
@@ -2771,7 +2771,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Hums the note of a live wire.",
+    "flavor": "Its leap leaves the grass faintly singed.",
     "baseValue": 2.78
   },
   {
@@ -2786,7 +2786,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Powers a village when it sleeps.",
+    "flavor": "It hums louder as the storm draws close.",
     "baseValue": 2.35
   },
   {
@@ -2801,7 +2801,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Its purr crackles with static.",
+    "flavor": "Coins stick to its staticky coat.",
     "baseValue": 3.03
   },
   {
@@ -2816,7 +2816,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Its purr crackles with static.",
+    "flavor": "Its eyes spark when it is excited.",
     "baseValue": 3.02
   },
   {
@@ -2831,7 +2831,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Faster than the lightning it rides.",
+    "flavor": "The kettle boils faster in its company.",
     "baseValue": 2.1
   },
   {
@@ -2846,7 +2846,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Powers a village when it sleeps.",
+    "flavor": "Born the moment lightning split an old oak.",
     "baseValue": 2.76
   },
   {
@@ -2861,7 +2861,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Powers a village when it sleeps.",
+    "flavor": "It chases thunder like a pup chases carts.",
     "baseValue": 2.87
   },
   {
@@ -2876,7 +2876,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Never needs to be plugged in.",
+    "flavor": "Its footsteps leave a tingle in the floor.",
     "baseValue": 2.91
   },
   {
@@ -2906,7 +2906,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "A single touch can light a lantern.",
+    "flavor": "A live current runs beneath its fur.",
     "baseValue": 5.21
   },
   {
@@ -2921,7 +2921,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Never needs to be plugged in.",
+    "flavor": "It naps through storms it helped summon.",
     "baseValue": 8.3
   },
   {
@@ -2936,7 +2936,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Its purr crackles with static.",
+    "flavor": "Sparks scatter when it shakes off the rain.",
     "baseValue": 15.61
   },
   {
@@ -2951,7 +2951,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Its eyes flicker like a busted bulb.",
+    "flavor": "Its yawn dims every lamp in the house.",
     "baseValue": 22.66
   },
   {
@@ -2966,7 +2966,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Faster than the lightning it rides.",
+    "flavor": "Follows the hum of the power lines home.",
     "baseValue": 84.0
   },
   {
@@ -2981,7 +2981,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Its eyes flicker like a busted bulb.",
+    "flavor": "It crackles brightest just before dawn.",
     "baseValue": 144.11
   },
   {
@@ -2996,7 +2996,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Charges the air before a storm.",
+    "flavor": "Its dreams flash like distant heat lightning.",
     "baseValue": 76.83
   },
   {
@@ -3026,7 +3026,7 @@
     "stageCount": 3,
     "evolvesFromId": "S5-001",
     "evolvesToId": "S5-003",
-    "flavor": "Colder where it has recently stood.",
+    "flavor": "Moonlight passes straight through it.",
     "baseValue": 14.83
   },
   {
@@ -3116,7 +3116,7 @@
     "stageCount": 3,
     "evolvesFromId": "S5-007",
     "evolvesToId": "S5-009",
-    "flavor": "Dreams leak out of it as fog.",
+    "flavor": "It pools like ink in the corners of a room.",
     "baseValue": 13.59
   },
   {
@@ -3146,7 +3146,7 @@
     "stageCount": 3,
     "evolvesFromId": null,
     "evolvesToId": "S5-011",
-    "flavor": "Older than the dark it came from.",
+    "flavor": "Its footsteps make no sound at all.",
     "baseValue": 2.94
   },
   {
@@ -3161,7 +3161,7 @@
     "stageCount": 3,
     "evolvesFromId": "S5-010",
     "evolvesToId": "S5-012",
-    "flavor": "Colder where it has recently stood.",
+    "flavor": "Candles gutter when it enters.",
     "baseValue": 11.81
   },
   {
@@ -3191,7 +3191,7 @@
     "stageCount": 3,
     "evolvesFromId": null,
     "evolvesToId": "S5-014",
-    "flavor": "Dreams leak out of it as fog.",
+    "flavor": "It borrows the shapes of other shadows.",
     "baseValue": 3.79
   },
   {
@@ -3206,7 +3206,7 @@
     "stageCount": 3,
     "evolvesFromId": "S5-013",
     "evolvesToId": "S5-015",
-    "flavor": "Walks through walls when unwatched.",
+    "flavor": "Night gathers close wherever it curls up.",
     "baseValue": 13.36
   },
   {
@@ -3221,7 +3221,7 @@
     "stageCount": 3,
     "evolvesFromId": "S5-014",
     "evolvesToId": null,
-    "flavor": "Older than the dark it came from.",
+    "flavor": "Its purr is felt more than heard.",
     "baseValue": 34.09
   },
   {
@@ -3236,7 +3236,7 @@
     "stageCount": 3,
     "evolvesFromId": null,
     "evolvesToId": "S5-017",
-    "flavor": "Feeds on starlight and secrets.",
+    "flavor": "Stars reflect in its coal-dark coat.",
     "baseValue": 3.68
   },
   {
@@ -3251,7 +3251,7 @@
     "stageCount": 3,
     "evolvesFromId": "S5-016",
     "evolvesToId": "S5-018",
-    "flavor": "Its whisper sounds like distant thunder.",
+    "flavor": "It unspools from under the furniture at dusk.",
     "baseValue": 11.39
   },
   {
@@ -3266,7 +3266,7 @@
     "stageCount": 3,
     "evolvesFromId": "S5-017",
     "evolvesToId": null,
-    "flavor": "Its whisper sounds like distant thunder.",
+    "flavor": "The dark feels warmer where it has been.",
     "baseValue": 33.12
   },
   {
@@ -3296,7 +3296,7 @@
     "stageCount": 2,
     "evolvesFromId": "S5-019",
     "evolvesToId": null,
-    "flavor": "Feeds on starlight and secrets.",
+    "flavor": "Its outline blurs at the edges.",
     "baseValue": 13.88
   },
   {
@@ -3326,7 +3326,7 @@
     "stageCount": 2,
     "evolvesFromId": "S5-021",
     "evolvesToId": null,
-    "flavor": "Fades at dawn, returns at dusk.",
+    "flavor": "It counts secrets the way others count sheep.",
     "baseValue": 12.79
   },
   {
@@ -3341,7 +3341,7 @@
     "stageCount": 2,
     "evolvesFromId": null,
     "evolvesToId": "S5-024",
-    "flavor": "Fades at dawn, returns at dusk.",
+    "flavor": "Lanterns dim to a whisper near it.",
     "baseValue": 8.27
   },
   {
@@ -3371,7 +3371,7 @@
     "stageCount": 2,
     "evolvesFromId": null,
     "evolvesToId": "S5-026",
-    "flavor": "Its whisper sounds like distant thunder.",
+    "flavor": "It slips through keyholes without a sound.",
     "baseValue": 3.89
   },
   {
@@ -3386,7 +3386,7 @@
     "stageCount": 2,
     "evolvesFromId": "S5-025",
     "evolvesToId": null,
-    "flavor": "Where it sleeps, the stars go dim.",
+    "flavor": "Its eyes are the last light before sleep.",
     "baseValue": 13.61
   },
   {
@@ -3416,7 +3416,7 @@
     "stageCount": 2,
     "evolvesFromId": "S5-027",
     "evolvesToId": null,
-    "flavor": "Its whisper sounds like distant thunder.",
+    "flavor": "Dusk arrives early wherever it wanders.",
     "baseValue": 25.19
   },
   {
@@ -3431,7 +3431,7 @@
     "stageCount": 2,
     "evolvesFromId": null,
     "evolvesToId": "S5-030",
-    "flavor": "Feeds on starlight and secrets.",
+    "flavor": "It wears the midnight like a familiar coat.",
     "baseValue": 4.65
   },
   {
@@ -3446,7 +3446,7 @@
     "stageCount": 2,
     "evolvesFromId": "S5-029",
     "evolvesToId": null,
-    "flavor": "Fades at dawn, returns at dusk.",
+    "flavor": "Cold follows it as warmth follows fire.",
     "baseValue": 13.57
   },
   {
@@ -3461,7 +3461,7 @@
     "stageCount": 2,
     "evolvesFromId": null,
     "evolvesToId": "S5-032",
-    "flavor": "Walks through walls when unwatched.",
+    "flavor": "It naps in the hollow beneath a stair.",
     "baseValue": 3.26
   },
   {
@@ -3476,7 +3476,7 @@
     "stageCount": 2,
     "evolvesFromId": "S5-031",
     "evolvesToId": null,
-    "flavor": "Dreams leak out of it as fog.",
+    "flavor": "Its yawn swallows the nearest candle flame.",
     "baseValue": 15.1
   },
   {
@@ -3491,7 +3491,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Its whisper sounds like distant thunder.",
+    "flavor": "Owls fall silent when it passes below.",
     "baseValue": 4.17
   },
   {
@@ -3506,7 +3506,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Born in the space between stars.",
+    "flavor": "It folds itself thin to hide in twilight.",
     "baseValue": 3.55
   },
   {
@@ -3521,7 +3521,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Casts no shadow of its own.",
+    "flavor": "The night sky misses a star while it wakes.",
     "baseValue": 3.14
   },
   {
@@ -3536,7 +3536,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Older than the dark it came from.",
+    "flavor": "Its breath frosts the glass from within.",
     "baseValue": 7.93
   },
   {
@@ -3551,7 +3551,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Its whisper sounds like distant thunder.",
+    "flavor": "It leaves cold spots that linger till noon.",
     "baseValue": 4.65
   },
   {
@@ -3566,7 +3566,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Its whisper sounds like distant thunder.",
+    "flavor": "Shadows lengthen to point the way it went.",
     "baseValue": 4.78
   },
   {
@@ -3581,7 +3581,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Colder where it has recently stood.",
+    "flavor": "It drinks the last of the evening light.",
     "baseValue": 4.62
   },
   {
@@ -3596,7 +3596,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Older than the dark it came from.",
+    "flavor": "Its whisper carries a chill down the spine.",
     "baseValue": 3.29
   },
   {
@@ -3611,7 +3611,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Its eyes hold a piece of the night sky.",
+    "flavor": "Mirrors show it a heartbeat too late.",
     "baseValue": 4.2
   },
   {
@@ -3626,7 +3626,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Its whisper sounds like distant thunder.",
+    "flavor": "It is quietest just before it vanishes.",
     "baseValue": 4.33
   },
   {
@@ -3641,7 +3641,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Where it sleeps, the stars go dim.",
+    "flavor": "The dark rearranges itself to let it by.",
     "baseValue": 3.58
   },
   {
@@ -3656,7 +3656,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Casts no shadow of its own.",
+    "flavor": "Its eyes open like two new moons.",
     "baseValue": 3.19
   },
   {
@@ -3671,7 +3671,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Born in the space between stars.",
+    "flavor": "It gathers dusk into a place to sleep.",
     "baseValue": 27.18
   },
   {
@@ -3686,7 +3686,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Dreams leak out of it as fog.",
+    "flavor": "Clocks seem to slow while it is near.",
     "baseValue": 13.91
   },
   {
@@ -3701,7 +3701,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Colder where it has recently stood.",
+    "flavor": "It threads through the gaps in the lamplight.",
     "baseValue": 75.33
   },
   {
@@ -3716,7 +3716,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Slips between one moment and the next.",
+    "flavor": "Nightfall feels like it is coming home.",
     "baseValue": 115.38
   },
   {
@@ -3731,7 +3731,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Fades at dawn, returns at dusk.",
+    "flavor": "Its dreams spill out as creeping mist.",
     "baseValue": 221.86
   },
   {
@@ -3746,7 +3746,7 @@
     "stageCount": 1,
     "evolvesFromId": null,
     "evolvesToId": null,
-    "flavor": "Feeds on starlight and secrets.",
+    "flavor": "Born from the shadow a comet left behind.",
     "baseValue": 111.83
   }
 ]

@@ -1,0 +1,35 @@
+<svg viewBox="0 0 216 150" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bodyS2_050" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#c2f0ff"/><stop offset="55%" stop-color="#4bb6ff"/>
+      <stop offset="100%" stop-color="#1e5bd6"/>
+    </linearGradient>
+    <linearGradient id="body2S2_050" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#4bb6ff"/><stop offset="100%" stop-color="#08245c"/>
+    </linearGradient>
+    <linearGradient id="bellyS2_050" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity=".92"/><stop offset="100%" stop-color="#c2f0ff"/>
+    </linearGradient>
+    <radialGradient id="stageS2_050" cx="50%" cy="62%" r="55%">
+      <stop offset="0%" stop-color="#bff0ff" stop-opacity=".55"/><stop offset="70%" stop-color="#bff0ff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="orbS2_050" cx="42%" cy="38%" r="65%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity=".95"/>
+      <stop offset="45%" stop-color="#c2f0ff"/><stop offset="100%" stop-color="#1e5bd6"/>
+    </radialGradient>
+  </defs>
+  <defs>
+    <linearGradient id="skyS2_050" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0e5aa8"/><stop offset="55%" stop-color="#0b336e"/><stop offset="100%" stop-color="#03102e"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="216" height="150" fill="url(#skyS2_050)"/>
+  <polygon points="24,0 40,0 74,150 42,150" fill="#bfeaff" opacity=".08"/><polygon points="70,0 92,0 126,150 88,150" fill="#bfeaff" opacity=".08"/><polygon points="120,0 134,0 168,150 138,150" fill="#bfeaff" opacity=".08"/><polygon points="168,0 194,0 228,150 186,150" fill="#bfeaff" opacity=".08"/>
+  <path d="M0,150 L0,120 Q40,132 78,122 Q120,110 150,124 Q186,136 216,122 L216,150 Z" fill="#06255a"/>
+  <path d="M0,150 L0,134 Q52,144 108,134 T216,136 L216,150 Z" fill="#041a44"/>
+  <g fill="#0a2f66" opacity=".9">
+    <path d="M150,150 C150,128 140,120 146,110 C152,120 156,116 156,108 C162,120 160,132 166,150 Z"/>
+    <path d="M40,150 C40,132 34,126 40,116 C46,126 48,122 50,116 C54,128 54,138 58,150 Z"/>
+  </g>
+  <circle cx="34" cy="44" r="2.4" fill="#dff6ff" opacity="0.5"/><circle cx="58" cy="80" r="1.6" fill="#dff6ff" opacity="0.4"/><circle cx="180" cy="40" r="2.8" fill="#dff6ff" opacity="0.5"/><circle cx="150" cy="96" r="1.8" fill="#dff6ff" opacity="0.4"/><circle cx="196" cy="110" r="2.2" fill="#dff6ff" opacity="0.45"/><circle cx="90" cy="30" r="1.4" fill="#dff6ff" opacity="0.4"/><circle cx="120" cy="120" r="1.6" fill="#dff6ff" opacity="0.4"/>
+  <ellipse cx="108" cy="86" rx="92" ry="46" fill="url(#stageS2_050)"/><g><g fill="none" stroke="#4bb6ff" stroke-width="3" opacity=".5"><path d="M68,124 a40,16.0 0 1 0 80,0"/><path d="M78,124 a30,12.0 0 1 0 60,0"/><path d="M88,124 a20,8.0 0 1 0 40,0"/></g><g stroke="#08245c" stroke-width="2.3" stroke-linejoin="round"><path d="M92,124 C80,104 96,92 110,96 C100,84 104,66 118,60 C112,74 118,84 128,88 C140,94 138,112 122,116 C132,118 134,128 124,132 C108,136 96,132 92,124 Z" fill="url(#bodyS2_050)"/><path d="M114,60 q-6,-14 6,-20 q0,10 6,14 q6,-8 12,-6 q-4,8 2,14" fill="none" stroke="#eaf6ff" stroke-width="2.4"/><path d="M110,58 C104,50 108,38 118,36 C128,38 132,48 128,58 C124,66 116,66 110,58 Z" fill="url(#bodyS2_050)"/><ellipse cx="114" cy="48" rx="3.2" ry="3.6479999999999997" fill="#bff0ff"/><circle cx="114.4" cy="48.384" r="1.92" fill="#1a1020"/><circle cx="113.632" cy="46.848" r="0.768" fill="#fff"/><ellipse cx="124" cy="48" rx="3.0" ry="3.42" fill="#bff0ff"/><circle cx="124.4" cy="48.36" r="1.7999999999999998" fill="#1a1020"/><circle cx="123.68" cy="46.92" r="0.72" fill="#fff"/><path d="M108,90 l6,6 -6,6 -6,-6 Z" fill="#eaf6ff"/></g></g></svg>
