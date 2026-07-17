@@ -129,11 +129,11 @@ higher‑set cards are always worth more. Approximate resulting bands:
 
   | Set             | Pack price | Target EV | Avg pack contents |
   |-----------------|-----------|-----------|-------------------|
-  | 1 Emberfall     | $10       | **1.50×** | ~$15   |
-  | 2 Tidecaller    | $20       | **1.25×** | ~$25   |
-  | 3 Verdspire     | $40       | **1.10×** | ~$44   |
-  | 4 Voltcrest     | $70       | **1.00×** | ~$70   |
-  | 5 Umbral Reach  | $120      | **0.90×** | ~$108  |
+  | 1 Emberfall     | $10       | **1.10×** | ~$11   |
+  | 2 Tidecaller    | $20       | **1.00×** | ~$20   |
+  | 3 Verdspire     | $40       | **0.90×** | ~$36   |
+  | 4 Voltcrest     | $70       | **0.80×** | ~$56   |
+  | 5 Umbral Reach  | $120      | **0.70×** | ~$84   |
 
   Any single pack still has **lots of variance** — a foil or a top‑tier hit blows past
   the average, a cold pack falls below it. Foils (~+2% expected) and opt‑in grading are

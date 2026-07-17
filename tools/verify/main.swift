@@ -45,7 +45,7 @@ check(evoBad == 0, "all evolution links resolve")
 check(CardDatabase.evolutionLines.count == 65, "65 multi-stage evolution lines (5×13)")
 
 print("\n== Pack economics (Monte Carlo) ==")
-let evTargets: [Int: Double] = [1: 1.50, 2: 1.25, 3: 1.10, 4: 1.00, 5: 0.90]
+let evTargets: [Int: Double] = [1: 1.10, 2: 1.00, 3: 0.90, 4: 0.80, 5: 0.70]
 for s in 1...5 {
     var rng = SeededRNG(0xC0FFEE &+ UInt64(s))
     let core = GameCore()
