@@ -92,7 +92,7 @@ struct GameCore: Codable {
 
     var isGameOver: Bool {
         guard !hasWon else { return false }
-        return cash < Economy.packPrice(set: 1) && sellableInstances.isEmpty
+        return cash < Economy.cheapestPackPrice && sellableInstances.isEmpty
     }
 
     // MARK: Welcome / onboarding

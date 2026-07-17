@@ -13,6 +13,10 @@ enum Economy {
     static func packPrice(set: Int) -> Double { packPrices[clampIndex(set)] }
     static func gradeFee(set: Int) -> Double { gradeFees[clampIndex(set)] }
 
+    /// The lowest pack price in the game — the least cash needed to buy any pack.
+    /// Falling below this with no sellable cards ends the game.
+    static var cheapestPackPrice: Double { packPrices.min() ?? 0 }
+
     // Booster box
     static let boxPacks = 24
     static let boxGuaranteeUltras = 6

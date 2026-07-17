@@ -75,8 +75,8 @@ all 250 cards are embedded in the app.
   foils stack.
 - **Bonuses** — completing an **evolution line** pays a cash bonus; completing a
   whole **set** pays a big one.
-- **Win** by collecting all **250** cards. **Lose** if you hit $0 with no
-  duplicates left to sell.
+- **Win** by collecting all **250** cards. **Lose** if your cash drops **below $10**
+  (the cheapest pack) with no duplicates left to sell.
 
 Your progress **auto‑saves** after every action.
 

@@ -183,10 +183,10 @@ A cheaper‑per‑pack commitment with guarantees above the statistical average.
 
 ## 10. Win / lose & stats
 
-- **Lose:** cash hits **$0** and you have **no sellable cards left**. You can never
-  sell your **last copy** of a unique card (you'd lose collection progress), so "broke"
-  means only singletons remain. A loss screen shows: cards collected per set, and total
-  unique cards.
+- **Lose:** cash drops **below the cheapest pack price ($10)** and you have **no
+  sellable cards left**. You can never sell your **last copy** of a unique card (you'd
+  lose collection progress), so "broke" means only singletons remain. A loss screen
+  shows: cards collected per set, and total unique cards.
 - **Win:** collect all **250** unique creatures. A winner's screen shows full stats:
   per‑set completion, foils, best grades, peak cash, packs opened, etc.
 

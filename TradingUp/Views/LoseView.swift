@@ -15,13 +15,13 @@ struct LoseView: View {
                 VStack(spacing: 20) {
                     Text("💸").font(.system(size: 72)).padding(.top, 36)
                     VStack(spacing: 6) {
-                        Text("OUT OF CASH")
+                        Text("TAPPED OUT")
                             .font(.system(size: 14, weight: .black)).tracking(3)
                             .foregroundStyle(Color(hex: "e0663b"))
                         Text("Game Over")
                             .font(.system(size: 28, weight: .black, design: .rounded))
                             .foregroundStyle(.white)
-                        Text("You're down to \(game.cash.money) with no cards left to sell. But look how far you got!")
+                        Text("You're down to \(game.cash.money) — not enough for the \(game.cheapestPackPrice.money) cheapest pack, and no cards left to sell. But look how far you got!")
                             .font(.system(size: 14, weight: .medium))
                             .foregroundStyle(Palette.subtle)
                             .multilineTextAlignment(.center)

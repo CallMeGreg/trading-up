@@ -31,6 +31,7 @@ final class GameState: ObservableObject {
     var hasWon: Bool { core.hasWon }
     var isGameOver: Bool { core.isGameOver }
     var shouldShowWelcome: Bool { core.shouldShowWelcome }
+    var cheapestPackPrice: Double { Economy.cheapestPackPrice }
 
     func canAffordPack(set: Int) -> Bool { core.cash >= Economy.packPrice(set: set) }
     func canAffordBox(set: Int) -> Bool { core.cash >= Economy.boxPrice(set: set) }

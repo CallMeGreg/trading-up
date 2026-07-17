@@ -117,6 +117,16 @@ do {
     check(broke.isGameOver, "broke with only last-copies = game over")
     broke.instances.append(CardInstance(cardId: "S1-001"))
     check(!broke.isGameOver, "broke but holding a sellable duplicate = not over")
+
+    // Loss threshold is the cheapest pack price ($10), NOT $0: you lose once you
+    // can no longer afford even the cheapest pack and have nothing left to sell.
+    check(Economy.cheapestPackPrice == 10, "cheapest pack price is $10")
+    var edge = GameCore()
+    edge.instances = [CardInstance(cardId: "S1-001")]   // only a last copy (unsellable)
+    edge.cash = Economy.cheapestPackPrice - 0.01        // $9.99 — can't afford any pack
+    check(edge.isGameOver, "cash just under cheapest pack with no sellables = game over")
+    edge.cash = Economy.cheapestPackPrice               // exactly $10 — can still buy a pack
+    check(!edge.isGameOver, "cash == cheapest pack price = still in the game")
 }
 
 print("\n== Win condition & bonuses ==")

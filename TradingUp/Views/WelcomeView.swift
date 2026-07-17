@@ -49,7 +49,7 @@ struct WelcomeView: View {
                                 Palette.money)
                         Rectangle().fill(Palette.stroke).frame(height: 1)
                         goalRow("💸", "How you lose",
-                                "Drop to \(0.0.money) with no duplicate cards left to sell.",
+                                "Can't afford the \(game.cheapestPackPrice.money) cheapest pack, with no duplicate cards left to sell.",
                                 Color(hex: "e0663b"))
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
