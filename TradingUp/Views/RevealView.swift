@@ -1,13 +1,18 @@
 import SwiftUI
 
-/// Dramatic pack / box opening. Packs reveal one card at a time with a tap;
-/// boxes jump to a highlights summary (too many cards to flip individually).
+/// Dramatic pack / box opening. Packs reveal one card at a time with a tap.
+/// A booster box reveals each of its packs in turn — the same card-by-card
+/// flip and keep/sell summary as a single pack — advancing automatically to
+/// the next pack once its cards are kept or sold, with a "Pack X of N" counter.
 struct RevealView: View {
-    let result: OpenResult
+    let content: RevealContent
     let set: Int
     let onDone: () -> Void
 
     @State private var phase: Phase = .sealed
+    @State private var packIndex = 0
+    /// The pack currently being revealed. For a box, the next pack's result.
+    @State private var current: OpenResult? = nil
 
     private enum Phase: Equatable {
         case sealed
@@ -16,6 +21,14 @@ struct RevealView: View {
     }
 
     private var element: Element { Element.theme(forSet: set) }
+
+    private var isBox: Bool { if case .box = content { return true }; return false }
+    private var packCount: Int {
+        switch content {
+        case .pack:             return 1
+        case .box(let results): return results.count
+        }
+    }
 
     var body: some View {
         ZStack {
@@ -27,9 +40,20 @@ struct RevealView: View {
             .ignoresSafeArea()
 
             switch phase {
-            case .sealed:      sealedView
-            case .revealing(let i): revealingView(i)
-            case .summary:     SummaryView(result: result, set: set, onDone: onDone)
+            case .sealed:
+                sealedView
+            case .revealing(let i):
+                if let result = current { revealingView(result, i) }
+            case .summary:
+                if let result = current {
+                    SummaryView(
+                        result: result,
+                        set: set,
+                        packCounter: isBox ? PackCounter(index: packIndex, total: packCount) : nil,
+                        onDone: resolvePack
+                    )
+                    .id(packIndex)
+                }
             }
         }
     }
@@ -39,12 +63,12 @@ struct RevealView: View {
     private var sealedView: some View {
         VStack(spacing: 28) {
             Spacer()
-            PackArtwork(set: set, isBox: result.isBox)
+            PackArtwork(set: set, isBox: isBox)
             VStack(spacing: 6) {
-                Text(result.isBox ? "Booster Box" : "\(CardDatabase.setName(set)) Pack")
+                Text(isBox ? "Booster Box" : "\(CardDatabase.setName(set)) Pack")
                     .font(.system(size: 22, weight: .black, design: .rounded))
                     .foregroundStyle(.white)
-                Text(result.isBox ? "Tap to tear it open" : "Tap to open")
+                Text(isBox ? "Tap to tear it open" : "Tap to open")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(Palette.subtle)
             }
@@ -61,10 +85,16 @@ struct RevealView: View {
 
     // MARK: Revealing
 
-    private func revealingView(_ i: Int) -> some View {
+    private func revealingView(_ result: OpenResult, _ i: Int) -> some View {
         let inst = result.pulled[i]
         let showBurst = inst.foil || inst.card.rarity == .rare || inst.card.rarity == .ultra
         return VStack(spacing: 20) {
+            if isBox {
+                Text("Pack \(packIndex + 1) of \(packCount)")
+                    .font(.system(size: 12, weight: .heavy, design: .rounded))
+                    .foregroundStyle(Palette.subtle)
+                    .padding(.top, 16)
+            }
             HStack(spacing: 7) {
                 ForEach(result.pulled.indices, id: \.self) { idx in
                     Circle()
@@ -110,14 +140,10 @@ struct RevealView: View {
     private func advance() {
         switch phase {
         case .sealed:
-            if result.isBox {
-                Haptics.play(.heavy)
-                withAnimation(.easeOut(duration: 0.4)) { phase = .summary }
-            } else {
-                haptic(for: result.pulled[0])
-                withAnimation(.spring(response: 0.5, dampingFraction: 0.68)) { phase = .revealing(0) }
-            }
+            if isBox { Haptics.play(.heavy) }
+            startPack(0)
         case .revealing(let i):
+            guard let result = current else { return }
             let next = i + 1
             if next < result.pulled.count {
                 haptic(for: result.pulled[next])
@@ -131,6 +157,30 @@ struct RevealView: View {
         }
     }
 
+    /// Begin revealing pack `index`. All cards were already added to the
+    /// collection when the box was bought; this just selects which pack to show.
+    private func startPack(_ index: Int) {
+        let result: OpenResult
+        switch content {
+        case .pack(let r):      result = r
+        case .box(let results): result = results[index]
+        }
+        current = result
+        packIndex = index
+        haptic(for: result.pulled[0])
+        withAnimation(.spring(response: 0.5, dampingFraction: 0.68)) { phase = .revealing(0) }
+    }
+
+    /// Called when the player finishes a pack's summary (kept or sold). Advances
+    /// to the next pack of a box, or finishes when the last pack is done.
+    private func resolvePack() {
+        if isBox, packIndex + 1 < packCount {
+            startPack(packIndex + 1)
+        } else {
+            onDone()
+        }
+    }
+
     private func haptic(for inst: CardInstance) {
         if inst.foil || inst.card.rarity == .ultra { Haptics.play(.heavy) }
         else if inst.card.rarity == .rare { Haptics.play(.medium) }
@@ -140,6 +190,12 @@ struct RevealView: View {
 
 // MARK: - Summary
 
+/// Position of a pack within a booster box, shown as a "Pack X of N" counter.
+struct PackCounter: Equatable {
+    let index: Int
+    let total: Int
+}
+
 /// Live per-card state on the pack summary. Boxes don't use this (bulk flow).
 enum PackSlot: Equatable { case newCard, keeperExisting, pendingDup, keptDup, sold }
 
@@ -147,6 +203,7 @@ private struct SummaryView: View {
     @EnvironmentObject var game: GameState
     let result: OpenResult
     let set: Int
+    var packCounter: PackCounter? = nil
     let onDone: () -> Void
 
     /// One-time classification of each pulled instance, snapshotted on appear
@@ -211,6 +268,8 @@ private struct SummaryView: View {
                 .padding(16)
             }
 
+            if let pc = packCounter { packCounterBar(pc) }
+
             finishButtons
                 .padding(16)
         }
@@ -268,6 +327,27 @@ private struct SummaryView: View {
     }
 
     // MARK: Bottom actions
+
+    /// "Pack X of N" progress shown between the card grid and the action buttons
+    /// while opening a booster box, so the player can track their way through it.
+    private func packCounterBar(_ pc: PackCounter) -> some View {
+        let element = Element.theme(forSet: set)
+        return VStack(spacing: 7) {
+            Text("Pack \(pc.index + 1) of \(pc.total)")
+                .font(.system(size: 13, weight: .heavy, design: .rounded))
+                .foregroundStyle(.white.opacity(0.9))
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Palette.stroke)
+                    Capsule().fill(element.palette[2])
+                        .frame(width: max(6, geo.size.width * CGFloat(pc.index + 1) / CGFloat(pc.total)))
+                }
+            }
+            .frame(height: 5)
+        }
+        .padding(.horizontal, 40)
+        .padding(.top, 6)
+    }
 
     private var finishButtons: some View {
         VStack(spacing: 10) {
@@ -340,7 +420,11 @@ private struct SummaryView: View {
     }
 
     private func keeperId(forCard cardId: String, pulledIds: Set<UUID>) -> UUID? {
-        game.instances(of: cardId).sorted { a, b in
+        var copies = game.instances(of: cardId)
+        if let visible = result.visibleInstanceIds {
+            copies = copies.filter { visible.contains($0.id) }
+        }
+        return copies.sorted { a, b in
             if a.currentValue != b.currentValue { return a.currentValue > b.currentValue }
             return !pulledIds.contains(a.id) && pulledIds.contains(b.id)
         }.first?.id

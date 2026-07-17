@@ -199,6 +199,41 @@ do {
           "box also records pre-owned ids")
 }
 
+print("\n== Booster box (pack-by-pack) ==")
+do {
+    var rng = SeededRNG(31)
+    var core = GameCore()
+    core.cash = 1_000_000
+    let ownedBefore = core.instances.count
+    guard let results = core.buyBoxPacks(set: 1, using: &rng) else {
+        check(false, "buyBoxPacks returns results for an unlocked, affordable box"); fatalError()
+    }
+    check(results.count == Economy.boxPacks, "box yields \(Economy.boxPacks) packs")
+    check(results.allSatisfy { $0.pulled.count == Economy.packSize }, "each pack has \(Economy.packSize) cards")
+    check(results.allSatisfy { !$0.isBox }, "box packs render as single-pack summaries")
+
+    let totalCards = results.reduce(0) { $0 + $1.pulled.count }
+    check(core.instances.count == ownedBefore + totalCards, "all box cards ingested up front (crash-safe)")
+
+    let ultras = results.flatMap { $0.pulled }.filter { $0.card.rarity == .ultra }.count
+    let foils  = results.flatMap { $0.pulled }.filter { $0.foil }.count
+    check(ultras >= Economy.boxGuaranteeUltras, "box meets ultra guarantee (\(ultras) ≥ \(Economy.boxGuaranteeUltras))")
+    check(foils  >= Economy.boxGuaranteeFoils,  "box meets foil guarantee (\(foils) ≥ \(Economy.boxGuaranteeFoils))")
+
+    // preOwnedIds grows monotonically pack-to-pack; visibleInstanceIds strictly grows.
+    var preOK = true, visOK = true
+    for k in 1..<results.count {
+        if !results[k].preOwnedIds.isSuperset(of: results[k-1].preOwnedIds) { preOK = false }
+        let a = results[k-1].visibleInstanceIds ?? []
+        let b = results[k].visibleInstanceIds ?? []
+        if !(b.isSuperset(of: a) && b.count > a.count) { visOK = false }
+    }
+    check(preOK, "preOwnedIds is monotonic across packs")
+    check(visOK, "visibleInstanceIds grows each pack (pack-by-pack duplicate scope)")
+    check(results.last?.visibleInstanceIds?.count == core.instances.count,
+          "last pack sees the whole post-box collection")
+}
+
 print("\n== Set unlocking ==")
 do {
     check(Economy.uniquesToUnlock(set: 1) == 0,   "set 1 needs 0 uniques")
