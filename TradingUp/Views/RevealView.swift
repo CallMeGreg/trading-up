@@ -331,7 +331,6 @@ private struct SummaryView: View {
     /// "Pack X of N" progress shown between the card grid and the action buttons
     /// while opening a booster box, so the player can track their way through it.
     private func packCounterBar(_ pc: PackCounter) -> some View {
-        let element = Element.theme(forSet: set)
         return VStack(spacing: 7) {
             Text("Pack \(pc.index + 1) of \(pc.total)")
                 .font(.system(size: 13, weight: .heavy, design: .rounded))
@@ -339,7 +338,7 @@ private struct SummaryView: View {
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     Capsule().fill(Palette.stroke)
-                    Capsule().fill(element.palette[2])
+                    Capsule().fill(.white)
                         .frame(width: max(6, geo.size.width * CGFloat(pc.index + 1) / CGFloat(pc.total)))
                 }
             }
