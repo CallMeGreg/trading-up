@@ -7,30 +7,9 @@ import Combine
 /// Every sound effect the app can play. The raw value is the bundled WAV's file
 /// name (see `tools/generate_sfx.py`, which synthesizes all of them).
 enum Sound: String, CaseIterable {
-    case tap
     case purchase
-    case packTear      = "pack_tear"
-    case cardWhoosh    = "card_whoosh"
-    case revealCommon  = "reveal_common"
-    case revealUncommon = "reveal_uncommon"
-    case revealRare    = "reveal_rare"
-    case revealUltra   = "reveal_ultra"
     case foilShimmer   = "foil_shimmer"
     case coin
-    case bonus
-    case grade
-    case win
-    case lose
-
-    /// The reveal sting that matches a pulled card's rarity.
-    static func reveal(for rarity: Rarity) -> Sound {
-        switch rarity {
-        case .common:   return .revealCommon
-        case .uncommon: return .revealUncommon
-        case .rare:     return .revealRare
-        case .ultra:    return .revealUltra
-        }
-    }
 
     /// Convenience mirroring `Haptics.play(_:)` so call sites read the same way.
     static func play(_ sound: Sound, volume: Float = 1.0) {

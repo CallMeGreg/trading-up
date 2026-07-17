@@ -95,7 +95,6 @@ struct CollectionView: View {
 
     private func toggle(_ f: CardFilter) {
         Haptics.play(.light)
-        Sound.play(.tap)
         if activeFilters.contains(f) { activeFilters.remove(f) } else { activeFilters.insert(f) }
     }
 
@@ -105,7 +104,6 @@ struct CollectionView: View {
             let best = bestInstance(card)
             Button {
                 Haptics.play(.light)
-                Sound.play(.tap)
                 selected = card
             } label: {
                 ZStack(alignment: .topTrailing) {

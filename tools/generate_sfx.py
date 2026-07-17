@@ -8,9 +8,10 @@ machine with just `python3`. Output is 16-bit mono PCM WAV at 44.1 kHz written t
 them automatically. The app plays them via `SoundManager` (see
 TradingUp/Audio/SoundManager.swift).
 
-Design goals: short, punchy, on-brand for a collectible-card game. Rarer pulls get
-brighter, sparklier, longer sounds; commons get a soft understated pop. Everything
-is peak-normalized and fenced with short fades so there are no clicks.
+Design goals: short, punchy, on-brand for a collectible-card game. The app keeps a
+deliberately minimal set — a purchase chime when you buy a pack, a sparkly shimmer
+for foil pulls, and a coin chime when cards are sold. Everything is peak-normalized
+and fenced with short fades so there are no clicks.
 
 Usage:
   python3 tools/generate_sfx.py            # (re)generate every SFX into the app
@@ -210,74 +211,12 @@ def write_wav(name, sig):
 
 # ------------------------------------------------------------------- the sounds
 
-def s_tap():
-    b = buf(0.06)
-    add(b, sine(1150, 0.05, decay=40, attack=0.001), 0, 0.5)
-    add(b, sine(2300, 0.03, decay=60, attack=0.001), 0, 0.18)
-    return finalize(b, gain=0.55)
-
-
 def s_purchase():
     b = buf(0.32)
     add(b, bell(hz("E5"), 0.16, decay=7), 0.0, 0.8)
     add(b, bell(hz("B5"), 0.20, decay=6), 0.09, 0.9)
     add(b, noise_swept(0.06, 6000, 2500, decay=25, seed=3, hp=True), 0.0, 0.25)
     return finalize(b, gain=0.7)
-
-
-def s_pack_tear():
-    # A ripping tear: bright crackly noise sweeping down, with amplitude "grain".
-    dur = 0.5
-    n = int(SR * dur)
-    src = _NoiseLP(11).run(n, 7000, 1200)
-    grain = _NoiseLP(29)
-    out = [0.0] * n
-    for i in range(n):
-        t = i / SR
-        body = math.exp(-3.0 * t)              # overall decay
-        crackle = 0.55 + 0.45 * (grain._white() * 0.5 + 0.5)  # 0.55..1.0 grain
-        out[i] = src[i] * body * crackle
-    add(out, sine(140, 0.18, decay=10), 0.0, 0.25)  # low "thunk" of the seal giving
-    return finalize(out, gain=0.8, fade_out=0.05)
-
-
-def s_card_whoosh():
-    b = noise_swept(0.26, 1200, 5200, decay=7, seed=5, hp=True)
-    # gentle body so it isn't purely hiss
-    add(b, sine(520, 0.14, decay=9), 0.0, 0.12)
-    return finalize(b, gain=0.5, fade_in=0.01, fade_out=0.06)
-
-
-def s_reveal_common():
-    b = buf(0.16)
-    add(b, sine(300, 0.13, decay=22), 0.0, 0.9)
-    add(b, sine(600, 0.06, decay=40), 0.0, 0.2)
-    return finalize(b, gain=0.55)
-
-
-def s_reveal_uncommon():
-    b = buf(0.22)
-    add(b, bell(hz("A4"), 0.20, decay=9), 0.0, 0.8)
-    add(b, sine(hz("E5"), 0.10, decay=22), 0.02, 0.25)
-    return finalize(b, gain=0.62)
-
-
-def s_reveal_rare():
-    b = buf(0.55)
-    add(b, bell(hz("D5"), 0.34, decay=6), 0.0, 0.9)
-    add(b, bell(hz("A5"), 0.42, decay=5), 0.12, 0.95)
-    add(b, noise_swept(0.05, 7000, 4000, decay=30, seed=8, hp=True), 0.0, 0.12)
-    return finalize(b, gain=0.72)
-
-
-def s_reveal_ultra():
-    b = buf(0.95)
-    arp = ["A5", "C#6", "E6", "A6"]
-    for k, note in enumerate(arp):
-        add(b, bell(hz(note), 0.55, decay=4.5), 0.05 * k, 0.9)
-    add(b, _shimmer(0.7, base=3200, seed=13), 0.18, 0.5)
-    add(b, brass(hz("A4"), 0.5, decay=3.5), 0.0, 0.18)  # warm underpinning
-    return finalize(b, gain=0.82, fade_out=0.08)
 
 
 def _shimmer(dur, base=3000, seed=21):
@@ -313,68 +252,10 @@ def s_coin():
     return finalize(b, gain=0.65)
 
 
-def s_bonus():
-    b = buf(1.0)
-    chord = ["C5", "E5", "G5", "C6"]
-    for k, note in enumerate(chord):        # quick ascending arpeggio
-        add(b, brass(hz(note), 0.55, decay=3.0), 0.06 * k, 0.8)
-    for note in ["C5", "E5", "G5", "C6"]:   # then the sustained chord stab
-        add(b, brass(hz(note), 0.6, decay=2.6), 0.34, 0.5)
-    add(b, _shimmer(0.5, base=3400, seed=23), 0.3, 0.28)
-    return finalize(b, gain=0.8, fade_out=0.1)
-
-
-def s_grade():
-    # Suspense riser resolving into a confident confirmation chime.
-    b = buf(0.75)
-    n = int(SR * 0.4)
-    riser = [0.0] * n
-    for i in range(n):
-        t = i / SR
-        f = 300 + 900 * (t / 0.4)
-        riser[i] = math.sin(2 * math.pi * f * t) * (0.3 + 0.7 * (t / 0.4))
-    add(b, _norm(riser), 0.0, 0.4)
-    add(b, bell(hz("E6"), 0.35, decay=6), 0.4, 0.95)
-    add(b, bell(hz("B5"), 0.3, decay=7), 0.4, 0.6)
-    return finalize(b, gain=0.72)
-
-
-def s_win():
-    b = buf(1.6)
-    melody = [("C5", 0.0), ("E5", 0.16), ("G5", 0.32), ("C6", 0.48)]
-    for note, at in melody:
-        add(b, brass(hz(note), 0.6, decay=2.6), at, 0.75)
-    for note in ["C5", "E5", "G5", "C6"]:       # triumphant sustained chord
-        add(b, brass(hz(note), 0.9, decay=1.8), 0.62, 0.5)
-    add(b, _shimmer(0.8, base=3600, seed=27), 0.55, 0.3)
-    return finalize(b, gain=0.85, fade_out=0.12)
-
-
-def s_lose():
-    # Two descending detuned notes — deflating but not harsh.
-    b = buf(1.0)
-    add(b, brass(hz("A4"), 0.5, decay=3.0, vibrato=0.0), 0.0, 0.6)
-    add(b, brass(hz("A4") * 0.997, 0.5, decay=3.0), 0.0, 0.4)  # slight detune
-    add(b, brass(hz("E4"), 0.7, decay=2.4), 0.34, 0.6)
-    add(b, brass(hz("E4") * 1.004, 0.7, decay=2.4), 0.34, 0.4)
-    return finalize(b, gain=0.72, fade_out=0.12)
-
-
 SOUNDS = {
-    "tap": s_tap,
     "purchase": s_purchase,
-    "pack_tear": s_pack_tear,
-    "card_whoosh": s_card_whoosh,
-    "reveal_common": s_reveal_common,
-    "reveal_uncommon": s_reveal_uncommon,
-    "reveal_rare": s_reveal_rare,
-    "reveal_ultra": s_reveal_ultra,
     "foil_shimmer": s_foil_shimmer,
     "coin": s_coin,
-    "bonus": s_bonus,
-    "grade": s_grade,
-    "win": s_win,
-    "lose": s_lose,
 }
 
 

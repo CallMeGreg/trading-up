@@ -245,7 +245,6 @@ struct GradeRevealOverlay: View {
             .opacity(shown ? 1 : 0)
         }
         .onAppear {
-            Sound.play(.grade)
             withAnimation(.spring(response: 0.5, dampingFraction: 0.6)) { shown = true }
         }
     }

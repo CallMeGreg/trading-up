@@ -227,14 +227,12 @@ struct RevealingCardView: View {
     }
 
     private func run() {
-        Sound.play(.cardWhoosh, volume: 0.85)
         let response = isBig ? 0.75 : 0.5
         withAnimation(.spring(response: response, dampingFraction: 0.72)) { rotation = 0 }
 
         // Land the sting + effects right as the card crosses to face-up.
         let mid = response * 0.42
         DispatchQueue.main.asyncAfter(deadline: .now() + mid) {
-            Sound.play(Sound.reveal(for: rarity))
             if inst.foil { Sound.play(.foilShimmer, volume: 0.8) }
 
             if isSpecial {
@@ -328,7 +326,6 @@ struct SealedPackView: View {
 
     private func open() {
         guard !tearing else { return }
-        Sound.play(.packTear)
         Haptics.play(isBox ? .heavy : .medium)
         withAnimation(.easeIn(duration: 0.3)) { tearing = true }
         withAnimation(.easeOut(duration: 0.12)) { flash = 0.45 }

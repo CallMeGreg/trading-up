@@ -129,7 +129,7 @@ TradingUp/
   Views/                     SwiftUI screens (Shop, Collection, pack opening, etc.)
   Audio/
     SoundManager.swift       AVAudioPlayer pool + mute preference; Sound.play(.x) API
-    SFX/                     14 generated sound effects (auto‑generated .wav files)
+    SFX/                     3 generated sound effects (auto‑generated .wav files)
   Assets.xcassets/           App icon + accent color + CardArt/ (250 card illustrations)
 data/cards.json              The 250 cards as JSON (source for tooling/other targets)
 design/
@@ -140,7 +140,7 @@ tools/
   generate_cards.py          Regenerates data/cards.json AND Generated/CardData.swift
   generate_art.py            Regenerates the 250 card illustrations (needs rsvg-convert)
   generate_icon.py           Regenerates the app icon (needs Pillow)
-  generate_sfx.py            Regenerates the 14 sound effects (stdlib only)
+  generate_sfx.py            Regenerates the 3 sound effects (stdlib only)
   generate_screenshots.py    Regenerates App Store screenshots (needs rsvg-convert)
   verify/main.swift          The simulation test harness described above
 ```
@@ -183,13 +183,14 @@ python3 -m venv .venv && .venv/bin/pip install Pillow
 .venv/bin/python tools/generate_icon.py
 ```
 
-**Sound effects** — all 14 SFX (button taps, pack tear, rarity‑tiered card
-reveals, coin/sell, bonus, grade, win/lose) are synthesized from scratch with the
-Python standard library only (no samples, no dependencies). To regenerate them
-after editing `tools/generate_sfx.py`:
+**Sound effects** — the app keeps a deliberately minimal set of three SFX (a
+purchase chime when you buy a pack, a sparkly shimmer for foil pulls, and a coin
+chime when cards are sold), each synthesized from scratch with the Python standard
+library only (no samples, no dependencies). To regenerate them after editing
+`tools/generate_sfx.py`:
 
 ```bash
-python3 tools/generate_sfx.py                # 14 .wav files -> TradingUp/Audio/SFX
+python3 tools/generate_sfx.py                # 3 .wav files -> TradingUp/Audio/SFX
 ```
 
 The file‑system‑synchronized Xcode target picks the `.wav` files up automatically.
@@ -243,11 +244,11 @@ This repo is a complete, runnable prototype. To actually publish it you'll need 
 3. **Commission bespoke artwork** if you want to go beyond the built‑in vector
    illustrations — e.g. hand‑drawn card art or a polished app icon.
 4. **Polish — done:** the app ships with synthesized [sound effects](#regenerating-content)
-   (rarity‑tiered reveals, coins, bonuses, win/lose; mute toggle in Stats → Settings),
-   a richer pack‑opening animation (3D card flips from a branded card back, rarity
-   glow bursts, particle sparkles, and a screen flash), and ready‑to‑upload
-   [App Store screenshots](#regenerating-content) in `design/screenshots/`. All that's
-   left here is an **App Privacy questionnaire** in App Store Connect (this app
+   (a purchase chime, a foil‑pull shimmer, and a coin chime when selling; mute toggle
+   in Stats → Settings), a richer pack‑opening animation (3D card flips from a branded
+   card back, rarity glow bursts, particle sparkles, and a screen flash), and
+   ready‑to‑upload [App Store screenshots](#regenerating-content) in `design/screenshots/`.
+   All that's left here is an **App Privacy questionnaire** in App Store Connect (this app
    collects no data).
 5. **Test on device** and distribute a beta via **TestFlight** before submitting for
    review.

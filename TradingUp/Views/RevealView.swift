@@ -246,11 +246,6 @@ private struct SummaryView: View {
         }
         .background(Palette.bg0.ignoresSafeArea())
         .onAppear(perform: computePlan)
-        .onAppear {
-            if !result.bonuses.isEmpty {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { Sound.play(.bonus) }
-            }
-        }
         .confirmationDialog(
             Text(actionInst.map { "Extra copy of \($0.card.name)" } ?? "Duplicate"),
             isPresented: Binding(get: { actionInst != nil }, set: { if !$0 { actionInst = nil } }),
@@ -420,7 +415,6 @@ private struct SummaryView: View {
 
     private func decideKeep(_ inst: CardInstance) {
         Haptics.play(.light)
-        Sound.play(.tap)
         withAnimation(.easeOut(duration: 0.2)) { _ = keptIds.insert(inst.id) }
     }
 
