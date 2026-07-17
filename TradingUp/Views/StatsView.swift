@@ -24,7 +24,7 @@ struct StatsView: View {
                             Text("\(game.uniqueCount) / \(game.totalCards)")
                                 .font(.system(size: 13, weight: .bold, design: .monospaced)).foregroundStyle(Palette.text)
                         }
-                        ProgressBar(value: Double(game.uniqueCount), total: Double(game.totalCards), tint: Color(hex: "b06cf7"))
+                        ProgressBar(value: Double(game.uniqueCount), total: Double(game.totalCards), tint: .white)
                         SetBreakdown()
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)

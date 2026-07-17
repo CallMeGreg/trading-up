@@ -241,7 +241,7 @@ OUTLIERS = {"common": 2, "uncommon": 2, "rare": 1, "ultra": 1}
 # EV_TARGET x price. Later sets pay back less relative to their (much larger)
 # price, forming a deliberate risk curve. Foils (~+2%) and opt-in grading are
 # upside on top of this.
-EV_TARGET = [1.50, 1.25, 1.10, 1.00, 0.90]
+EV_TARGET = [1.10, 1.00, 0.90, 0.80, 0.70]
 
 # Stable per-rarity RNG offsets. (Replaces Python's per-process-salted hash(),
 # which made card values non-deterministic across runs.)
