@@ -45,9 +45,6 @@ struct CardView: View {
             if let g = grade {
                 gradeBadge(g)
             }
-            if foil {
-                foilTag
-            }
         }
         .frame(width: width, height: height)
         .shadow(color: .black.opacity(0.45), radius: 8 * s, x: 0, y: 4 * s)
@@ -63,14 +60,11 @@ struct CardView: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
             Spacer(minLength: 2 * s)
-            HStack(spacing: 2 * s) {
-                Text(card.element.emoji).font(.system(size: 10 * s))
-                Text(card.element.display)
-                    .font(.system(size: 9 * s, weight: .bold))
-                    .foregroundStyle(card.element.badgeTint)
-            }
-            .padding(.horizontal, 6 * s).padding(.vertical, 3 * s)
-            .background(Capsule().fill(card.element.badgeTint.opacity(0.14)))
+            Text(card.element.display)
+                .font(.system(size: 9 * s, weight: .bold))
+                .foregroundStyle(card.element.badgeTint)
+                .padding(.horizontal, 6 * s).padding(.vertical, 3 * s)
+                .background(Capsule().fill(card.element.badgeTint.opacity(0.14)))
         }
     }
 
@@ -129,16 +123,6 @@ struct CardView: View {
                 .font(.system(size: 15 * s, weight: .heavy, design: .rounded))
                 .foregroundStyle(Palette.money)
         }
-    }
-
-    private var foilTag: some View {
-        Text("★ FOIL ★")
-            .font(.system(size: 9 * s, weight: .black))
-            .foregroundStyle(.white)
-            .padding(.horizontal, 6 * s).padding(.vertical, 2 * s)
-            .background(Capsule().fill(LinearGradient(colors: [Color(hex: "ff8ad6"), Color(hex: "7ad9ff")], startPoint: .leading, endPoint: .trailing)))
-            .rotationEffect(.degrees(-8))
-            .offset(x: -width * 0.28, y: -height * 0.40)
     }
 
     private func gradeBadge(_ g: Int) -> some View {

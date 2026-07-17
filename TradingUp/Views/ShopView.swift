@@ -175,7 +175,11 @@ struct SetShopCard: View {
                         .foregroundStyle(.white)
                 }
                 Spacer()
-                Text(unlocked ? element.emoji : "🔒").font(.system(size: 40))
+                if !unlocked {
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 28, weight: .bold))
+                        .foregroundStyle(.white.opacity(0.85))
+                }
             }
             .padding(.horizontal, 16)
         }

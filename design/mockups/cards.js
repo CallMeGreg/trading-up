@@ -83,13 +83,13 @@ function cardHTML(c) {
   let val = c.value;
   if (c.foil) val *= 3;
   if (c.grade) val *= c.gradeMult;
-  const foil = c.foil ? `<div class="foil-overlay"></div><div class="foil-tag">★ FOIL ★</div>` : '';
+  const foil = c.foil ? `<div class="foil-overlay"></div>` : '';
   return `
   <div class="card rarity-${c.rarity}">
     ${foil}
     <div class="card-top">
       <span class="card-name">${c.name}</span>
-      <span class="type-badge type-${c.type}">${t.emoji} ${t.label}</span>
+      <span class="type-badge type-${c.type}">${t.label}</span>
     </div>
     <div class="art-window aw-${c.type}">${c.art ? `<img class="art-img" src="art/${c.art}.svg" alt="${c.name}">` : makeSigil(c.name + c.type, c.type)}</div>
     <div class="card-meta">
