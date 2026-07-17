@@ -1,0 +1,35 @@
+<svg viewBox="0 0 216 150" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bodyS2_032" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#c2f0ff"/><stop offset="55%" stop-color="#4bb6ff"/>
+      <stop offset="100%" stop-color="#1e5bd6"/>
+    </linearGradient>
+    <linearGradient id="body2S2_032" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#4bb6ff"/><stop offset="100%" stop-color="#08245c"/>
+    </linearGradient>
+    <linearGradient id="bellyS2_032" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity=".92"/><stop offset="100%" stop-color="#c2f0ff"/>
+    </linearGradient>
+    <radialGradient id="stageS2_032" cx="50%" cy="62%" r="55%">
+      <stop offset="0%" stop-color="#bff0ff" stop-opacity=".55"/><stop offset="70%" stop-color="#bff0ff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="orbS2_032" cx="42%" cy="38%" r="65%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity=".95"/>
+      <stop offset="45%" stop-color="#c2f0ff"/><stop offset="100%" stop-color="#1e5bd6"/>
+    </radialGradient>
+  </defs>
+  <defs>
+    <linearGradient id="skyS2_032" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0e5aa8"/><stop offset="55%" stop-color="#0b336e"/><stop offset="100%" stop-color="#03102e"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="216" height="150" fill="url(#skyS2_032)"/>
+  <polygon points="24,0 40,0 74,150 42,150" fill="#bfeaff" opacity=".08"/><polygon points="70,0 92,0 126,150 88,150" fill="#bfeaff" opacity=".08"/><polygon points="120,0 134,0 168,150 138,150" fill="#bfeaff" opacity=".08"/><polygon points="168,0 194,0 228,150 186,150" fill="#bfeaff" opacity=".08"/>
+  <path d="M0,150 L0,120 Q40,132 78,122 Q120,110 150,124 Q186,136 216,122 L216,150 Z" fill="#06255a"/>
+  <path d="M0,150 L0,134 Q52,144 108,134 T216,136 L216,150 Z" fill="#041a44"/>
+  <g fill="#0a2f66" opacity=".9">
+    <path d="M150,150 C150,128 140,120 146,110 C152,120 156,116 156,108 C162,120 160,132 166,150 Z"/>
+    <path d="M40,150 C40,132 34,126 40,116 C46,126 48,122 50,116 C54,128 54,138 58,150 Z"/>
+  </g>
+  <circle cx="34" cy="44" r="2.4" fill="#dff6ff" opacity="0.5"/><circle cx="58" cy="80" r="1.6" fill="#dff6ff" opacity="0.4"/><circle cx="180" cy="40" r="2.8" fill="#dff6ff" opacity="0.5"/><circle cx="150" cy="96" r="1.8" fill="#dff6ff" opacity="0.4"/><circle cx="196" cy="110" r="2.2" fill="#dff6ff" opacity="0.45"/><circle cx="90" cy="30" r="1.4" fill="#dff6ff" opacity="0.4"/><circle cx="120" cy="120" r="1.6" fill="#dff6ff" opacity="0.4"/>
+  <ellipse cx="108" cy="86" rx="92" ry="46" fill="url(#stageS2_032)"/><ellipse cx="108" cy="121.3" rx="27.6" ry="6" fill="#000" opacity=".2"/><g stroke="#08245c" stroke-width="2.2" stroke-linejoin="round"><g transform="rotate(-60 82.56 91.336)" stroke="#123f1e" stroke-width="1.1" stroke-linejoin="round"><path d="M82.56,78.616 Q91.464,91.336 82.56,104.056 Q73.656,91.336 82.56,78.616 Z" fill="#dcffa8"/><line x1="82.56" y1="82.432" x2="82.56" y2="100.24" stroke="#2f9e44" stroke-width="0.9"/></g><g transform="rotate(60 133.44 91.336)" stroke="#123f1e" stroke-width="1.1" stroke-linejoin="round"><path d="M133.44,78.616 Q142.344,91.336 133.44,104.056 Q124.536,91.336 133.44,78.616 Z" fill="#dcffa8"/><line x1="133.44" y1="82.432" x2="133.44" y2="100.24" stroke="#2f9e44" stroke-width="0.9"/></g><ellipse cx="108" cy="96" rx="21.200000000000003" ry="23.32" fill="url(#bodyS2_032)"/><ellipse cx="108" cy="100.664" rx="12.72" ry="13.991999999999999" fill="url(#bellyS2_032)" stroke="none"/><g transform="rotate(-63.0 89.32450325301181 64.01905138782138)" stroke="#08245c" stroke-width="1.1" stroke-linejoin="round"><path d="M89.32450325301181,54.47905138782138 L96.1933032530118,73.55905138782138 Q89.32450325301181,68.31205138782138 82.45570325301182,73.55905138782138 Z" fill="#c2f0ff"/><line x1="89.32450325301181" y1="59.249051387821375" x2="89.32450325301181" y2="70.69705138782138" stroke="#1e5bd6" stroke-width="0.9"/></g><g transform="rotate(-37.800000000000004 95.15346815543361 59.08684565842388)" stroke="#08245c" stroke-width="1.1" stroke-linejoin="round"><path d="M95.15346815543361,49.546845658423884 L102.02226815543361,68.62684565842389 Q95.15346815543361,63.37984565842388 88.28466815543362,68.62684565842389 Z" fill="#c2f0ff"/><line x1="95.15346815543361" y1="54.31684565842388" x2="95.15346815543361" y2="65.76484565842388" stroke="#1e5bd6" stroke-width="0.9"/></g><g transform="rotate(-12.600000000000009 103.42771766032847 56.36134926883471)" stroke="#08245c" stroke-width="1.1" stroke-linejoin="round"><path d="M103.42771766032847,46.82134926883471 L110.29651766032848,65.90134926883471 Q103.42771766032847,60.65434926883471 96.55891766032846,65.90134926883471 Z" fill="#c2f0ff"/><line x1="103.42771766032847" y1="51.591349268834705" x2="103.42771766032847" y2="63.039349268834705" stroke="#1e5bd6" stroke-width="0.9"/></g><g transform="rotate(12.599999999999994 112.57228233967153 56.3613492688347)" stroke="#08245c" stroke-width="1.1" stroke-linejoin="round"><path d="M112.57228233967153,46.8213492688347 L119.44108233967154,65.90134926883471 Q112.57228233967153,60.6543492688347 105.70348233967152,65.90134926883471 Z" fill="#c2f0ff"/><line x1="112.57228233967153" y1="51.5913492688347" x2="112.57228233967153" y2="63.0393492688347" stroke="#1e5bd6" stroke-width="0.9"/></g><g transform="rotate(37.79999999999998 120.84653184456639 59.086845658423876)" stroke="#08245c" stroke-width="1.1" stroke-linejoin="round"><path d="M120.84653184456639,49.54684565842388 L127.71533184456638,68.62684565842387 Q120.84653184456639,63.379845658423875 113.97773184456639,68.62684565842387 Z" fill="#c2f0ff"/><line x1="120.84653184456639" y1="54.31684565842387" x2="120.84653184456639" y2="65.76484565842388" stroke="#1e5bd6" stroke-width="0.9"/></g><g transform="rotate(63.0 126.67549674698819 64.01905138782138)" stroke="#08245c" stroke-width="1.1" stroke-linejoin="round"><path d="M126.67549674698819,54.47905138782138 L133.54429674698818,73.55905138782138 Q126.67549674698819,68.31205138782138 119.8066967469882,73.55905138782138 Z" fill="#c2f0ff"/><line x1="126.67549674698819" y1="59.249051387821375" x2="126.67549674698819" y2="70.69705138782138" stroke="#1e5bd6" stroke-width="0.9"/></g><circle cx="108" cy="74.7" r="6.4" fill="url(#orbS2_032)"/><ellipse cx="100.58" cy="93.668" rx="2.968" ry="3.38352" fill="#ffffff"/><circle cx="100.58" cy="94.02416000000001" r="1.7808" fill="#1a1020"/><circle cx="99.86768" cy="92.59952000000001" r="0.71232" fill="#fff"/><ellipse cx="115.42" cy="93.668" rx="2.968" ry="3.38352" fill="#ffffff"/><circle cx="115.42" cy="94.02416000000001" r="1.7808" fill="#1a1020"/><circle cx="114.70768" cy="92.59952000000001" r="0.71232" fill="#fff"/><path d="M102.1,101.8 q5.9,4.7 11.9,0" fill="none" stroke="#08245c" stroke-width="1.5"/></g></svg>

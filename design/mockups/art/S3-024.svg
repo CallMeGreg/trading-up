@@ -1,0 +1,40 @@
+<svg viewBox="0 0 216 150" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bodyS3_024" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#dcffa8"/><stop offset="55%" stop-color="#78dd63"/>
+      <stop offset="100%" stop-color="#2f9e44"/>
+    </linearGradient>
+    <linearGradient id="body2S3_024" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#78dd63"/><stop offset="100%" stop-color="#123f1e"/>
+    </linearGradient>
+    <linearGradient id="bellyS3_024" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity=".92"/><stop offset="100%" stop-color="#dcffa8"/>
+    </linearGradient>
+    <radialGradient id="stageS3_024" cx="50%" cy="62%" r="55%">
+      <stop offset="0%" stop-color="#eaffb4" stop-opacity=".55"/><stop offset="70%" stop-color="#eaffb4" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="orbS3_024" cx="42%" cy="38%" r="65%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity=".95"/>
+      <stop offset="45%" stop-color="#dcffa8"/><stop offset="100%" stop-color="#2f9e44"/>
+    </radialGradient>
+  </defs>
+  <defs>
+    <linearGradient id="skyS3_024" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#4fb85e"/><stop offset="50%" stop-color="#2c8a3e"/><stop offset="100%" stop-color="#0c2f16"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="216" height="150" fill="url(#skyS3_024)"/>
+  <g fill="#1c5f2b" opacity=".85">
+    <rect x="18" y="10" width="20" height="140" rx="10"/><rect x="176" y="4" width="24" height="146" rx="12"/>
+  </g>
+  <g fill="#134a20" opacity=".7">
+    <ellipse cx="30" cy="20" rx="34" ry="20"/><ellipse cx="188" cy="14" rx="40" ry="22"/><ellipse cx="108" cy="6" rx="70" ry="18"/>
+  </g>
+  <polygon points="40,0 60,0 86,150 54,150" fill="#eaffb0" opacity=".10"/><polygon points="96,0 122,0 148,150 110,150" fill="#eaffb0" opacity=".10"/><polygon points="160,0 178,0 204,150 174,150" fill="#eaffb0" opacity=".10"/>
+  <g fill="#2f9e44" opacity=".8">
+    <path d="M46,10 q-10,10 -4,22 q10,-4 8,-20 Z"/><path d="M170,8 q10,10 4,22 q-10,-4 -6,-20 Z"/>
+  </g>
+  <circle cx="34" cy="52" r="1.6" fill="#f6ffcf" opacity="0.7"/><circle cx="72" cy="34" r="1.2" fill="#f6ffcf" opacity="0.6"/><circle cx="150" cy="44" r="1.6" fill="#f6ffcf" opacity="0.65"/><circle cx="186" cy="64" r="1.3" fill="#f6ffcf" opacity="0.6"/><circle cx="110" cy="28" r="1.1" fill="#f6ffcf" opacity="0.6"/><circle cx="60" cy="96" r="1.3" fill="#f6ffcf" opacity="0.6"/>
+  <path d="M0,150 L0,128 Q54,140 108,130 T216,132 L216,150 Z" fill="#12451f"/>
+  <path d="M12,150 C9,120 11,112 14,106" stroke="#1c5a2a" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M30,150 C27,112 29,104 32,98" stroke="#1c5a2a" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M190,150 C187,116 189,108 192,102" stroke="#1c5a2a" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M206,150 C203,122 205,114 208,108" stroke="#1c5a2a" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M150,150 C147,126 149,118 152,112" stroke="#1c5a2a" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <ellipse cx="108" cy="96" rx="92" ry="44" fill="url(#stageS3_024)"/><ellipse cx="108" cy="149.3" rx="47.6" ry="9.1" fill="#000" opacity=".22"/><g stroke="#123f1e" stroke-width="2.3" stroke-linejoin="round" stroke-linecap="round"><rect x="87.0" y="93.0" width="14.0" height="50.7" rx="7.0" fill="url(#body2S3_024)"/><rect x="116.9" y="93.0" width="14.0" height="50.7" rx="7.0" fill="url(#body2S3_024)"/><circle cx="150.0" cy="82.5" r="17.5" fill="url(#bodyS3_024)"/><circle cx="161.6" cy="73.8" r="14.7" fill="url(#bodyS3_024)"/><circle cx="169.6" cy="64.3" r="11.2" fill="url(#bodyS3_024)"/><ellipse cx="108" cy="86" rx="46.64" ry="34.980000000000004" fill="url(#bodyS3_024)"/><ellipse cx="105.668" cy="97.89320000000001" rx="25.652" ry="18.189600000000002" fill="url(#bellyS3_024)" stroke="none"/><rect x="76.8" y="94.7" width="14.0" height="52.5" rx="7.0" fill="url(#bodyS3_024)"/><ellipse cx="83.74719999999999" cy="147.7" rx="8.7" ry="5.6" fill="#2f9e44"/><rect x="127.1" y="94.7" width="14.0" height="52.5" rx="7.0" fill="url(#bodyS3_024)"/><ellipse cx="134.1184" cy="147.7" rx="8.7" ry="5.6" fill="#2f9e44"/><circle cx="77.2" cy="67.8" r="23.3" fill="url(#bodyS3_024)"/><circle cx="74.9" cy="54.7" r="10.5" fill="url(#bodyS3_024)"/><circle cx="90.0" cy="56.1" r="10.5" fill="url(#bodyS3_024)"/><ellipse cx="60.4" cy="75.7" rx="9.8" ry="7.5" fill="url(#bodyS3_024)"/><circle cx="53.4" cy="73.4" r="3.0" fill="#123f1e"/><ellipse cx="69.28880000000001" cy="66.8776" rx="5.5968" ry="6.380351999999999" fill="#ffffff"/><circle cx="66.49040000000001" cy="67.549216" r="3.3580799999999997" fill="#1a1020"/><circle cx="65.14716800000001" cy="64.862752" r="1.343232" fill="#fff"/><ellipse cx="80.9488" cy="67.34400000000001" rx="5.149056" ry="5.869923839999999" fill="#ffffff"/><circle cx="78.1504" cy="67.96188672000001" r="3.0894336" fill="#1a1020"/><circle cx="76.91462656" cy="65.49033984" r="1.23577344" fill="#fff"/><path d="M55.1,79.9 q8.161999999999999,6.9959999999999996 16.323999999999998,0" fill="none" stroke="#123f1e" stroke-width="1.5"/></g></svg>

@@ -19,20 +19,20 @@ struct ShopView: View {
             .toolbar(.hidden, for: .navigationBar)
         }
         .fullScreenCover(item: $pending) { p in
-            RevealView(result: p.result, set: p.set) { pending = nil }
+            RevealView(content: p.content, set: p.set) { pending = nil }
         }
     }
 
     private func buyPack(_ set: Int) {
         guard let r = game.buyPack(set: set) else { Haptics.play(.error); return }
         Haptics.play(.medium)
-        pending = PendingOpen(result: r, set: set)
+        pending = PendingOpen(content: .pack(r), set: set)
     }
 
     private func buyBox(_ set: Int) {
-        guard let r = game.buyBox(set: set) else { Haptics.play(.error); return }
+        guard let results = game.buyBoxPacks(set: set) else { Haptics.play(.error); return }
         Haptics.play(.heavy)
-        pending = PendingOpen(result: r, set: set)
+        pending = PendingOpen(content: .box(results: results), set: set)
     }
 }
 
@@ -130,7 +130,7 @@ struct SetShopCard: View {
                 title: "Buy Booster Box",
                 subtitle: "\(Economy.boxPacks) packs · \(boxPrice.money) · ≥\(Economy.boxGuaranteeUltras) ultra, ≥\(Economy.boxGuaranteeFoils) foil",
                 systemImage: "cube.box.fill",
-                tint: [Color(hex: "b06cf7"), Color(hex: "6d5cf7")],
+                tint: [element.palette[2], element.palette[3]],
                 enabled: game.canAffordBox(set: set),
                 action: onBuyBox
             )
@@ -175,7 +175,11 @@ struct SetShopCard: View {
                         .foregroundStyle(.white)
                 }
                 Spacer()
-                Text(unlocked ? element.emoji : "🔒").font(.system(size: 40))
+                if !unlocked {
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 28, weight: .bold))
+                        .foregroundStyle(.white.opacity(0.85))
+                }
             }
             .padding(.horizontal, 16)
         }
@@ -185,9 +189,16 @@ struct SetShopCard: View {
     }
 }
 
-/// Identifiable wrapper so an `OpenResult` can drive `.fullScreenCover(item:)`.
+/// What a `RevealView` is opening: a single already-opened pack, or a booster
+/// box whose packs are revealed one at a time (all cards are already added).
+enum RevealContent {
+    case pack(OpenResult)
+    case box(results: [OpenResult])
+}
+
+/// Identifiable wrapper so a pending open can drive `.fullScreenCover(item:)`.
 struct PendingOpen: Identifiable {
     let id = UUID()
-    let result: OpenResult
+    let content: RevealContent
     let set: Int
 }

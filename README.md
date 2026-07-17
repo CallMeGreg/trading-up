@@ -9,8 +9,9 @@ Start with **$100**, rip packs, flip duplicates back to the shop, grade your hit
 and try to collect all **250** cards across **5 sets** — without going broke.
 
 > Status: fully playable first build. All game logic is verified by an automated
-> simulation (see [Testing](#testing)). Art is procedural placeholder "sigils" —
-> good enough to ship a prototype, ready to be swapped for real illustrations later.
+> simulation (see [Testing](#testing)). Each of the 250 cards has its own
+> name-aligned creature illustration, rendered as a flat‑vector scene tinted to the
+> card's element (with the procedural "sigil" kept as an automatic fallback).
 
 ---
 
@@ -131,13 +132,14 @@ TradingUp/
   Generated/
     CardData.swift           The 250 cards (auto‑generated — do not edit by hand)
   Views/                     SwiftUI screens (Shop, Collection, pack opening, etc.)
-  Assets.xcassets/           App icon + accent color
+  Assets.xcassets/           App icon + accent color + CardArt/ (250 card illustrations)
 data/cards.json              The 250 cards as JSON (source for tooling/other targets)
 design/
   DESIGN.md                  Full game design document
   mockups/                   Interactive HTML card‑style mockups (open index.html)
 tools/
   generate_cards.py          Regenerates data/cards.json AND Generated/CardData.swift
+  generate_art.py            Regenerates the 250 card illustrations (needs rsvg-convert)
   generate_icon.py           Regenerates the app icon (needs Pillow)
   verify/main.swift          The simulation test harness described above
 ```
@@ -159,6 +161,19 @@ python3 tools/generate_cards.py
 
 This rewrites both `data/cards.json` and `TradingUp/Generated/CardData.swift`, and
 prints an economy report. Re‑run the [test harness](#testing) afterward.
+
+**Card art** — each of the 250 cards has a deterministic, name‑aligned creature
+illustration (a flat‑vector creature on a per‑set scene, tinted to the card's
+element). To (re)generate the art after editing `tools/generate_art.py`:
+
+```bash
+brew install librsvg                        # one‑time: provides rsvg-convert
+python3 tools/generate_art.py assets        # 250 PNGs -> Assets.xcassets/CardArt + mockup SVGs
+python3 tools/generate_art.py qa            # optional: QA contact sheets to /tmp/qa_set{n}.png
+```
+
+The app shows these via `UIImage(named: card.id)` in `CardView`; the procedural
+`SigilView` stays as an automatic fallback if an image is ever missing.
 
 **App icon** — the icon is the game's procedural "sigil" rendered with Pillow:
 
@@ -182,10 +197,11 @@ See **[DESIGN.md](DESIGN.md)** for the full write‑up: the Mythlings world, all
 sets and their themes, the rarity value bands, the complete economy and grading
 tables, booster‑box guarantees, bonus payouts, and win/lose rules.
 
-The card art is generated procedurally: a deterministic "sigil" emblem derived from
-each card's name so the same card always looks the same. The exact same algorithm is
-used in the HTML mockups (`design/mockups/cards.js`) and in the app
-(`TradingUp/Views/SigilView.swift`), so what you preview is what you get.
+The card art is generated deterministically by `tools/generate_art.py`: every card
+gets a name‑aligned, flat‑vector creature on a per‑set scene, tinted to its element
+and scaled up through its evolution line. The rendered images live in the asset
+catalog (`TradingUp/Assets.xcassets/CardArt`) and, as SVGs, in the HTML mockups
+(`design/mockups/art`). The app's procedural `SigilView` remains as a fallback.
 
 ---
 
@@ -198,8 +214,8 @@ This repo is a complete, runnable prototype. To actually publish it you'll need 
 2. **Set your signing team** in Xcode: select the *TradingUp* target →
    *Signing & Capabilities* → pick your team. The bundle id is
    `com.callmegreg.tradingup` (change if you like).
-3. **Commission real artwork** for the 250 cards (and a polished app icon) to
-   replace the procedural placeholders.
+3. **Commission bespoke artwork** if you want to go beyond the built‑in vector
+   illustrations — e.g. hand‑drawn card art or a polished app icon.
 4. **Add polish**: sound effects, richer pack‑opening animation, App Store
    screenshots, and an App Privacy questionnaire (this app collects no data).
 5. **Test on device** and distribute a beta via **TestFlight** before submitting for

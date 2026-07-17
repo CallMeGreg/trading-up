@@ -77,8 +77,14 @@ body {
 .card-name { font-weight: 800; font-size: 17px; letter-spacing: .3px; }
 .type-badge {
   font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 999px;
-  background: rgba(255,255,255,.08); white-space: nowrap;
+  background: rgba(255,255,255,.08); white-space: nowrap; color: var(--subtle, #8a94a6);
 }
+.type-badge.type-fire     { color: #ff9a6b; background: rgba(255,154,107,.14); }
+.type-badge.type-rock     { color: #e0b483; background: rgba(224,180,131,.14); }
+.type-badge.type-water    { color: #8fd3ff; background: rgba(143,211,255,.14); }
+.type-badge.type-grass    { color: #9fe08a; background: rgba(159,224,138,.14); }
+.type-badge.type-electric { color: #ffdf66; background: rgba(255,223,102,.14); }
+.type-badge.type-shadow   { color: #c6a3ff; background: rgba(198,163,255,.14); }
 
 .art-window {
   position: relative;
@@ -92,6 +98,7 @@ body {
 .aw-electric { background: radial-gradient(120px 90px at 50% 40%, #fff29a 0%, #f5a300 45%, #3a2900 100%); }
 .aw-shadow { background: radial-gradient(120px 90px at 50% 40%, #d3b0ff 0%, #6b2fce 45%, #180733 100%); }
 .sigil { width: 100%; height: 100%; display: block; filter: drop-shadow(0 2px 3px rgba(0,0,0,.4)); }
+.art-img { width: 100%; height: 100%; display: block; object-fit: cover; }
 
 .card-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 11px; color: var(--muted); }
 .rarity-gem { width: 10px; height: 10px; transform: rotate(45deg); display: inline-block; margin-right: 6px; vertical-align: -1px; border-radius: 2px; }

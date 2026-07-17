@@ -1,0 +1,34 @@
+<svg viewBox="0 0 216 150" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bodyS4_045" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#fff6b0"/><stop offset="55%" stop-color="#ffd21a"/>
+      <stop offset="100%" stop-color="#f5a300"/>
+    </linearGradient>
+    <linearGradient id="body2S4_045" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ffd21a"/><stop offset="100%" stop-color="#5a3d00"/>
+    </linearGradient>
+    <linearGradient id="bellyS4_045" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity=".92"/><stop offset="100%" stop-color="#fff6b0"/>
+    </linearGradient>
+    <radialGradient id="stageS4_045" cx="50%" cy="62%" r="55%">
+      <stop offset="0%" stop-color="#fff6b0" stop-opacity=".55"/><stop offset="70%" stop-color="#fff6b0" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="orbS4_045" cx="42%" cy="38%" r="65%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity=".95"/>
+      <stop offset="45%" stop-color="#fff6b0"/><stop offset="100%" stop-color="#f5a300"/>
+    </radialGradient>
+  </defs>
+  <defs>
+    <linearGradient id="skyS4_045" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2b2f45"/><stop offset="55%" stop-color="#3a3320"/><stop offset="100%" stop-color="#14140c"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="216" height="150" fill="url(#skyS4_045)"/>
+  <g fill="#20233a" opacity=".9">
+    <ellipse cx="50" cy="26" rx="52" ry="22"/><ellipse cx="150" cy="18" rx="60" ry="24"/><ellipse cx="200" cy="40" rx="40" ry="20"/>
+  </g>
+  <polyline points="150,2 138,40 150,40 132,86" fill="none" stroke="#fff29a" stroke-width="2" opacity=".35"/><polyline points="44,0 34,30 44,30 30,64" fill="none" stroke="#fff29a" stroke-width="2" opacity=".35"/>
+  <line x1="30" y1="20" x2="26" y2="36" stroke="#cfe0ff" stroke-width="1" opacity=".2"/><line x1="70" y1="50" x2="66" y2="66" stroke="#cfe0ff" stroke-width="1" opacity=".2"/><line x1="110" y1="10" x2="106" y2="26" stroke="#cfe0ff" stroke-width="1" opacity=".2"/><line x1="150" y1="60" x2="146" y2="76" stroke="#cfe0ff" stroke-width="1" opacity=".2"/><line x1="190" y1="30" x2="186" y2="46" stroke="#cfe0ff" stroke-width="1" opacity=".2"/><line x1="90" y1="90" x2="86" y2="106" stroke="#cfe0ff" stroke-width="1" opacity=".2"/><line x1="200" y1="90" x2="196" y2="106" stroke="#cfe0ff" stroke-width="1" opacity=".2"/>
+  <path d="M60,37.6 L60.672,39.328 L62.4,40 L60.672,40.672 L60,42.4 L59.328,40.672 L57.6,40 L59.328,39.328 Z" fill="#fff6b0" opacity="0.8"/><path d="M170,50 L170.56,51.44 L172,52 L170.56,52.56 L170,54 L169.44,52.56 L168,52 L169.44,51.44 Z" fill="#fff6b0" opacity="0.7"/><path d="M120,27.8 L120.616,29.384 L122.2,30 L120.616,30.616 L120,32.2 L119.384,30.616 L117.8,30 L119.384,29.384 Z" fill="#fff6b0" opacity="0.75"/><path d="M48,94.2 L48.504,95.496 L49.8,96 L48.504,96.504 L48,97.8 L47.496,96.504 L46.2,96 L47.496,95.496 Z" fill="#fff6b0" opacity="0.7"/><path d="M196,98 L196.56,99.44 L198,100 L196.56,100.56 L196,102 L195.44,100.56 L194,100 L195.44,99.44 Z" fill="#fff6b0" opacity="0.7"/>
+  <path d="M0,150 L0,126 Q54,138 108,128 T216,130 L216,150 Z" fill="#181812"/>
+  <ellipse cx="108" cy="92" rx="92" ry="44" fill="url(#stageS4_045)"/><ellipse cx="108" cy="138.7" rx="42.8" ry="7.3" fill="#000" opacity=".22"/><g stroke="#5a3d00" stroke-width="2.3" stroke-linejoin="round" stroke-linecap="round"><rect x="89.1" y="93.6" width="12.6" height="40.6" rx="6.3" fill="url(#body2S4_045)"/><rect x="116.0" y="93.6" width="12.6" height="40.6" rx="6.3" fill="url(#body2S4_045)"/><path d="M143.7,85.2 q29.4,-2.8000000000000003 29.4,-30.800000000000004" fill="none" stroke="url(#body2S4_045)" stroke-width="8.4"/><g transform="rotate(20 173.10000000000002 54.4)" stroke="#5a3d00" stroke-width="1.1" stroke-linejoin="round"><polygon points="170.3,40.4 180.10000000000002,40.4 173.8,53.699999999999996 179.40000000000003,53.699999999999996 168.20000000000002,68.4 172.82000000000002,55.1 166.10000000000002,55.1 173.10000000000002,51.6" fill="#fff6b0"/></g><ellipse cx="108" cy="88" rx="42" ry="28" fill="url(#bodyS4_045)"/><ellipse cx="105.9" cy="97.52" rx="23.1" ry="14.56" fill="url(#bellyS4_045)" stroke="none"/><g fill="url(#body2S4_045)" stroke="#5a3d00" stroke-width="1.6" stroke-linejoin="round"><path d="M82.0,67.0 L87.0,55.0 L92.0,67.0 Z"/><path d="M93.6,61.400000000000006 L99.6,46.400000000000006 L105.6,61.400000000000006 Z"/><path d="M107.04,62.8 L113.04,48.8 L119.04,62.8 Z"/><path d="M120.64,68.4 L125.64,57.400000000000006 L130.64,68.4 Z"/></g><rect x="79.9" y="95.0" width="12.6" height="42.0" rx="6.3" fill="url(#bodyS4_045)"/><ellipse cx="86.16" cy="137.4" rx="7.8" ry="5.0" fill="#f5a300"/><rect x="125.2" y="95.0" width="12.6" height="42.0" rx="6.3" fill="url(#bodyS4_045)"/><ellipse cx="131.52" cy="137.4" rx="7.8" ry="5.0" fill="#f5a300"/><circle cx="80.3" cy="73.4" r="22.0" fill="url(#bodyS4_045)"/><path d="M72.9,66.8 L78.1,52.5 L83.3,66.8 Z" fill="url(#bodyS4_045)" transform="rotate(-8 78.08 73.44)"/><path d="M87.2,66.8 L92.4,52.5 L97.6,66.8 Z" fill="url(#bodyS4_045)" transform="rotate(10 92.38 73.44)"/><ellipse cx="64.4" cy="80.9" rx="9.2" ry="7.0" fill="url(#bodyS4_045)"/><circle cx="57.8" cy="78.7" r="2.9" fill="#5a3d00"/><ellipse cx="72.8" cy="72.56" rx="5.279999999999999" ry="6.019199999999999" fill="#fff6b0"/><circle cx="68.312" cy="73.1936" r="3.1679999999999997" fill="#1a1020"/><circle cx="67.0448" cy="70.6592" r="1.2671999999999999" fill="#fff"/><path d="M65.93599999999999,64.64 L78.608,69.92" stroke="#1a1020" stroke-width="2.6399999999999997" stroke-linecap="round"/><ellipse cx="83.8" cy="73.0" rx="4.8576" ry="5.5376639999999995" fill="#fff6b0"/><circle cx="79.312" cy="73.582912" r="2.91456" fill="#1a1020"/><circle cx="78.146176" cy="71.251264" r="1.165824" fill="#fff"/><path d="M77.48512,65.7136 L89.14336,70.5712" stroke="#1a1020" stroke-width="2.4288" stroke-linecap="round"/><path d="M58.3,83.3 q11.0,11.0 20.9,0.05" fill="#5a3d00" stroke="none"/><path d="M62.7,84.4 l2,6 l3,-6 Z" fill="#fff"/></g><path d="M60.3,79.4 q-6,14 6,18 q14,3 18,-6 q-10,2 -16,-4 q-4,-4 -8,-8 Z" fill="#5a3d00" stroke="#5a3d00" stroke-width="1.6"/><g fill="#fff"><path d="M64.3,82.4 l2,6 l3,-6 Z"/><path d="M72.3,82.4 l2,6 l3,-6 Z"/><path d="M80.3,82.4 l2,6 l3,-6 Z"/></g></svg>

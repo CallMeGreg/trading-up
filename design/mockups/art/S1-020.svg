@@ -1,0 +1,39 @@
+<svg viewBox="0 0 216 150" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bodyS1_020" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffe08a"/><stop offset="55%" stop-color="#ff8a2a"/>
+      <stop offset="100%" stop-color="#e01f1f"/>
+    </linearGradient>
+    <linearGradient id="body2S1_020" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ff8a2a"/><stop offset="100%" stop-color="#4a0f04"/>
+    </linearGradient>
+    <linearGradient id="bellyS1_020" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity=".92"/><stop offset="100%" stop-color="#ffe08a"/>
+    </linearGradient>
+    <radialGradient id="stageS1_020" cx="50%" cy="62%" r="55%">
+      <stop offset="0%" stop-color="#ffd15c" stop-opacity=".55"/><stop offset="70%" stop-color="#ffd15c" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="orbS1_020" cx="42%" cy="38%" r="65%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity=".95"/>
+      <stop offset="45%" stop-color="#ffe08a"/><stop offset="100%" stop-color="#e01f1f"/>
+    </radialGradient>
+  </defs>
+  <defs>
+    <linearGradient id="skyS1_020" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#3a0d05"/><stop offset="55%" stop-color="#7a1c06"/><stop offset="100%" stop-color="#20060a"/>
+    </linearGradient>
+    <radialGradient id="lavaS1_020" cx="50%" cy="100%" r="80%">
+      <stop offset="0%" stop-color="#ffd15c"/><stop offset="35%" stop-color="#ff6a1a"/><stop offset="100%" stop-color="#7a1c06" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect x="0" y="0" width="216" height="150" fill="url(#skyS1_020)"/>
+  <path d="M0,150 L0,96 L34,110 L70,88 L104,104 L150,86 L186,106 L216,92 L216,150 Z" fill="#2a0a06"/>
+  <path d="M56,150 L56,74 L74,56 L92,150 Z M150,150 L142,68 L162,52 L182,150 Z" fill="#1c0705" opacity=".8"/>
+  <g stroke="#ff7a1a" stroke-width="1" opacity=".5" fill="none">
+    <path d="M28,150 L34,120 L28,104 L38,84"/><path d="M120,150 L116,118 L126,100"/><path d="M176,150 L172,120 L182,102"/>
+  </g>
+  <rect x="0" y="118" width="216" height="32" fill="url(#lavaS1_020)"/>
+  <path d="M0,150 L0,138 Q54,128 108,138 T216,136 L216,150 Z" fill="#ffb24d" opacity=".9"/>
+  <path d="M0,150 L0,144 Q54,136 108,144 T216,142 L216,150 Z" fill="#fff0b0" opacity=".7"/>
+  <circle cx="30" cy="52" r="1.8" fill="#ffcf6a" opacity="0.9"/><circle cx="70" cy="34" r="1.3" fill="#ffcf6a" opacity="0.8"/><circle cx="120" cy="60" r="1.6" fill="#ffcf6a" opacity="0.85"/><circle cx="160" cy="30" r="1.2" fill="#ffcf6a" opacity="0.7"/><circle cx="188" cy="66" r="1.7" fill="#ffcf6a" opacity="0.8"/><circle cx="50" cy="84" r="1.2" fill="#ffcf6a" opacity="0.7"/><circle cx="96" cy="26" r="1.1" fill="#ffcf6a" opacity="0.7"/>
+  <ellipse cx="108" cy="118" rx="86" ry="30" fill="url(#stageS1_020)"/><ellipse cx="104" cy="121.3" rx="37.1" ry="5.1" fill="#000" opacity=".16"/><g stroke="#4a0f04" stroke-width="2.2" stroke-linejoin="round"><path d="M147.5,90.0 l15.9,-21.0 l0,42.0 Z" fill="url(#body2S1_020)"/><path d="M51.0,90.0 C51.0,59.7 141.1,66.7 149.1,90.0 C141.1,113.3 51.0,120.3 51.0,90.0 Z" fill="url(#bodyS1_020)"/><path d="M56.3,90.0 C61.6,104.0 125.2,106.3 141.1,94.7" fill="none" stroke="#ffe08a" stroke-width="6.5" opacity=".7"/><g transform="rotate(0 104 67.846)" stroke="#4a0f04" stroke-width="1.1" stroke-linejoin="round"><path d="M104,86.50200000000001 C89.0752,71.5772 94.672,60.3836 104,49.19 C113.328,60.3836 118.9248,71.5772 104,86.50200000000001 Z" fill="#ffd15c"/><path d="M104,77.174 C96.5376,69.7116 99.336,63.182 104,56.6524 C108.664,63.182 111.4624,69.7116 104,77.174 Z" fill="#ff8a2a" stroke="none"/></g><path d="M93.4,97.0 q-15.9,11.7 -2.7,16.3 q7.9,-7.0 5.3,-14.0 Z" fill="url(#body2S1_020)"/><circle cx="104" cy="85.336" r="2.2" fill="#ffd15c" opacity=".7"/><circle cx="119.9" cy="90" r="2.0" fill="#ffd15c" opacity=".7"/><ellipse cx="71.14" cy="85.8024" rx="5.1304" ry="5.848655999999999" fill="#ffffff"/><circle cx="70.14" cy="86.418048" r="3.0782399999999996" fill="#1a1020"/><circle cx="68.908704" cy="83.95545600000001" r="1.231296" fill="#fff"/><path d="M52.1,96.5 q15.9,6.5 29.2,-1.2 l-2,6 l-6,-3 l-4,5 l-5,-4 l-5,4 Z" fill="#fff" stroke="#4a0f04" stroke-width="1.2"/></g></svg>

@@ -60,6 +60,15 @@ final class GameState: ObservableObject {
         return r
     }
 
+    /// Open a box as a sequence of packs (all cards added immediately, revealed
+    /// pack-by-pack). Returns one result per pack, or nil if unaffordable/locked.
+    @discardableResult
+    func buyBoxPacks(set: Int) -> [OpenResult]? {
+        let r = core.buyBoxPacks(set: set, using: &rng)
+        if r != nil { save() }
+        return r
+    }
+
     @discardableResult
     func sell(_ instanceId: UUID) -> Double? {
         let v = core.sell(instanceId: instanceId)

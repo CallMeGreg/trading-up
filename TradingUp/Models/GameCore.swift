@@ -46,6 +46,10 @@ struct OpenResult {
     /// Cards already owned *before* this pack/box was opened — lets the reveal
     /// screen flag which pulled cards are brand new to the collection.
     var preOwnedIds: Set<String> = []
+    /// When set (box packs), restricts duplicate classification to the copies
+    /// owned up to and including this pack, so a box opened all at once still
+    /// classifies keepers in true pack-by-pack order. `nil` = use all copies.
+    var visibleInstanceIds: Set<UUID>? = nil
 }
 
 struct GradeResult {
@@ -150,16 +154,10 @@ struct GameCore: Codable {
         return OpenResult(pulled: pack, bonuses: bonuses, isBox: false, preOwnedIds: preOwned)
     }
 
-    mutating func buyBox<G: RandomNumberGenerator>(set: Int, using rng: inout G) -> OpenResult? {
-        guard isUnlocked(set: set) else { return nil }
-        let price = Economy.boxPrice(set: set)
-        guard cash >= price else { return nil }
-        cash -= price
-        stats.moneySpent += price
-        stats.boxesOpened += 1
-        stats.packsOpened += Economy.boxPacks
-        let preOwned = uniqueOwnedIds
-
+    /// Build every pack in a booster box, applying the box-wide ultra/foil
+    /// guarantees across all of them, then splitting back into per-pack groups.
+    /// Pure construction: touches neither cash, stats, nor the collection.
+    func buildBoxPacks<G: RandomNumberGenerator>(set: Int, using rng: inout G) -> [[CardInstance]] {
         var pulled: [CardInstance] = []
         for _ in 0..<Economy.boxPacks { pulled += buildPack(set: set, using: &rng) }
 
@@ -179,9 +177,52 @@ struct GameCore: Codable {
             pulled[i].foil = true
         }
 
+        // Guarantees replaced cards in place, so grouping by pack size is preserved.
+        return stride(from: 0, to: pulled.count, by: Economy.packSize).map {
+            Array(pulled[$0..<min($0 + Economy.packSize, pulled.count)])
+        }
+    }
+
+    mutating func buyBox<G: RandomNumberGenerator>(set: Int, using rng: inout G) -> OpenResult? {
+        guard isUnlocked(set: set) else { return nil }
+        let price = Economy.boxPrice(set: set)
+        guard cash >= price else { return nil }
+        cash -= price
+        stats.moneySpent += price
+        stats.boxesOpened += 1
+        stats.packsOpened += Economy.boxPacks
+        let preOwned = uniqueOwnedIds
+        let pulled = buildBoxPacks(set: set, using: &rng).flatMap { $0 }
         ingest(pulled)
         let bonuses = checkBonuses()
         return OpenResult(pulled: pulled, bonuses: bonuses, isBox: true, preOwnedIds: preOwned)
+    }
+
+    /// Open a booster box as a sequence of packs. All cards are added to the
+    /// collection immediately (so nothing is lost if the reveal is interrupted),
+    /// but each returned pack carries a snapshot of the copies visible "so far"
+    /// so the reveal can classify duplicates in true pack-by-pack order.
+    mutating func buyBoxPacks<G: RandomNumberGenerator>(set: Int, using rng: inout G) -> [OpenResult]? {
+        guard isUnlocked(set: set) else { return nil }
+        let price = Economy.boxPrice(set: set)
+        guard cash >= price else { return nil }
+        cash -= price
+        stats.moneySpent += price
+        stats.boxesOpened += 1
+
+        let packs = buildBoxPacks(set: set, using: &rng)
+        var results: [OpenResult] = []
+        var visible = Set(instances.map { $0.id })   // copies owned before the box
+        for pack in packs {
+            let preOwned = uniqueOwnedIds
+            stats.packsOpened += 1
+            ingest(pack)
+            visible.formUnion(pack.map { $0.id })
+            let bonuses = checkBonuses()
+            results.append(OpenResult(pulled: pack, bonuses: bonuses, isBox: false,
+                                      preOwnedIds: preOwned, visibleInstanceIds: visible))
+        }
+        return results
     }
 
     private mutating func ingest(_ newInstances: [CardInstance]) {

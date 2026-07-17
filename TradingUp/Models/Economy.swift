@@ -18,10 +18,10 @@ enum Economy {
     static var cheapestPackPrice: Double { packPrices.min() ?? 0 }
 
     // Booster box
-    static let boxPacks = 24
-    static let boxGuaranteeUltras = 6
-    static let boxGuaranteeFoils = 4
-    static func boxPrice(set: Int) -> Double { packPrice(set: set) * 20 }
+    static let boxPacks = 12
+    static let boxGuaranteeUltras = 3
+    static let boxGuaranteeFoils = 2
+    static func boxPrice(set: Int) -> Double { packPrice(set: set) * 10 }
 
     // Set unlocking: set N stays locked until this many *unique* cards are owned.
     // Set 1 is free; each later set costs 25 more uniques (2→25, 3→50, 4→75, 5→100).
