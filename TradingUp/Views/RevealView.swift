@@ -383,10 +383,21 @@ private struct PackCardSlot: View {
 
     private var tappable: Bool { slot == .pendingDup || slot == .keptDup }
 
+    /// Kept and sold cards are "processed" — desaturated so it's clear which
+    /// cards still need a decision. Sold fades more and carries a stamp.
+    private var isProcessed: Bool { slot == .sold || slot == .keptDup }
+    private var cardOpacity: Double {
+        switch slot {
+        case .sold:    return 0.45
+        case .keptDup: return 0.65
+        default:       return 1
+        }
+    }
+
     var body: some View {
         CardView(card: inst.card, instance: inst, width: width)
-            .saturation(slot == .sold ? 0 : 1)
-            .opacity(slot == .sold ? 0.45 : 1)
+            .saturation(isProcessed ? 0 : 1)
+            .opacity(cardOpacity)
             .overlay(alignment: .topTrailing) { badgeView }
             .overlay { if slot == .sold { soldStamp } }
             .contentShape(Rectangle())
