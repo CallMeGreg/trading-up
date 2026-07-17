@@ -40,9 +40,9 @@ enum Economy {
     // Bonuses
     static func evolutionBonus(set: Int, stageCount: Int) -> Double {
         let p = packPrice(set: set)
-        return stageCount >= 3 ? p * 1.0 : p * 0.5
+        return stageCount >= 3 ? p * 2.0 : p * 1.0
     }
-    static func setCompletionBonus(set: Int) -> Double { packPrice(set: set) * 30 }
+    static func setCompletionBonus(set: Int) -> Double { packPrice(set: set) * 50 }
 
     // MARK: Grading table (grade, odds %, value multiplier)
     static let gradeTable: [(grade: Int, odds: Int, mult: Double)] = [

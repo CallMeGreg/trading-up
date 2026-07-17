@@ -190,9 +190,9 @@ A cheaper‑per‑pack commitment with guarantees above the statistical average.
 ## 9. Bonuses
 
 - **Complete an evolution line** → cash bonus:
-  - 2‑stage line = **0.5× pack price** of its set · 3‑stage line = **1.0× pack price**.
-- **Complete a full set (all 50)** → **huge** cash bonus = **30× that set's pack price**
-  (S1 $300 … S5 $3,600). Roughly funds a booster box of the next set.
+  - 2‑stage line = **1.0× pack price** of its set · 3‑stage line = **2.0× pack price**.
+- **Complete a full set (all 50)** → **huge** cash bonus = **50× that set's pack price**
+  (S1 $500 … S5 $6,000) — a major windfall that easily bankrolls the next set.
 
 ---
 
