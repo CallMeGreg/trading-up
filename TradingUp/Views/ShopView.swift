@@ -68,7 +68,7 @@ struct CashHeader: View {
                         .foregroundStyle(Palette.text)
                 }
                 ProgressBar(value: Double(game.uniqueCount), total: Double(game.totalCards),
-                            tint: Color(hex: "b06cf7"))
+                            tint: .white)
             }
         }
         .panel()
