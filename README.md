@@ -65,9 +65,10 @@ all 250 cards are embedded in the app.
 - **Open packs** — tap to reveal cards one at a time. Every pack is
   **3 commons, 2 uncommons, and 1 rare‑or‑ultra**. Every card has a **1%** chance
   to be a shiny **foil** (×3 value). On the summary, brand‑new cards are flagged
-  **✦ NEW**; duplicates are outlined — **tap any duplicate to keep or sell it
-  individually**, or use **Sell Duplicates** / **Keep All** at the bottom (blue =
-  keep, green = sell). The sell total updates live as you decide each card.
+  **✦ NEW** in the corner — **tap any duplicate (the cards without a NEW tag) to
+  keep or sell it individually**, or use **Sell Duplicates** / **Keep All** at the
+  bottom (blue = keep, green = sell). The sell total updates live as you decide
+  each card.
 - **Collection** — browse all 50 cards per set. Owned cards show off their best
   copy; unowned cards are locked silhouettes. Tap a card for details.
 - **Sell** — flip duplicate cards back to the shop for cash. You can **never sell

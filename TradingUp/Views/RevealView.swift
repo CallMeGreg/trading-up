@@ -382,21 +382,13 @@ private struct PackCardSlot: View {
     let onTap: () -> Void
 
     private var tappable: Bool { slot == .pendingDup || slot == .keptDup }
-    private var scale: CGFloat { width / 230 }
 
     var body: some View {
         CardView(card: inst.card, instance: inst, width: width)
             .saturation(slot == .sold ? 0 : 1)
             .opacity(slot == .sold ? 0.45 : 1)
-            .overlay(alignment: .top) { badgeView }
+            .overlay(alignment: .topTrailing) { badgeView }
             .overlay { if slot == .sold { soldStamp } }
-            .overlay {
-                if slot == .pendingDup {
-                    RoundedRectangle(cornerRadius: 16 * scale)
-                        .strokeBorder(Color(hex: "e0a23b").opacity(0.9),
-                                      style: StrokeStyle(lineWidth: 2, dash: [6, 4]))
-                }
-            }
             .contentShape(Rectangle())
             .onTapGesture { if tappable { Haptics.play(.light); onTap() } }
             .animation(.easeInOut(duration: 0.2), value: slot)
@@ -411,7 +403,7 @@ private struct PackCardSlot: View {
                 .background(Capsule().fill(b.color))
                 .overlay(Capsule().strokeBorder(.white.opacity(0.35), lineWidth: 0.5))
                 .shadow(color: .black.opacity(0.45), radius: 2, y: 1)
-                .offset(y: -7)
+                .offset(x: 5, y: -7)
         }
     }
 
