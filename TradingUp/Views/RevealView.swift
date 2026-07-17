@@ -140,53 +140,46 @@ struct RevealView: View {
 
 // MARK: - Summary
 
+/// Live per-card state on the pack summary. Boxes don't use this (bulk flow).
+enum PackSlot: Equatable { case newCard, keeperExisting, pendingDup, keptDup, sold }
+
 private struct SummaryView: View {
     @EnvironmentObject var game: GameState
     let result: OpenResult
     let set: Int
     let onDone: () -> Void
 
+    /// One-time classification of each pulled instance, snapshotted on appear
+    /// (before any selling) so keeper decisions don't shift as dupes are sold.
+    private enum BaseKind { case newCard, keeperExisting, duplicate }
+    @State private var baseKind: [UUID: BaseKind] = [:]
+    @State private var soldIds: Set<UUID> = []
+    @State private var keptIds: Set<UUID> = []
+    @State private var actionInst: CardInstance? = nil
+
+    private let blue = [Color(hex: "3b82f6"), Color(hex: "6d5cf7")]
+    private let green = [Palette.money, Color(hex: "2fae63")]
+
     private var totalValue: Double { result.pulled.reduce(0) { $0 + $1.currentValue } }
     private var foils: [CardInstance] { result.pulled.filter { $0.foil } }
     private var ultras: [CardInstance] { result.pulled.filter { $0.card.rarity == .ultra } }
-    private var highlights: [CardInstance] {
-        // Boxes: show the exciting cards. Packs: show everything.
-        result.isBox ? Array((ultras + foils.filter { $0.card.rarity != .ultra })
+
+    /// Distinct cards in this pull that weren't already in the collection.
+    private var newCount: Int {
+        Set(result.pulled.map { $0.cardId }).subtracting(result.preOwnedIds).count
+    }
+
+    // Box highlights: show only the exciting cards (too many to list all).
+    private var boxHighlights: [CardInstance] {
+        Array((ultras + foils.filter { $0.card.rarity != .ultra })
             .reduce(into: [CardInstance]()) { acc, x in if !acc.contains(where: { $0.id == x.id }) { acc.append(x) } })
-            : result.pulled
     }
 
-    /// Duplicates among the just-opened cards (all but the best copy of each).
-    private var duplicates: (count: Int, proceeds: Double) { game.duplicateSummary(from: result) }
-
-    /// Bottom action(s): offer to auto-sell duplicates when there are any,
-    /// otherwise a single confirm. Uniques are always kept either way.
-    private var finishButtons: some View {
-        let dup = duplicates
-        return VStack(spacing: 10) {
-            if dup.count > 0 {
-                BigButton(title: "Sell \(dup.count) Duplicate\(dup.count == 1 ? "" : "s")",
-                          subtitle: "Keep 1 of each · +\(dup.proceeds.moneyShort)",
-                          systemImage: "dollarsign.circle.fill",
-                          tint: [Palette.money, Color(hex: "2fae63")]) {
-                    Haptics.play(.success)
-                    game.sellDuplicates(from: result)
-                    onDone()
-                }
-                BigButton(title: "Keep All", systemImage: "tray.and.arrow.down.fill",
-                          tint: [Color(hex: "3b82f6"), Color(hex: "6d5cf7")]) {
-                    Haptics.play(.light)
-                    onDone()
-                }
-            } else {
-                BigButton(title: "Add to Collection", systemImage: "checkmark.circle.fill",
-                          tint: [Palette.money, Color(hex: "2fae63")]) {
-                    Haptics.play(.light)
-                    onDone()
-                }
-            }
-        }
+    // Pack duplicates the player hasn't yet sold or explicitly kept.
+    private var pendingDuplicates: [CardInstance] {
+        result.pulled.filter { baseKind[$0.id] == .duplicate && !soldIds.contains($0.id) && !keptIds.contains($0.id) }
     }
+    private var pendingProceeds: Double { pendingDuplicates.reduce(0) { $0 + $1.currentValue } }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -199,8 +192,13 @@ private struct SummaryView: View {
 
                     HStack(spacing: 10) {
                         StatTile(label: "Cards", value: "\(result.pulled.count)")
-                        StatTile(label: "Foils", value: "\(foils.count)", tint: Color(hex: "ff8ad6"))
-                        StatTile(label: "Ultras", value: "\(ultras.count)", tint: Color(hex: "b06cf7"))
+                        if result.isBox {
+                            StatTile(label: "Foils", value: "\(foils.count)", tint: Color(hex: "ff8ad6"))
+                            StatTile(label: "Ultras", value: "\(ultras.count)", tint: Color(hex: "b06cf7"))
+                        } else {
+                            StatTile(label: "New", value: "\(newCount)", tint: Color(hex: "ffd54a"))
+                            StatTile(label: "Foils", value: "\(foils.count)", tint: Color(hex: "ff8ad6"))
+                        }
                         StatTile(label: "Value", value: totalValue.moneyShort, tint: Palette.money)
                     }
 
@@ -208,19 +206,7 @@ private struct SummaryView: View {
                         BonusBanner(bonus: bonus)
                     }
 
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 104), spacing: 12)], spacing: 12) {
-                        ForEach(highlights) { inst in
-                            CardView(card: inst.card, instance: inst, width: 104)
-                        }
-                    }
-                    .padding(.top, 4)
-
-                    if result.isBox && highlights.count < result.pulled.count {
-                        Text("+ \(result.pulled.count - highlights.count) more commons & uncommons added to your collection")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(Palette.subtle)
-                            .multilineTextAlignment(.center)
-                    }
+                    if result.isBox { boxGrid } else { packGrid }
                 }
                 .padding(16)
             }
@@ -229,6 +215,225 @@ private struct SummaryView: View {
                 .padding(16)
         }
         .background(Palette.bg0.ignoresSafeArea())
+        .onAppear(perform: computePlan)
+        .confirmationDialog(
+            Text(actionInst.map { "Extra copy of \($0.card.name)" } ?? "Duplicate"),
+            isPresented: Binding(get: { actionInst != nil }, set: { if !$0 { actionInst = nil } }),
+            titleVisibility: .visible,
+            presenting: actionInst
+        ) { inst in
+            Button("Sell for \(inst.currentValue.money)") { decideSell(inst) }
+            Button("Keep in collection") { decideKeep(inst) }
+            Button("Cancel", role: .cancel) { }
+        } message: { _ in
+            Text("You already have a copy. Sell this extra for cash, or keep it in your collection.")
+        }
+    }
+
+    // MARK: Grids
+
+    private var boxGrid: some View {
+        VStack(spacing: 10) {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 104), spacing: 12)], spacing: 12) {
+                ForEach(boxHighlights) { inst in
+                    CardView(card: inst.card, instance: inst, width: 104)
+                }
+            }
+            if boxHighlights.count < result.pulled.count {
+                Text("+ \(result.pulled.count - boxHighlights.count) more commons & uncommons added to your collection")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(Palette.subtle)
+                    .multilineTextAlignment(.center)
+            }
+        }
+        .padding(.top, 4)
+    }
+
+    private var packGrid: some View {
+        VStack(spacing: 10) {
+            if !pendingDuplicates.isEmpty {
+                Text("Tap a duplicate to keep or sell it")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(Palette.subtle)
+            }
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 104), spacing: 12)], spacing: 12) {
+                ForEach(result.pulled) { inst in
+                    PackCardSlot(inst: inst, slot: slot(for: inst), width: 104) {
+                        actionInst = inst
+                    }
+                }
+            }
+        }
+        .padding(.top, 4)
+    }
+
+    // MARK: Bottom actions
+
+    private var finishButtons: some View {
+        VStack(spacing: 10) {
+            if result.isBox {
+                let dup = game.duplicateSummary(from: result)
+                if dup.count > 0 {
+                    BigButton(title: "Sell \(dup.count) Duplicate\(dup.count == 1 ? "" : "s")",
+                              subtitle: "Keep 1 of each · +\(dup.proceeds.moneyShort)",
+                              systemImage: "dollarsign.circle.fill", tint: green) {
+                        Haptics.play(.success); game.sellDuplicates(from: result); onDone()
+                    }
+                    BigButton(title: "Keep All", systemImage: "tray.and.arrow.down.fill", tint: blue) {
+                        Haptics.play(.light); onDone()
+                    }
+                } else {
+                    BigButton(title: "Add to Collection", systemImage: "checkmark.circle.fill", tint: blue) {
+                        Haptics.play(.light); onDone()
+                    }
+                }
+            } else {
+                let pending = pendingDuplicates
+                if !pending.isEmpty {
+                    BigButton(title: "Sell \(pending.count) Duplicate\(pending.count == 1 ? "" : "s")",
+                              subtitle: "Keep 1 of each · +\(pendingProceeds.moneyShort)",
+                              systemImage: "dollarsign.circle.fill", tint: green) {
+                        sellAllPending()
+                    }
+                    BigButton(title: "Keep All", systemImage: "tray.and.arrow.down.fill", tint: blue) {
+                        Haptics.play(.light); onDone()
+                    }
+                } else {
+                    BigButton(title: "Add to Collection", systemImage: "checkmark.circle.fill", tint: blue) {
+                        Haptics.play(.light); onDone()
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: Classification + live state
+
+    private func slot(for inst: CardInstance) -> PackSlot {
+        switch baseKind[inst.id] ?? .duplicate {
+        case .newCard:        return .newCard
+        case .keeperExisting: return .keeperExisting
+        case .duplicate:
+            if soldIds.contains(inst.id) { return .sold }
+            if keptIds.contains(inst.id) { return .keptDup }
+            return .pendingDup
+        }
+    }
+
+    /// Snapshot which pulled cards are new keepers vs. sellable extras. The
+    /// keeper of each card is its most valuable owned copy; ties prefer a
+    /// pre-existing (non-pulled) copy so a plain re-pull becomes the dup, while
+    /// a foil upgrade of an owned card keeps the pulled foil.
+    private func computePlan() {
+        guard baseKind.isEmpty, !result.isBox else { return }
+        let pulledIds = Set(result.pulled.map { $0.id })
+        var plan: [UUID: BaseKind] = [:]
+        for inst in result.pulled {
+            let keeper = keeperId(forCard: inst.cardId, pulledIds: pulledIds)
+            if inst.id == keeper {
+                plan[inst.id] = result.preOwnedIds.contains(inst.cardId) ? .keeperExisting : .newCard
+            } else {
+                plan[inst.id] = .duplicate
+            }
+        }
+        baseKind = plan
+    }
+
+    private func keeperId(forCard cardId: String, pulledIds: Set<UUID>) -> UUID? {
+        game.instances(of: cardId).sorted { a, b in
+            if a.currentValue != b.currentValue { return a.currentValue > b.currentValue }
+            return !pulledIds.contains(a.id) && pulledIds.contains(b.id)
+        }.first?.id
+    }
+
+    private func decideSell(_ inst: CardInstance) {
+        guard game.sell(inst.id) != nil else {
+            withAnimation(.easeOut(duration: 0.2)) { _ = keptIds.insert(inst.id) }
+            return
+        }
+        Haptics.play(.success)
+        withAnimation(.easeOut(duration: 0.25)) {
+            keptIds.remove(inst.id)
+            _ = soldIds.insert(inst.id)
+        }
+    }
+
+    private func decideKeep(_ inst: CardInstance) {
+        Haptics.play(.light)
+        withAnimation(.easeOut(duration: 0.2)) { _ = keptIds.insert(inst.id) }
+    }
+
+    private func sellAllPending() {
+        Haptics.play(.success)
+        withAnimation(.easeOut(duration: 0.25)) {
+            for inst in pendingDuplicates where game.sell(inst.id) != nil {
+                soldIds.insert(inst.id)
+            }
+        }
+        onDone()
+    }
+}
+
+/// A single card on the pack summary with its NEW / duplicate / sold state.
+private struct PackCardSlot: View {
+    let inst: CardInstance
+    let slot: PackSlot
+    let width: CGFloat
+    let onTap: () -> Void
+
+    private var tappable: Bool { slot == .pendingDup || slot == .keptDup }
+    private var scale: CGFloat { width / 230 }
+
+    var body: some View {
+        CardView(card: inst.card, instance: inst, width: width)
+            .saturation(slot == .sold ? 0 : 1)
+            .opacity(slot == .sold ? 0.45 : 1)
+            .overlay(alignment: .top) { badgeView }
+            .overlay { if slot == .sold { soldStamp } }
+            .overlay {
+                if slot == .pendingDup {
+                    RoundedRectangle(cornerRadius: 16 * scale)
+                        .strokeBorder(Color(hex: "e0a23b").opacity(0.9),
+                                      style: StrokeStyle(lineWidth: 2, dash: [6, 4]))
+                }
+            }
+            .contentShape(Rectangle())
+            .onTapGesture { if tappable { Haptics.play(.light); onTap() } }
+            .animation(.easeInOut(duration: 0.2), value: slot)
+    }
+
+    @ViewBuilder private var badgeView: some View {
+        if let b = badge {
+            Text(b.text)
+                .font(.system(size: 9, weight: .black))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 7).padding(.vertical, 3)
+                .background(Capsule().fill(b.color))
+                .overlay(Capsule().strokeBorder(.white.opacity(0.35), lineWidth: 0.5))
+                .shadow(color: .black.opacity(0.45), radius: 2, y: 1)
+                .offset(y: -7)
+        }
+    }
+
+    private var badge: (text: String, color: Color)? {
+        switch slot {
+        case .newCard:        return ("✦ NEW", Color(hex: "ffd54a"))
+        case .keeperExisting: return ("✦ FOIL", Color(hex: "ff8ad6"))
+        case .pendingDup:     return ("DUPLICATE", Color(hex: "e0a23b"))
+        case .keptDup:        return ("KEPT", Color(hex: "3b82f6"))
+        case .sold:           return nil
+        }
+    }
+
+    private var soldStamp: some View {
+        Text("SOLD\n+\(inst.currentValue.money)")
+            .multilineTextAlignment(.center)
+            .font(.system(size: 13, weight: .black, design: .rounded))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 8).padding(.vertical, 6)
+            .background(RoundedRectangle(cornerRadius: 8).fill(Palette.money.opacity(0.92)))
+            .rotationEffect(.degrees(-11))
+            .shadow(color: .black.opacity(0.4), radius: 3, y: 1)
     }
 }
 

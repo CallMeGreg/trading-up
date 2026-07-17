@@ -43,6 +43,9 @@ struct OpenResult {
     let pulled: [CardInstance]
     let bonuses: [BonusEvent]
     let isBox: Bool
+    /// Cards already owned *before* this pack/box was opened — lets the reveal
+    /// screen flag which pulled cards are brand new to the collection.
+    var preOwnedIds: Set<String> = []
 }
 
 struct GradeResult {
@@ -140,10 +143,11 @@ struct GameCore: Codable {
         cash -= price
         stats.moneySpent += price
         stats.packsOpened += 1
+        let preOwned = uniqueOwnedIds
         let pack = buildPack(set: set, using: &rng)
         ingest(pack)
         let bonuses = checkBonuses()
-        return OpenResult(pulled: pack, bonuses: bonuses, isBox: false)
+        return OpenResult(pulled: pack, bonuses: bonuses, isBox: false, preOwnedIds: preOwned)
     }
 
     mutating func buyBox<G: RandomNumberGenerator>(set: Int, using rng: inout G) -> OpenResult? {
@@ -154,6 +158,7 @@ struct GameCore: Codable {
         stats.moneySpent += price
         stats.boxesOpened += 1
         stats.packsOpened += Economy.boxPacks
+        let preOwned = uniqueOwnedIds
 
         var pulled: [CardInstance] = []
         for _ in 0..<Economy.boxPacks { pulled += buildPack(set: set, using: &rng) }
@@ -176,7 +181,7 @@ struct GameCore: Codable {
 
         ingest(pulled)
         let bonuses = checkBonuses()
-        return OpenResult(pulled: pulled, bonuses: bonuses, isBox: true)
+        return OpenResult(pulled: pulled, bonuses: bonuses, isBox: true, preOwnedIds: preOwned)
     }
 
     private mutating func ingest(_ newInstances: [CardInstance]) {

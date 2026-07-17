@@ -181,6 +181,24 @@ do {
           "keeps the most valuable (foil) copy when selling duplicates")
 }
 
+print("\n== Pre-owned snapshot (new-card flag) ==")
+do {
+    var rng = SeededRNG(7)
+    var core = GameCore()
+    core.cash = 100_000
+    let r1 = core.buyPack(set: 1, using: &rng)
+    check(r1?.preOwnedIds.isEmpty == true, "first pack: nothing pre-owned")
+    let ownedAfter1 = core.uniqueOwnedIds
+    let r2 = core.buyPack(set: 1, using: &rng)
+    check(r2?.preOwnedIds == ownedAfter1, "second pack: preOwnedIds = uniques owned before it")
+    let newInFirst = Set(r1!.pulled.map { $0.cardId }).subtracting(r1!.preOwnedIds)
+    check(!newInFirst.isEmpty, "first pack yields at least one brand-new card")
+    // A box snapshots pre-owned ids too.
+    let rb = core.buyBox(set: 1, using: &rng)
+    check(rb?.preOwnedIds.contains(where: { ownedAfter1.contains($0) }) == true,
+          "box also records pre-owned ids")
+}
+
 print("\n== Set unlocking ==")
 do {
     check(Economy.uniquesToUnlock(set: 1) == 0,   "set 1 needs 0 uniques")
