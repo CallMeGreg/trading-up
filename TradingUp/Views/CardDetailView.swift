@@ -125,7 +125,8 @@ struct CardDetailView: View {
             VStack(spacing: 6) {
                 miniButton("Sell", "dollarsign.circle.fill", Color(hex: "2fae63"),
                            enabled: game.isSellable(inst)) {
-                    if game.sell(inst.id) != nil { Haptics.play(.success) } else { Haptics.play(.error) }
+                    if game.sell(inst.id) != nil { Haptics.play(.success); Sound.play(.coin) }
+                    else { Haptics.play(.error) }
                 }
                 if inst.card.rarity.canBeGraded && inst.grade == nil {
                     miniButton("Grade \(Economy.gradeFee(set: card.set).money)", "seal.fill",
@@ -244,6 +245,7 @@ struct GradeRevealOverlay: View {
             .opacity(shown ? 1 : 0)
         }
         .onAppear {
+            Sound.play(.grade)
             withAnimation(.spring(response: 0.5, dampingFraction: 0.6)) { shown = true }
         }
     }

@@ -61,33 +61,13 @@ struct RevealView: View {
     // MARK: Sealed
 
     private var sealedView: some View {
-        VStack(spacing: 28) {
-            Spacer()
-            PackArtwork(set: set, isBox: isBox)
-            VStack(spacing: 6) {
-                Text(isBox ? "Booster Box" : "\(CardDatabase.setName(set)) Pack")
-                    .font(.system(size: 22, weight: .black, design: .rounded))
-                    .foregroundStyle(.white)
-                Text(isBox ? "Tap to tear it open" : "Tap to open")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(Palette.subtle)
-            }
-            Spacer()
-            Image(systemName: "hand.tap.fill")
-                .font(.system(size: 26))
-                .foregroundStyle(.white.opacity(0.6))
-                .padding(.bottom, 40)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .contentShape(Rectangle())
-        .onTapGesture { advance() }
+        SealedPackView(set: set, isBox: isBox) { startPack(0) }
     }
 
     // MARK: Revealing
 
     private func revealingView(_ result: OpenResult, _ i: Int) -> some View {
         let inst = result.pulled[i]
-        let showBurst = inst.foil || inst.card.rarity == .rare || inst.card.rarity == .ultra
         return VStack(spacing: 20) {
             if isBox {
                 Text("Pack \(packIndex + 1) of \(packCount)")
@@ -106,17 +86,9 @@ struct RevealView: View {
 
             Spacer()
 
-            ZStack {
-                if showBurst {
-                    GlowBurst(color: inst.foil ? Color(hex: "ff8ad6") : inst.card.rarity.accent)
-                }
-                CardView(card: inst.card, instance: inst, width: 280)
-                    .id(i)
-                    .transition(.asymmetric(
-                        insertion: .scale(scale: 0.55).combined(with: .opacity),
-                        removal: .opacity
-                    ))
-            }
+            RevealingCardView(inst: inst, width: 280)
+                .id(i)
+                .transition(.opacity)
 
             Spacer()
 
@@ -140,7 +112,6 @@ struct RevealView: View {
     private func advance() {
         switch phase {
         case .sealed:
-            if isBox { Haptics.play(.heavy) }
             startPack(0)
         case .revealing(let i):
             guard let result = current else { return }
@@ -275,6 +246,11 @@ private struct SummaryView: View {
         }
         .background(Palette.bg0.ignoresSafeArea())
         .onAppear(perform: computePlan)
+        .onAppear {
+            if !result.bonuses.isEmpty {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { Sound.play(.bonus) }
+            }
+        }
         .confirmationDialog(
             Text(actionInst.map { "Extra copy of \($0.card.name)" } ?? "Duplicate"),
             isPresented: Binding(get: { actionInst != nil }, set: { if !$0 { actionInst = nil } }),
@@ -356,7 +332,7 @@ private struct SummaryView: View {
                     BigButton(title: "Sell \(dup.count) Duplicate\(dup.count == 1 ? "" : "s")",
                               subtitle: "Keep 1 of each · +\(dup.proceeds.moneyShort)",
                               systemImage: "dollarsign.circle.fill", tint: green) {
-                        Haptics.play(.success); game.sellDuplicates(from: result); onDone()
+                        Haptics.play(.success); Sound.play(.coin); game.sellDuplicates(from: result); onDone()
                     }
                     BigButton(title: "Keep All", systemImage: "tray.and.arrow.down.fill", tint: blue) {
                         Haptics.play(.light); onDone()
@@ -435,6 +411,7 @@ private struct SummaryView: View {
             return
         }
         Haptics.play(.success)
+        Sound.play(.coin)
         withAnimation(.easeOut(duration: 0.25)) {
             keptIds.remove(inst.id)
             _ = soldIds.insert(inst.id)
@@ -443,11 +420,13 @@ private struct SummaryView: View {
 
     private func decideKeep(_ inst: CardInstance) {
         Haptics.play(.light)
+        Sound.play(.tap)
         withAnimation(.easeOut(duration: 0.2)) { _ = keptIds.insert(inst.id) }
     }
 
     private func sellAllPending() {
         Haptics.play(.success)
+        Sound.play(.coin)
         withAnimation(.easeOut(duration: 0.25)) {
             for inst in pendingDuplicates where game.sell(inst.id) != nil {
                 soldIds.insert(inst.id)

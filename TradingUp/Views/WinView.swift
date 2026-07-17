@@ -58,6 +58,6 @@ struct WinView: View {
                 .padding(16)
             }
         }
-        .onAppear { Haptics.play(.success) }
+        .onAppear { Haptics.play(.success); Sound.play(.win) }
     }
 }

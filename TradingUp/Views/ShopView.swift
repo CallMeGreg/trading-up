@@ -26,12 +26,14 @@ struct ShopView: View {
     private func buyPack(_ set: Int) {
         guard let r = game.buyPack(set: set) else { Haptics.play(.error); return }
         Haptics.play(.medium)
+        Sound.play(.purchase)
         pending = PendingOpen(content: .pack(r), set: set)
     }
 
     private func buyBox(_ set: Int) {
         guard let results = game.buyBoxPacks(set: set) else { Haptics.play(.error); return }
         Haptics.play(.heavy)
+        Sound.play(.purchase)
         pending = PendingOpen(content: .box(results: results), set: set)
     }
 }

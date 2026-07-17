@@ -44,7 +44,7 @@ struct BigButton: View {
     let action: () -> Void
 
     var body: some View {
-        Button(action: action) {
+        Button(action: { Sound.play(.tap); action() }) {
             HStack(spacing: 10) {
                 if let systemImage {
                     Image(systemName: systemImage).font(.system(size: 18, weight: .bold))

@@ -50,6 +50,6 @@ struct LoseView: View {
                 .padding(16)
             }
         }
-        .onAppear { Haptics.play(.error) }
+        .onAppear { Haptics.play(.error); Sound.play(.lose) }
     }
 }
