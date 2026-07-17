@@ -1,0 +1,151 @@
+:root {
+  --bg: #0d1117;
+  --panel: #161b22;
+  --text: #e6edf3;
+  --muted: #8b949e;
+
+  --common: #8a94a6;
+  --uncommon: #3fbf7f;
+  --rare: #3b82f6;
+  --ultra1: #b06cf7;
+  --ultra2: #ffd54a;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(1200px 600px at 50% -10%, #1b2740 0%, var(--bg) 55%),
+    var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+  padding: 32px 20px 80px;
+}
+
+.wrap { max-width: 1120px; margin: 0 auto; }
+
+.wordmark {
+  font-size: 46px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  text-align: center;
+  background: linear-gradient(92deg, #ffd54a, #ff7a1a 40%, #ff2e63 70%, #b06cf7);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  margin: 0;
+}
+.subtitle { text-align: center; color: var(--muted); margin: 6px 0 4px; letter-spacing: 3px; font-size: 12px; text-transform: uppercase; }
+.tagline { text-align: center; color: var(--text); opacity: .8; margin: 0 0 28px; font-style: italic; }
+
+.section-title {
+  font-size: 13px; text-transform: uppercase; letter-spacing: 2px;
+  color: var(--muted); border-bottom: 1px solid #21262d;
+  padding-bottom: 8px; margin: 40px 0 20px;
+}
+
+.row { display: flex; flex-wrap: wrap; gap: 22px; align-items: flex-start; }
+.evo-row { align-items: center; }
+.evo-arrow { font-size: 30px; color: var(--muted); }
+
+/* ---------- Card ---------- */
+.card {
+  position: relative;
+  width: 240px; height: 336px;
+  border-radius: 16px;
+  padding: 12px;
+  background: linear-gradient(160deg, #20262f, #0f1319);
+  border: 3px solid var(--common);
+  box-shadow: 0 10px 26px rgba(0,0,0,.55);
+  overflow: hidden;
+  display: flex; flex-direction: column;
+  user-select: none;
+}
+.card.rarity-common   { border-color: var(--common); }
+.card.rarity-uncommon { border-color: var(--uncommon); box-shadow: 0 10px 26px rgba(63,191,127,.25), 0 10px 26px rgba(0,0,0,.5); }
+.card.rarity-rare     { border-color: var(--rare); box-shadow: 0 10px 30px rgba(59,130,246,.35), 0 10px 26px rgba(0,0,0,.5); }
+.card.rarity-ultra {
+  border: 3px solid transparent;
+  background:
+    linear-gradient(160deg, #241a33, #12101c) padding-box,
+    linear-gradient(135deg, var(--ultra2), var(--ultra1)) border-box;
+  box-shadow: 0 12px 34px rgba(176,108,247,.4), 0 10px 26px rgba(0,0,0,.55);
+}
+
+.card-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; }
+.card-name { font-weight: 800; font-size: 17px; letter-spacing: .3px; }
+.type-badge {
+  font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 999px;
+  background: rgba(255,255,255,.08); white-space: nowrap;
+}
+
+.art-window {
+  position: relative;
+  height: 150px; border-radius: 10px; overflow: hidden;
+  border: 1px solid rgba(255,255,255,.12);
+}
+.aw-fire  { background: radial-gradient(120px 90px at 50% 40%, #ffb14d 0%, #e0361b 45%, #3a0c05 100%); }
+.aw-rock  { background: radial-gradient(120px 90px at 50% 40%, #e7bd85 0%, #9a6a34 45%, #2c1a0c 100%); }
+.aw-water { background: radial-gradient(120px 90px at 50% 40%, #8fe4ff 0%, #1e6fd6 45%, #061a3a 100%); }
+.aw-grass { background: radial-gradient(120px 90px at 50% 40%, #bff08a 0%, #2f9e44 45%, #0d2f16 100%); }
+.aw-electric { background: radial-gradient(120px 90px at 50% 40%, #fff29a 0%, #f5a300 45%, #3a2900 100%); }
+.aw-shadow { background: radial-gradient(120px 90px at 50% 40%, #d3b0ff 0%, #6b2fce 45%, #180733 100%); }
+.sigil { width: 100%; height: 100%; display: block; filter: drop-shadow(0 2px 3px rgba(0,0,0,.4)); }
+
+.card-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 11px; color: var(--muted); }
+.rarity-gem { width: 10px; height: 10px; transform: rotate(45deg); display: inline-block; margin-right: 6px; vertical-align: -1px; border-radius: 2px; }
+.gem-common { background: var(--common); }
+.gem-uncommon { background: var(--uncommon); }
+.gem-rare { background: var(--rare); }
+.gem-ultra { background: linear-gradient(135deg, var(--ultra2), var(--ultra1)); }
+
+.flavor { font-size: 11px; font-style: italic; color: #aeb6c2; margin: 8px 2px 0; line-height: 1.35; flex: 1; }
+
+.value-bar { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; }
+.rarity-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; padding: 2px 8px; border-radius: 6px; font-weight: 700; }
+.rl-common { background: rgba(138,148,166,.2); color: #c3cad6; }
+.rl-uncommon { background: rgba(63,191,127,.18); color: #7ee6ac; }
+.rl-rare { background: rgba(59,130,246,.2); color: #93c1ff; }
+.rl-ultra { background: linear-gradient(135deg, rgba(255,213,74,.25), rgba(176,108,247,.3)); color: #ffe89a; }
+.value { font-weight: 800; font-size: 16px; color: #7CFC9A; }
+
+/* ---------- Foil ---------- */
+.foil-overlay {
+  position: absolute; inset: 0; z-index: 5; pointer-events: none; border-radius: 13px;
+  background: linear-gradient( 115deg,
+    rgba(255,0,128,.35), rgba(255,214,0,.35) 20%, rgba(0,255,170,.35) 40%,
+    rgba(0,170,255,.35) 60%, rgba(170,0,255,.35) 80%, rgba(255,0,128,.35) );
+  background-size: 300% 300%;
+  mix-blend-mode: color-dodge;
+  opacity: .5;
+  animation: foilshift 4s linear infinite;
+}
+@keyframes foilshift { 0% { background-position: 0% 50%; } 100% { background-position: 300% 50%; } }
+.foil-tag {
+  position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+  z-index: 6; font-size: 10px; font-weight: 800; letter-spacing: 2px;
+  padding: 2px 10px; border-radius: 999px; color: #111;
+  background: linear-gradient(90deg, #ffd54a, #7CFC9A, #8fe4ff);
+}
+
+/* ---------- Graded slab ---------- */
+.slab {
+  width: 268px; border-radius: 14px; padding: 12px 12px 16px;
+  background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.03));
+  border: 1px solid rgba(255,255,255,.18);
+  box-shadow: 0 14px 34px rgba(0,0,0,.6), inset 0 0 0 1px rgba(255,255,255,.05);
+}
+.slab-label { display: flex; align-items: center; gap: 12px; padding: 6px 8px 12px; }
+.slab-grade {
+  font-size: 30px; font-weight: 900; line-height: 1; color: #111;
+  background: linear-gradient(135deg, #ffd54a, #ff9d2e); padding: 6px 12px; border-radius: 8px;
+}
+.slab-grade-word { font-weight: 800; letter-spacing: 1px; }
+.slab-grade-word small { display: block; font-weight: 600; color: var(--muted); letter-spacing: .5px; font-size: 10px; }
+.slab-cert { margin-top: 8px; font-size: 9px; letter-spacing: 1px; color: var(--muted); text-align: center; text-transform: uppercase; }
+.slab .card { box-shadow: none; margin: 0 auto; }
+
+.legend { margin-top: 44px; color: var(--muted); font-size: 12px; line-height: 1.7; }
+.legend b { color: var(--text); }
+.note { margin-top: 10px; font-size: 12px; color: var(--muted); }

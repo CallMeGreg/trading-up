@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Trading Up — Card Style Mockups</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="wrap">
+    <h1 class="wordmark">TRADING UP</h1>
+    <div class="subtitle">Set 1 · Emberfall</div>
+    <p class="tagline">Collect all 250 Mythlings.</p>
+
+    <div class="section-title">The four rarities</div>
+    <div class="row" id="rarities"></div>
+
+    <div class="section-title">Foil &amp; graded treatments</div>
+    <div class="row" id="special"></div>
+
+    <div class="section-title">An evolution line (3 stages)</div>
+    <div class="row evo-row" id="evo"></div>
+
+    <div class="legend">
+      <b>How to read a card:</b> the coloured frame + gem show rarity
+      (<span style="color:#c3cad6">slate = common</span>,
+       <span style="color:#7ee6ac">green = uncommon</span>,
+       <span style="color:#93c1ff">blue = rare</span>,
+       <span style="color:#ffe89a">gold/purple = ultra rare</span>).
+      The green number is the card's current market value. Foils get an animated
+      holographic sheen and a ×3 value. Graded cards sit in a PSA-style slab whose
+      grade multiplies value.
+      <div class="note">Art note: these emblems are <b>procedurally generated</b> from each
+      creature's name + type (deterministic, so the app reproduces them exactly). This is the
+      proposed v1 art direction — swappable for commissioned art later.</div>
+    </div>
+  </div>
+  <script src="cards.js"></script>
+</body>
+</html>
