@@ -179,7 +179,25 @@ struct GradeRevealOverlay: View {
     let onClose: () -> Void
     @State private var shown = false
 
-    private var up: Bool { result.newValue >= result.oldValue }
+    private enum ValueDirection { case up, neutral, down }
+    private var direction: ValueDirection {
+        if abs(result.newValue - result.oldValue) < 0.001 { return .neutral }
+        return result.newValue > result.oldValue ? .up : .down
+    }
+    private var directionColor: Color {
+        switch direction {
+        case .up:      return Palette.money
+        case .neutral: return Palette.text
+        case .down:    return Color(hex: "e0663b")
+        }
+    }
+    private var directionText: String {
+        switch direction {
+        case .up:      return "▲ Value up!"
+        case .neutral: return "▬ Value neutral"
+        case .down:    return "▼ Value down"
+        }
+    }
 
     var body: some View {
         ZStack {
@@ -199,13 +217,13 @@ struct GradeRevealOverlay: View {
                 HStack(spacing: 18) {
                     valueColumn("Was", result.oldValue, Palette.subtle)
                     Image(systemName: "arrow.right").foregroundStyle(Palette.subtle)
-                    valueColumn("Now", result.newValue, up ? Palette.money : Color(hex: "e0663b"))
+                    valueColumn("Now", result.newValue, directionColor)
                 }
                 .padding(.top, 4)
 
-                Text(up ? "▲ Value up!" : "▼ Value down")
+                Text(directionText)
                     .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(up ? Palette.money : Color(hex: "e0663b"))
+                    .foregroundStyle(directionColor)
 
                 Button {
                     onClose()

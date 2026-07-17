@@ -72,6 +72,7 @@ struct StatsView: View {
             }
             .background(Palette.screen.ignoresSafeArea())
             .navigationTitle("Stats")
+            .navigationBarTitleDisplayMode(.inline)
             .alert("Start a new game?", isPresented: $confirmNew) {
                 Button("Cancel", role: .cancel) {}
                 Button("Reset", role: .destructive) { game.newGame() }

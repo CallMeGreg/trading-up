@@ -17,7 +17,7 @@ struct ShopView: View {
             }
             .background(Palette.screen.ignoresSafeArea())
             .navigationTitle("Shop")
-            .navigationBarTitleDisplayMode(.large)
+            .navigationBarTitleDisplayMode(.inline)
         }
         .fullScreenCover(item: $pending) { p in
             RevealView(result: p.result, set: p.set) { pending = nil }
