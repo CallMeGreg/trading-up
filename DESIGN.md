@@ -109,20 +109,35 @@ after you approve the style.
 ### Value bands (base value, ungraded, non‑foil)
 Bands **never overlap** — the best common is worth less than the worst uncommon, etc.
 Each tier has **1–2 outliers** priced near the top of its band (the "chase" cards of
-that tier); the rest sit lower.
+that tier); the rest sit lower. Each set's values are scaled so its packs pay back the
+target EV (see **Packs** below); absolute magnitude still climbs every set, so
+higher‑set cards are always worth more. Approximate resulting bands:
 
-| Tier       | Set 1        | Set 2 (×2)   | Set 3 (×4)   | Set 4 (×7)    | Set 5 (×12)    |
-|------------|--------------|--------------|--------------|---------------|----------------|
-| Common     | $0.25–0.90   | $0.50–1.80   | $1–3.60      | $1.75–6.30    | $3–10.80       |
-| Uncommon   | $1.00–2.75   | $2–5.50      | $4–11        | $7–19.25      | $12–33         |
-| Rare       | $3.00–7.50   | $6–15        | $12–30       | $21–52.50     | $36–90         |
-| Ultra Rare | $9.00–25.00  | $18–50       | $36–100      | $63–175       | $108–300       |
+| Tier       | Set 1        | Set 2         | Set 3         | Set 4          | Set 5           |
+|------------|--------------|---------------|---------------|----------------|-----------------|
+| Common     | $0.38–1.13   | $0.67–1.86    | $1.17–3.60    | $1.84–5.37     | $2.94–8.27      |
+| Uncommon   | $1.46–3.57   | $2.65–6.29    | $4.51–10.08   | $7.09–16.53    | $11.39–27.18    |
+| Rare       | $5.10–9.38   | $7.63–16.21   | $13.37–29.78  | $20.91–47.45   | $33.12–75.33    |
+| Ultra Rare | $14.68–33.40 | $24.62–57.27  | $46.55–90.23  | $76.83–144.11  | $111.83–221.86  |
 
 ### Packs
 - **6 cards per pack:** 3 commons, 2 uncommons, 1 "hit."
 - The **hit slot** is a Rare 80% of the time, Ultra Rare 20%.
-- A pack's total contents are worth on average **~1.1× the pack price** (positive but
-  with lots of variance — good pulls net big, bad pulls lose a little).
+- A pack's contents are worth, on average, a **per‑set multiple of the pack price**.
+  The payout curve **shrinks as sets get pricier** — early packs are generous, later
+  packs are a bigger gamble:
+
+  | Set             | Pack price | Target EV | Avg pack contents |
+  |-----------------|-----------|-----------|-------------------|
+  | 1 Emberfall     | $10       | **1.50×** | ~$15   |
+  | 2 Tidecaller    | $20       | **1.25×** | ~$25   |
+  | 3 Verdspire     | $40       | **1.10×** | ~$44   |
+  | 4 Voltcrest     | $70       | **1.00×** | ~$70   |
+  | 5 Umbral Reach  | $120      | **0.90×** | ~$108  |
+
+  Any single pack still has **lots of variance** — a foil or a top‑tier hit blows past
+  the average, a cold pack falls below it. Foils (~+2% expected) and opt‑in grading are
+  upside on top of these base‑value targets.
 
 ### Foils
 - **1% chance per card**, rolled independently for all 6 cards in a pack.

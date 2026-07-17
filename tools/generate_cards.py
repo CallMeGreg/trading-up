@@ -159,9 +159,20 @@ BANDS = {  # Set-1 base bands (min, max); scaled per set
   "rare":     (3.00, 7.50),
   "ultra":    (9.00, 25.00),
 }
-SCALE = [1, 2, 4, 7, 12]           # per set value/price multiplier
+SCALE = [1, 2, 4, 7, 12]           # per set value/price multiplier (pre-normalization magnitude)
 PACK_PRICE = [10, 20, 40, 70, 120] # per set
 OUTLIERS = {"common": 2, "uncommon": 2, "rare": 1, "ultra": 1}
+
+# Target pack expected value as a multiple of the pack price, per set. The base
+# values of a set are normalized so the average pack's base-value contents equal
+# EV_TARGET x price. Later sets pay back less relative to their (much larger)
+# price, forming a deliberate risk curve. Foils (~+2%) and opt-in grading are
+# upside on top of this.
+EV_TARGET = [1.50, 1.25, 1.10, 1.00, 0.90]
+
+# Stable per-rarity RNG offsets. (Replaces Python's per-process-salted hash(),
+# which made card values non-deterministic across runs.)
+RARITY_SEED = {"common": 11, "uncommon": 23, "rare": 37, "ultra": 51}
 
 def elem_of(card_name, s):
     if s.get("rock_names") and card_name in s["rock_names"]:
@@ -173,7 +184,8 @@ def flavor_for(name, element):
     return pool[sum(ord(c) for c in name) % len(pool)]
 
 def assign_values(cards, set_idx):
-    """Assign baseValue per card within its scaled band, with 1-2 high outliers/tier."""
+    """Assign baseValue per card within its scaled band, with 1-2 high outliers/tier.
+    Values are left unrounded here; normalize_set_ev scales then rounds them."""
     scale = SCALE[set_idx]
     by_rarity = {}
     for c in cards:
@@ -183,7 +195,7 @@ def assign_values(cards, set_idx):
         a, b = a * scale, b * scale
         R = b - a
         idxs = list(range(len(group)))
-        rng = random.Random(1000 * set_idx + hash(rarity) % 997)
+        rng = random.Random(1000 * set_idx + RARITY_SEED[rarity])
         rng.shuffle(idxs)
         outlier_set = set(idxs[:OUTLIERS[rarity]])
         for i, c in enumerate(group):
@@ -191,7 +203,24 @@ def assign_values(cards, set_idx):
                 frac = rng.uniform(0.80, 1.00)
             else:
                 frac = rng.uniform(0.05, 0.35)
-            c["baseValue"] = round(a + R * frac, 2)
+            c["baseValue"] = a + R * frac
+
+def pack_base_ev(cards):
+    """Expected base-value of one pack from a set: 3 common + 2 uncommon +
+    1 hit (80% rare / 20% ultra). Base values only (foil/grade are upside)."""
+    def avg(r):
+        v = [c["baseValue"] for c in cards if c["rarity"] == r]
+        return sum(v) / len(v)
+    return 3 * avg("common") + 2 * avg("uncommon") + 0.8 * avg("rare") + 0.2 * avg("ultra")
+
+def normalize_set_ev(cards, set_idx):
+    """Uniformly scale a set's base values so the pack's base-value EV equals
+    EV_TARGET x price, then round to cents. Uniform scaling shifts only the mean,
+    preserving relative spread, outliers, and non-overlapping tiers."""
+    target = EV_TARGET[set_idx] * PACK_PRICE[set_idx]
+    f = target / pack_base_ev(cards)
+    for c in cards:
+        c["baseValue"] = round(c["baseValue"] * f, 2)
 
 def build():
     all_cards = []
@@ -243,6 +272,7 @@ def build():
                 if j < len(chain) - 1:
                     c["evolvesToId"] = chain[j + 1]["id"]
         assign_values(set_cards, set_idx)
+        normalize_set_ev(set_cards, set_idx)
         all_cards.extend(set_cards)
     return all_cards
 
@@ -289,16 +319,16 @@ def economy_report(cards):
     for set_idx in range(5):
         set_no = set_idx + 1
         sc = [c for c in cards if c["set"] == set_no]
-        def avg(r):
-            v = [c["baseValue"] for c in sc if c["rarity"] == r]
-            return sum(v) / len(v)
-        # pack = 3 common + 2 uncommon + 1 hit(80% rare / 20% ultra); foil ~x1.02
-        ev = (3*avg("common") + 2*avg("uncommon") + 0.8*avg("rare") + 0.2*avg("ultra")) * 1.02
+        base_ev = pack_base_ev(sc)
         price = PACK_PRICE[set_idx]
-        ratio = ev / price
-        flag = "" if 1.03 <= ratio <= 1.20 else "  <-- OUT OF RANGE"
-        print(f"Set {set_no} {SETS[set_idx]['name']:<13} price ${price:<4} EV ${ev:6.2f}  ratio {ratio:.3f}{flag}")
-        if not (1.03 <= ratio <= 1.20):
+        target = EV_TARGET[set_idx]
+        ratio = base_ev / price
+        realized = base_ev * 1.02  # ~1% foil chance per card adds ~+2% on top
+        flag = "" if abs(ratio - target) <= 0.02 else "  <-- OFF TARGET"
+        print(f"Set {set_no} {SETS[set_idx]['name']:<13} price ${price:<4} "
+              f"base EV ${base_ev:7.2f}  ratio {ratio:.3f} (target {target:.2f})"
+              f"  realized ~${realized:7.2f}{flag}")
+        if abs(ratio - target) > 0.02:
             ok = False
     return ok
 

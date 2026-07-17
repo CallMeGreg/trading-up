@@ -45,7 +45,8 @@ check(evoBad == 0, "all evolution links resolve")
 check(CardDatabase.evolutionLines.count == 65, "65 multi-stage evolution lines (5×13)")
 
 print("\n== Pack economics (Monte Carlo) ==")
-for s in [1, 5] {
+let evTargets: [Int: Double] = [1: 1.50, 2: 1.25, 3: 1.10, 4: 1.00, 5: 0.90]
+for s in 1...5 {
     var rng = SeededRNG(0xC0FFEE &+ UInt64(s))
     let core = GameCore()
     let n = 40_000
@@ -54,8 +55,10 @@ for s in [1, 5] {
     for _ in 0..<n { total += core.buildPack(set: s, using: &rng).reduce(0) { $0 + $1.currentValue } }
     let ev = total / Double(n)
     let ratio = ev / Economy.packPrice(set: s)
-    print(String(format: "  set %d EV $%.2f vs price $%.0f  ratio %.3f", s, ev, Economy.packPrice(set: s), ratio))
-    check(ratio > 1.03 && ratio < 1.25, "set \(s) pack EV ≈ 1.1× price")
+    let target = evTargets[s]!
+    print(String(format: "  set %d EV $%.2f vs price $%.0f  ratio %.3f (target %.2f)", s, ev, Economy.packPrice(set: s), ratio, target))
+    // realized ratio ≈ target × ~1.02 (foils); allow foil + sampling slack
+    check(abs(ratio - target) < 0.06, "set \(s) pack EV ≈ \(target)× price")
 }
 
 print("\n== Grading distribution ==")

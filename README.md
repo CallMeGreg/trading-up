@@ -101,7 +101,8 @@ This checks, among other things:
 - all 250 cards load and match the Swift model, with unique names/ids;
 - each set's rarity split is 25/15/7/3 and value bands don't overlap (best of a
   tier is worth less than the worst of the next);
-- **pack expected value ≈ 1.1× the pack price** (Monte Carlo);
+- **pack expected value matches each set's target curve** — 1.5× / 1.25× / 1.1× / 1.0× /
+  0.9× of the pack price for sets 1–5 (Monte Carlo);
 - the **PSA grade odds** match the spec exactly and sum to 100%;
 - selling protects your last copy; the game‑over check is correct;
 - collecting all 250 triggers the win and pays every evolution/set bonus exactly
