@@ -45,8 +45,9 @@ catalog (`TradingUp/Assets.xcassets/CardArt`) and, as SVGs, in the HTML mockups
 ## How to play
 
 - **Shop** — each of the 5 sets sells a **Pack** (6 cards) or a **Booster Box**
-  (24 packs, cheaper per pack, with guaranteed foils & ultras). Higher sets cost
-  more but contain more valuable cards.
+  (12 packs, with guaranteed foils & ultras). Higher sets cost **steeply** more
+  ($10 → $30 → $75 → $160 → $320) but contain more valuable cards. A box costs
+  **11× the pack price** — you buy it for the guaranteed chase cards, not a discount.
 - **Open packs** — tap to reveal cards one at a time. Every pack is
   **3 commons, 2 uncommons, and 1 rare‑or‑ultra**. Every card has a **1%** chance
   to be a shiny **foil** (×3 value). On the summary, brand‑new cards are flagged
@@ -58,16 +59,20 @@ catalog (`TradingUp/Assets.xcassets/CardArt`) and, as SVGs, in the HTML mockups
   copy; unowned cards are locked silhouettes. Tap a card for details. Filter the
   grid by **Dupes**, **Foils**, and **Rare+** — combine filters to narrow further
   (e.g. Dupes + Foils shows only foil duplicates).
-- **Sell** — flip duplicate cards back to the shop for cash. You can **never sell
-  your last copy** of a card, so your collection is safe.
-- **Grade** — send a rare/ultra to grading for a fee. The PSA grade you roll
-  changes its value a lot: a **PSA 10** is ×5, a **PSA 9** is ×2, a **PSA 1** is a
-  freak ×10 jackpot — but grades 2–7 are worth *less* than ungraded. Grading and
-  foils stack.
+- **Sell** — flip duplicate cards back to the shop for cash. The shop buys at a
+  **buylist spread**: you get **65%** of a card's market value, so churning packs and
+  dumping dupes slowly bleeds money — that spread is the game's main risk. You can
+  **never sell your last copy** of a card, so your collection is safe.
+- **Grade** — send a rare/ultra to grading for a flat per‑set fee (**$2–$10**). The PSA
+  grade you roll changes its value a lot: a **PSA 10** is ×5, a **PSA 9** is ×2, a
+  **PSA 1** is a freak ×10 jackpot — but grades 2–7 are worth *less* than ungraded.
+  Because the fee is cheap next to a pricey card, **grading valuable dupes before you
+  sell them** is a real edge. Grading and foils stack.
 - **Bonuses** — completing an **evolution line** pays a cash bonus; completing a
-  whole **set** pays a big one.
+  whole **set** pays a big one (**15× the pack price**).
 - **Win** by collecting all **250** cards. **Lose** if your cash drops **below $10**
-  (the cheapest pack) with no duplicates left to sell.
+  (the cheapest pack) with no duplicates left to sell — with the buylist spread and
+  steep prices, careless spam‑and‑dump really can bankrupt you.
 
 Your progress **auto‑saves** after every action.
 
@@ -119,6 +124,15 @@ This checks, among other things:
 - **pack expected value matches each set's target curve** — 1.0× / 0.9× / 0.8× / 0.7× /
   0.6× of the pack price for sets 1–5 (Monte Carlo);
 - the **PSA grade odds** match the spec exactly and sum to 100%;
+- the **economy knobs** are set as designed — steep pack prices `[10,30,75,160,320]`,
+  flat grade fees `[2,4,6,8,10]`, booster box at 11× pack price, set‑completion bonus at
+  15× pack price, and a **65% sell‑back rate**;
+- the **sell‑back spread** works — a duplicate sells for 65% of market value, and
+  buying into an already‑complete set then dumping the dupes is a **net loss** (the
+  core losing risk);
+- **strategy simulations** hold the "moderate" difficulty target — reckless
+  spam‑and‑dump play **busts ~44%** of the time, while thoughtful play (pace buys, grade
+  valuable dupes before selling) still **wins ~77%**, a clear skill gap;
 - selling protects your last copy; the game‑over check is correct;
 - collecting all 250 triggers the win and pays every evolution/set bonus exactly
   once.

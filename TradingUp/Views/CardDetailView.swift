@@ -101,6 +101,12 @@ struct CardDetailView: View {
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(Palette.subtle)
                     .padding(.top, 2)
+            } else {
+                Label("The shop buys extra copies at \(Int((Economy.sellbackRate * 100).rounded()))% of market value.",
+                      systemImage: "tag.fill")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(Palette.subtle)
+                    .padding(.top, 2)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -123,7 +129,7 @@ struct CardDetailView: View {
             }
             Spacer(minLength: 0)
             VStack(spacing: 6) {
-                miniButton("Sell", "dollarsign.circle.fill", Color(hex: "2fae63"),
+                miniButton("Sell \(inst.sellValue.moneyShort)", "dollarsign.circle.fill", Color(hex: "2fae63"),
                            enabled: game.isSellable(inst)) {
                     if game.sell(inst.id) != nil { Haptics.play(.success); Sound.play(.coin) }
                     else { Haptics.play(.error) }
