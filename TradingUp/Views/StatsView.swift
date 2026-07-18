@@ -36,10 +36,10 @@ struct StatsView: View {
                         grid([
                             ("Packs Opened", "\(s.packsOpened)"),
                             ("Boxes Opened", "\(s.boxesOpened)"),
-                            ("Cards Pulled", "\(s.cardsPulled)"),
-                            ("Foils Pulled", "\(s.foilsPulled)"),
-                            ("Ultras Pulled", "\(s.ultrasPulled)"),
                             ("Best Grade", s.bestGrade == 0 ? "—" : "PSA \(s.bestGrade)"),
+                            ("Cards Pulled", "\(s.cardsPulled)"),
+                            ("Ultras Pulled", "\(s.ultrasPulled)"),
+                            ("Foils Pulled", "\(s.foilsPulled)"),
                         ])
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -52,6 +52,8 @@ struct StatsView: View {
                             ("Earned", s.moneyEarned.moneyShort),
                             ("Cards Sold", "\(s.cardsSold)"),
                             ("Peak Cash", s.peakCash.moneyShort),
+                            ("Peak Card", s.peakCardValue == 0 ? "—" : s.peakCardValue.moneyShort),
+                            ("Peak Sale", s.peakSale == 0 ? "—" : s.peakSale.moneyShort),
                         ])
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
