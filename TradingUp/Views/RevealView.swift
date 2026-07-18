@@ -208,7 +208,7 @@ private struct SummaryView: View {
     private var pendingDuplicates: [CardInstance] {
         result.pulled.filter { baseKind[$0.id] == .duplicate && !soldIds.contains($0.id) && !keptIds.contains($0.id) }
     }
-    private var pendingProceeds: Double { pendingDuplicates.reduce(0) { $0 + $1.currentValue } }
+    private var pendingProceeds: Double { pendingDuplicates.reduce(0) { $0 + $1.sellValue } }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -253,11 +253,11 @@ private struct SummaryView: View {
             titleVisibility: .visible,
             presenting: actionInst
         ) { inst in
-            Button("Sell for \(inst.currentValue.money)") { decideSell(inst) }
+            Button("Sell for \(inst.sellValue.money)") { decideSell(inst) }
             Button("Keep in collection") { decideKeep(inst) }
             Button("Cancel", role: .cancel) { }
         } message: { _ in
-            Text("You already have a copy. Sell this extra for cash, or keep it in your collection.")
+            Text("You already have a copy. The shop pays \(Int((Economy.sellbackRate * 100).rounded()))% of market value for extras — sell it for cash, or keep it in your collection.")
         }
     }
 
@@ -320,6 +320,17 @@ private struct SummaryView: View {
         .padding(.top, 6)
     }
 
+    private var showSpreadHint: Bool {
+        result.isBox ? game.duplicateSummary(from: result).count > 0 : !pendingDuplicates.isEmpty
+    }
+
+    private var spreadHint: some View {
+        Text("Shop buys extras at \(Int((Economy.sellbackRate * 100).rounded()))% of market value")
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundStyle(Palette.subtle)
+            .padding(.top, 2)
+    }
+
     private var finishButtons: some View {
         VStack(spacing: 10) {
             if result.isBox {
@@ -355,6 +366,7 @@ private struct SummaryView: View {
                     }
                 }
             }
+            if showSpreadHint { spreadHint }
         }
     }
 
@@ -483,7 +495,7 @@ private struct PackCardSlot: View {
     }
 
     private var soldStamp: some View {
-        Text("SOLD\n+\(inst.currentValue.money)")
+        Text("SOLD\n+\(inst.sellValue.money)")
             .multilineTextAlignment(.center)
             .font(.system(size: 13, weight: .black, design: .rounded))
             .foregroundStyle(.white)

@@ -11,6 +11,10 @@ struct CardInstance: Identifiable, Codable, Hashable {
 
     var card: Card { CardDatabase.byId[cardId]! }
     var currentValue: Double { Economy.value(base: card.baseValue, foil: foil, grade: grade) }
+    /// What the shop actually pays for this copy if sold: market value minus the
+    /// sell-back spread. Selling always uses this; `currentValue` stays the market
+    /// value shown in the collection and used for net worth / peaks / sorting.
+    var sellValue: Double { Economy.sellback(currentValue) }
 }
 
 // MARK: - Stats
@@ -267,7 +271,7 @@ struct GameCore: Codable {
         guard let idx = instances.firstIndex(where: { $0.id == instanceId }) else { return nil }
         let inst = instances[idx]
         guard isSellable(inst) else { return nil }
-        let v = inst.currentValue
+        let v = inst.sellValue
         instances.remove(at: idx)
         cash += v
         stats.moneyEarned += v
@@ -288,7 +292,7 @@ struct GameCore: Codable {
             guard copies.count > 1 else { continue }
             for extra in copies.dropFirst() {   // keep copies[0] (best), the rest are extras
                 count += 1
-                proceeds += extra.currentValue
+                proceeds += extra.sellValue
             }
         }
         return (count, proceeds)

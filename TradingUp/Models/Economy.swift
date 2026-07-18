@@ -7,8 +7,8 @@ enum Economy {
     static let packSize = 6
 
     // Per-set pricing (set 1...5)
-    static let packPrices: [Double] = [10, 20, 40, 70, 120]
-    static let gradeFees:  [Double] = [2, 4, 8, 14, 24]
+    static let packPrices: [Double] = [10, 30, 75, 160, 320]
+    static let gradeFees:  [Double] = [2, 4, 6, 8, 10]
 
     static func packPrice(set: Int) -> Double { packPrices[clampIndex(set)] }
     static func gradeFee(set: Int) -> Double { gradeFees[clampIndex(set)] }
@@ -21,7 +21,13 @@ enum Economy {
     static let boxPacks = 12
     static let boxGuaranteeUltras = 3
     static let boxGuaranteeFoils = 2
-    static func boxPrice(set: Int) -> Double { packPrice(set: set) * 10 }
+    static func boxPrice(set: Int) -> Double { packPrice(set: set) * 11 }
+
+    // Sell-back spread: the shop buys duplicates back at a fraction of their market
+    // value, so churning packs/boxes and dumping dupes is a net loss over time. This
+    // is the main source of losing risk — filling out a set squeezes your cash.
+    static let sellbackRate = 0.65
+    static func sellback(_ value: Double) -> Double { value * sellbackRate }
 
     // Set unlocking: set N stays locked until this many *unique* cards are owned.
     // Set 1 is free; each later set costs 25 more uniques (2→25, 3→50, 4→75, 5→100).
@@ -42,7 +48,7 @@ enum Economy {
         let p = packPrice(set: set)
         return stageCount >= 3 ? p * 2.0 : p * 1.0
     }
-    static func setCompletionBonus(set: Int) -> Double { packPrice(set: set) * 30 }
+    static func setCompletionBonus(set: Int) -> Double { packPrice(set: set) * 15 }
 
     // MARK: Grading table (grade, odds %, value multiplier)
     static let gradeTable: [(grade: Int, odds: Int, mult: Double)] = [

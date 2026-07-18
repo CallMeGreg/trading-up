@@ -232,8 +232,8 @@ BANDS = {  # Set-1 base bands (min, max); scaled per set
   "rare":     (3.00, 7.50),
   "ultra":    (9.00, 25.00),
 }
-SCALE = [1, 2, 4, 7, 12]           # per set value/price multiplier (pre-normalization magnitude)
-PACK_PRICE = [10, 20, 40, 70, 120] # per set
+SCALE = [1, 3, 7.5, 16, 32]         # per set value/price multiplier (mirrors PACK_PRICE/10; cancels in normalization)
+PACK_PRICE = [10, 30, 75, 160, 320] # per set
 OUTLIERS = {"common": 2, "uncommon": 2, "rare": 1, "ultra": 1}
 
 # Target pack expected value as a multiple of the pack price, per set. The base
