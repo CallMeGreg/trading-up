@@ -1,9 +1,28 @@
 import SwiftUI
+import UIKit
 
 /// Shown when all 250 cards are collected. Terminal, celebratory.
 struct WinView: View {
     @EnvironmentObject var game: GameState
     private var s: Stats { game.stats }
+
+    /// Rendered snapshot of the win, shared as an image. Built on appear.
+    @State private var shareImage: Image?
+
+    /// Rasterize `WinShareCard` so the share sheet can attach it as an image.
+    @MainActor private func renderShareImage() {
+        let card = WinShareCard(
+            totalCards: game.totalCards,
+            netWorth: game.netWorth,
+            stats: s,
+            ownedBySet: (1...CardDatabase.setCount).map { game.ownedCount(inSet: $0) }
+        )
+        let renderer = ImageRenderer(content: card)
+        renderer.scale = 3
+        guard let ui = renderer.uiImage else { return }
+        shareImage = Image(uiImage: ui)
+    }
+
 
     var body: some View {
         ZStack {
@@ -25,7 +44,7 @@ struct WinView: View {
                             .font(.system(size: 26, weight: .black, design: .rounded))
                             .foregroundStyle(.white)
                             .multilineTextAlignment(.center)
-                        Text("Every Mythling across all five sets is yours.")
+                        Text("Every Mythling is yours.")
                             .font(.system(size: 14, weight: .medium))
                             .foregroundStyle(Palette.subtle)
                             .multilineTextAlignment(.center)
@@ -49,6 +68,22 @@ struct WinView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .panel()
 
+                    if let shareImage {
+                        ShareLink(item: shareImage,
+                                  preview: SharePreview("Trading Up", image: shareImage)) {
+                            BigButtonLabel(title: "Share with your friends",
+                                           subtitle: "Send a screenshot of your win",
+                                           systemImage: "square.and.arrow.up",
+                                           tint: [Color(hex: "3b82f6"), Color(hex: "6d5cf7")])
+                        }
+                        .buttonStyle(.plain)
+                    } else {
+                        BigButtonLabel(title: "Share with your friends",
+                                       subtitle: "Send a screenshot of your win",
+                                       systemImage: "square.and.arrow.up",
+                                       tint: [Color(hex: "3b82f6"), Color(hex: "6d5cf7")])
+                    }
+
                     BigButton(title: "Play Again", systemImage: "arrow.counterclockwise",
                               tint: [Color(hex: "b06cf7"), Color(hex: "6d5cf7")]) {
                         Haptics.play(.success)
@@ -58,6 +93,9 @@ struct WinView: View {
                 .padding(16)
             }
         }
-        .onAppear { Haptics.play(.success) }
+        .onAppear {
+            Haptics.play(.success)
+            renderShareImage()
+        }
     }
 }

@@ -45,33 +45,48 @@ struct BigButton: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 10) {
-                if let systemImage {
-                    Image(systemName: systemImage).font(.system(size: 18, weight: .bold))
-                }
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(title).font(.system(size: 15, weight: .bold))
-                    if let subtitle {
-                        Text(subtitle).font(.system(size: 11, weight: .medium)).opacity(0.85)
-                    }
-                }
-                Spacer(minLength: 0)
-            }
-            .foregroundStyle(.white)
-            .padding(.vertical, 12).padding(.horizontal, 14)
-            .frame(maxWidth: .infinity)
-            .background(
-                RoundedRectangle(cornerRadius: 14).fill(
-                    LinearGradient(
-                        colors: enabled ? tint : [Palette.stroke, Palette.stroke.opacity(0.7)],
-                        startPoint: .leading, endPoint: .trailing
-                    )
-                )
-            )
-            .opacity(enabled ? 1 : 0.55)
+            BigButtonLabel(title: title, subtitle: subtitle, systemImage: systemImage,
+                           tint: tint, enabled: enabled)
         }
         .buttonStyle(.plain)
         .disabled(!enabled)
+    }
+}
+
+/// The styled label used by `BigButton`. Extracted so non-Button controls
+/// (e.g. `ShareLink`) can present the same full-width pill.
+struct BigButtonLabel: View {
+    let title: String
+    var subtitle: String? = nil
+    var systemImage: String? = nil
+    var tint: [Color] = [Color(hex: "3b82f6"), Color(hex: "6d5cf7")]
+    var enabled: Bool = true
+
+    var body: some View {
+        HStack(spacing: 10) {
+            if let systemImage {
+                Image(systemName: systemImage).font(.system(size: 18, weight: .bold))
+            }
+            VStack(alignment: .leading, spacing: 1) {
+                Text(title).font(.system(size: 15, weight: .bold))
+                if let subtitle {
+                    Text(subtitle).font(.system(size: 11, weight: .medium)).opacity(0.85)
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .foregroundStyle(.white)
+        .padding(.vertical, 12).padding(.horizontal, 14)
+        .frame(maxWidth: .infinity)
+        .background(
+            RoundedRectangle(cornerRadius: 14).fill(
+                LinearGradient(
+                    colors: enabled ? tint : [Palette.stroke, Palette.stroke.opacity(0.7)],
+                    startPoint: .leading, endPoint: .trailing
+                )
+            )
+        )
+        .opacity(enabled ? 1 : 0.55)
     }
 }
 
