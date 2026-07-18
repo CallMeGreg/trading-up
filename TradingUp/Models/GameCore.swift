@@ -26,6 +26,30 @@ struct Stats: Codable {
     var moneyEarned = 0.0
     var bestGrade = 0
     var peakCash = Economy.startingCash
+    /// All-time highest value of any single card owned (from a pull or a grade bump).
+    var peakCardValue = 0.0
+    /// All-time largest proceeds from a single card sale.
+    var peakSale = 0.0
+
+    init() {}
+
+    /// Decode leniently so saves written before a field existed still load: any
+    /// missing key falls back to its default instead of failing the whole decode.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        packsOpened   = try c.decodeIfPresent(Int.self,    forKey: .packsOpened)   ?? 0
+        boxesOpened   = try c.decodeIfPresent(Int.self,    forKey: .boxesOpened)   ?? 0
+        cardsPulled   = try c.decodeIfPresent(Int.self,    forKey: .cardsPulled)   ?? 0
+        foilsPulled   = try c.decodeIfPresent(Int.self,    forKey: .foilsPulled)   ?? 0
+        ultrasPulled  = try c.decodeIfPresent(Int.self,    forKey: .ultrasPulled)  ?? 0
+        cardsSold     = try c.decodeIfPresent(Int.self,    forKey: .cardsSold)     ?? 0
+        moneySpent    = try c.decodeIfPresent(Double.self, forKey: .moneySpent)    ?? 0
+        moneyEarned   = try c.decodeIfPresent(Double.self, forKey: .moneyEarned)   ?? 0
+        bestGrade     = try c.decodeIfPresent(Int.self,    forKey: .bestGrade)     ?? 0
+        peakCash      = try c.decodeIfPresent(Double.self, forKey: .peakCash)      ?? Economy.startingCash
+        peakCardValue = try c.decodeIfPresent(Double.self, forKey: .peakCardValue) ?? 0
+        peakSale      = try c.decodeIfPresent(Double.self, forKey: .peakSale)      ?? 0
+    }
 }
 
 // MARK: - Events (transient, for UI)
@@ -230,6 +254,9 @@ struct GameCore: Codable {
         stats.cardsPulled += newInstances.count
         stats.foilsPulled += newInstances.filter { $0.foil }.count
         stats.ultrasPulled += newInstances.filter { CardDatabase.byId[$0.cardId]?.rarity == .ultra }.count
+        if let best = newInstances.map({ $0.currentValue }).max() {
+            stats.peakCardValue = max(stats.peakCardValue, best)
+        }
         updatePeak()
     }
 
@@ -245,6 +272,7 @@ struct GameCore: Codable {
         cash += v
         stats.moneyEarned += v
         stats.cardsSold += 1
+        stats.peakSale = max(stats.peakSale, v)
         updatePeak()
         return v
     }
@@ -300,6 +328,7 @@ struct GameCore: Codable {
         let g = Economy.rollGrade(using: &rng)
         instances[idx].grade = g
         stats.bestGrade = max(stats.bestGrade, g)
+        stats.peakCardValue = max(stats.peakCardValue, instances[idx].currentValue)
         updatePeak()
         return GradeResult(grade: g, fee: fee, oldValue: oldValue, newValue: instances[idx].currentValue)
     }
