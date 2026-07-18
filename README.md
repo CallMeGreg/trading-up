@@ -83,10 +83,6 @@ Your progress **auto‑saves** after every action.
 | **Xcode 16 or newer** (free, Mac App Store) | builds & runs the app. The project uses Xcode 16's file‑system‑synchronized folders. |
 | An **iOS 17+ Simulator** | comes bundled with Xcode; no paid account needed to run in the Simulator |
 
-> Command Line Tools alone are **not** enough to run the app — you need the full
-> Xcode application. (The logic test harness in [Testing](#testing) *does* run with
-> just Command Line Tools.)
-
 ### Run it (5 steps)
 
 1. **Install Xcode 16+** from the Mac App Store, launch it once, and accept the
@@ -228,8 +224,3 @@ This writes five framed scenes (reveal, shop, collection, grade, win) at both
 cd design/mockups && python3 -m http.server 8787
 # then open http://localhost:8787
 ```
-
----
-
-*Built as a first iOS project. No Pokémon assets, names, or trademarks are used;
-all characters, sets, and art are original to Trading Up.*
