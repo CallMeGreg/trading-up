@@ -12,44 +12,33 @@ and try to collect all **250** cards across **5 sets** — without going broke.
 
 ## Contents
 
-- [Requirements](#requirements)
-- [Run it (5 steps)](#run-it-5-steps)
+- [Overview](#overview)
 - [How to play](#how-to-play)
-- [Testing (no Xcode needed)](#testing)
-- [Project layout](#project-layout)
-- [Regenerating content](#regenerating-content)
-- [Game design](#game-design)
-- [Road to the App Store](#road-to-the-app-store)
+- [Local development & testing](#local-development--testing)
+  - [Requirements](#requirements)
+  - [Run it (5 steps)](#run-it-5-steps)
+  - [Testing (no Xcode needed)](#testing)
+  - [Project layout](#project-layout)
+  - [Regenerating content](#regenerating-content)
 
 ---
 
-## Requirements
+## Overview
 
-| Need | Why |
-|------|-----|
-| **macOS** (Sonoma 14 or newer recommended) | to run Xcode |
-| **Xcode 16 or newer** (free, Mac App Store) | builds & runs the app. The project uses Xcode 16's file‑system‑synchronized folders. |
-| An **iOS 17+ Simulator** | comes bundled with Xcode; no paid account needed to run in the Simulator |
+Trading Up is a single-player **collecting & economy** game: buy packs, open them,
+sell duplicates back to the shop, grade your best pulls, and chase a complete
+collection before your cash runs out. Everything — all 250 cards across 5 sets — is
+embedded in the app, which has **zero third‑party dependencies**.
 
-> Command Line Tools alone are **not** enough to run the app — you need the full
-> Xcode application. (The logic test harness in [Testing](#testing) *does* run with
-> just Command Line Tools.)
+See **[DESIGN.md](DESIGN.md)** for the full write‑up: the Mythlings world, all five
+sets and their themes, the rarity value bands, the complete economy and grading
+tables, booster‑box guarantees, bonus payouts, and win/lose rules.
 
----
-
-## Run it (5 steps)
-
-1. **Install Xcode 16+** from the Mac App Store, launch it once, and accept the
-   component install prompt.
-2. **Open the project**: double‑click `TradingUp.xcodeproj` (or `xed .` from this
-   folder).
-3. **Pick a simulator** in the scheme selector at the top — e.g. *iPhone 16*.
-4. Press **▶︎ Run** (or `⌘R`). First build takes a moment; the app launches in the
-   Simulator.
-5. You start with **$100**. Open the **Shop** tab, buy a pack, and tap to reveal!
-
-There's nothing else to install — the app has **zero third‑party dependencies** and
-all 250 cards are embedded in the app.
+The card art is generated deterministically by `tools/generate_art.py`: every card
+gets a name‑aligned, flat‑vector creature on a per‑set scene, tinted to its element
+and scaled up through its evolution line. The rendered images live in the asset
+catalog (`TradingUp/Assets.xcassets/CardArt`) and, as SVGs, in the HTML mockups
+(`design/mockups/art`). The app's procedural `SigilView` remains as a fallback.
 
 ---
 
@@ -84,7 +73,31 @@ Your progress **auto‑saves** after every action.
 
 ---
 
-## Testing
+## Local development & testing
+
+### Requirements
+
+| Need | Why |
+|------|-----|
+| **macOS** (Sonoma 14 or newer recommended) | to run Xcode |
+| **Xcode 16 or newer** (free, Mac App Store) | builds & runs the app. The project uses Xcode 16's file‑system‑synchronized folders. |
+| An **iOS 17+ Simulator** | comes bundled with Xcode; no paid account needed to run in the Simulator |
+
+### Run it (5 steps)
+
+1. **Install Xcode 16+** from the Mac App Store, launch it once, and accept the
+   component install prompt.
+2. **Open the project**: double‑click `TradingUp.xcodeproj` (or `xed .` from this
+   folder).
+3. **Pick a simulator** in the scheme selector at the top — e.g. *iPhone 16*.
+4. Press **▶︎ Run** (or `⌘R`). First build takes a moment; the app launches in the
+   Simulator.
+5. You start with **$100**. Open the **Shop** tab, buy a pack, and tap to reveal!
+
+There's nothing else to install — the app has **zero third‑party dependencies** and
+all 250 cards are embedded in the app.
+
+### Testing
 
 The entire game economy and rules are covered by a Foundation‑only simulation you
 can run **without Xcode** (just the Swift toolchain from Command Line Tools):
@@ -112,9 +125,7 @@ This checks, among other things:
 
 It prints `ALL CHECKS PASSED ✅` on success.
 
----
-
-## Project layout
+### Project layout
 
 ```
 TradingUp.xcodeproj/         Xcode project (open this)
@@ -150,9 +161,7 @@ pack composition, foil chance, grade odds/multipliers, box guarantees, bonuses)
 live in `TradingUp/Models/Economy.swift`. Card names/values live in
 `tools/generate_cards.py`.
 
----
-
-## Regenerating content
+### Regenerating content
 
 **Cards** — after editing names or values in `tools/generate_cards.py`:
 
@@ -215,45 +224,3 @@ This writes five framed scenes (reveal, shop, collection, grade, win) at both
 cd design/mockups && python3 -m http.server 8787
 # then open http://localhost:8787
 ```
-
----
-
-## Game design
-
-See **[DESIGN.md](DESIGN.md)** for the full write‑up: the Mythlings world, all five
-sets and their themes, the rarity value bands, the complete economy and grading
-tables, booster‑box guarantees, bonus payouts, and win/lose rules.
-
-The card art is generated deterministically by `tools/generate_art.py`: every card
-gets a name‑aligned, flat‑vector creature on a per‑set scene, tinted to its element
-and scaled up through its evolution line. The rendered images live in the asset
-catalog (`TradingUp/Assets.xcassets/CardArt`) and, as SVGs, in the HTML mockups
-(`design/mockups/art`). The app's procedural `SigilView` remains as a fallback.
-
----
-
-## Road to the App Store
-
-This repo is a complete, runnable prototype. To actually publish it you'll need to:
-
-1. **Enroll in the Apple Developer Program** ($99/year) — required to ship to the
-   App Store and to run on a physical device.
-2. **Set your signing team** in Xcode: select the *TradingUp* target →
-   *Signing & Capabilities* → pick your team. The bundle id is
-   `com.callmegreg.tradingup` (change if you like).
-3. **Commission bespoke artwork** if you want to go beyond the built‑in vector
-   illustrations — e.g. hand‑drawn card art or a polished app icon.
-4. **Polish — done:** the app ships with synthesized [sound effects](#regenerating-content)
-   (a purchase chime, a foil‑pull shimmer, and a coin chime when selling; mute toggle
-   in Stats → Settings), a richer pack‑opening animation (3D card flips from a branded
-   card back, rarity glow bursts, particle sparkles, and a screen flash), and
-   ready‑to‑upload [App Store screenshots](#regenerating-content) in `design/screenshots/`.
-   All that's left here is an **App Privacy questionnaire** in App Store Connect (this app
-   collects no data).
-5. **Test on device** and distribute a beta via **TestFlight** before submitting for
-   review.
-
----
-
-*Built as a first iOS project. No Pokémon assets, names, or trademarks are used;
-all characters, sets, and art are original to Trading Up.*
