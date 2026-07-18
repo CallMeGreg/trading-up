@@ -25,25 +25,22 @@ struct WelcomeView: View {
                         Text("Trading Up")
                             .font(.system(size: 32, weight: .black, design: .rounded))
                             .foregroundStyle(.white)
-                        Text("Start with \(Economy.startingCash.money). Rip packs, chase foils and grades, and build the ultimate collection.")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundStyle(Palette.subtle)
-                            .multilineTextAlignment(.center)
-                            .fixedSize(horizontal: false, vertical: true)
                     }
 
                     VStack(alignment: .leading, spacing: 16) {
                         infoRow("📦", "Buy & open packs",
-                                "Six cards a pack — 3 common, 2 uncommon, and a rare or ultra. Opening them is the fun part.")
+                                "Six cards a pack — 3 common, 2 uncommon, and a rare or ultra.")
                         infoRow("💰", "Sell your extras",
                                 "Turn duplicate copies into cash. You can never sell the last copy of a card, though.")
                         infoRow("🎁", "Cash in bonuses",
                                 "Complete evolution lines and full sets for payouts. New sets unlock as your collection grows.")
+                        infoRow("🔍", "Grade rares & ultras",
+                                "Pay to grade a rare or ultra and roll a PSA score — it can multiply the card's value or leave it worth far less.")
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .panel()
 
-                    VStack(spacing: 14) {
+                    VStack(alignment: .leading, spacing: 14) {
                         goalRow("🏆", "How you win",
                                 "Collect all \(game.totalCards) cards across the five sets.",
                                 Palette.money)
