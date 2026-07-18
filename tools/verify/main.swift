@@ -45,7 +45,7 @@ check(evoBad == 0, "all evolution links resolve")
 check(CardDatabase.evolutionLines.count == 65, "65 multi-stage evolution lines (5×13)")
 
 print("\n== Pack economics (Monte Carlo) ==")
-let evTargets: [Int: Double] = [1: 1.10, 2: 1.00, 3: 0.90, 4: 0.80, 5: 0.70]
+let evTargets: [Int: Double] = [1: 1.00, 2: 0.90, 3: 0.80, 4: 0.70, 5: 0.60]
 for s in 1...5 {
     var rng = SeededRNG(0xC0FFEE &+ UInt64(s))
     let core = GameCore()
@@ -141,8 +141,8 @@ do {
     check(core.claimedSets.count == 5, "all 5 sets marked complete")
     check(core.claimedEvoLines.count == 65, "all 65 evolution lines marked complete")
     check(events.count == 70, "70 bonus events (65 evo + 5 set)")
-    // per set: 6 trios×2.0 + 7 duos×1.0 + 1 set×50 = 69.0 × pack price
-    let expected = 69.0 * (10 + 20 + 40 + 70 + 120)
+    // per set: 6 trios×2.0 + 7 duos×1.0 + 1 set×30 = 49.0 × pack price
+    let expected = 49.0 * (10 + 20 + 40 + 70 + 120)
     check(abs(core.cash - (100 + expected)) < 0.01, "bonus payout exact: $\(expected)")
     let again = core.checkBonuses()
     check(again.isEmpty, "bonuses are not paid twice")

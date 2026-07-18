@@ -113,12 +113,12 @@ that tier); the rest sit lower. Each set's values are scaled so its packs pay ba
 target EV (see **Packs** below); absolute magnitude still climbs every set, so
 higher‑set cards are always worth more. Approximate resulting bands:
 
-| Tier       | Set 1        | Set 2         | Set 3         | Set 4          | Set 5           |
-|------------|--------------|---------------|---------------|----------------|-----------------|
-| Common     | $0.38–1.13   | $0.67–1.86    | $1.17–3.60    | $1.84–5.37     | $2.94–8.27      |
-| Uncommon   | $1.46–3.57   | $2.65–6.29    | $4.51–10.08   | $7.09–16.53    | $11.39–27.18    |
-| Rare       | $5.10–9.38   | $7.63–16.21   | $13.37–29.78  | $20.91–47.45   | $33.12–75.33    |
-| Ultra Rare | $14.68–33.40 | $24.62–57.27  | $46.55–90.23  | $76.83–144.11  | $111.83–221.86  |
+| Tier       | Set 1       | Set 2        | Set 3        | Set 4         | Set 5         |
+|------------|-------------|--------------|--------------|---------------|---------------|
+| Common     | $0.25–0.75  | $0.48–1.34   | $0.85–2.62   | $1.29–3.76    | $1.96–5.51    |
+| Uncommon   | $0.98–2.38  | $1.91–4.53   | $3.28–7.33   | $4.96–11.57   | $7.59–18.12   |
+| Rare       | $3.40–6.25  | $5.49–11.67  | $9.73–21.66  | $14.63–33.22  | $22.08–50.22  |
+| Ultra Rare | $9.79–22.27 | $17.73–41.23 | $33.85–65.62 | $53.78–100.88 | $74.55–147.91 |
 
 ### Packs
 - **6 cards per pack:** 3 commons, 2 uncommons, 1 "hit."
@@ -129,11 +129,11 @@ higher‑set cards are always worth more. Approximate resulting bands:
 
   | Set             | Pack price | Target EV | Avg pack contents |
   |-----------------|-----------|-----------|-------------------|
-  | 1 Emberfall     | $10       | **1.10×** | ~$11   |
-  | 2 Tidecaller    | $20       | **1.00×** | ~$20   |
-  | 3 Verdspire     | $40       | **0.90×** | ~$36   |
-  | 4 Voltcrest     | $70       | **0.80×** | ~$56   |
-  | 5 Umbral Reach  | $120      | **0.70×** | ~$84   |
+  | 1 Emberfall     | $10       | **1.00×** | ~$10   |
+  | 2 Tidecaller    | $20       | **0.90×** | ~$18   |
+  | 3 Verdspire     | $40       | **0.80×** | ~$32   |
+  | 4 Voltcrest     | $70       | **0.70×** | ~$49   |
+  | 5 Umbral Reach  | $120      | **0.60×** | ~$72   |
 
   Any single pack still has **lots of variance** — a foil or a top‑tier hit blows past
   the average, a cold pack falls below it. Foils (~+2% expected) and opt‑in grading are
@@ -191,8 +191,8 @@ A cheaper‑per‑pack commitment with guarantees above the statistical average.
 
 - **Complete an evolution line** → cash bonus:
   - 2‑stage line = **1.0× pack price** of its set · 3‑stage line = **2.0× pack price**.
-- **Complete a full set (all 50)** → **huge** cash bonus = **50× that set's pack price**
-  (S1 $500 … S5 $6,000) — a major windfall that easily bankrolls the next set.
+- **Complete a full set (all 50)** → **huge** cash bonus = **30× that set's pack price**
+  (S1 $300 … S5 $3,600) — a major windfall that easily bankrolls the next set.
 
 ---
 
