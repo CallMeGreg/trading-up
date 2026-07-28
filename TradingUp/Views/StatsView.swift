@@ -4,8 +4,16 @@ struct StatsView: View {
     @Environment(GameState.self) var game: GameState
     @Bindable private var sound = SoundManager.shared
     @State private var confirmNew = false
+    @State private var scope: Scope = .run
+
+    private enum Scope: String, CaseIterable, Identifiable {
+        case run = "This Run"
+        case allTime = "All Time"
+        var id: String { rawValue }
+    }
 
     private var s: Stats { game.stats }
+    private var lifetime: LifetimeStats { game.lifetimeStats }
 
     var body: some View {
         NavigationStack {
@@ -16,6 +24,11 @@ struct StatsView: View {
                         StatTile(label: "Collection Value", value: game.collectionValue.moneyShort)
                         StatTile(label: "Net Worth", value: game.netWorth.moneyShort, tint: Color(hex: "b06cf7"))
                     }
+
+                    Picker("Scope", selection: $scope) {
+                        ForEach(Scope.allCases) { Text($0.rawValue).tag($0) }
+                    }
+                    .pickerStyle(.segmented)
 
                     VStack(alignment: .leading, spacing: 12) {
                         header("Collection")
@@ -31,15 +44,35 @@ struct StatsView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .panel()
 
+                    if scope == .allTime {
+                        VStack(alignment: .leading, spacing: 12) {
+                            header("Runs")
+                            grid([
+                                ("Runs Played", "\(lifetime.runsStarted)"),
+                                ("Runs Won", "\(lifetime.runsWon)"),
+                                ("Best Run", lifetime.bestRunPacks.map { "\($0) packs" } ?? "—"),
+                            ])
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .panel()
+                    }
+
                     VStack(alignment: .leading, spacing: 12) {
                         header("Haul")
-                        grid([
+                        grid(scope == .run ? [
                             ("Packs Opened", "\(s.packsOpened)"),
                             ("Boxes Opened", "\(s.boxesOpened)"),
                             ("Best Grade", s.bestGrade == 0 ? "—" : "PSA \(s.bestGrade)"),
                             ("Cards Pulled", "\(s.cardsPulled)"),
                             ("Ultras Pulled", "\(s.ultrasPulled)"),
                             ("Foils Pulled", "\(s.foilsPulled)"),
+                        ] : [
+                            ("Packs Opened", "\(lifetime.packsOpened)"),
+                            ("Boxes Opened", "\(lifetime.boxesOpened)"),
+                            ("Best Grade", lifetime.bestGrade == 0 ? "—" : "PSA \(lifetime.bestGrade)"),
+                            ("Cards Pulled", "\(lifetime.cardsPulled)"),
+                            ("Ultras Pulled", "\(lifetime.ultrasPulled)"),
+                            ("Foils Pulled", "\(lifetime.foilsPulled)"),
                         ])
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -47,13 +80,20 @@ struct StatsView: View {
 
                     VStack(alignment: .leading, spacing: 12) {
                         header("Economy")
-                        grid([
+                        grid(scope == .run ? [
                             ("Spent", s.moneySpent.moneyShort),
                             ("Earned", s.moneyEarned.moneyShort),
                             ("Cards Sold", "\(s.cardsSold)"),
                             ("Peak Cash", s.peakCash.moneyShort),
                             ("Peak Card", s.peakCardValue == 0 ? "—" : s.peakCardValue.moneyShort),
                             ("Peak Sale", s.peakSale == 0 ? "—" : s.peakSale.moneyShort),
+                        ] : [
+                            ("Spent", lifetime.moneySpent.moneyShort),
+                            ("Earned", lifetime.moneyEarned.moneyShort),
+                            ("Cards Sold", "\(lifetime.cardsSold)"),
+                            ("Peak Cash", lifetime.peakCash.moneyShort),
+                            ("Peak Card", lifetime.peakCardValue == 0 ? "—" : lifetime.peakCardValue.moneyShort),
+                            ("Peak Sale", lifetime.peakSale == 0 ? "—" : lifetime.peakSale.moneyShort),
                         ])
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -96,7 +136,7 @@ struct StatsView: View {
                 Button("Cancel", role: .cancel) {}
                 Button("Reset", role: .destructive) { game.newGame() }
             } message: {
-                Text("This erases your current collection and cash, and starts over with \(Economy.startingCash.money).")
+                Text("This erases your current collection and cash, and starts over with \(Economy.startingCash.money). Your all-time record is kept.")
             }
         }
     }

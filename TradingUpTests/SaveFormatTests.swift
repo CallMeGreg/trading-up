@@ -68,4 +68,100 @@ final class SaveFormatTests: XCTestCase {
         XCTAssertFalse(claimed.sanitized().core.claimedSets.contains(1),
                        "a set that is no longer complete after sanitizing should be un-claimed")
     }
+
+    // MARK: - Lifetime stats
+
+    func testFoldingALostRunCountsStartedButNotWon() {
+        var run = Stats()
+        run.packsOpened = 10
+        run.moneyEarned = 50
+        run.peakCash = 500
+        let after = LifetimeStats().folding(run, won: false)
+        XCTAssertEqual(after.runsStarted, 1)
+        XCTAssertEqual(after.runsWon, 0)
+        XCTAssertEqual(after.packsOpened, 10, "sums should add the run's counters into lifetime")
+        XCTAssertEqual(after.moneyEarned, 50)
+        XCTAssertEqual(after.peakCash, 500, "maxes should rise to the run's peak")
+        XCTAssertNil(after.bestRunPacks, "a lost run should never set bestRunPacks")
+    }
+
+    func testFoldingAWonRunIncrementsRunsWonAndRecordsBestRunPacks() {
+        var won = Stats(); won.packsOpened = 7
+        let after = LifetimeStats().folding(won, won: true)
+        XCTAssertEqual(after.runsWon, 1)
+        XCTAssertEqual(after.bestRunPacks, 7)
+    }
+
+    func testBestRunPacksOnlyImprovesTowardFewestPacks() {
+        var first = Stats(); first.packsOpened = 7
+        var better = LifetimeStats().folding(first, won: true)
+        XCTAssertEqual(better.bestRunPacks, 7)
+
+        var fewer = Stats(); fewer.packsOpened = 3
+        better = better.folding(fewer, won: true)
+        XCTAssertEqual(better.bestRunPacks, 3, "a faster winning run should lower bestRunPacks")
+
+        var more = Stats(); more.packsOpened = 20
+        better = better.folding(more, won: true)
+        XCTAssertEqual(better.bestRunPacks, 3, "a slower winning run should not raise bestRunPacks")
+    }
+
+    func testFoldingMultipleRunsAccumulatesSumsAndCounters() {
+        var runA = Stats(); runA.cardsSold = 4
+        var runB = Stats(); runB.cardsSold = 6
+        let twoRuns = LifetimeStats().folding(runA, won: false).folding(runB, won: true)
+        XCTAssertEqual(twoRuns.cardsSold, 10)
+        XCTAssertEqual(twoRuns.runsStarted, 2)
+        XCTAssertEqual(twoRuns.runsWon, 1)
+    }
+
+    func testDisplayTimeFoldingNeverMutatesStoredLifetime() {
+        var core = GameCore()
+        core.stats.packsOpened = 5
+        core.stats.moneyEarned = 40
+        let display = core.lifetimeIncludingCurrentRun
+        XCTAssertEqual(display.runsStarted, 1, "the in-progress run should count toward all-time display")
+        XCTAssertEqual(display.packsOpened, 5)
+        XCTAssertEqual(core.lifetime.runsStarted, 0, "stored lifetime must not be mutated by a display read")
+    }
+
+    func testStartingNewRunFoldsFinishedRunIntoLifetimeAndResets() {
+        var finished = GameCore()
+        finished.cash = 999
+        finished.stats.packsOpened = 12
+        finished.hasWon = true
+        let next = finished.startingNewRun()
+        XCTAssertEqual(next.lifetime.runsStarted, 1)
+        XCTAssertEqual(next.lifetime.runsWon, 1, "a won run should be folded in as a win")
+        XCTAssertEqual(next.lifetime.packsOpened, 12)
+        XCTAssertEqual(next.cash, Economy.startingCash, "cash should reset on a new run")
+        XCTAssertEqual(next.stats.packsOpened, 0, "current-run stats should reset on a new run")
+        XCTAssertEqual(next.lifetimeIncludingCurrentRun.runsStarted, 2,
+                       "all-time display right after reset should count the completed run plus the new one")
+    }
+
+    func testFoldingALostRunDoesNotFlipRunsWon() {
+        var finished = GameCore()
+        finished.stats.packsOpened = 4
+        finished.hasWon = false
+        let next = finished.startingNewRun()
+        XCTAssertEqual(next.lifetime.runsStarted, 1)
+        XCTAssertEqual(next.lifetime.runsWon, 0, "a run that ended without winning should not increment runsWon")
+    }
+
+    func testEmptyLifetimeStatsPayloadDecodesToDefaults() {
+        let empty = try? JSONDecoder().decode(LifetimeStats.self, from: Data("{}".utf8))
+        XCTAssertNotNil(empty)
+        XCTAssertEqual(empty?.runsStarted, 0)
+        XCTAssertEqual(empty?.runsWon, 0)
+        XCTAssertNil(empty?.bestRunPacks)
+        XCTAssertEqual(empty?.peakCash, Economy.startingCash)
+    }
+
+    func testGameCoreDecodesMissingLifetimeToDefaults() {
+        let legacy = Data(#"{"cash":42.5,"instances":[],"claimedEvoLines":[],"claimedSets":[],"stats":{},"hasWon":false}"#.utf8)
+        let core = try? JSONDecoder().decode(GameCore.self, from: legacy)
+        XCTAssertNotNil(core)
+        XCTAssertEqual(core?.lifetime.runsStarted, 0, "a save with no lifetime key should default to zero")
+    }
 }

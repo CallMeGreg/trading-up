@@ -68,4 +68,29 @@ final class SaveStoreTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: store.url.path),
                        "the bad file should be moved aside so the next save starts clean")
     }
+
+    func testV1SaveMigratesToV2WithoutLosingData() {
+        let v1Save = """
+        {"schemaVersion":1,"core":{"cash":250,"instances":[{"cardId":"S1-001"}],\
+        "claimedEvoLines":[],"claimedSets":[],"stats":{"packsOpened":9,"moneyEarned":30},"hasWon":false}}
+        """
+        try! Data(v1Save.utf8).write(to: store.url)
+        let migrated = store.load()
+        XCTAssertEqual(migrated.core?.cash, 250, "a v1 save should migrate without losing cash")
+        XCTAssertEqual(migrated.core?.stats.packsOpened, 9, "a v1 save should keep its current-run stats")
+        XCTAssertEqual(migrated.core?.instances.count, 1, "a v1 save should keep its collection")
+        XCTAssertEqual(migrated.core?.lifetime.runsStarted, 0, "a v1 save's stored lifetime should default to zero")
+        XCTAssertEqual(migrated.core?.lifetimeIncludingCurrentRun.packsOpened, 9,
+                       "all-time display should immediately reflect the in-progress run's stats after migration")
+        XCTAssertNil(migrated.issue, "a valid v1 save should migrate cleanly with no reported issue")
+    }
+
+    func testBarePreEnvelopeSaveDecodesLifetimeToDefaults() {
+        var legacyCore = GameCore(); legacyCore.cash = 55
+        try! JSONEncoder().encode(legacyCore).write(to: store.url)
+        let loaded = store.load()
+        XCTAssertEqual(loaded.core?.cash, 55)
+        XCTAssertEqual(loaded.core?.lifetime.runsStarted, 0,
+                       "a bare pre-envelope save should also decode lifetime to defaults")
+    }
 }

@@ -290,6 +290,74 @@ do {
           "a set that is no longer complete after sanitizing is un-claimed")
 }
 
+print("\n== Lifetime stats (run vs. all-time) ==")
+do {
+    // Folding a lost run: sums add, maxes take the larger value, runsWon
+    // stays put, bestRunPacks stays nil (never won).
+    var run = Stats()
+    run.packsOpened = 10
+    run.moneyEarned = 50
+    run.peakCash = 500
+    let afterLoss = LifetimeStats().folding(run, won: false)
+    check(afterLoss.runsStarted == 1 && afterLoss.runsWon == 0,
+          "folding a lost run counts it as started but not won")
+    check(afterLoss.packsOpened == 10 && afterLoss.moneyEarned == 50,
+          "folding a run sums its counters into lifetime")
+    check(afterLoss.peakCash == 500, "folding a run raises lifetime peaks to the run's peak")
+    check(afterLoss.bestRunPacks == nil, "a lost run never sets bestRunPacks")
+
+    // Folding a won run: runsWon increments, bestRunPacks records the pack count.
+    var won = Stats(); won.packsOpened = 7
+    let afterWin = LifetimeStats().folding(won, won: true)
+    check(afterWin.runsWon == 1 && afterWin.bestRunPacks == 7,
+          "folding a won run increments runsWon and records bestRunPacks")
+
+    // bestRunPacks only ever shrinks toward the fewest packs across won runs.
+    var secondWin = Stats(); secondWin.packsOpened = 3
+    let afterSecondWin = afterWin.folding(secondWin, won: true)
+    check(afterSecondWin.bestRunPacks == 3, "bestRunPacks tracks the fewest packs across won runs")
+    var thirdWin = Stats(); thirdWin.packsOpened = 20
+    let afterThirdWin = afterSecondWin.folding(thirdWin, won: true)
+    check(afterThirdWin.bestRunPacks == 3, "a worse winning run does not raise bestRunPacks")
+
+    // Sums accumulate across multiple folds (simulating several completed runs).
+    var runA = Stats(); runA.cardsSold = 4
+    var runB = Stats(); runB.cardsSold = 6
+    let twoRuns = LifetimeStats().folding(runA, won: false).folding(runB, won: true)
+    check(twoRuns.cardsSold == 10 && twoRuns.runsStarted == 2 && twoRuns.runsWon == 1,
+          "folding two runs accumulates sums and run counters correctly")
+
+    // Display-time totals = stored lifetime + current run, without mutating
+    // stored lifetime — so a reset can't double-count it.
+    var core = GameCore()
+    core.stats.packsOpened = 5
+    core.stats.moneyEarned = 40
+    let display = core.lifetimeIncludingCurrentRun
+    check(display.runsStarted == 1 && display.packsOpened == 5,
+          "an in-progress run is folded into all-time totals for display")
+    check(core.lifetime.runsStarted == 0, "display-time folding never mutates stored lifetime")
+
+    // startingNewRun() permanently commits the finished run and resets the rest.
+    var finished = GameCore()
+    finished.cash = 999
+    finished.stats.packsOpened = 12
+    finished.hasWon = true
+    let next = finished.startingNewRun()
+    check(next.lifetime.runsStarted == 1 && next.lifetime.runsWon == 1,
+          "startingNewRun folds the just-finished (won) run into lifetime")
+    check(next.lifetime.packsOpened == 12, "startingNewRun carries the finished run's totals into lifetime")
+    check(next.cash == Economy.startingCash && next.stats.packsOpened == 0,
+          "startingNewRun resets cash and the current run's stats")
+    check(next.lifetimeIncludingCurrentRun.runsStarted == 2,
+          "all-time display after a reset counts the completed run plus the freshly started one")
+
+    // LifetimeStats decodes leniently: missing keys fall back to defaults,
+    // exactly like Stats and GameCore.
+    let emptyLifetime = try? JSONDecoder().decode(LifetimeStats.self, from: Data("{}".utf8))
+    check(emptyLifetime != nil && emptyLifetime?.runsStarted == 0 && emptyLifetime?.bestRunPacks == nil,
+          "a LifetimeStats payload missing every key decodes to defaults")
+}
+
 print("\n== Save store (files) ==")
 do {
     let dir = URL(fileURLWithPath: NSTemporaryDirectory())
@@ -336,6 +404,28 @@ do {
           "the unreadable save is quarantined on disk, never deleted")
     check(!FileManager.default.fileExists(atPath: store.url.path),
           "the bad file is moved aside so the next save starts clean")
+
+    // A v1 envelope (no `lifetime` key at all) migrates to v2 cleanly: no data
+    // is lost, and the missing lifetime defaults to zero — the player's
+    // in-progress run is folded in at display time instead.
+    let v1Save = """
+    {"schemaVersion":1,"core":{"cash":250,"instances":[{"cardId":"S1-001"}],\
+    "claimedEvoLines":[],"claimedSets":[],"stats":{"packsOpened":9,"moneyEarned":30},"hasWon":false}}
+    """
+    try! Data(v1Save.utf8).write(to: store.url)
+    let migrated = store.load()
+    check(migrated.core?.cash == 250, "a v1 save migrates without losing cash")
+    check(migrated.core?.stats.packsOpened == 9, "a v1 save migrates without losing current-run stats")
+    check(migrated.core?.instances.count == 1, "a v1 save migrates without losing the collection")
+    check(migrated.core?.lifetime.runsStarted == 0, "a v1 save's stored lifetime defaults to zero")
+    check(migrated.core?.lifetimeIncludingCurrentRun.packsOpened == 9,
+          "a v1 save's all-time display still reflects the in-progress run's stats immediately")
+
+    // A bare pre-envelope save (no schemaVersion, no lifetime) also loads cleanly.
+    let bare = try! JSONEncoder().encode(GameCore())
+    try! bare.write(to: store.url)
+    check(store.load().core?.lifetime.runsStarted == 0,
+          "a bare pre-envelope save also decodes lifetime to defaults")
 }
 
 print("\n== Win presentation ==")

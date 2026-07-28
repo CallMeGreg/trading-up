@@ -9,7 +9,11 @@ import Foundation
 struct SaveFile: Codable {
     /// Bump whenever the payload changes shape in a way `GameCore.init(from:)`
     /// can't absorb on its own.
-    static let currentVersion = 1
+    ///
+    /// v2: split lifetime stats out of the per-run `Stats` (see `LifetimeStats`
+    /// on `GameCore`). v1 saves have no `lifetime` key at all; `SaveStore.load()`
+    /// branches on `schemaVersion` to migrate them explicitly.
+    static let currentVersion = 2
 
     var schemaVersion: Int
     var core: GameCore
@@ -54,6 +58,9 @@ enum SaveLoadIssue: Equatable {
 /// handling — versioning, legacy formats, corrupt-file quarantine — stays pure,
 /// testable, and out of the observable object.
 struct SaveStore {
+    /// Just enough of the envelope to decide how to decode the rest.
+    private struct SchemaProbe: Decodable { let schemaVersion: Int }
+
     let url: URL
 
     init(directory: URL? = nil, fileName: String = "tradingup_save.json") {
@@ -61,22 +68,44 @@ struct SaveStore {
         url = dir.appendingPathComponent(fileName)
     }
 
-    /// Load the save, tolerating both the versioned envelope and the original
-    /// bare-`GameCore` format. A file that can't be decoded at all is *moved
-    /// aside*, never discarded, so a bug or a bad migration can't silently erase
-    /// a player's collection.
+    /// Load the save, tolerating the v2 envelope, the v1 envelope, and the
+    /// original bare-`GameCore` format. A file that can't be decoded at all is
+    /// *moved aside*, never discarded, so a bug or a bad migration can't
+    /// silently erase a player's collection.
     func load() -> (core: GameCore?, issue: SaveLoadIssue?) {
         guard let data = try? Data(contentsOf: url) else { return (nil, nil) }
 
         let decoder = JSONDecoder()
-        let decoded = (try? decoder.decode(SaveFile.self, from: data))?.core
-            ?? (try? decoder.decode(GameCore.self, from: data))   // pre-envelope saves
+        let decoded: GameCore?
+        if let probe = try? decoder.decode(SchemaProbe.self, from: data) {
+            switch probe.schemaVersion {
+            case 1:
+                decoded = migrateV1((try? decoder.decode(SaveFile.self, from: data))?.core)
+            default:
+                // Current version, or a newer one we don't recognize yet —
+                // decode as-is; `GameCore`'s lenient init absorbs new fields.
+                decoded = (try? decoder.decode(SaveFile.self, from: data))?.core
+            }
+        } else {
+            // No `schemaVersion` key at all: a pre-envelope, bare-`GameCore` save.
+            decoded = try? decoder.decode(GameCore.self, from: data)
+        }
 
         guard let decoded else { return (nil, .unreadable(quarantinedAs: quarantine())) }
 
         let (clean, dropped) = decoded.sanitized()
         return (clean, dropped > 0 ? .droppedUnknownCards(count: dropped) : nil)
     }
+
+    /// v1 -> v2: v1 predates lifetime stats entirely, so there's nothing to
+    /// carry over beyond what `GameCore`'s lenient decode already defaults
+    /// `lifetime` to (all zero). That's correct, not just convenient: the
+    /// player's in-progress run gets folded into that zero lifetime at display
+    /// time (`GameCore.lifetimeIncludingCurrentRun`), so their all-time totals
+    /// read right immediately, with no data loss. Kept as an explicit branch —
+    /// rather than only relying on the lenient decode — so the next schema
+    /// change has a template to extend instead of inventing this from scratch.
+    private func migrateV1(_ core: GameCore?) -> GameCore? { core }
 
     @discardableResult
     func save(_ core: GameCore) -> Bool {
