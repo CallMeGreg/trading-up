@@ -2,7 +2,6 @@ import Foundation
 #if canImport(AVFoundation)
 import AVFoundation
 #endif
-import Combine
 
 /// Every sound effect the app can play. The raw value is the bundled WAV's file
 /// name (see `tools/generate_sfx.py`, which synthesizes all of them).
@@ -12,6 +11,7 @@ enum Sound: String, CaseIterable {
     case coin
 
     /// Convenience mirroring `Haptics.play(_:)` so call sites read the same way.
+    @MainActor
     static func play(_ sound: Sound, volume: Float = 1.0) {
         SoundManager.shared.play(sound, volume: volume)
     }
@@ -26,12 +26,14 @@ enum Sound: String, CaseIterable {
 ///   interrupts the player's own music and honors the physical mute switch.
 /// - Mute state is a user preference persisted in `UserDefaults`, independent of
 ///   the game save, and published so a settings toggle updates live.
-final class SoundManager: ObservableObject {
+@Observable
+@MainActor
+final class SoundManager {
     static let shared = SoundManager()
 
     private static let prefKey = "tradingup_sound_enabled"
 
-    @Published var isEnabled: Bool {
+    var isEnabled: Bool {
         didSet { UserDefaults.standard.set(isEnabled, forKey: Self.prefKey) }
     }
 
@@ -51,11 +53,21 @@ final class SoundManager: ObservableObject {
 
     /// Warm up the audio session and decode every effect ahead of first use so
     /// the initial pack-open doesn't stutter. Safe to call from app launch.
+    ///
+    /// The file reads happen off the main actor; only the resulting pool of
+    /// `AVAudioPlayer`s is installed back on the main actor, which is where
+    /// `pools` is otherwise read and written from `play(_:volume:)`.
     func preloadAll() {
         #if canImport(AVFoundation)
-        DispatchQueue.global(qos: .utility).async { [weak self] in
-            guard let self else { return }
-            for sound in Sound.allCases { _ = self.players(for: sound) }
+        Task.detached(priority: .utility) { [weak self] in
+            guard self != nil else { return }
+            var decoded: [Sound: Data] = [:]
+            for sound in Sound.allCases {
+                guard let url = Bundle.main.url(forResource: sound.rawValue, withExtension: "wav"),
+                      let data = try? Data(contentsOf: url) else { continue }
+                decoded[sound] = data
+            }
+            await self?.installPools(from: decoded)
         }
         #endif
     }
@@ -100,6 +112,19 @@ final class SoundManager: ObservableObject {
             pools[sound] = []
             return []
         }
+        return makePool(from: data, into: sound)
+    }
+
+    /// Installs a batch of preloaded pools (called back on the main actor
+    /// from `preloadAll()`). Sounds that already have a pool are skipped.
+    private func installPools(from decoded: [Sound: Data]) {
+        for (sound, data) in decoded where pools[sound] == nil {
+            _ = makePool(from: data, into: sound)
+        }
+    }
+
+    @discardableResult
+    private func makePool(from data: Data, into sound: Sound) -> [AVAudioPlayer] {
         var made: [AVAudioPlayer] = []
         for _ in 0..<poolSize {
             if let p = try? AVAudioPlayer(data: data) {

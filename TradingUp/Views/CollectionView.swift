@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct CollectionView: View {
-    @EnvironmentObject var game: GameState
+    @Environment(GameState.self) var game: GameState
     @State private var set = 1
     @State private var selected: Card?
     @State private var activeFilters: Set<CardFilter> = []

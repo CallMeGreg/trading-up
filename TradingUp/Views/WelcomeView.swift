@@ -3,7 +3,7 @@ import SwiftUI
 /// Quick intro shown on first launch and after starting a new game. Explains
 /// the core loop plus how you win and lose.
 struct WelcomeView: View {
-    @EnvironmentObject var game: GameState
+    @Environment(GameState.self) var game: GameState
 
     var body: some View {
         ZStack {

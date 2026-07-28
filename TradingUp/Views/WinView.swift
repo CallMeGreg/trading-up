@@ -3,7 +3,7 @@ import UIKit
 
 /// Shown when all 250 cards are collected. Terminal, celebratory.
 struct WinView: View {
-    @EnvironmentObject var game: GameState
+    @Environment(GameState.self) var game: GameState
     private var s: Stats { game.stats }
 
     /// Rendered snapshot of the win, shared as an image. Built on appear.

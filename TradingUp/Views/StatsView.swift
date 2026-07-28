@@ -1,8 +1,8 @@
 import SwiftUI
 
 struct StatsView: View {
-    @EnvironmentObject var game: GameState
-    @ObservedObject private var sound = SoundManager.shared
+    @Environment(GameState.self) var game: GameState
+    @Bindable private var sound = SoundManager.shared
     @State private var confirmNew = false
 
     private var s: Stats { game.stats }
@@ -116,7 +116,7 @@ struct StatsView: View {
 
 /// Per-set owned/50 progress rows. Shared by Stats / Win / Lose.
 struct SetBreakdown: View {
-    @EnvironmentObject var game: GameState
+    @Environment(GameState.self) var game: GameState
 
     var body: some View {
         VStack(spacing: 9) {

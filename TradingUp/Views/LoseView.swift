@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Shown when the player can't afford a pack and has no sellable duplicates.
 struct LoseView: View {
-    @EnvironmentObject var game: GameState
+    @Environment(GameState.self) var game: GameState
     private var s: Stats { game.stats }
     @State private var confirmNew = false
 
