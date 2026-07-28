@@ -32,6 +32,18 @@ extension View {
             .background(RoundedRectangle(cornerRadius: corner).fill(Palette.panel))
             .overlay(RoundedRectangle(cornerRadius: corner).strokeBorder(Palette.stroke, lineWidth: 1))
     }
+
+    /// Caps content at a comfortable reading width and centres it in whatever
+    /// space is left over. Every screen in this app was laid out against an
+    /// iPhone's ~370pt content width, but the target ships `TARGETED_DEVICE_FAMILY
+    /// = "1,2"` with landscape enabled — so on an iPad the same panels stretch to
+    /// ~1370pt and strand their contents against the leading edge. The default is
+    /// above the widest iPhone (Pro Max is 440pt), so portrait iPhone layout is
+    /// unchanged and only genuinely wide containers are constrained.
+    func readableWidth(_ limit: CGFloat = 540) -> some View {
+        frame(maxWidth: limit)
+            .frame(maxWidth: .infinity)
+    }
 }
 
 /// Full-width gradient action button with optional subtitle.

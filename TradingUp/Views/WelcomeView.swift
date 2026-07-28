@@ -60,6 +60,7 @@ struct WelcomeView: View {
                     .padding(.top, 4)
                 }
                 .padding(16)
+                .readableWidth()
             }
         }
     }
