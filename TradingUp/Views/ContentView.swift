@@ -20,6 +20,11 @@ struct ContentView: View {
             case .lose:    LoseView()
             }
         }
+        .alert(game.loadIssue?.title ?? "", isPresented: loadIssueBinding) {
+            Button("OK", role: .cancel) { game.dismissLoadIssue() }
+        } message: {
+            Text(game.loadIssue?.message ?? "")
+        }
     }
 
     /// Which full-screen overlay (if any) the current model state calls for.
@@ -28,15 +33,21 @@ struct ContentView: View {
     /// two separate presentations.
     private var activeOverlay: AppOverlay? {
         if game.shouldShowWelcome { return .welcome }
-        if game.hasWon { return .win }
+        if game.shouldShowWin { return .win }
         if game.isGameOver { return .lose }
         return nil
     }
 
     /// Model-driven; dismissal happens when the state clears (markWelcomeSeen /
-    /// newGame), so the setter is intentionally a no-op.
+    /// acknowledgeWin / newGame), so the setter is intentionally a no-op.
     private var overlayBinding: Binding<AppOverlay?> {
         Binding(get: { activeOverlay }, set: { _ in })
+    }
+
+    /// Presents the save-load notice until the player dismisses it.
+    private var loadIssueBinding: Binding<Bool> {
+        Binding(get: { game.loadIssue != nil },
+                set: { if !$0 { game.dismissLoadIssue() } })
     }
 }
 

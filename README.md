@@ -72,9 +72,13 @@ catalog (`TradingUp/Assets.xcassets/CardArt`) and, as SVGs, in the HTML mockups
   whole **set** pays a big one (**15× the pack price**).
 - **Win** by collecting all **250** cards. **Lose** if your cash drops **below $10**
   (the cheapest pack) with no duplicates left to sell — with the buylist spread and
-  steep prices, careless spam‑and‑dump really can bankrupt you.
+  steep prices, careless spam‑and‑dump really can bankrupt you. Winning is a
+  celebration, not an ending: dismiss the win screen and your completed collection
+  stays yours to browse — starting over is always an explicit, confirmed choice.
 
-Your progress **auto‑saves** after every action.
+Your progress **auto‑saves** after every action. Saves carry a schema version, tolerate
+missing or newly added fields, and are **never silently discarded** — an unreadable save
+is moved aside rather than deleted.
 
 ---
 
@@ -111,6 +115,7 @@ can run **without Xcode** (just the Swift toolchain from Command Line Tools):
 swiftc TradingUp/Models/Card.swift \
        TradingUp/Models/Economy.swift \
        TradingUp/Models/GameCore.swift \
+       TradingUp/Models/Persistence.swift \
        TradingUp/Generated/CardData.swift \
        tools/verify/main.swift \
        -o /tmp/tu_verify && /tmp/tu_verify
@@ -130,6 +135,12 @@ This checks, among other things:
 - the **sell‑back spread** works — a duplicate sells for 65% of market value, and
   buying into an already‑complete set then dumping the dupes is a **net loss** (the
   core losing risk);
+- the **save format is forward‑compatible** — a payload missing newer keys (or missing
+  every key) still decodes to sensible defaults, the envelope carries its schema
+  version, a pre‑envelope save still loads, retired card ids are stripped rather than
+  crashing, and an unreadable save is **quarantined on disk, never deleted**;
+- **winning doesn't erase your collection** — the celebration shows once, and dismissing
+  it leaves the finished collection browsable;
 - **strategy simulations** hold the "moderate" difficulty target — reckless
   spam‑and‑dump play **busts ~44%** of the time, while thoughtful play (pace buys, grade
   valuable dupes before selling) still **wins ~77%**, a clear skill gap;
@@ -148,6 +159,7 @@ TradingUp/
     Card.swift               Card, Rarity, Element, CardDatabase
     Economy.swift            Prices, grading table, value math — all tuning lives here
     GameCore.swift           Deterministic game state: buy / open / sell / grade / bonuses
+    Persistence.swift        Versioned save envelope, load hygiene, corrupt-save quarantine
     GameState.swift          ObservableObject wrapper: randomness + autosave for SwiftUI
   Generated/
     CardData.swift           The 250 cards (auto‑generated — do not edit by hand)
@@ -158,9 +170,9 @@ TradingUp/
   Assets.xcassets/           App icon + accent color + CardArt/ (250 card illustrations)
 data/cards.json              The 250 cards as JSON (source for tooling/other targets)
 design/
-  DESIGN.md                  Full game design document
   mockups/                   Interactive HTML card‑style mockups (open index.html)
   screenshots/               Generated App Store screenshots (6.9" + 6.5")
+DESIGN.md                    Full game design document
 tools/
   generate_cards.py          Regenerates data/cards.json AND Generated/CardData.swift
   generate_art.py            Regenerates the 250 card illustrations (needs rsvg-convert)

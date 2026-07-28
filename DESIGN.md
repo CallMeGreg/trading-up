@@ -240,6 +240,9 @@ and one big multi‑pack open, **not** a bulk discount.
   - Thoughtful play — pacing your buys, keeping a cash cushion, and **grading valuable
     dupes before selling** — still **wins ~77%** of the time. The gap between the two is
     the point: skill, not grinding, is what carries you through.
+  - **Winning is not an exit.** The celebration is shown once; dismissing it keeps the
+    completed collection intact and browsable. Starting over is always a separate,
+    confirmed action — the reward for finishing shouldn't be losing what you finished.
 
 **Difficulty target: moderate.** Thoughtful play usually wins; careless play can
 bankrupt you. Balance knobs all live in `Economy.swift`; the simulations that hold this
@@ -250,6 +253,21 @@ target live in `tools/verify/main.swift` (strategy sims + economy‑knob asserti
 ## 11. Persistence
 Local save (Codable → JSON in the app's Documents dir): cash, owned cards (with
 foil/grade state + counts), stats, and claimed bonuses. No account/server needed for v1.
+
+The payload is wrapped in a small versioned envelope (`SaveFile`, see
+`Models/Persistence.swift`) so future schema changes are detectable rather than guessed
+at. Three rules keep a player's collection safe across updates:
+
+- **Additive changes are free.** `GameCore` decodes every key independently, so a field
+  added in a later build falls back to its default instead of failing the whole decode.
+  (Swift's synthesized `Codable` would otherwise throw on the missing key and — with the
+  old `try?` fallback — silently reset the game.)
+- **Retired cards degrade, they don't crash.** If a save references a card id that's no
+  longer in the catalogue, those copies are dropped on load, any bonus the player no
+  longer qualifies for is un‑claimed, and the player is told what changed.
+- **A bad save is never deleted.** An undecodable file is moved to
+  `tradingup_save.corrupt-<timestamp>.json` and the player gets an explanation, so a bug
+  or a botched migration can't quietly erase a collection.
 
 ---
 

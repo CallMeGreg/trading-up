@@ -8,6 +8,7 @@ struct WinView: View {
 
     /// Rendered snapshot of the win, shared as an image. Built on appear.
     @State private var shareImage: Image?
+    @State private var confirmNew = false
 
     /// Rasterize `WinShareCard` so the share sheet can attach it as an image.
     @MainActor private func renderShareImage() {
@@ -84,10 +85,16 @@ struct WinView: View {
                                        tint: [Color(hex: "3b82f6"), Color(hex: "6d5cf7")])
                     }
 
-                    BigButton(title: "Play Again", systemImage: "arrow.counterclockwise",
+                    BigButton(title: "Keep My Collection", systemImage: "square.grid.3x3.fill",
+                              tint: [Palette.money, Color(hex: "39b56a")]) {
+                        Haptics.play(.light)
+                        game.acknowledgeWin()
+                    }
+
+                    BigButton(title: "Play Again", subtitle: "Erases this collection and starts over",
+                              systemImage: "arrow.counterclockwise",
                               tint: [Color(hex: "b06cf7"), Color(hex: "6d5cf7")]) {
-                        Haptics.play(.success)
-                        game.newGame()
+                        confirmNew = true
                     }
                 }
                 .padding(16)
@@ -96,6 +103,12 @@ struct WinView: View {
         .onAppear {
             Haptics.play(.success)
             renderShareImage()
+        }
+        .alert("Start a new game?", isPresented: $confirmNew) {
+            Button("Cancel", role: .cancel) {}
+            Button("Reset", role: .destructive) { Haptics.play(.success); game.newGame() }
+        } message: {
+            Text("This erases your completed collection and starts over with \(Economy.startingCash.money). Choose \"Keep My Collection\" instead to go on browsing it.")
         }
     }
 }

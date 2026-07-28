@@ -6,18 +6,21 @@ import Combine
 final class GameState: ObservableObject {
     @Published private(set) var core: GameCore
 
-    private var rng = SystemRandomNumberGenerator()
-    private let saveURL: URL
+    /// Set when the last load didn't go cleanly, so the UI can tell the player
+    /// rather than silently presenting them with a fresh game.
+    @Published private(set) var loadIssue: SaveLoadIssue?
 
-    init() {
-        let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        saveURL = dir.appendingPathComponent("tradingup_save.json")
-        if let data = try? Data(contentsOf: saveURL),
-           let loaded = try? JSONDecoder().decode(GameCore.self, from: data) {
-            core = loaded
-        } else {
-            core = GameCore()
-        }
+    private var rng = SystemRandomNumberGenerator()
+    private let store: SaveStore
+
+    init(store: SaveStore = SaveStore()) {
+        self.store = store
+        let (loaded, issue) = store.load()
+        core = loaded ?? GameCore()
+        loadIssue = issue
+        // Persist immediately if load had to repair or quarantine something, so
+        // the cleaned state is what's on disk from here on.
+        if issue != nil { store.save(core) }
     }
 
     // MARK: Read-through conveniences
@@ -29,6 +32,7 @@ final class GameState: ObservableObject {
     var collectionValue: Double { core.collectionValue }
     var netWorth: Double { core.netWorth }
     var hasWon: Bool { core.hasWon }
+    var shouldShowWin: Bool { core.shouldShowWin }
     var isGameOver: Bool { core.isGameOver }
     var shouldShowWelcome: Bool { core.shouldShowWelcome }
     var cheapestPackPrice: Double { Economy.cheapestPackPrice }
@@ -104,9 +108,15 @@ final class GameState: ObservableObject {
         save()
     }
 
+    /// Dismiss the win celebration but keep the completed collection.
+    func acknowledgeWin() {
+        core.acknowledgeWin()
+        save()
+    }
+
+    func dismissLoadIssue() { loadIssue = nil }
+
     private func save() {
-        if let data = try? JSONEncoder().encode(core) {
-            try? data.write(to: saveURL, options: .atomic)
-        }
+        store.save(core)
     }
 }

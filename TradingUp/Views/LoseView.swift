@@ -4,6 +4,7 @@ import SwiftUI
 struct LoseView: View {
     @EnvironmentObject var game: GameState
     private var s: Stats { game.stats }
+    @State private var confirmNew = false
 
     var body: some View {
         ZStack {
@@ -41,15 +42,21 @@ struct LoseView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .panel()
 
-                    BigButton(title: "Try Again", systemImage: "arrow.counterclockwise",
+                    BigButton(title: "Try Again", subtitle: "Erases this collection and starts over",
+                              systemImage: "arrow.counterclockwise",
                               tint: [Color(hex: "e0663b"), Color(hex: "c0442b")]) {
-                        Haptics.play(.medium)
-                        game.newGame()
+                        confirmNew = true
                     }
                 }
                 .padding(16)
             }
         }
         .onAppear { Haptics.play(.error) }
+        .alert("Start a new game?", isPresented: $confirmNew) {
+            Button("Cancel", role: .cancel) {}
+            Button("Reset", role: .destructive) { Haptics.play(.medium); game.newGame() }
+        } message: {
+            Text("This erases your collection and starts over with \(Economy.startingCash.money).")
+        }
     }
 }

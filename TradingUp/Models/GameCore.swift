@@ -9,7 +9,26 @@ struct CardInstance: Identifiable, Codable, Hashable {
     var foil: Bool = false
     var grade: Int? = nil    // nil = ungraded
 
-    var card: Card { CardDatabase.byId[cardId]! }
+    init(id: UUID = UUID(), cardId: String, foil: Bool = false, grade: Int? = nil) {
+        self.id = id
+        self.cardId = cardId
+        self.foil = foil
+        self.grade = grade
+    }
+
+    /// Decode leniently, like `Stats` and `GameCore`: synthesized `Codable`
+    /// ignores property defaults and throws on any missing key, which would make
+    /// adding a per-copy field (serial number, acquired date, …) break every
+    /// existing save. Only `cardId` is genuinely required.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        cardId = try c.decode(String.self, forKey: .cardId)
+        id     = try c.decodeIfPresent(UUID.self, forKey: .id)   ?? UUID()
+        foil   = try c.decodeIfPresent(Bool.self, forKey: .foil) ?? false
+        grade  = try c.decodeIfPresent(Int.self,  forKey: .grade)
+    }
+
+    var card: Card { CardDatabase.byId[cardId] ?? .unknown(id: cardId) }
     var currentValue: Double { Economy.value(base: card.baseValue, foil: foil, grade: grade) }
     /// What the shop actually pays for this copy if sold: market value minus the
     /// sell-back spread. Selling always uses this; `currentValue` stays the market
@@ -96,8 +115,56 @@ struct GameCore: Codable {
     var claimedSets: Set<Int> = []
     var stats = Stats()
     var hasWon = false
-    /// Optional so older saves (which lack the key) decode cleanly to `nil`.
-    var welcomeSeen: Bool? = nil
+    /// Set once the player dismisses the win screen to keep browsing their
+    /// finished collection. `hasWon` stays true forever; this only controls
+    /// whether the celebration overlay is still being presented.
+    var winAcknowledged = false
+    var welcomeSeen = false
+
+    init() {}
+
+    /// Decode leniently, like `Stats`: Swift's synthesized `init(from:)` ignores
+    /// property defaults and throws on any missing key, so adding a field here
+    /// would make every existing save fail to decode. Decoding each key
+    /// independently means new fields fall back to their default and old saves
+    /// keep loading.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        cash            = try c.decodeIfPresent(Double.self,         forKey: .cash)            ?? Economy.startingCash
+        instances       = try c.decodeIfPresent([CardInstance].self, forKey: .instances)       ?? []
+        claimedEvoLines = try c.decodeIfPresent(Set<String>.self,    forKey: .claimedEvoLines) ?? []
+        claimedSets     = try c.decodeIfPresent(Set<Int>.self,       forKey: .claimedSets)     ?? []
+        stats           = try c.decodeIfPresent(Stats.self,          forKey: .stats)           ?? Stats()
+        hasWon          = try c.decodeIfPresent(Bool.self,           forKey: .hasWon)          ?? false
+        winAcknowledged = try c.decodeIfPresent(Bool.self,           forKey: .winAcknowledged) ?? false
+        welcomeSeen     = try c.decodeIfPresent(Bool.self,           forKey: .welcomeSeen)     ?? false
+    }
+
+    // MARK: Load hygiene
+
+    /// A copy of this state with any card ids that are no longer in the shipped
+    /// catalogue removed — so a save written against an older card list (renamed,
+    /// renumbered, or retired cards) loads as a slightly smaller collection
+    /// instead of showing placeholder cards. Returns the cleaned state and how
+    /// many copies were dropped.
+    func sanitized() -> (core: GameCore, droppedInstances: Int) {
+        var out = self
+        let kept = instances.filter { CardDatabase.exists($0.cardId) }
+        let dropped = instances.count - kept.count
+        guard dropped > 0 else { return (out, 0) }
+        out.instances = kept
+        // Re-open bonuses whose line/set the player no longer completes, so the
+        // reward isn't permanently stranded if they re-collect the cards.
+        let owned = Set(kept.map { $0.cardId })
+        out.claimedEvoLines = out.claimedEvoLines.filter { lineId in
+            CardDatabase.evolutionLines[lineId]?.allSatisfy { owned.contains($0.id) } ?? false
+        }
+        out.claimedSets = out.claimedSets.filter { set in
+            let cards = CardDatabase.cards(inSet: set)
+            return !cards.isEmpty && cards.allSatisfy { owned.contains($0.id) }
+        }
+        return (out, dropped)
+    }
 
     // MARK: Derived
 
@@ -132,7 +199,7 @@ struct GameCore: Codable {
 
     // MARK: Welcome / onboarding
 
-    var hasSeenWelcome: Bool { welcomeSeen ?? false }
+    var hasSeenWelcome: Bool { welcomeSeen }
 
     /// Show the intro only on a brand-new game (fresh, no progress yet) that
     /// hasn't been dismissed — so it appears on first launch and after New Game,
@@ -140,6 +207,15 @@ struct GameCore: Codable {
     var shouldShowWelcome: Bool { !hasSeenWelcome && instances.isEmpty && stats.packsOpened == 0 }
 
     mutating func markWelcomeSeen() { welcomeSeen = true }
+
+    // MARK: Win presentation
+
+    /// The win overlay is shown once per completed collection. After the player
+    /// dismisses it they keep their finished collection and can browse freely —
+    /// winning shouldn't force a reset to see the cards you just collected.
+    var shouldShowWin: Bool { hasWon && !winAcknowledged }
+
+    mutating func acknowledgeWin() { winAcknowledged = true }
 
     // MARK: Pack building
 

@@ -234,6 +234,123 @@ do {
           "last pack sees the whole post-box collection")
 }
 
+print("\n== Save format & load hygiene ==")
+do {
+    // A save written before a field existed must still decode. Simulate one by
+    // encoding a payload that omits every optional-ish key.
+    let legacy = Data(#"{"cash":42.5,"instances":[],"claimedEvoLines":[],"claimedSets":[],"stats":{},"hasWon":false}"#.utf8)
+    let old = try? JSONDecoder().decode(GameCore.self, from: legacy)
+    check(old != nil, "a save missing newer keys still decodes")
+    check(old?.cash == 42.5, "existing values survive a lenient decode")
+    check(old?.winAcknowledged == false && old?.welcomeSeen == false,
+          "missing keys fall back to defaults instead of throwing")
+
+    // A save missing *every* key must not throw either — that's what makes
+    // additive schema changes safe forever.
+    let empty = try? JSONDecoder().decode(GameCore.self, from: Data("{}".utf8))
+    check(empty != nil && empty?.cash == Economy.startingCash,
+          "an empty payload decodes to a default game")
+
+    // Envelope round-trip carries the version tag.
+    var core = GameCore()
+    core.cash = 777
+    let encoded = try! JSONEncoder().encode(SaveFile(core: core))
+    let round = try? JSONDecoder().decode(SaveFile.self, from: encoded)
+    check(round?.schemaVersion == SaveFile.currentVersion, "save records its schema version")
+    check(round?.core.cash == 777, "save round-trips the game state")
+
+    // Owned copies decode leniently too — only `cardId` is required, so a future
+    // per-copy field (serial number, acquired date, …) can't invalidate old saves.
+    let sparse = Data(#"{"instances":[{"cardId":"S1-001"}]}"#.utf8)
+    let sparseCore = try? JSONDecoder().decode(GameCore.self, from: sparse)
+    check(sparseCore?.instances.count == 1, "a card copy with only a cardId still decodes")
+    check(sparseCore?.instances.first?.foil == false && sparseCore?.instances.first?.grade == nil,
+          "missing per-copy keys fall back to defaults")
+    check(sparseCore?.instances.first?.cardId == "S1-001", "the required cardId survives")
+
+    // Retired/renamed card ids are dropped rather than crashing on access.
+    var stale = GameCore()
+    stale.instances = [CardInstance(cardId: "S1-001"), CardInstance(cardId: "S9-999")]
+    let ghost = stale.instances[1]
+    check(ghost.card.id == "S9-999" && ghost.currentValue == 0,
+          "an unknown card id resolves to a worthless placeholder, not a crash")
+    let (clean, dropped) = stale.sanitized()
+    check(dropped == 1 && clean.instances.count == 1 && clean.instances[0].cardId == "S1-001",
+          "sanitize drops instances whose card left the catalogue")
+    check(GameCore().sanitized().droppedInstances == 0, "sanitize is a no-op on a valid save")
+
+    // Dropping cards must also un-claim bonuses the player no longer qualifies for.
+    var claimed = GameCore()
+    for c in CardDatabase.cards(inSet: 1) { claimed.instances.append(CardInstance(cardId: c.id)) }
+    _ = claimed.checkBonuses()
+    check(claimed.claimedSets.contains(1), "set 1 claimed while complete")
+    claimed.instances.append(CardInstance(cardId: "S9-999"))
+    claimed.instances.removeAll { $0.cardId == "S1-001" }
+    check(!claimed.sanitized().core.claimedSets.contains(1),
+          "a set that is no longer complete after sanitizing is un-claimed")
+}
+
+print("\n== Save store (files) ==")
+do {
+    let dir = URL(fileURLWithPath: NSTemporaryDirectory())
+        .appendingPathComponent("tu_verify_\(UUID().uuidString)")
+    try! FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: dir) }
+
+    let store = SaveStore(directory: dir)
+    check(store.load().core == nil && store.load().issue == nil,
+          "no save file yet = fresh game, no issue reported")
+
+    var core = GameCore()
+    core.cash = 321
+    core.hasWon = true
+    core.acknowledgeWin()
+    check(store.save(core), "save writes to disk")
+    let reloaded = store.load()
+    check(reloaded.core?.cash == 321, "reload restores cash")
+    check(reloaded.core?.winAcknowledged == true, "reload restores win acknowledgement")
+    check(reloaded.issue == nil, "a healthy save reports no issue")
+
+    // Pre-envelope saves (a bare GameCore) still load.
+    var legacyCore = GameCore(); legacyCore.cash = 55
+    try! JSONEncoder().encode(legacyCore).write(to: store.url)
+    check(store.load().core?.cash == 55, "a pre-envelope (bare GameCore) save still loads")
+
+    // A save referencing a retired card loads, cleaned, and says so.
+    var stale = GameCore()
+    stale.instances = [CardInstance(cardId: "S1-001"), CardInstance(cardId: "S9-999")]
+    _ = store.save(stale)
+    let cleaned = store.load()
+    check(cleaned.core?.instances.count == 1, "retired cards are stripped on load")
+    check(cleaned.issue == .droppedUnknownCards(count: 1), "the player is told cards were removed")
+
+    // An undecodable save must be preserved, not deleted.
+    try! Data("not json at all".utf8).write(to: store.url)
+    let broken = store.load()
+    check(broken.core == nil, "an unreadable save falls back to a fresh game")
+    var quarantinedName: String? = nil
+    if case .unreadable(let name) = broken.issue { quarantinedName = name }
+    check(quarantinedName != nil, "an unreadable save reports where it was moved")
+    let leftovers = (try? FileManager.default.contentsOfDirectory(atPath: dir.path)) ?? []
+    check(leftovers.contains { $0.hasPrefix("tradingup_save.corrupt-") },
+          "the unreadable save is quarantined on disk, never deleted")
+    check(!FileManager.default.fileExists(atPath: store.url.path),
+          "the bad file is moved aside so the next save starts clean")
+}
+
+print("\n== Win presentation ==")
+do {
+    var core = GameCore()
+    for c in CardDatabase.all { core.instances.append(CardInstance(cardId: c.id)) }
+    _ = core.checkBonuses()
+    check(core.hasWon && core.shouldShowWin, "the win overlay shows once the collection is complete")
+    core.acknowledgeWin()
+    check(core.hasWon && !core.shouldShowWin,
+          "dismissing the win keeps the completed collection instead of forcing a reset")
+    check(!core.isGameOver, "a finished collection can't then be flagged game over")
+    check(GameCore().winAcknowledged == false, "a new game starts with the win un-acknowledged")
+}
+
 print("\n== Set unlocking ==")
 do {
     check(Economy.uniquesToUnlock(set: 1) == 0,   "set 1 needs 0 uniques")
