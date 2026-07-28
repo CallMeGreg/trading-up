@@ -426,6 +426,35 @@ do {
     try! bare.write(to: store.url)
     check(store.load().core?.lifetime.runsStarted == 0,
           "a bare pre-envelope save also decodes lifetime to defaults")
+
+    // A save from a *newer* schema version than this build knows about must
+    // not be absorbed by the lenient decode — that would silently drop
+    // whatever fields the future version added, and the next autosave would
+    // make that loss permanent. It must be quarantined instead, like an
+    // unreadable file, with the original bytes fully recoverable.
+    let futureSave = """
+    {"schemaVersion":99,"core":{"cash":777,"instances":[{"cardId":"S1-001"}],\
+    "claimedEvoLines":[],"claimedSets":[],"stats":{},"hasWon":false,"futureField":"do not drop me"}}
+    """
+    try! Data(futureSave.utf8).write(to: store.url)
+    let futureLoaded = store.load()
+    check(futureLoaded.core == nil, "a save from a newer schema version does not load at all")
+    var futureQuarantinedName: String? = nil
+    if case .fromNewerVersion(let name) = futureLoaded.issue { futureQuarantinedName = name }
+    check(futureQuarantinedName != nil, "the player is told this save needs a newer app version")
+    let laterLeftovers = (try? FileManager.default.contentsOfDirectory(atPath: dir.path)) ?? []
+    check(laterLeftovers.contains { $0.hasPrefix("tradingup_save.corrupt-") },
+          "a newer-schema save is quarantined on disk, never deleted")
+    check(!FileManager.default.fileExists(atPath: store.url.path),
+          "the newer-schema file is moved aside so it isn't overwritten")
+    if let name = futureQuarantinedName {
+        let quarantinedURL = dir.appendingPathComponent(name)
+        let recovered = try? String(contentsOf: quarantinedURL, encoding: .utf8)
+        check(recovered == futureSave, "the quarantined file is byte-for-byte the original newer-schema save")
+        _ = store.save(GameCore())
+        let stillRecovered = try? String(contentsOf: quarantinedURL, encoding: .utf8)
+        check(stillRecovered == futureSave, "a later save does not overwrite the quarantined newer-schema file")
+    }
 }
 
 print("\n== Win presentation ==")

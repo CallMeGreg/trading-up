@@ -93,4 +93,41 @@ final class SaveStoreTests: XCTestCase {
         XCTAssertEqual(loaded.core?.lifetime.runsStarted, 0,
                        "a bare pre-envelope save should also decode lifetime to defaults")
     }
+
+    func testSaveFromNewerSchemaVersionIsQuarantinedNotSilentlyTruncated() {
+        // A hypothetical v99 save carrying a field this build has never heard
+        // of (`futureField`). A lenient decode would just drop it — and the
+        // next autosave would make that loss permanent — so this must refuse
+        // to load rather than absorb it.
+        let futureSave = """
+        {"schemaVersion":99,"core":{"cash":777,"instances":[{"cardId":"S1-001"}],\
+        "claimedEvoLines":[],"claimedSets":[],"stats":{},"hasWon":false,"futureField":"do not drop me"}}
+        """
+        try! Data(futureSave.utf8).write(to: store.url)
+        let loaded = store.load()
+
+        XCTAssertNil(loaded.core, "a save from a newer schema version should not load at all")
+        var quarantinedName: String? = nil
+        if case .fromNewerVersion(let name) = loaded.issue { quarantinedName = name }
+        XCTAssertNotNil(quarantinedName, "the player should be told this save needs a newer app version")
+
+        let leftovers = (try? FileManager.default.contentsOfDirectory(atPath: dir.path)) ?? []
+        XCTAssertTrue(leftovers.contains { $0.hasPrefix("tradingup_save.corrupt-") },
+                     "a newer-schema save should be quarantined on disk, never deleted")
+        XCTAssertFalse(FileManager.default.fileExists(atPath: store.url.path),
+                       "the newer-schema file should be moved aside so it isn't overwritten")
+
+        // The original bytes must still be fully intact (and readable as v99)
+        // under the quarantined name — nothing was truncated or rewritten.
+        let quarantinedURL = dir.appendingPathComponent(quarantinedName!)
+        let recovered = try? String(contentsOf: quarantinedURL, encoding: .utf8)
+        XCTAssertEqual(recovered, futureSave, "the quarantined file should be byte-for-byte the original save")
+
+        // A subsequent save (e.g. GameState falling back to a fresh game and
+        // autosaving) must not touch the quarantined file.
+        _ = store.save(GameCore())
+        let stillRecovered = try? String(contentsOf: quarantinedURL, encoding: .utf8)
+        XCTAssertEqual(stillRecovered, futureSave,
+                       "a later save must not overwrite the quarantined newer-schema file")
+    }
 }
