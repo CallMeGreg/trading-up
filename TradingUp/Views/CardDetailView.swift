@@ -23,6 +23,7 @@ struct CardDetailView: View {
                     copiesSection
                 }
                 .padding(16)
+                .readableWidth()
             }
             .background(Palette.screen.ignoresSafeArea())
             .navigationTitle(card.name)

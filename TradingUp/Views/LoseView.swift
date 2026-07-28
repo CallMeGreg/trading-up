@@ -49,6 +49,7 @@ struct LoseView: View {
                     }
                 }
                 .padding(16)
+                .readableWidth()
             }
         }
         .onAppear { Haptics.play(.error) }

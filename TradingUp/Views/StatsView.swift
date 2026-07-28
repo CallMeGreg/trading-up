@@ -129,6 +129,7 @@ struct StatsView: View {
                     .buttonStyle(.plain)
                 }
                 .padding(16)
+                .readableWidth()
             }
             .background(Palette.screen.ignoresSafeArea())
             .toolbar(.hidden, for: .navigationBar)

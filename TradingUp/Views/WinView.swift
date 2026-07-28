@@ -98,6 +98,7 @@ struct WinView: View {
                     }
                 }
                 .padding(16)
+                .readableWidth()
             }
         }
         .onAppear {
