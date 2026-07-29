@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ShopView: View {
-    @EnvironmentObject var game: GameState
+    @Environment(GameState.self) var game: GameState
     @State private var pending: PendingOpen?
     /// Collection counts captured at purchase time. While a reveal is on screen
     /// the shop shows these frozen values so the fullScreenCover sliding in/out
@@ -53,6 +53,7 @@ struct ShopFreeze {
     let uniqueCount: Int
     let ownedInSet: [Int: Int]
 
+    @MainActor
     init(_ game: GameState) {
         uniqueCount = game.uniqueCount
         var owned: [Int: Int] = [:]
@@ -64,7 +65,7 @@ struct ShopFreeze {
 // MARK: - Cash header
 
 struct CashHeader: View {
-    @EnvironmentObject var game: GameState
+    @Environment(GameState.self) var game: GameState
     var freeze: ShopFreeze? = nil
 
     private var uniqueCount: Int { freeze?.uniqueCount ?? game.uniqueCount }
@@ -106,7 +107,7 @@ struct CashHeader: View {
 // MARK: - Per-set shop card
 
 struct SetShopCard: View {
-    @EnvironmentObject var game: GameState
+    @Environment(GameState.self) var game: GameState
     let set: Int
     var freeze: ShopFreeze? = nil
     let onBuyPack: () -> Void

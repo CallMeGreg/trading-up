@@ -1,14 +1,15 @@
 import Foundation
-import Combine
 
 /// Observable wrapper around the pure `GameCore`. Owns randomness and persistence
 /// so SwiftUI views stay declarative. All mutations funnel through here and autosave.
-final class GameState: ObservableObject {
-    @Published private(set) var core: GameCore
+@Observable
+@MainActor
+final class GameState {
+    private(set) var core: GameCore
 
     /// Set when the last load didn't go cleanly, so the UI can tell the player
     /// rather than silently presenting them with a fresh game.
-    @Published private(set) var loadIssue: SaveLoadIssue?
+    private(set) var loadIssue: SaveLoadIssue?
 
     private var rng = SystemRandomNumberGenerator()
     private let store: SaveStore

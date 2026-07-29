@@ -2,7 +2,7 @@ import SwiftUI
 
 @main
 struct TradingUpApp: App {
-    @StateObject private var game = GameState()
+    @State private var game = GameState()
 
     init() {
         // Decode the SFX and warm the audio session so the first pack-open is instant.
@@ -12,7 +12,7 @@ struct TradingUpApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .environmentObject(game)
+                .environment(game)
                 .preferredColorScheme(.dark)
         }
     }

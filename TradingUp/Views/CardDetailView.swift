@@ -3,7 +3,7 @@ import SwiftUI
 /// Card detail sheet: big art, evolution line, and per-copy sell / grade actions.
 struct CardDetailView: View {
     let card: Card
-    @EnvironmentObject var game: GameState
+    @Environment(GameState.self) var game: GameState
     @Environment(\.dismiss) private var dismiss
     @State private var gradeResult: GradeResult?
 

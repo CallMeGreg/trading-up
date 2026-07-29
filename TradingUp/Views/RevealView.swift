@@ -172,7 +172,7 @@ struct PackCounter: Equatable {
 enum PackSlot: Equatable { case newCard, keeperExisting, pendingDup, keptDup, sold }
 
 private struct SummaryView: View {
-    @EnvironmentObject var game: GameState
+    @Environment(GameState.self) var game: GameState
     let result: OpenResult
     let set: Int
     var packCounter: PackCounter? = nil
