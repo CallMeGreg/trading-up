@@ -69,41 +69,50 @@ struct RevealView: View {
     private func revealingView(_ result: OpenResult, _ i: Int) -> some View {
         let inst = result.pulled[i]
         let isNew = !result.preOwnedIds.contains(inst.cardId)
-        return VStack(spacing: 20) {
-            if isBox {
-                Text("Pack \(packIndex + 1) of \(packCount)")
-                    .font(.system(size: 12, weight: .heavy, design: .rounded))
-                    .foregroundStyle(Palette.subtle)
-                    .padding(.top, 16)
-            }
-            HStack(spacing: 7) {
-                ForEach(result.pulled.indices, id: \.self) { idx in
-                    Circle()
-                        .fill(idx <= i ? result.pulled[idx].card.rarity.accent : Palette.stroke)
-                        .frame(width: 9, height: 9)
+        return GeometryReader { geo in
+            // On a short frame (e.g. 402pt-tall landscape phone) a fixed 280pt-wide
+            // card (392pt tall) plus its chrome would overflow, so scale the card
+            // down to whatever height is actually available instead of clipping.
+            let chrome: CGFloat = isBox ? 210 : 170
+            let availableForCard = max(120, geo.size.height - chrome)
+            let cardWidth = min(280, availableForCard / 1.4, geo.size.width * 0.78)
+
+            VStack(spacing: 20) {
+                if isBox {
+                    Text("Pack \(packIndex + 1) of \(packCount)")
+                        .font(.system(size: 12, weight: .heavy, design: .rounded))
+                        .foregroundStyle(Palette.subtle)
+                        .padding(.top, 16)
                 }
+                HStack(spacing: 7) {
+                    ForEach(result.pulled.indices, id: \.self) { idx in
+                        Circle()
+                            .fill(idx <= i ? result.pulled[idx].card.rarity.accent : Palette.stroke)
+                            .frame(width: 9, height: 9)
+                    }
+                }
+                .padding(.top, 24)
+
+                Spacer()
+
+                RevealingCardView(inst: inst, isNew: isNew, width: cardWidth)
+                    .id(i)
+                    .transition(.opacity)
+
+                Spacer()
+
+                VStack(spacing: 4) {
+                    Text(inst.card.rarity.display.uppercased())
+                        .font(.system(size: 13, weight: .black))
+                        .foregroundStyle(inst.card.rarity.accent)
+                    Text(i + 1 == result.pulled.count ? "Tap to finish" : "Tap for next card")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Palette.subtle)
+                }
+                .padding(.bottom, 44)
             }
-            .padding(.top, 24)
-
-            Spacer()
-
-            RevealingCardView(inst: inst, isNew: isNew, width: 280)
-                .id(i)
-                .transition(.opacity)
-
-            Spacer()
-
-            VStack(spacing: 4) {
-                Text(inst.card.rarity.display.uppercased())
-                    .font(.system(size: 13, weight: .black))
-                    .foregroundStyle(inst.card.rarity.accent)
-                Text(i + 1 == result.pulled.count ? "Tap to finish" : "Tap for next card")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(Palette.subtle)
-            }
-            .padding(.bottom, 44)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .contentShape(Rectangle())
         .onTapGesture { advance() }
     }
@@ -238,12 +247,14 @@ private struct SummaryView: View {
                     if result.isBox { boxGrid } else { packGrid }
                 }
                 .padding(16)
+                .readableWidth(760)
             }
 
             if let pc = packCounter { packCounterBar(pc) }
 
             finishButtons
                 .padding(16)
+                .readableWidth()
         }
         .background(Palette.bg0.ignoresSafeArea())
         .onAppear(perform: computePlan)
@@ -318,6 +329,7 @@ private struct SummaryView: View {
         }
         .padding(.horizontal, 40)
         .padding(.top, 6)
+        .readableWidth()
     }
 
     private var showSpreadHint: Bool {

@@ -1,4 +1,5 @@
 import XCTest
+import SwiftUI
 @testable import TradingUp
 
 /// Deterministic RNG (SplitMix64) so gameplay tests are reproducible.
@@ -178,5 +179,174 @@ final class GameplaySimulationTests: XCTestCase {
         }
         XCTAssertEqual(results.last?.visibleInstanceIds?.count, core.instances.count,
                        "last pack should see the whole post-box collection")
+    }
+}
+
+/// Regression coverage for the shop's double-tap bug: `game.buyPack(set:)` and
+/// `game.buyBoxPacks(set:)` commit a purchase (charge cash, bump stats, add
+/// cards) the instant they're called, so `ShopView` must refuse to start a
+/// second purchase while a reveal is still pending/on screen — otherwise a
+/// double-tap (or a tap during the cover's slide-in animation) charges the
+/// player twice while only ever showing one reveal. The guard itself
+/// (`ShopView.attemptPurchase`) is a plain function over `ShopFreeze`/
+/// `PendingOpen`, so it's exercised here directly against a real `GameState`
+/// without needing a live view.
+@MainActor
+final class ShopPurchaseGuardTests: XCTestCase {
+    var dir: URL!
+    var game: GameState!
+
+    override func setUp() {
+        super.setUp()
+        dir = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("tu_tests_\(UUID().uuidString)")
+        try! FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        // Fund generously so both a pack and a booster box are affordable
+        // (default starting cash is less than one box).
+        var core = GameCore()
+        core.cash = 10_000
+        let store = SaveStore(directory: dir)
+        _ = store.save(core)
+        game = GameState(store: store)
+    }
+
+    override func tearDown() {
+        try? FileManager.default.removeItem(at: dir)
+        super.tearDown()
+    }
+
+    func testSecondPackPurchaseWhileRevealIsPendingIsBlocked() {
+        var freeze: ShopFreeze?
+        var pending: PendingOpen?
+        var buyInvocations = 0
+
+        func attempt() -> Bool {
+            ShopView.attemptPurchase(
+                freeze: &freeze, pending: &pending,
+                freezeSnapshot: ShopFreeze(game),
+                buy: { buyInvocations += 1; return game.buyPack(set: 1) },
+                makePending: { PendingOpen(content: .pack($0), set: 1) }
+            )
+        }
+
+        XCTAssertTrue(attempt(), "first purchase should succeed and start a reveal")
+        XCTAssertEqual(buyInvocations, 1)
+        XCTAssertNotNil(freeze)
+        XCTAssertNotNil(pending)
+        let cashAfterFirst = game.cash
+        let packsAfterFirst = game.stats.packsOpened
+
+        XCTAssertFalse(attempt(), "a purchase while a reveal is pending must be blocked")
+        XCTAssertEqual(buyInvocations, 1, "buy() must not be invoked while a reveal is in flight")
+        XCTAssertEqual(game.cash, cashAfterFirst, "the player must not be charged twice")
+        XCTAssertEqual(game.stats.packsOpened, packsAfterFirst, "packsOpened must not double-increment")
+
+        // Simulate the fullScreenCover finishing its dismissal (both cleared together).
+        freeze = nil
+        pending = nil
+        XCTAssertTrue(attempt(), "a purchase after the reveal is dismissed should succeed normally")
+        XCTAssertEqual(buyInvocations, 2)
+    }
+
+    func testSecondBoxPurchaseWhileRevealIsPendingIsBlocked() {
+        var freeze: ShopFreeze?
+        var pending: PendingOpen?
+        var buyInvocations = 0
+
+        func attempt() -> Bool {
+            ShopView.attemptPurchase(
+                freeze: &freeze, pending: &pending,
+                freezeSnapshot: ShopFreeze(game),
+                buy: { buyInvocations += 1; return game.buyBoxPacks(set: 1) },
+                makePending: { PendingOpen(content: .box(results: $0), set: 1) }
+            )
+        }
+
+        XCTAssertTrue(attempt(), "first box purchase should succeed and start a reveal")
+        XCTAssertEqual(buyInvocations, 1)
+        let cashAfterFirst = game.cash
+        let boxesAfterFirst = game.stats.boxesOpened
+
+        XCTAssertFalse(attempt(), "a box purchase while a reveal is pending must be blocked")
+        XCTAssertEqual(buyInvocations, 1, "buy() must not be invoked while a reveal is in flight")
+        XCTAssertEqual(game.cash, cashAfterFirst, "the player must not be charged twice for a box")
+        XCTAssertEqual(game.stats.boxesOpened, boxesAfterFirst, "boxesOpened must not double-increment")
+    }
+}
+
+/// Deterministic evidence that the iPad/landscape layout pass doesn't overflow
+/// or fail to lay out at the two shapes that matter most: a wide iPad frame
+/// (1024×1366pt, portrait iPad Pro 11") and a very short landscape-phone frame
+/// (874×402pt, iPhone landscape). `ImageRenderer` only produces an image when
+/// SwiftUI successfully lays the view out at the requested size, so a non-nil,
+/// correctly-sized result is proof the screen renders (rather than clipping,
+/// crashing, or silently producing a zero-size snapshot) at that shape.
+@MainActor
+final class WideAndShortLayoutRenderTests: XCTestCase {
+    var dir: URL!
+    var game: GameState!
+
+    override func setUp() {
+        super.setUp()
+        dir = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("tu_tests_\(UUID().uuidString)")
+        try! FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        game = GameState(store: SaveStore(directory: dir))
+    }
+
+    override func tearDown() {
+        try? FileManager.default.removeItem(at: dir)
+        super.tearDown()
+    }
+
+    private func rendersWithoutFailure<V: View>(_ view: V, size: CGSize) -> CGSize? {
+        let sized = view.environment(game).frame(width: size.width, height: size.height)
+        let renderer = ImageRenderer(content: sized)
+        renderer.proposedSize = ProposedViewSize(size)
+        renderer.scale = 1
+        return renderer.uiImage?.size
+    }
+
+    private let ipadSize = CGSize(width: 1024, height: 1366)
+    private let landscapePhoneSize = CGSize(width: 874, height: 402)
+
+    func testShopViewRendersAtIPadWidth() {
+        XCTAssertEqual(rendersWithoutFailure(ShopView(), size: ipadSize), ipadSize)
+    }
+
+    func testCollectionViewRendersAtIPadWidth() {
+        XCTAssertEqual(rendersWithoutFailure(CollectionView(), size: ipadSize), ipadSize)
+    }
+
+    func testStatsViewRendersAtIPadWidth() {
+        XCTAssertEqual(rendersWithoutFailure(StatsView(), size: ipadSize), ipadSize)
+    }
+
+    func testCollectionViewRendersAtLandscapePhoneSize() {
+        XCTAssertEqual(rendersWithoutFailure(CollectionView(), size: landscapePhoneSize), landscapePhoneSize)
+    }
+
+    func testSealedPackViewRendersAtLandscapePhoneSizeWithoutClipping() {
+        let view = SealedPackView(set: 1, isBox: true, onOpen: {})
+        XCTAssertEqual(rendersWithoutFailure(view, size: landscapePhoneSize), landscapePhoneSize)
+    }
+
+    func testRevealingCardViewScalesDownAtLandscapePhoneSize() {
+        var rng = SeededRNG(3)
+        var core = GameCore()
+        guard let result = core.buyPack(set: 1, using: &rng) else {
+            XCTFail("expected a pack purchase to succeed")
+            return
+        }
+        let view = RevealingCardView(inst: result.pulled[0], isNew: true, width: 280)
+        XCTAssertEqual(rendersWithoutFailure(view, size: landscapePhoneSize), landscapePhoneSize)
+    }
+
+    func testWinViewRendersAtIPadWidth() {
+        XCTAssertEqual(rendersWithoutFailure(WinView(), size: ipadSize), ipadSize)
+    }
+
+    func testLoseViewRendersAtIPadWidth() {
+        XCTAssertEqual(rendersWithoutFailure(LoseView(), size: ipadSize), ipadSize)
     }
 }

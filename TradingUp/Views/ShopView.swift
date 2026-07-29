@@ -14,10 +14,11 @@ struct ShopView: View {
                 VStack(spacing: 16) {
                     CashHeader(freeze: freeze)
                     ForEach(1...CardDatabase.setCount, id: \.self) { set in
-                        SetShopCard(set: set, freeze: freeze) { buyPack(set) } onBuyBox: { buyBox(set) }
+                        SetShopCard(set: set, freeze: freeze, revealInFlight: isRevealInFlight) { buyPack(set) } onBuyBox: { buyBox(set) }
                     }
                 }
                 .padding(16)
+                .readableWidth()
             }
             .background(Palette.screen.ignoresSafeArea())
             .toolbar(.hidden, for: .navigationBar)
@@ -28,21 +29,67 @@ struct ShopView: View {
     }
 
     private func buyPack(_ set: Int) {
-        let snapshot = ShopFreeze(game)
-        guard let r = game.buyPack(set: set) else { Haptics.play(.error); return }
-        freeze = snapshot
-        Haptics.play(.medium)
-        Sound.play(.purchase)
-        pending = PendingOpen(content: .pack(r), set: set)
+        let wasBlocked = freeze != nil
+        let started = Self.attemptPurchase(
+            freeze: &freeze, pending: &pending,
+            freezeSnapshot: ShopFreeze(game),
+            buy: { game.buyPack(set: set) },
+            makePending: { PendingOpen(content: .pack($0), set: set) }
+        )
+        guard !wasBlocked else { return }   // reveal already in flight: silent no-op
+        if started {
+            Haptics.play(.medium)
+            Sound.play(.purchase)
+        } else {
+            Haptics.play(.error)
+        }
     }
 
     private func buyBox(_ set: Int) {
-        let snapshot = ShopFreeze(game)
-        guard let results = game.buyBoxPacks(set: set) else { Haptics.play(.error); return }
+        let wasBlocked = freeze != nil
+        let started = Self.attemptPurchase(
+            freeze: &freeze, pending: &pending,
+            freezeSnapshot: ShopFreeze(game),
+            buy: { game.buyBoxPacks(set: set) },
+            makePending: { PendingOpen(content: .box(results: $0), set: set) }
+        )
+        guard !wasBlocked else { return }   // reveal already in flight: silent no-op
+        if started {
+            Haptics.play(.heavy)
+            Sound.play(.purchase)
+        } else {
+            Haptics.play(.error)
+        }
+    }
+
+    /// Whether a reveal is currently pending or on screen. `freeze` (rather
+    /// than `pending`) is the sentinel: both are set the instant a purchase
+    /// commits and cleared together only when the reveal's `fullScreenCover`
+    /// finishes dismissing, so `freeze` exactly brackets the window a
+    /// double-tap (or a tap during the cover's slide-in animation) could
+    /// otherwise exploit into charging the player twice for one visible reveal.
+    var isRevealInFlight: Bool { freeze != nil }
+
+    /// Attempts to start a pack/box purchase. If a reveal is already pending
+    /// or on screen, `buy` is never invoked — so a blocked attempt cannot
+    /// deduct cash, increment stats, or add cards to the collection. Returns
+    /// `true` only when a new reveal was started. Free of `GameState`/view
+    /// dependencies beyond `ShopFreeze`/`PendingOpen`, so the guard itself is
+    /// directly unit-testable without standing up a live `ShopView`.
+    @discardableResult
+    static func attemptPurchase<Result>(
+        freeze: inout ShopFreeze?,
+        pending: inout PendingOpen?,
+        freezeSnapshot: @autoclosure () -> ShopFreeze,
+        buy: () -> Result?,
+        makePending: (Result) -> PendingOpen
+    ) -> Bool {
+        guard freeze == nil else { return false }
+        let snapshot = freezeSnapshot()
+        guard let result = buy() else { return false }
         freeze = snapshot
-        Haptics.play(.heavy)
-        Sound.play(.purchase)
-        pending = PendingOpen(content: .box(results: results), set: set)
+        pending = makePending(result)
+        return true
     }
 }
 
@@ -110,6 +157,9 @@ struct SetShopCard: View {
     @Environment(GameState.self) var game: GameState
     let set: Int
     var freeze: ShopFreeze? = nil
+    /// Disables both buy buttons while a reveal is pending/on screen, so the
+    /// affordance matches the behaviour instead of silently swallowing taps.
+    var revealInFlight: Bool = false
     let onBuyPack: () -> Void
     let onBuyBox: () -> Void
 
@@ -154,7 +204,7 @@ struct SetShopCard: View {
                 subtitle: "6 cards · \(packPrice.money)",
                 systemImage: "shippingbox.fill",
                 tint: [element.palette[1], element.palette[2]],
-                enabled: game.canAffordPack(set: set),
+                enabled: game.canAffordPack(set: set) && !revealInFlight,
                 action: onBuyPack
             )
             BigButton(
@@ -162,7 +212,7 @@ struct SetShopCard: View {
                 subtitle: "\(Economy.boxPacks) packs · \(boxPrice.money) · ≥\(Economy.boxGuaranteeUltras) ultra, ≥\(Economy.boxGuaranteeFoils) foil",
                 systemImage: "cube.box.fill",
                 tint: [element.palette[2], element.palette[3]],
-                enabled: game.canAffordBox(set: set),
+                enabled: game.canAffordBox(set: set) && !revealInFlight,
                 action: onBuyBox
             )
         }

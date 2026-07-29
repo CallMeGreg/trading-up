@@ -61,6 +61,7 @@ struct CollectionView: View {
                 }
             }
             .padding(.top, 8)
+            .readableWidth(900)
             .background(Palette.screen.ignoresSafeArea())
             .toolbar(.hidden, for: .navigationBar)
             .sheet(item: $selected) { card in

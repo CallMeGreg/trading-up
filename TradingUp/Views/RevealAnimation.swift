@@ -293,34 +293,42 @@ struct SealedPackView: View {
     @State private var flash: Double = 0
 
     var body: some View {
-        VStack(spacing: 28) {
-            Spacer()
-            ZStack {
-                PackArtwork(set: set, isBox: isBox)
-                    .rotationEffect(.degrees(floaty ? 1.6 : -1.6))
-                    .offset(y: floaty ? -9 : 9)
-                    .scaleEffect(tearing ? 1.22 : 1)
+        GeometryReader { geo in
+            ScrollView {
+                VStack(spacing: 28) {
+                    Spacer(minLength: 0)
+                    ZStack {
+                        PackArtwork(set: set, isBox: isBox)
+                            .rotationEffect(.degrees(floaty ? 1.6 : -1.6))
+                            .offset(y: floaty ? -9 : 9)
+                            .scaleEffect(tearing ? 1.22 : 1)
+                            .opacity(tearing ? 0 : 1)
+                            .overlay { shimmer }
+                    }
+                    VStack(spacing: 6) {
+                        Text(isBox ? "Booster Box" : "\(CardDatabase.setName(set)) Pack")
+                            .font(.system(size: 22, weight: .black, design: .rounded))
+                            .foregroundStyle(.white)
+                        Text(isBox ? "Tap to tear it open" : "Tap to open")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(Palette.subtle)
+                    }
                     .opacity(tearing ? 0 : 1)
-                    .overlay { shimmer }
+                    Spacer(minLength: 0)
+                    Image(systemName: "hand.tap.fill")
+                        .font(.system(size: 26))
+                        .foregroundStyle(.white.opacity(0.6))
+                        .scaleEffect(hint ? 1.14 : 0.92)
+                        .opacity((hint ? 0.9 : 0.5) * (tearing ? 0 : 1))
+                        .padding(.bottom, 40)
+                }
+                // At least fill the screen (so the Spacers still centre things
+                // on a normal portrait phone), but let the VStack grow taller
+                // than that and scroll rather than clip on a very short frame
+                // (e.g. 402pt-tall landscape phone).
+                .frame(minWidth: geo.size.width, minHeight: geo.size.height)
             }
-            VStack(spacing: 6) {
-                Text(isBox ? "Booster Box" : "\(CardDatabase.setName(set)) Pack")
-                    .font(.system(size: 22, weight: .black, design: .rounded))
-                    .foregroundStyle(.white)
-                Text(isBox ? "Tap to tear it open" : "Tap to open")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(Palette.subtle)
-            }
-            .opacity(tearing ? 0 : 1)
-            Spacer()
-            Image(systemName: "hand.tap.fill")
-                .font(.system(size: 26))
-                .foregroundStyle(.white.opacity(0.6))
-                .scaleEffect(hint ? 1.14 : 0.92)
-                .opacity((hint ? 0.9 : 0.5) * (tearing ? 0 : 1))
-                .padding(.bottom, 40)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .overlay {
             Color.white.opacity(flash).blendMode(.plusLighter).ignoresSafeArea().allowsHitTesting(false)
         }
