@@ -75,6 +75,90 @@ struct Stats: Codable {
     }
 }
 
+// MARK: - Lifetime stats
+
+/// Totals across every *completed* run (won or lost/reset), independent of the
+/// current run's `Stats`. Deliberately not a copy of `Stats`: the aggregation
+/// rule differs per field (sums, running maxes, or run counters), so it can't
+/// just be added on top of the in-progress run's numbers.
+///
+/// Stored lifetime only ever contains finished runs — the current run is
+/// folded in separately, at display time, via `folding(_:won:)`. That keeps
+/// the reset path (which permanently commits the just-finished run) and the
+/// display path (which previews the in-progress run as if it just finished)
+/// sharing one code path, so they can't drift, and it makes the v1 -> v2
+/// migration trivial: an existing player's stored lifetime starts at zero,
+/// and their in-progress run is added back in the moment it's displayed.
+struct LifetimeStats: Codable {
+    var runsStarted = 0
+    var runsWon = 0
+    var packsOpened = 0
+    var boxesOpened = 0
+    var cardsPulled = 0
+    var foilsPulled = 0
+    var ultrasPulled = 0
+    var cardsSold = 0
+    var moneySpent = 0.0
+    var moneyEarned = 0.0
+    var bestGrade = 0
+    var peakCash = Economy.startingCash
+    var peakCardValue = 0.0
+    var peakSale = 0.0
+    /// Fewest packs opened in a *winning* run. `nil` until a run has been won.
+    var bestRunPacks: Int? = nil
+
+    init() {}
+
+    /// Decode leniently, like `Stats` and `GameCore`: synthesized `Codable`
+    /// ignores property defaults and throws on any missing key. A v1 save has
+    /// none of these keys at all, so every field must be optional here.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        runsStarted   = try c.decodeIfPresent(Int.self,    forKey: .runsStarted)   ?? 0
+        runsWon       = try c.decodeIfPresent(Int.self,    forKey: .runsWon)       ?? 0
+        packsOpened   = try c.decodeIfPresent(Int.self,    forKey: .packsOpened)   ?? 0
+        boxesOpened   = try c.decodeIfPresent(Int.self,    forKey: .boxesOpened)   ?? 0
+        cardsPulled   = try c.decodeIfPresent(Int.self,    forKey: .cardsPulled)   ?? 0
+        foilsPulled   = try c.decodeIfPresent(Int.self,    forKey: .foilsPulled)   ?? 0
+        ultrasPulled  = try c.decodeIfPresent(Int.self,    forKey: .ultrasPulled)  ?? 0
+        cardsSold     = try c.decodeIfPresent(Int.self,    forKey: .cardsSold)     ?? 0
+        moneySpent    = try c.decodeIfPresent(Double.self, forKey: .moneySpent)    ?? 0
+        moneyEarned   = try c.decodeIfPresent(Double.self, forKey: .moneyEarned)   ?? 0
+        bestGrade     = try c.decodeIfPresent(Int.self,    forKey: .bestGrade)     ?? 0
+        peakCash      = try c.decodeIfPresent(Double.self, forKey: .peakCash)      ?? Economy.startingCash
+        peakCardValue = try c.decodeIfPresent(Double.self, forKey: .peakCardValue) ?? 0
+        peakSale      = try c.decodeIfPresent(Double.self, forKey: .peakSale)      ?? 0
+        bestRunPacks  = try c.decodeIfPresent(Int.self,    forKey: .bestRunPacks)
+    }
+
+    /// Returns lifetime totals with `run` folded in as one additional run
+    /// (won if `won` is true). Used both to preview "all time" totals for
+    /// display — folding in the still-in-progress current run — and to
+    /// permanently commit a finished run's stats when starting a new game.
+    /// Sharing this one function for both means they can never drift apart.
+    func folding(_ run: Stats, won: Bool) -> LifetimeStats {
+        var out = self
+        out.runsStarted += 1
+        if won { out.runsWon += 1 }
+        out.packsOpened += run.packsOpened
+        out.boxesOpened += run.boxesOpened
+        out.cardsPulled += run.cardsPulled
+        out.foilsPulled += run.foilsPulled
+        out.ultrasPulled += run.ultrasPulled
+        out.cardsSold += run.cardsSold
+        out.moneySpent += run.moneySpent
+        out.moneyEarned += run.moneyEarned
+        out.bestGrade = max(out.bestGrade, run.bestGrade)
+        out.peakCash = max(out.peakCash, run.peakCash)
+        out.peakCardValue = max(out.peakCardValue, run.peakCardValue)
+        out.peakSale = max(out.peakSale, run.peakSale)
+        if won {
+            out.bestRunPacks = min(out.bestRunPacks ?? Int.max, run.packsOpened)
+        }
+        return out
+    }
+}
+
 // MARK: - Events (transient, for UI)
 
 enum BonusKind { case evolution, set }
@@ -114,6 +198,9 @@ struct GameCore: Codable {
     var claimedEvoLines: Set<String> = []
     var claimedSets: Set<Int> = []
     var stats = Stats()
+    /// Totals across *completed* runs only — the current run's `Stats` are
+    /// folded in separately at display time. See `LifetimeStats`.
+    var lifetime = LifetimeStats()
     var hasWon = false
     /// Set once the player dismisses the win screen to keep browsing their
     /// finished collection. `hasWon` stays true forever; this only controls
@@ -135,10 +222,30 @@ struct GameCore: Codable {
         claimedEvoLines = try c.decodeIfPresent(Set<String>.self,    forKey: .claimedEvoLines) ?? []
         claimedSets     = try c.decodeIfPresent(Set<Int>.self,       forKey: .claimedSets)     ?? []
         stats           = try c.decodeIfPresent(Stats.self,          forKey: .stats)           ?? Stats()
+        lifetime        = try c.decodeIfPresent(LifetimeStats.self,  forKey: .lifetime)        ?? LifetimeStats()
         hasWon          = try c.decodeIfPresent(Bool.self,           forKey: .hasWon)          ?? false
         winAcknowledged = try c.decodeIfPresent(Bool.self,           forKey: .winAcknowledged) ?? false
         welcomeSeen     = try c.decodeIfPresent(Bool.self,           forKey: .welcomeSeen)     ?? false
     }
+
+    // MARK: Resetting
+
+    /// A fresh run that keeps the collection's lifetime record: the run that's
+    /// ending is folded into `lifetime` first (as won or lost, whichever
+    /// `hasWon` says), then everything else — cash, collection, current-run
+    /// `stats` — starts over. Pure and unit-testable in isolation from
+    /// `GameState`/persistence.
+    func startingNewRun() -> GameCore {
+        var fresh = GameCore()
+        fresh.lifetime = lifetime.folding(stats, won: hasWon)
+        return fresh
+    }
+
+    /// "All time" totals for display: the permanently-recorded `lifetime`
+    /// (completed runs only) plus this still-in-progress run, previewed as if
+    /// it ended right now. Never persisted — recomputed on read so it can
+    /// never double-count against `startingNewRun()`.
+    var lifetimeIncludingCurrentRun: LifetimeStats { lifetime.folding(stats, won: hasWon) }
 
     // MARK: Load hygiene
 

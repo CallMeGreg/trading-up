@@ -28,6 +28,9 @@ final class GameState {
 
     var cash: Double { core.cash }
     var stats: Stats { core.stats }
+    /// "All time" totals: completed runs plus this still-in-progress one,
+    /// so a reset never looks like it erased anything.
+    var lifetimeStats: LifetimeStats { core.lifetimeIncludingCurrentRun }
     var uniqueCount: Int { core.uniqueCount }
     var totalCards: Int { CardDatabase.all.count }
     var collectionValue: Double { core.collectionValue }
@@ -100,7 +103,7 @@ final class GameState {
     }
 
     func newGame() {
-        core = GameCore()
+        core = core.startingNewRun()
         save()
     }
 
