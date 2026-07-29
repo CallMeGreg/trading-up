@@ -62,6 +62,17 @@ struct Card: Identifiable, Codable, Hashable {
     let evolvesToId: String?
     let baseValue: Double
     let flavor: String
+
+    /// Stand-in for a card id that is no longer in the catalogue — e.g. a save
+    /// written before a card was renamed, renumbered, or retired. Saves are
+    /// sanitized on load (`GameCore.sanitized()`), so this should be unreachable
+    /// in practice; it exists so a stale id degrades to a worthless placeholder
+    /// instead of crashing the app on launch.
+    static func unknown(id: String) -> Card {
+        Card(id: id, set: 0, number: 0, name: "Unknown Card", element: .shadow,
+             rarity: .common, lineId: "unknown", stage: 1, stageCount: 1,
+             evolvesFromId: nil, evolvesToId: nil, baseValue: 0, flavor: "")
+    }
 }
 
 // MARK: - Card database
@@ -75,6 +86,10 @@ enum CardDatabase {
     }
 
     static let byId: [String: Card] = Dictionary(uniqueKeysWithValues: all.map { ($0.id, $0) })
+
+    /// Whether `id` still exists in the shipped catalogue. Used to sanitize saves
+    /// written against an older card list.
+    static func exists(_ id: String) -> Bool { byId[id] != nil }
 
     private static let bySet: [Int: [Card]] =
         Dictionary(grouping: all, by: { $0.set }).mapValues { $0.sorted { $0.number < $1.number } }
