@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Mythling card art — deterministic creature illustrations for all 250 cards.
+"""Spryte card art — deterministic creature illustrations for all 250 cards.
 
 Sets are perfectly parallel (same 13 evolution lines + 18 singles in the same
 structural roles), so we define one creature archetype per slot and restyle it per

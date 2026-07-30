@@ -1,133 +1,143 @@
 #!/usr/bin/env python3
-"""Generate the Trading Up app icon: the procedural "sigil" emblem (fire palette)
-on an ember gradient. Mirrors the sigil algorithm in design/mockups/cards.js and
-TradingUp/Views/SigilView.swift so the icon matches the in-game card art.
+"""Generate the Trading Up app icon.
 
-Run with a Python that has Pillow installed:
+The icon is Emberpup — card 001, the first Spryte anyone pulls — drawn with the
+exact same code that draws the card art, so the icon and the game can never
+drift apart. `tools/generate_art.py` owns the creature; this file only builds a
+square Emberfall backdrop around it and renders the result.
+
+The creature's bounding box is measured from a throwaway render rather than
+hard-coded, so tweaking the artwork can't silently push the pup off-centre or
+crop its tail.
+
+Needs `rsvg-convert` from librsvg (`brew install librsvg`) — the same dependency
+`generate_art.py` already has. No Pillow, no other third-party packages.
+
     python3 tools/generate_icon.py
+    python3 tools/check_icon.py     # verify it's submittable
+
 Writes: TradingUp/Assets.xcassets/AppIcon.appiconset/icon-1024.png
 """
-import math
 import os
-from PIL import Image, ImageDraw
+import subprocess
+import sys
+import tempfile
 
-FIRE = ["#ffd15c", "#ff7a1a", "#e01f1f", "#5c1004"]
-SEED = "Trading Up Emberfall"
-SS = 2048          # supersample canvas; downscaled to 1024 for anti-aliasing
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(HERE)
+sys.path.insert(0, HERE)
+
+import generate_art as art  # noqa: E402
+from pngutil import PNG  # noqa: E402
+
+STAR = "Emberpup"
+ELEMENT = "fire"
+UID = "icon"
+VB = 216.0           # square canvas, same unit scale as the card art
 OUT_SIZE = 1024
+DARKEST = "#140402"  # colour at the corners, and what the PNG is flattened onto
+
+# How much of the canvas the creature spans, and where its centre sits. The pup
+# is a wide side profile, so width is the binding dimension.
+FILL = 0.63
+CENTRE = (0.500, 0.495)
 
 
-def hex_rgb(h):
-    h = h.lstrip("#")
-    return (int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16))
+def creature_svg():
+    e = art.ELE[ELEMENT]
+    role = art.ROLES[STAR]
+    return art.defs(UID, e) + art.ARCH[role["slot"]](UID, e, role["stage"], role["sc"],
+                                                     art.vary(STAR))
 
 
-def lerp(a, b, t):
-    return tuple(int(round(a[i] + (b[i] - a[i]) * t)) for i in range(3))
+def measure(inner, supersample=4):
+    """Bounding box of `inner`, in card-art units, read off its alpha channel."""
+    w, h = art.VB_W, art.VB_H
+    with tempfile.TemporaryDirectory() as tmp:
+        svg, png = os.path.join(tmp, "m.svg"), os.path.join(tmp, "m.png")
+        with open(svg, "w") as fh:
+            fh.write(f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w} {h}">{inner}</svg>')
+        subprocess.run(["rsvg-convert", "-w", str(w * supersample), "-h", str(h * supersample),
+                        svg, "-o", png], check=True)
+        img = PNG(png)
+        if img.color_type != 6:
+            raise SystemExit("expected RGBA from rsvg-convert while measuring the creature")
+        xs, ys = [], []
+        for y, row in enumerate(img._decoded()):
+            lit = [x for x in range(img.width) if row[x * 4 + 3] > 8]
+            if lit:
+                ys.append(y)
+                xs += [lit[0], lit[-1]]
+    if not xs:
+        raise SystemExit("nothing rendered while measuring the creature")
+    return (min(xs) / supersample, min(ys) / supersample,
+            max(xs) / supersample, max(ys) / supersample)
 
 
-def hash_str(s):
-    h = 2166136261
-    for ch in s:
-        h ^= (ord(ch) & 0xFFFF)
-        h = (h * 16777619) & 0xFFFFFFFF
-    return h
+def backdrop():
+    """Emberfall reduced to what still reads at 40 points: a warm core to lift
+    the pup off the background, and the glow of lava out of frame below him."""
+    embers = "".join(
+        f'<circle cx="{x}" cy="{y}" r="{r}" fill="#ffcf6a" opacity="{o}"/>'
+        for x, y, r, o in [(30, 44, 2.7, .70), (184, 38, 2.3, .62), (52, 20, 1.7, .48),
+                           (198, 92, 2.2, .48), (22, 102, 1.7, .42), (150, 18, 1.5, .40)])
+    return f"""
+  <defs>
+    <radialGradient id="sky{UID}" cx="50%" cy="41%" r="76%">
+      <stop offset="0%" stop-color="#8f2f12"/>
+      <stop offset="42%" stop-color="#431006"/>
+      <stop offset="100%" stop-color="{DARKEST}"/>
+    </radialGradient>
+    <radialGradient id="floor{UID}" cx="50%" cy="100%" r="62%">
+      <stop offset="0%" stop-color="#ffbe52" stop-opacity=".95"/>
+      <stop offset="45%" stop-color="#ff6a1a" stop-opacity=".55"/>
+      <stop offset="100%" stop-color="#ff6a1a" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="spot{UID}" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffd15c" stop-opacity=".42"/>
+      <stop offset="100%" stop-color="#ffd15c" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="vig{UID}" cx="50%" cy="46%" r="72%">
+      <stop offset="55%" stop-color="{DARKEST}" stop-opacity="0"/>
+      <stop offset="100%" stop-color="{DARKEST}" stop-opacity=".55"/>
+    </radialGradient>
+  </defs>
+  <rect width="{VB}" height="{VB}" fill="url(#sky{UID})"/>
+  {embers}
+  <ellipse cx="{CENTRE[0] * VB:.0f}" cy="{CENTRE[1] * VB:.0f}" rx="96" ry="66" fill="url(#spot{UID})"/>
+  <rect x="0" y="158" width="{VB}" height="58" fill="url(#floor{UID})"/>
+  <rect width="{VB}" height="{VB}" fill="url(#vig{UID})"/>"""
 
 
-def make_rnd(seed):
-    a = hash_str(seed)
-
-    def rnd():
-        nonlocal a
-        a = (a + 0x6D2B79F5) & 0xFFFFFFFF
-        t = ((a ^ (a >> 15)) * (1 | a)) & 0xFFFFFFFF
-        t = ((t + (((t ^ (t >> 7)) * (61 | t)) & 0xFFFFFFFF)) ^ t) & 0xFFFFFFFF
-        return ((t ^ (t >> 14)) & 0xFFFFFFFF) / 4294967296.0
-    return rnd
+def icon_svg():
+    inner = creature_svg()
+    x0, y0, x1, y1 = measure(inner)
+    scale = FILL * VB / (x1 - x0)
+    tx = CENTRE[0] * VB - (x0 + x1) / 2 * scale
+    ty = CENTRE[1] * VB - (y0 + y1) / 2 * scale
+    body = backdrop() + f'<g transform="translate({tx:.3f},{ty:.3f}) scale({scale:.5f})">{inner}</g>'
+    return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {VB:.0f} {VB:.0f}" '
+            f'width="{OUT_SIZE}" height="{OUT_SIZE}">{body}</svg>')
 
 
 def main():
-    pal = [hex_rgb(c) for c in FIRE]
-    img = Image.new("RGB", (SS, SS), (0, 0, 0))
-    d = ImageDraw.Draw(img, "RGBA")
-
-    # Ember radial gradient background (bright core -> dark edge).
-    center = (SS / 2, SS * 0.46)
-    edge = (20, 6, 3)
-    mid = (92, 22, 9)
-    core = (168, 60, 20)
-    maxr = SS * 0.78
-    step = 3
-    r = maxr
-    while r > 0:
-        t = r / maxr                      # 1 at edge, 0 at center
-        if t > 0.5:
-            col = lerp(mid, edge, (t - 0.5) / 0.5)
-        else:
-            col = lerp(core, mid, t / 0.5)
-        d.ellipse([center[0] - r, center[1] - r, center[0] + r, center[1] + r], fill=col)
-        r -= step
-
-    # --- Sigil (same sequence of rnd() calls as the app) ---
-    rnd = make_rnd(SEED)
-    pad = 0.16
-    side = SS * (1 - 2 * pad)
-    ox = SS * pad
-    oy = SS * pad
-
-    def P(x, y):
-        return (ox + x / 100.0 * side, oy + y / 100.0 * side)
-
-    unit = side / 100.0
-
-    arms = 5 + int(rnd() * 4)
-    ring_count = 2 + int(rnd() * 3)
-    rot = rnd() * 360.0
-
-    def dim(color, f):
-        return tuple(int(c * f) for c in color)
-
-    for i in range(ring_count):
-        rr = (12.0 + i * (32.0 / ring_count)) * unit
-        cx, cy = P(50, 50)
-        w = max(2, int((1.0 + rnd() * 1.4) * unit))
-        d.ellipse([cx - rr, cy - rr, cx + rr, cy + rr], outline=dim(pal[i % 4], 0.75) + (200,), width=w)
-
-    d2r = math.pi / 180.0
-    for i in range(arms):
-        a = (rot + i * (360.0 / arms)) * d2r
-        perp = a + math.pi / 2
-        x1 = 50 + math.cos(a) * 13
-        y1 = 50 + math.sin(a) * 13
-        x2 = 50 + math.cos(a) * (36 + rnd() * 8)
-        y2 = 50 + math.sin(a) * (36 + rnd() * 8)
-        w = 3.5 + rnd() * 3
-        bx1 = x1 + math.cos(perp) * w
-        by1 = y1 + math.sin(perp) * w
-        bx2 = x1 - math.cos(perp) * w
-        by2 = y1 - math.sin(perp) * w
-        d.polygon([P(bx1, by1), P(bx2, by2), P(x2, y2)], fill=pal[1] + (235,))
-        tr = (1.8 + rnd() * 2) * unit
-        tx, ty = P(x2, y2)
-        d.ellipse([tx - tr, ty - tr, tx + tr, ty + tr], fill=pal[0] + (255,))
-
-    sides = 3 + int(rnd() * 4)
-    pts = []
-    for i in range(sides):
-        a = (rot + i * (360.0 / sides)) * d2r
-        pts.append(P(50 + math.cos(a) * 11, 50 + math.sin(a) * 11))
-    d.polygon(pts, fill=pal[2] + (255,), outline=(255, 255, 255, 200))
-    cx, cy = P(50, 50)
-    dr = 3 * unit
-    d.ellipse([cx - dr, cy - dr, cx + dr, cy + dr], fill=(255, 255, 255, 230))
-
-    out_dir = os.path.join(os.path.dirname(__file__), "..",
-                           "TradingUp", "Assets.xcassets", "AppIcon.appiconset")
-    out_dir = os.path.abspath(out_dir)
+    out_dir = os.path.join(ROOT, "TradingUp", "Assets.xcassets", "AppIcon.appiconset")
     os.makedirs(out_dir, exist_ok=True)
     out = os.path.join(out_dir, "icon-1024.png")
-    img.resize((OUT_SIZE, OUT_SIZE), Image.LANCZOS).save(out)
-    print("wrote", out)
+
+    with tempfile.TemporaryDirectory() as tmp:
+        svg = os.path.join(tmp, "icon.svg")
+        with open(svg, "w") as fh:
+            fh.write(icon_svg())
+        # -b flattens onto an opaque colour, which is what keeps the PNG at
+        # colour type 2. App Store Connect rejects a marketing icon with alpha.
+        subprocess.run(["rsvg-convert", "-w", str(OUT_SIZE), "-h", str(OUT_SIZE),
+                        "-b", DARKEST, svg, "-o", out], check=True)
+
+    img = PNG(out)
+    if img.has_alpha:
+        raise SystemExit(f"{out} has an alpha channel — App Store Connect will reject it")
+    print(f"wrote {out} ({img.width}x{img.height}, colour type {img.color_type})")
 
 
 if __name__ == "__main__":

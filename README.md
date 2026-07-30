@@ -3,7 +3,7 @@
 A collectible-card **collecting & economy** game for iOS, built with SwiftUI. It's
 inspired by the loop of opening trading-card packs, chasing rares and foils, grading
 your best pulls, and completing sets — but with a wholly original world (the
-**Mythlings**) and **no Pokémon names, characters, or artwork**.
+**Sprytes**) and **no Pokémon names, characters, or artwork**.
 
 Start with **$100**, rip packs, flip duplicates back to the shop, grade your hits,
 and try to collect all **250** cards across **5 sets** — without going broke.
@@ -30,7 +30,7 @@ sell duplicates back to the shop, grade your best pulls, and chase a complete
 collection before your cash runs out. Everything — all 250 cards across 5 sets — is
 embedded in the app, which has **zero third‑party dependencies**.
 
-See **[DESIGN.md](DESIGN.md)** for the full write‑up: the Mythlings world, all five
+See **[DESIGN.md](DESIGN.md)** for the full write‑up: the Sprytes world, all five
 sets and their themes, the rarity value bands, the complete economy and grading
 tables, booster‑box guarantees, bonus payouts, and win/lose rules.
 
@@ -170,15 +170,21 @@ TradingUp/
   Assets.xcassets/           App icon + accent color + CardArt/ (250 card illustrations)
 data/cards.json              The 250 cards as JSON (source for tooling/other targets)
 design/
+  app-store/                 Ready‑to‑paste App Store Connect listing metadata
   mockups/                   Interactive HTML card‑style mockups (open index.html)
-  screenshots/               Generated App Store screenshots (6.9" + 6.5")
+  screenshots/               Framed marketing renders (6.9" + 6.5")
+    appstore/                Real device captures from an automated playthrough
 DESIGN.md                    Full game design document
 tools/
   generate_cards.py          Regenerates data/cards.json AND Generated/CardData.swift
   generate_art.py            Regenerates the 250 card illustrations (needs rsvg-convert)
   generate_icon.py           Regenerates the app icon (needs Pillow)
   generate_sfx.py            Regenerates the 3 sound effects (stdlib only)
-  generate_screenshots.py    Regenerates App Store screenshots (needs rsvg-convert)
+  generate_screenshots.py    Renders framed marketing scenes (needs rsvg-convert)
+  capture_screenshots.sh     Plays the game in a Simulator and captures real screenshots
+  seed_save.py               Writes a completed‑collection save (late‑game screenshots)
+  check_icon.py              Checks the 1024² icon against App Store rules
+  check_screenshots.py       Checks captured screenshots against App Store sizes
   verify/main.swift          The simulation test harness described above
 ```
 
@@ -211,12 +217,23 @@ python3 tools/generate_art.py qa            # optional: QA contact sheets to /tm
 The app shows these via `UIImage(named: card.id)` in `CardView`; the procedural
 `SigilView` stays as an automatic fallback if an image is ever missing.
 
-**App icon** — the icon is the game's procedural "sigil" rendered with Pillow:
+**App icon** — the icon is Emberpup, card 001, drawn by the *same* code that draws
+his card art, so the icon can never drift away from the game's look:
 
 ```bash
-python3 -m venv .venv && .venv/bin/pip install Pillow
-.venv/bin/python tools/generate_icon.py
+brew install librsvg                         # one‑time: provides rsvg-convert
+python3 tools/generate_icon.py
+python3 tools/check_icon.py                  # App Store rules: 1024², no alpha, no baked corners
 ```
+
+`generate_icon.py` imports the creature straight out of `generate_art.py`, measures
+its bounding box from a throwaway render so it can't end up off‑centre or cropped,
+and composes it over a square Emberfall backdrop. Both scripts are stdlib‑only
+apart from `rsvg-convert`.
+
+`check_icon.py` is what proves the marketing icon is submittable: exactly
+1024×1024, 8‑bit, **no alpha channel**, and full‑bleed to the edges (iOS applies
+the rounded‑corner mask itself, so a baked‑in one shows up as dark wedges).
 
 **Sound effects** — the app keeps a deliberately minimal set of three SFX (a
 purchase chime when you buy a pack, a sparkly shimmer for foil pulls, and a coin
@@ -232,17 +249,52 @@ The file‑system‑synchronized Xcode target picks the `.wav` files up automati
 `SoundManager` preloads them at launch and honors the in‑app mute toggle (Stats →
 Settings), so no wiring is needed after regenerating.
 
-**App Store screenshots** — faithful, marketing‑ready screenshots are composited
-as SVG (exact app palette + embedded real card art) and rasterized to the official
-sizes. To regenerate them after editing `tools/generate_screenshots.py`:
+**App Store screenshots** — the ones to actually upload are captured by *playing
+the game*. `TradingUpUITests/ScreenshotTests.swift` starts from a wiped app
+container, buys packs with the $100 the game gives you, rips them card by card,
+sells the duplicates, grades a rare and browses the collection it built — taking
+full‑resolution device screenshots along the way. A second short pass seeds a
+completed collection (`tools/seed_save.py`) so the win screen, a finished set and
+a booster box are covered too.
+
+```bash
+tools/capture_screenshots.sh                 # both required sizes, ~10 minutes
+tools/capture_screenshots.sh "iPhone 17 Pro Max"   # just one device
+tools/capture_screenshots.sh --only endgame  # refresh shots 25-29 only
+```
+
+Output lands in `design/screenshots/appstore/<device>/` — 29 numbered PNGs per
+device at **1320×2868** (iPhone 6.9") and **2064×2752** (iPad 13"). Both are
+required: the target ships `TARGETED_DEVICE_FAMILY = "1,2"`, so App Store Connect
+asks for an iPad set as well as an iPhone set. `tools/check_screenshots.py <dir>`
+re‑validates sizes and alpha channels, and the capture script runs it for you.
+
+The PNGs are **gitignored on purpose** — they're build output, and ~65 MB a
+capture would dwarf the rest of the repo. Regenerate on demand; the set you
+submit lives in App Store Connect. `--only playthrough|endgame` re‑shoots just
+one pass, which is handy when a change only affects part of the game.
+
+The screenshots use the `TradingUpScreenshots` scheme, which is deliberately
+separate from the `TradingUp` scheme so CI's unit‑test run stays fast.
+
+Optional stylized alternates — device‑framed scenes with marketing captions,
+composited as SVG rather than captured from a running app — come from the older
+generator:
 
 ```bash
 brew install librsvg                         # one‑time: provides rsvg-convert
 python3 tools/generate_screenshots.py        # -> design/screenshots (6.9" + 6.5")
 ```
 
-This writes five framed scenes (reveal, shop, collection, grade, win) at both
-1290×2796 (6.9") and 1242×2688 (6.5") — the two required App Store display sizes.
+**App Store listing copy** — recommended values for every App Store Connect
+field (name, subtitle, keywords, description, age‑rating answers, privacy,
+review notes) are in [`design/app-store/listing.md`](design/app-store/listing.md).
+
+**Privacy manifest** — `TradingUp/PrivacyInfo.xcprivacy` declares no tracking and
+no data collection, plus the one required‑reason API the app touches:
+`UserDefaults` (the mute preference), under reason `CA92.1`. Apple bounces
+uploads that use such an API without declaring it, so keep the manifest in sync
+if the app ever grows a new dependency or starts talking to the network.
 
 **Mockups** — preview the card visual style in a browser:
 

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- The game has no network access, no accounts, no analytics and no ads,
+	     so nothing leaves the device and there is nothing to track. This must
+	     stay in sync with the "Data Not Collected" answers on the App Store
+	     Connect privacy questionnaire. -->
+	<key>NSPrivacyTracking</key>
+	<false/>
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array/>
+
+	<!-- Required-reason APIs. Apple rejects uploads that use one of these
+	     without declaring it (ITMS-91053). We touch exactly one: UserDefaults,
+	     for the sound on/off preference in SoundManager. CA92.1 is "access
+	     info from the app itself", which is all we do — the save file lives in
+	     Documents and uses no timestamp APIs. -->
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array>
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>CA92.1</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>

@@ -111,7 +111,7 @@ function slabHTML(c) {
   <div class="slab">
     <div class="slab-label">
       <div class="slab-grade">PSA ${c.grade}</div>
-      <div class="slab-grade-word">${word}<small>Mythlings · ${c.name}</small></div>
+      <div class="slab-grade-word">${word}<small>Sprytes · ${c.name}</small></div>
     </div>
     ${cardHTML(c)}
     <div class="slab-cert">Trading Up Grading · Cert #${cert}</div>
