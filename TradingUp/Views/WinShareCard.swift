@@ -24,7 +24,7 @@ struct WinShareCard: View {
                     .font(.system(size: 26, weight: .black, design: .rounded))
                     .foregroundStyle(.white)
                     .multilineTextAlignment(.center)
-                Text("Every Mythling is yours.")
+                Text("Every Spryte is yours.")
                     .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(Palette.subtle)
             }

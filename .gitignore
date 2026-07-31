@@ -24,5 +24,14 @@ node_modules/
 .venv/
 __pycache__/
 
+# App Store marketing screenshots — build output, not source.
+#
+# tools/capture_screenshots.sh regenerates these by playing the game, and
+# nothing in the app or CI reads them. They're ~65 MB per capture of PNGs that
+# git can't delta-compress, so committing them would make a 340 KB repo ~200x
+# bigger, permanently, on every refresh. Upload them to App Store Connect (which
+# then holds the submitted set) or attach a zip to the GitHub Release.
+design/screenshots/appstore/
+
 # Misc
 *.log

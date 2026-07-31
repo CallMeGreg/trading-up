@@ -543,7 +543,7 @@ def screen_win(defs):
     out.append(text(cx, 130, "\U0001F3C6", 76, "#ffffff", anchor="middle"))
     out.append(text(cx, 178, "MASTER COLLECTOR", 14, "#ffd54a", weight=900, anchor="middle", tracking=3))
     out.append(text(cx, 210, "You collected all 250!", 26, "#ffffff", weight=900, anchor="middle"))
-    out.append(text(cx, 236, "Every Mythling across all five sets is yours.", 13, SUBTLE, weight=500, anchor="middle"))
+    out.append(text(cx, 236, "Every Spryte across all five sets is yours.", 13, SUBTLE, weight=500, anchor="middle"))
     m = 16
     tw = (SCREEN_W - 2 * m - 24) / 3
     out.append(stat_tile(m, 268, tw, "$3.1k", "Net Worth", MONEY))
@@ -569,7 +569,7 @@ def screen_win(defs):
 SCENES = [
     ("01_reveal", screen_reveal, "Every pull is a thrill.", "Rip packs and reveal cards one by one \u2014 chase foils and ultra rares."),
     ("02_shop", screen_shop, "Start with $100. Rip packs.", "Buy packs and booster boxes across five sets \u2014 without going broke."),
-    ("03_collection", screen_collection, "Collect all 250 Mythlings.", "Five sets, 250 original creatures, foils and dupes to hunt down."),
+    ("03_collection", screen_collection, "Collect all 250 Sprytes.", "Five sets, 250 original creatures, foils and dupes to hunt down."),
     ("04_grade", screen_grade, "Grade your best pulls.", "Send rares to grading and roll for a jackpot PSA 10."),
     ("05_win", screen_win, "Build the ultimate collection.", "Complete evolution lines and full sets for big cash bonuses."),
 ]
