@@ -15,7 +15,7 @@ Usage:
   python3 tools/generate_screenshots.py           # render every scene at every size
   python3 tools/generate_screenshots.py --list     # list scenes and output sizes
 
-Output: design/screenshots/<scene>_<w>x<h>.png
+Output: docs/screenshots/<scene>_<w>x<h>.png
 """
 import json
 import math
@@ -25,7 +25,7 @@ import sys
 import tempfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-OUT_DIR = os.path.join(ROOT, "design", "screenshots")
+OUT_DIR = os.path.join(ROOT, "docs", "screenshots")
 ART_DIR = os.path.join(ROOT, "TradingUp", "Assets.xcassets", "CardArt")
 
 # ------------------------------------------------------------------- app palette

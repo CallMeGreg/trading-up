@@ -23,7 +23,7 @@ private func fnv1a(_ s: String) -> UInt32 {
 }
 
 /// Symmetric mandala/crest emblem, drawn deterministically from `seed`.
-/// Mirrors `makeSigil(name+type, type)` in design/mockups/cards.js.
+/// Mirrors `makeSigil(name+type, type)` in docs/mockups/cards.js.
 struct SigilView: View {
     let seed: String
     let element: Element

@@ -1,7 +1,11 @@
 # Trading Up — Game Design Document
 
-> A Pokémon‑TCG‑inspired **card collecting + economy** game for iOS (SwiftUI).
-> Original creatures, names, and art — **zero** Pokémon references, names, or images.
+> A trading‑card‑game‑inspired **card collecting + economy** game for iOS (SwiftUI).
+> Every creature, name, set and illustration is original to this project. No real
+> trading‑card brand, character, or artwork is referenced, named, or reproduced —
+> deliberately, because a trademark in the app or its metadata is a
+> [Guideline 5.2](https://developer.apple.com/app-store/review/guidelines/#intellectual-property)
+> rejection risk.
 
 ---
 
@@ -18,7 +22,7 @@ economy is the strategy, the 250‑card completion is the goal.
 
 ### Art direction (important — read this)
 We can't commission real creature art for 250 characters, and we must not copy
-Pokémon art. So every Spryte is **drawn in code**: `tools/generate_art.py` builds a
+anyone else's. So every Spryte is **drawn in code**: `tools/generate_art.py` builds a
 flat‑vector creature from a per‑slot archetype (canine, bird, dragon, crab, moth…),
 restyles it per element, scales it up through its evolution line, and stands it on a
 per‑set scene. It is deterministic, name‑aligned, scales to 250 cards for free, and
