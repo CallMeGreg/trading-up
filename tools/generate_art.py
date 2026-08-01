@@ -13,7 +13,7 @@ Commands (needs `rsvg-convert` from librsvg: `brew install librsvg`):
 
 Outputs:
   - asset PNGs  TradingUp/Assets.xcassets/CardArt/<id>.imageset/<id>.png  (864x600)
-  - mockup SVGs design/mockups/art/<id>.svg
+  - mockup SVGs docs/mockups/art/<id>.svg
   - QA sheets   /tmp/qa_set{n}.png  (all 50 of a set in a grid)
 The app (CardView) shows these via UIImage(named: card.id); SigilView is the fallback.
 """
@@ -1197,7 +1197,7 @@ def qa_sheet(setno, out_dir="/tmp"):
     print("wrote", out)
 
 CARDART = os.path.join(ROOT, "TradingUp", "Assets.xcassets", "CardArt")
-MOCKART = os.path.join(ROOT, "design", "mockups", "art")
+MOCKART = os.path.join(ROOT, "docs", "mockups", "art")
 
 def _contents_json(fid):
     return json.dumps({

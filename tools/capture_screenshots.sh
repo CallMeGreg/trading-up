@@ -16,7 +16,7 @@
 # when a change only touches part of the game so the rest of the set — and its
 # place in git history — is left alone.
 #
-# Output: design/screenshots/appstore/<slug>/NN-name.png
+# Output: docs/screenshots/appstore/<slug>/NN-name.png
 #
 # Required App Store Connect sizes (the app ships TARGETED_DEVICE_FAMILY "1,2",
 # so iPad screenshots are required too):
@@ -30,7 +30,7 @@ PROJECT=TradingUp.xcodeproj
 SCHEME=TradingUpScreenshots
 BUNDLE_ID=com.callmegreg.tradingup
 DERIVED=${DERIVED_DATA:-build/screenshots-dd}
-OUT_ROOT=design/screenshots/appstore
+OUT_ROOT=docs/screenshots/appstore
 WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
 

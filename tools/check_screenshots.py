@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Check captured screenshots against App Store Connect's specifications.
 
-    python3 tools/check_screenshots.py design/screenshots/appstore/<slug>
+    python3 tools/check_screenshots.py docs/screenshots/appstore/<slug>
 
 Verifies every PNG in the folder is one of the accepted portrait sizes for a
 required display class, carries no alpha channel, and that the folder holds

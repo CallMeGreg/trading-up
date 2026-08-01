@@ -180,7 +180,7 @@ indexed from those fields, so spending keyword characters on them is wasted.
 
 ## 4. Screenshots
 
-Real captures from an actual playthrough land in `design/screenshots/appstore/`,
+Real captures from an actual playthrough land in `docs/screenshots/appstore/`,
 produced by `tools/capture_screenshots.sh`.
 
 > **These are deliberately not in git.** They're build output — ~65 MB of PNGs
@@ -197,8 +197,8 @@ produced by `tools/capture_screenshots.sh`.
 
 | Display class | Size | Folder |
 | --- | --- | --- |
-| iPhone 6.9" | 1320 × 2868 | `design/screenshots/appstore/iphone-17-pro-max/` |
-| iPad 13" | 2064 × 2752 | `design/screenshots/appstore/ipad-pro-13-inch-m5/` |
+| iPhone 6.9" | 1320 × 2868 | `docs/screenshots/appstore/iphone-17-pro-max/` |
+| iPad 13" | 2064 × 2752 | `docs/screenshots/appstore/ipad-pro-13-inch-m5/` |
 
 29 numbered screenshots are available per device; App Store Connect accepts a
 maximum of **10** per size. Recommended ten, in upload order — the first three
