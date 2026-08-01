@@ -6,7 +6,7 @@
 
 ### Rip packs, chase the rares.
 
-**Start with $100. Finish with all 250.**
+**Start with $100. Finish with all 250 Sprytes.**
 
 A card‑collecting economy game for iPhone and iPad, built in SwiftUI.
 
