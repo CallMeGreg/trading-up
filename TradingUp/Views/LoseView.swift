@@ -22,7 +22,7 @@ struct LoseView: View {
                         Text("Game Over")
                             .font(.system(size: 28, weight: .black, design: .rounded))
                             .foregroundStyle(.white)
-                        Text("You're down to \(game.cash.money) — not enough for the \(game.cheapestPackPrice.money) cheapest pack, and no cards left to sell. But look how far you got!")
+                        Text("You're down to \(game.cash.money) — not enough for the \(game.cheapestPackPrice.money) cheapest pack, and selling every duplicate you have left wouldn't cover one either. But look how far you got!")
                             .font(.system(size: 14, weight: .medium))
                             .foregroundStyle(Palette.subtle)
                             .multilineTextAlignment(.center)

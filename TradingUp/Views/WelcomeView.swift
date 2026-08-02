@@ -14,84 +14,117 @@ struct WelcomeView: View {
                            center: .top, startRadius: 20, endRadius: 480)
                 .ignoresSafeArea()
 
-            ScrollView {
-                VStack(spacing: 20) {
-                    Text("🎴").font(.system(size: 72)).padding(.top, 32)
-
-                    VStack(spacing: 6) {
-                        Text("WELCOME TO")
-                            .font(.system(size: 13, weight: .black)).tracking(3)
-                            .foregroundStyle(Palette.subtle)
-                        Text("Trading Up")
-                            .font(.system(size: 32, weight: .black, design: .rounded))
-                            .foregroundStyle(.white)
-                    }
-
-                    VStack(alignment: .leading, spacing: 16) {
-                        infoRow("📦", "Buy & open packs",
-                                "Six cards a pack — 3 common, 2 uncommon, and a rare or ultra.")
-                        infoRow("💰", "Sell your extras",
-                                "Turn duplicate copies into cash. You can never sell the last copy of a card, though.")
-                        infoRow("🎁", "Cash in bonuses",
-                                "Complete evolution lines and full sets for payouts. New sets unlock as your collection grows.")
-                        infoRow("🔍", "Grade rares & ultras",
-                                "Pay to grade a rare or ultra and roll a PSA score — it can multiply the card's value or leave it worth far less.")
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .panel()
-
-                    VStack(alignment: .leading, spacing: 14) {
-                        goalRow("🏆", "How you win",
-                                "Collect all \(game.totalCards) cards across the five sets.",
-                                Palette.money)
-                        Rectangle().fill(Palette.stroke).frame(height: 1)
-                        goalRow("💸", "How you lose",
-                                "Can't afford the \(game.cheapestPackPrice.money) cheapest pack, with no duplicate cards left to sell.",
-                                Color(hex: "e0663b"))
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .panel()
-
-                    BigButton(title: "Start Collecting", systemImage: "sparkles",
-                              tint: [Palette.money, Color(hex: "39b56a")]) {
-                        Haptics.play(.success)
-                        game.markWelcomeSeen()
-                    }
-                    .padding(.top, 4)
-                }
-                .padding(16)
-                .readableWidth()
+            // There's not much to read here, so nobody should have to scroll to
+            // find the button that starts the game. Try the roomy layout first
+            // and step down through tighter spacing until one fits the screen;
+            // scrolling is only the last resort, for the cases where even the
+            // tightest layout can't fit (small phones, landscape).
+            ViewThatFits(in: .vertical) {
+                content(.roomy)
+                content(.compact)
+                content(.tight)
+                ScrollView { content(.tight) }
             }
         }
     }
 
-    private func infoRow(_ emoji: String, _ title: String, _ body: String) -> some View {
+    private func content(_ d: Density) -> some View {
+        VStack(spacing: d.stack) {
+            Text("🎴").font(.system(size: d.hero))
+
+            VStack(spacing: 6) {
+                Text("WELCOME TO")
+                    .font(.system(size: 13, weight: .black)).tracking(3)
+                    .foregroundStyle(Palette.subtle)
+                Text("Trading Up")
+                    .font(.system(size: d.wordmark, weight: .black, design: .rounded))
+                    .foregroundStyle(.white)
+            }
+
+            VStack(alignment: .leading, spacing: d.infoRows) {
+                infoRow(d, "📦", "Buy & open packs",
+                        "Six cards a pack — 3 common, 2 uncommon, and a rare or ultra.")
+                infoRow(d, "💰", "Sell your extras",
+                        "Turn duplicate copies into cash. You can never sell the last copy of a card, though.")
+                infoRow(d, "🎁", "Cash in bonuses",
+                        "Complete evolution lines and full sets for payouts. New sets unlock as your collection grows.")
+                infoRow(d, "🔍", "Grade rares & ultras",
+                        "Pay to grade a rare or ultra and roll a PSA score — it can multiply the card's value or leave it worth far less.")
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .panel(d.panelPad)
+
+            VStack(alignment: .leading, spacing: d.goalRows) {
+                goalRow(d, "🏆", "How you win",
+                        "Collect all \(game.totalCards) cards across the five sets.",
+                        Palette.money)
+                Rectangle().fill(Palette.stroke).frame(height: 1)
+                goalRow(d, "💸", "How you lose",
+                        "Can't afford the \(game.cheapestPackPrice.money) cheapest pack — even after selling every duplicate you own.",
+                        Color(hex: "e0663b"))
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .panel(d.panelPad)
+
+            BigButton(title: "Start Collecting", systemImage: "sparkles",
+                      tint: [Palette.money, Color(hex: "39b56a")]) {
+                Haptics.play(.success)
+                game.markWelcomeSeen()
+            }
+        }
+        .padding(d.outerPad)
+        .readableWidth()
+    }
+
+    private func infoRow(_ d: Density, _ emoji: String, _ title: String, _ body: String) -> some View {
         HStack(alignment: .top, spacing: 12) {
-            Text(emoji).font(.system(size: 26)).frame(width: 34)
+            Text(emoji).font(.system(size: d.rowEmoji)).frame(width: 34)
             VStack(alignment: .leading, spacing: 3) {
                 Text(title)
-                    .font(.system(size: 15, weight: .bold))
+                    .font(.system(size: d.rowTitle, weight: .bold))
                     .foregroundStyle(Palette.text)
                 Text(body)
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.system(size: d.rowBody, weight: .medium))
                     .foregroundStyle(Palette.subtle)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
     }
 
-    private func goalRow(_ emoji: String, _ title: String, _ body: String, _ tint: Color) -> some View {
+    private func goalRow(_ d: Density, _ emoji: String, _ title: String, _ body: String, _ tint: Color) -> some View {
         HStack(alignment: .top, spacing: 12) {
-            Text(emoji).font(.system(size: 26)).frame(width: 34)
+            Text(emoji).font(.system(size: d.rowEmoji)).frame(width: 34)
             VStack(alignment: .leading, spacing: 3) {
                 Text(title.uppercased())
                     .font(.system(size: 12, weight: .black)).tracking(1)
                     .foregroundStyle(tint)
                 Text(body)
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.system(size: d.rowBody, weight: .medium))
                     .foregroundStyle(Palette.text)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
+    }
+
+    /// How generously the intro is spaced. `ViewThatFits` walks these from
+    /// roomiest to tightest and picks the first one the screen can hold.
+    fileprivate struct Density {
+        var hero: CGFloat
+        var wordmark: CGFloat
+        var stack: CGFloat
+        var infoRows: CGFloat
+        var goalRows: CGFloat
+        var panelPad: CGFloat
+        var rowEmoji: CGFloat
+        var rowTitle: CGFloat
+        var rowBody: CGFloat
+        var outerPad: CGFloat
+
+        static let roomy = Density(hero: 68, wordmark: 32, stack: 18, infoRows: 16, goalRows: 14,
+                                   panelPad: 16, rowEmoji: 26, rowTitle: 15, rowBody: 13, outerPad: 16)
+        static let compact = Density(hero: 52, wordmark: 30, stack: 13, infoRows: 12, goalRows: 11,
+                                     panelPad: 14, rowEmoji: 24, rowTitle: 15, rowBody: 13, outerPad: 14)
+        static let tight = Density(hero: 38, wordmark: 26, stack: 9, infoRows: 9, goalRows: 8,
+                                   panelPad: 11, rowEmoji: 21, rowTitle: 14, rowBody: 12, outerPad: 10)
     }
 }

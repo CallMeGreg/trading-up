@@ -32,7 +32,7 @@ shop's price rather than yours.
 Between those two ends is a real economy — pack odds, a buylist spread, grading
 variance and set bonuses — that you can actually play against instead of just
 watching. Collect all **250 Sprytes** and you're a Master Collector. Run out of
-cash with nothing left to sell and you're tapped out.
+cash with nothing left worth selling and you're tapped out.
 
 Every creature, name, illustration and line of flavor text is original to the
 game, generated from code and shipped inside the app. No accounts, no ads, no
@@ -101,9 +101,10 @@ bonus; completing a whole **set** pays a big one (15× the pack price).
 ### 🏆 Win or go broke
 
 **Win** by collecting all 250 cards. **Lose** if your cash drops below $10 — the
-cheapest pack — with no duplicates left to sell. Winning is a celebration, not an
-ending: dismiss the win screen and your completed collection stays yours to
-browse. Starting over is always an explicit, confirmed choice.
+cheapest pack — with no way to raise it, even by selling every duplicate you own.
+Winning is a celebration, not an ending: dismiss the win screen and your completed
+collection stays yours to browse. Starting over is always an explicit, confirmed
+choice.
 
 Your progress **auto‑saves** after every action, and a save is never silently
 discarded.

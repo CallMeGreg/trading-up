@@ -129,7 +129,7 @@ Emberfall, Tidecaller, Verdspire, Voltcrest and Umbral Reach - the world of the 
 
 WIN OR GO BROKE
 
-Collect all 250 cards and you're a Master Collector. Fall below the price of the cheapest pack with no duplicates left to sell and you're tapped out. Between those two ends is a real economy - pack odds, a buylist spread, grading variance and set bonuses - that you can actually play against instead of just watching.
+Collect all 250 cards and you're a Master Collector. Fall below the price of the cheapest pack with no way left to raise it and you're tapped out. Between those two ends is a real economy - pack odds, a buylist spread, grading variance and set bonuses - that you can actually play against instead of just watching.
 
 NO CATCHES
 

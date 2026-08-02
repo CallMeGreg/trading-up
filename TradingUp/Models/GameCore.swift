@@ -285,6 +285,42 @@ struct GameCore: Codable {
     func isSellable(_ inst: CardInstance) -> Bool { count(of: inst.cardId) > 1 }
     var sellableInstances: [CardInstance] { instances.filter { isSellable($0) } }
 
+    /// Every copy the player could actually part with — all but one of each
+    /// card. Unlike `sellableInstances` (which flags *both* copies of a pair as
+    /// sellable, since either one may go) this is the set that can be sold
+    /// *together*, so it's what any "how much is left to raise" sum has to use.
+    /// The cheapest copy of each card is the one left behind, because that's
+    /// the choice that maximises what the rest are worth.
+    var sellableExtras: [CardInstance] {
+        Dictionary(grouping: instances, by: { $0.cardId }).values.flatMap { copies in
+            copies.count > 1
+                ? Array(copies.sorted { $0.currentValue < $1.currentValue }.dropFirst())
+                : []
+        }
+    }
+
+    /// The most cash this position could ever be turned into: every duplicate
+    /// sold at the shop's buylist price, grading the ones first where even the
+    /// fee-inclusive best case (`Economy.luckiestGrade`) beats selling them
+    /// raw. Extras are liquidated cheapest-first so those early sales can
+    /// bankroll the grading fees on the pricier ones.
+    ///
+    /// Deliberately optimistic: it exists to decide when a run is *provably*
+    /// unrecoverable, so it must never miss a way back to a pack.
+    var maxRaisableCash: Double {
+        var pool = cash
+        for inst in sellableExtras.sorted(by: { $0.sellValue < $1.sellValue }) {
+            let fee = Economy.gradeFee(set: inst.card.set)
+            let luckiestSale = Economy.sellback(
+                Economy.value(base: inst.card.baseValue, foil: inst.foil, grade: Economy.luckiestGrade)
+            )
+            let worthGrading = inst.card.rarity.canBeGraded && inst.grade == nil
+                && pool >= fee && luckiestSale - fee > inst.sellValue
+            pool += worthGrading ? luckiestSale - fee : inst.sellValue
+        }
+        return pool
+    }
+
     func instances(of cardId: String) -> [CardInstance] { instances.filter { $0.cardId == cardId } }
 
     var collectionValue: Double { instances.reduce(0) { $0 + $1.currentValue } }
@@ -299,9 +335,17 @@ struct GameCore: Codable {
     /// Set 1 is always unlocked; later sets gate on Economy.uniquesToUnlock(set:).
     func isUnlocked(set: Int) -> Bool { uniqueCount >= Economy.uniquesToUnlock(set: set) }
 
+    /// The run is over once the cheapest pack is out of reach for good: not
+    /// just unaffordable right now, but unaffordable even after liquidating
+    /// every spare copy in the binder (grading the ones worth grading first).
+    ///
+    /// Only requiring "no duplicates left" wasn't enough — a player sitting on
+    /// a handful of commons worth pennies could be mathematically finished yet
+    /// still be shown a live shop, with nothing to do but sell those last few
+    /// cards one at a time before the game would admit it.
     var isGameOver: Bool {
         guard !hasWon else { return false }
-        return cash < Economy.cheapestPackPrice && sellableInstances.isEmpty
+        return maxRaisableCash < Economy.cheapestPackPrice
     }
 
     // MARK: Welcome / onboarding
