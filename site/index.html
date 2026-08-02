@@ -8,6 +8,18 @@
       name="description"
       content="A card-collecting economy game for iPhone and iPad. Start with $100, finish with all 250 Sprytes. No ads, no in-app purchases, fully offline."
     />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Trading Up — Rip packs, chase the rares" />
+    <meta
+      property="og:description"
+      content="Start with $100. Finish with all 250 Sprytes. A card-collecting economy game for iPhone and iPad, built in SwiftUI."
+    />
+    <meta property="og:url" content="https://callmegreg.github.io/trading-up/" />
+    <meta
+      property="og:image"
+      content="https://callmegreg.github.io/trading-up/icon.png"
+    />
+    <meta name="twitter:card" content="summary" />
     <link rel="icon" href="icon.png" />
     <link rel="stylesheet" href="styles.css" />
   </head>
@@ -25,20 +37,250 @@
 
       <main>
         <p class="lede">
-          Start with $100. Finish with all 250 Sprytes. A card-collecting
-          economy game for iPhone and iPad, built around the best part of
-          trading cards: tearing open a fresh pack and turning it over one card
-          at a time.
+          <strong>Start with $100. Finish with all 250 Sprytes.</strong> A
+          card-collecting economy game for iPhone and iPad, built in SwiftUI.
+        </p>
+
+        <ul class="meta">
+          <li>iOS 17+</li>
+          <li>iPhone &amp; iPad</li>
+          <li>Zero dependencies</li>
+          <li>Plays offline</li>
+        </ul>
+
+        <p>
+          Trading Up is built around the best part of trading cards: tearing
+          open a fresh pack and turning it over one card at a time.
+        </p>
+        <p>
+          Buy a pack, rip it, and find out what you got. Six cards — three
+          commons, two uncommons, and a rare or an ultra rare — with a 1% shot
+          at a shimmering foil on any of them. New pulls go straight into your
+          binder. Extras become cash, at the shop&rsquo;s price rather than
+          yours.
+        </p>
+        <p>
+          Between those two ends is a real economy — pack odds, a buylist
+          spread, grading variance and set bonuses — that you can actually play
+          against instead of just watching. Collect all
+          <strong>250 Sprytes</strong> and you&rsquo;re a Master Collector. Run
+          out of cash with nothing left to sell and you&rsquo;re tapped out.
+        </p>
+        <p>
+          Every creature, name, illustration and line of flavor text is original
+          to the game, generated from code and shipped inside the app. No
+          accounts, no ads, no in-app purchases, no internet connection.
+        </p>
+
+        <ul class="shots">
+          <li>
+            <img
+              src="screenshots/02_shop.webp"
+              width="415"
+              height="900"
+              loading="lazy"
+              alt="The shop, with five sets and $100 to spend"
+            />
+            <b>Shop</b>
+          </li>
+          <li>
+            <img
+              src="screenshots/01_reveal.webp"
+              width="415"
+              height="900"
+              loading="lazy"
+              alt="An ultra rare flipping over during a pack reveal"
+            />
+            <b>Rip packs</b>
+          </li>
+          <li>
+            <img
+              src="screenshots/03_collection.webp"
+              width="415"
+              height="900"
+              loading="lazy"
+              alt="The collection grid filling in"
+            />
+            <b>Collect</b>
+          </li>
+          <li>
+            <img
+              src="screenshots/04_grade.webp"
+              width="415"
+              height="900"
+              loading="lazy"
+              alt="A card coming back from grading as a PSA 10"
+            />
+            <b>Grade</b>
+          </li>
+          <li>
+            <img
+              src="screenshots/05_win.webp"
+              width="415"
+              height="900"
+              loading="lazy"
+              alt="The Master Collector win screen"
+            />
+            <b>Win</b>
+          </li>
+        </ul>
+
+        <h2>How to play</h2>
+
+        <h3>🛒 Buy a pack</h3>
+        <p>
+          Each of the five sets sells a <strong>Pack</strong> (6 cards) or a
+          <strong>Booster Box</strong> (12 packs, with guaranteed foils and
+          ultras). Higher sets cost steeply more — $10 → $30 → $75 → $160 →
+          $320 — but hold far more valuable cards. A box costs
+          <strong>11× the pack price</strong>, so you buy it for the guaranteed
+          chase cards, not for a discount.
+        </p>
+
+        <h3>✨ Rip it</h3>
+        <p>
+          Tap to reveal cards one at a time, with the hit slot always saved for
+          last. Every pack is
+          <strong>3 commons, 2 uncommons, and 1 rare-or-ultra</strong>, and
+          every card has a <strong>1% chance</strong> to be a shiny
+          <strong>foil</strong> (×3 value).
+        </p>
+
+        <h3>🗂️ Keep or sell</h3>
+        <p>
+          On the pack summary, brand-new cards are flagged
+          <strong>✦ NEW</strong>. Tap any duplicate to keep or sell it
+          individually, or use <strong>Sell Duplicates</strong> /
+          <strong>Keep All</strong> at the bottom — the sell total updates live
+          as you decide each card.
+        </p>
+        <p>
+          The shop buys at a <strong>buylist spread</strong>: you get
+          <strong>65%</strong> of a card&rsquo;s market value. Churning packs
+          and dumping dupes slowly bleeds money, and that spread is the
+          game&rsquo;s main risk. You can
+          <strong>never sell your last copy</strong> of a card, so your
+          collection is always safe.
+        </p>
+
+        <h3>🏅 Grade your best</h3>
+        <p>
+          Send a rare or ultra to grading for a flat per-set fee ($2–$10) and
+          roll a PSA grade. A <strong>PSA 10</strong> is ×5, a
+          <strong>PSA 9</strong> is ×2, and a <strong>PSA 1</strong> is a freak
+          ×10 jackpot — but grades 2–7 are worth <em>less</em> than ungraded.
+          Because the fee is cheap next to a pricey card, grading valuable
+          duplicates <strong>before</strong> you sell them is a real edge.
+          Grading and foils stack.
+        </p>
+
+        <h3>📖 Complete the binder</h3>
+        <p>
+          Browse all 50 cards per set. Owned cards show off your best copy;
+          unowned cards are locked silhouettes. Filter the grid by
+          <strong>Dupes</strong>, <strong>Foils</strong> and
+          <strong>Rare+</strong>, and combine filters to narrow further.
+          Completing an <strong>evolution line</strong> pays a cash bonus;
+          completing a whole <strong>set</strong> pays a big one (15× the pack
+          price).
+        </p>
+
+        <h3>🏆 Win or go broke</h3>
+        <p>
+          <strong>Win</strong> by collecting all 250 cards.
+          <strong>Lose</strong> if your cash drops below $10 — the cheapest pack
+          — with no duplicates left to sell. Winning is a celebration, not an
+          ending: dismiss the win screen and your completed collection stays
+          yours to browse. Starting over is always an explicit, confirmed
+          choice.
+        </p>
+        <p>
+          Your progress <strong>auto-saves</strong> after every action, and a
+          save is never silently discarded.
+        </p>
+
+        <h2>Five sets, 250 cards</h2>
+        <table class="sets">
+          <thead>
+            <tr>
+              <th class="rank">#</th>
+              <th>Set</th>
+              <th>Theme</th>
+              <th class="num">Pack price</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="rank">1</td>
+              <td>
+                <span class="dot" style="--dot: #ff9a6b"></span
+                ><strong>Emberfall</strong>
+              </td>
+              <td>Fire / magma</td>
+              <td class="num">$10</td>
+            </tr>
+            <tr>
+              <td class="rank">2</td>
+              <td>
+                <span class="dot" style="--dot: #8fd3ff"></span
+                ><strong>Tidecaller</strong>
+              </td>
+              <td>Water / ice</td>
+              <td class="num">$30</td>
+            </tr>
+            <tr>
+              <td class="rank">3</td>
+              <td>
+                <span class="dot" style="--dot: #9fe08a"></span
+                ><strong>Verdspire</strong>
+              </td>
+              <td>Grass / nature</td>
+              <td class="num">$75</td>
+            </tr>
+            <tr>
+              <td class="rank">4</td>
+              <td>
+                <span class="dot" style="--dot: #ffdf66"></span
+                ><strong>Voltcrest</strong>
+              </td>
+              <td>Electric / storm</td>
+              <td class="num">$160</td>
+            </tr>
+            <tr>
+              <td class="rank">5</td>
+              <td>
+                <span class="dot" style="--dot: #c6a3ff"></span
+                ><strong>Umbral Reach</strong>
+              </td>
+              <td>Shadow / cosmic</td>
+              <td class="num">$320</td>
+            </tr>
+          </tbody>
+        </table>
+        <p>
+          Each set is 50 cards with its own creatures, evolution lines, flavor
+          text and rarity spread, and unlocks as your collection grows.
         </p>
 
         <h2>No catches</h2>
         <ul>
-          <li>No advertising and no in-app purchases.</li>
-          <li>No accounts and no sign-in.</li>
           <li>
-            No network requests at all — it plays the same in airplane mode.
+            <strong>No in-app purchases and no real money, ever.</strong> The
+            only currency is the fictional one inside the game.
           </li>
-          <li>No analytics, no tracking, no data collection.</li>
+          <li><strong>No ads.</strong></li>
+          <li>
+            <strong
+              >No account, no sign-in, no internet connection required.</strong
+            >
+          </li>
+          <li>
+            <strong>No data collected.</strong> Your collection lives in a
+            single file on your device and is never sent anywhere.
+          </li>
+          <li>
+            <strong>Plays entirely offline</strong>, on both iPhone and iPad.
+          </li>
         </ul>
 
         <ul class="cards">
@@ -55,7 +297,17 @@
         </ul>
       </main>
 
-      <footer>&copy; 2026 Greg Mohler</footer>
+      <footer>
+        <p>
+          <a href="https://github.com/CallMeGreg/trading-up">Source on GitHub</a>
+          &middot; <a href="privacy/">Privacy Policy</a> &middot;
+          <a href="support/">Support</a>
+        </p>
+        <p>
+          &copy; 2026 Greg Mohler. All 250 creatures, their names, artwork and
+          flavor text are original works created for this app.
+        </p>
+      </footer>
     </div>
   </body>
 </html>
