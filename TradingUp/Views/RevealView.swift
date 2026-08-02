@@ -298,7 +298,7 @@ private struct SummaryView: View {
     private func packGrid(_ m: GridMetrics) -> some View {
         VStack(spacing: 10) {
             if !pendingDuplicates.isEmpty {
-                Label("Tap any card marked EXTRA to sell it or keep it", systemImage: "hand.tap.fill")
+                Label("Tap a highlighted card to sell it or keep it", systemImage: "hand.tap.fill")
                     .font(.system(size: 13, weight: .bold))
                     .foregroundStyle(Palette.tapCue)
                     .multilineTextAlignment(.center)
@@ -586,7 +586,6 @@ private struct PackCardSlot: View {
     private var badge: (text: String, color: Color)? {
         switch slot {
         case .newCard:    return ("✦ NEW", Color(hex: "ffd54a"))
-        case .pendingDup: return ("EXTRA", Palette.tapCue)
         case .keptDup:    return ("KEPT", Color(hex: "5b6b8a"))
         default:          return nil
         }
