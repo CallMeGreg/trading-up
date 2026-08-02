@@ -82,7 +82,8 @@ Trading Up has none of those:
 - The randomness is loot-box-shaped (randomised rewards) rather than
   casino-shaped. Apple governs that under **Guideline 3.1.1**, which requires
   publishing odds *for loot boxes bought with real money*. Trading Up has no
-  IAP, so 3.1.1 does not bite either — and the odds are disclosed in-app anyway.
+  IAP, so 3.1.1 does not bite either — and the odds are published on the
+  support page regardless.
 
 So **"None" is the honest and defensible answer**, and it matches how comparable
 pack-opening collection games are rated.
@@ -159,9 +160,15 @@ indexed from those fields, so spending keyword characters on them is wasted.
 
 | Field | Recommended value | Required? |
 | --- | --- | --- |
-| **Support URL** | `https://github.com/CallMeGreg/trading-up/issues` | **Yes.** Must be a live page where a user can get help. An Issues page qualifies; a small GitHub Pages support page with an email address is nicer. |
-| **Marketing URL** | `https://github.com/CallMeGreg/trading-up` | Optional. |
-| **Privacy Policy URL** | `https://callmegreg.github.io/trading-up/privacy` | **Yes — required for every app, including ones that collect nothing.** Ready-to-publish text in §5. |
+| **Support URL** | `https://callmegreg.github.io/trading-up/support/` | **Yes.** Must be a live page where a user can get help. The repo's Issues page also qualifies; the Pages one answers the common questions up front and links to Issues anyway. |
+| **Marketing URL** | `https://callmegreg.github.io/trading-up/` | Optional. |
+| **Privacy Policy URL** | `https://callmegreg.github.io/trading-up/privacy/` | **Yes — required for every app, including ones that collect nothing.** |
+
+All three are served from `site/` by `.github/workflows/pages.yml`. Edit the
+HTML there, merge to `main`, and the deploy runs itself. The policy wording
+that used to live in §5 of this file is now the page itself — `site/privacy/index.html`
+is the single source of truth, so it can't drift out of sync with what's
+published.
 
 ### Other version fields
 
@@ -279,28 +286,11 @@ form, so **it has to stay in sync with the table above** — if the app ever gai
 analytics or a network call, both change together.
 
 The privacy *label* being "no data" does **not** waive the privacy *policy URL*.
-Publish something like this at the URL you enter:
-
-```
-Trading Up — Privacy Policy
-Last updated: <date>
-
-Trading Up does not collect, transmit, or share any personal data.
-
-The app has no accounts, no sign-in, no analytics, no advertising, no
-third-party SDKs, and makes no network requests of any kind.
-
-Your game progress — cash, collection, grades and statistics — is stored in a
-single file inside the app's own private container on your device. It is never
-sent anywhere. Deleting the app deletes it permanently.
-
-If your device has iCloud device backups enabled, that file may be included in
-your own encrypted Apple backup. The developer has no access to it.
-
-Children: the app collects nothing from anyone, including children under 13.
-
-Questions: <your support email>
-```
+The policy is published at
+[`callmegreg.github.io/trading-up/privacy/`](https://callmegreg.github.io/trading-up/privacy/)
+and its source is [`site/privacy/index.html`](../site/privacy/index.html) —
+edit it there rather than copying the wording into this file, so the published
+page and the declared label can only ever change together.
 
 ---
 
@@ -327,8 +317,8 @@ outside the app.
 Regarding the age-rating gambling questions: the app has no wagering, betting,
 casino games or cash-out. Buying a pack always delivers six cards, so nothing is
 staked or lost on a roll. The randomised elements are the contents of a pack and
-a card's grade, both of which are randomised rewards rather than a bet. Pack
-odds are disclosed in the app.
+a card's grade, both of which are randomised rewards rather than a bet. The
+pack odds are published at https://callmegreg.github.io/trading-up/support/.
 
 All 250 creatures, their names, artwork, flavour text and set names are original
 works created for this app. No third-party or licensed content is used.
@@ -373,7 +363,9 @@ Connect reads it and stops asking.
 - [ ] App Information filled in (§1) and Age Rating answered (§2)
 - [ ] Version 1.0 metadata pasted in (§3)
 - [ ] 10 iPhone 6.9", 10 iPhone 6.5" **and** 10 iPad 13" screenshots uploaded (§4)
-- [ ] Privacy policy live at its URL, App Privacy published as "Data Not Collected" (§5)
+- [x] Privacy policy, support and marketing pages live on GitHub Pages
+      (`site/`, deployed by `.github/workflows/pages.yml`)
+- [ ] App Privacy published as "Data Not Collected" in App Store Connect (§5)
 - [ ] `TradingUp/PrivacyInfo.xcprivacy` present in the built bundle (§5) — without it
       the upload draws an automated ITMS-91053 rejection email
 - [ ] App Review notes and contact filled in (§6)

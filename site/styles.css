@@ -1,0 +1,196 @@
+/* Palette mirrors TradingUp/Views/Theme.swift so the site and the app match. */
+:root {
+  --bg0: #0b0e14;
+  --bg1: #121722;
+  --panel: #1a2130;
+  --stroke: #2c3750;
+  --text: #e7ecf5;
+  --subtle: #8a94a6;
+  --accent: #5be08a;
+  --ultra: #b06cf7;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  padding: 0 20px 80px;
+  background-color: var(--bg0);
+  background-image:
+    radial-gradient(900px 520px at 50% -140px, #1b2233 0%, transparent 70%);
+  background-repeat: no-repeat;
+  color: var(--text);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  -webkit-text-size-adjust: 100%;
+}
+
+.wrap {
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+header.site {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 44px 0 28px;
+}
+
+header.site img {
+  width: 68px;
+  height: 68px;
+  border-radius: 15px;
+  border: 1px solid var(--stroke);
+  flex: none;
+}
+
+header.site h1 {
+  margin: 0;
+  font-size: 26px;
+  letter-spacing: -0.02em;
+}
+
+header.site p {
+  margin: 4px 0 0;
+  color: var(--subtle);
+  font-size: 15px;
+}
+
+header.site a {
+  color: inherit;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+main {
+  background: var(--panel);
+  border: 1px solid var(--stroke);
+  border-radius: 16px;
+  padding: 8px 28px 28px;
+}
+
+h2 {
+  font-size: 20px;
+  letter-spacing: -0.01em;
+  margin: 32px 0 10px;
+}
+
+h2:first-of-type {
+  margin-top: 24px;
+}
+
+h3 {
+  font-size: 17px;
+  margin: 26px 0 6px;
+}
+
+p,
+li {
+  color: #cfd7e6;
+}
+
+ul {
+  padding-left: 20px;
+}
+
+li {
+  margin: 6px 0;
+}
+
+a {
+  color: var(--accent);
+}
+
+a:hover {
+  color: #8ff0b3;
+}
+
+.updated {
+  color: var(--subtle);
+  font-size: 14px;
+  margin: 20px 0 0;
+}
+
+.lede {
+  font-size: 18px;
+  color: var(--text);
+}
+
+.tldr {
+  background: var(--bg1);
+  border: 1px solid var(--stroke);
+  border-left: 3px solid var(--accent);
+  border-radius: 10px;
+  padding: 14px 18px;
+  margin: 22px 0 4px;
+}
+
+.tldr p {
+  margin: 0;
+  color: var(--text);
+}
+
+.cards {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1fr 1fr;
+  margin: 24px 0 4px;
+  padding: 0;
+  list-style: none;
+}
+
+.cards a {
+  display: block;
+  background: var(--bg1);
+  border: 1px solid var(--stroke);
+  border-radius: 12px;
+  padding: 16px 18px;
+  text-decoration: none;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.cards a:hover {
+  border-color: var(--accent);
+}
+
+.cards span {
+  display: block;
+  color: var(--subtle);
+  font-weight: 400;
+  font-size: 14px;
+  margin-top: 2px;
+}
+
+footer {
+  margin-top: 28px;
+  color: var(--subtle);
+  font-size: 14px;
+  text-align: center;
+}
+
+footer a {
+  color: var(--subtle);
+  text-decoration: underline;
+}
+
+@media (max-width: 520px) {
+  .cards {
+    grid-template-columns: 1fr;
+  }
+
+  main {
+    padding: 4px 20px 22px;
+  }
+}
