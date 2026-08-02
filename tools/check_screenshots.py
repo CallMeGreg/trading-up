@@ -15,11 +15,15 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from pngutil import PNG  # noqa: E402
 
-# Portrait sizes App Store Connect accepts for the two display classes this app
-# has to provide (it ships TARGETED_DEVICE_FAMILY "1,2", so iPad is required).
+# Portrait sizes App Store Connect accepts for the display classes this app has
+# to provide (it ships TARGETED_DEVICE_FAMILY "1,2", so iPad is required).
+# App Store Connect keeps a separate 6.5" iPhone slot and will reject a 6.9"
+# image there, so both iPhone classes are captured.
 ACCEPTED = {
     (1320, 2868): 'iPhone 6.9"',
     (1290, 2796): 'iPhone 6.9"',
+    (1242, 2688): 'iPhone 6.5"',
+    (1284, 2778): 'iPhone 6.5"',
     (2064, 2752): 'iPad 13"',
     (2048, 2732): 'iPad 13"',
 }

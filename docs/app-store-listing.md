@@ -13,10 +13,11 @@ ads, no accounts, no network access, 250 cards across 5 sets.
 
 | Field | Recommended value | Notes |
 | --- | --- | --- |
-| **Name** (30) | `Trading Up` | 10/30. If taken, use `Trading Up: Card Collector` (26) or `Trading Up — Sprytes` (20). Check availability *before* creating the record — the name is reserved the moment you create it. |
+| **Name** (30) | `Trading Up TCG` | 14/30. **In use** — `Trading Up` was the first choice; the record was created as `Trading Up TCG`. The name is reserved the moment the record is created. |
 | **Subtitle** (30) | `Rip packs, chase the rares` | 26/30. Indexed for search, so it earns its keywords. Alternates: `Open packs. Build the binder.` (29), `A card collecting economy sim` (29). |
 | **Bundle ID** | `com.callmegreg.tradingup` | Must match `PRODUCT_BUNDLE_IDENTIFIER` in the project. Create the App ID in the Developer portal first. |
-| **SKU** | `TRADINGUP-IOS-001` | Private. Never shown to users, can't be changed later. |
+| **SKU** | `trading-up` | **In use.** Private, never shown to users, and can't be changed once the record exists. |
+| **Apple ID** | `6792863289` | Assigned by App Store Connect; you'll need it for `altool` uploads and support requests. |
 | **Primary Language** | `English (U.S.)` | |
 | **Primary Category** | `Games` | |
 | **Primary Subcategory 1** | `Card` | The most literal match — this is a trading-card game. |
@@ -81,7 +82,8 @@ Trading Up has none of those:
 - The randomness is loot-box-shaped (randomised rewards) rather than
   casino-shaped. Apple governs that under **Guideline 3.1.1**, which requires
   publishing odds *for loot boxes bought with real money*. Trading Up has no
-  IAP, so 3.1.1 does not bite either — and the odds are disclosed in-app anyway.
+  IAP, so 3.1.1 does not bite either — and the odds are published on the
+  support page regardless.
 
 So **"None" is the honest and defensible answer**, and it matches how comparable
 pack-opening collection games are rated.
@@ -158,9 +160,15 @@ indexed from those fields, so spending keyword characters on them is wasted.
 
 | Field | Recommended value | Required? |
 | --- | --- | --- |
-| **Support URL** | `https://github.com/CallMeGreg/trading-up/issues` | **Yes.** Must be a live page where a user can get help. An Issues page qualifies; a small GitHub Pages support page with an email address is nicer. |
-| **Marketing URL** | `https://github.com/CallMeGreg/trading-up` | Optional. |
-| **Privacy Policy URL** | `https://callmegreg.github.io/trading-up/privacy` | **Yes — required for every app, including ones that collect nothing.** Ready-to-publish text in §5. |
+| **Support URL** | `https://callmegreg.github.io/trading-up/support/` | **Yes.** Must be a live page where a user can get help. The repo's Issues page also qualifies; the Pages one answers the common questions up front and links to Issues anyway. |
+| **Marketing URL** | `https://callmegreg.github.io/trading-up/` | Optional. |
+| **Privacy Policy URL** | `https://callmegreg.github.io/trading-up/privacy/` | **Yes — required for every app, including ones that collect nothing.** |
+
+All three are served from `site/` by `.github/workflows/pages.yml`. Edit the
+HTML there, merge to `main`, and the deploy runs itself. The policy wording
+that used to live in §5 of this file is now the page itself — `site/privacy/index.html`
+is the single source of truth, so it can't drift out of sync with what's
+published.
 
 ### Other version fields
 
@@ -192,13 +200,19 @@ produced by `tools/capture_screenshots.sh`.
 > good roll works for marketing, but if you want to keep a specific set, archive
 > it outside the repo (a zip on the GitHub Release is the tidy option).
 
-**Both of these are required**, because the app ships
-`TARGETED_DEVICE_FAMILY = "1,2"` (universal iPhone + iPad):
+**All three of these are required**, because the app ships
+`TARGETED_DEVICE_FAMILY = "1,2"` (universal iPhone + iPad), and App Store
+Connect keeps the 6.5" iPhone as its own upload that rejects a 6.9" image:
 
 | Display class | Size | Folder |
 | --- | --- | --- |
 | iPhone 6.9" | 1320 × 2868 | `docs/screenshots/appstore/iphone-17-pro-max/` |
+| iPhone 6.5" | 1242 × 2688 | `docs/screenshots/appstore/iphone-11-pro-max/` |
 | iPad 13" | 2064 × 2752 | `docs/screenshots/appstore/ipad-pro-13-inch-m5/` |
+
+The 6.5" slot also accepts 1284 × 2778 (and either size rotated to landscape),
+but the capture uses 1242 × 2688 because that's what the simulator shoots
+natively — don't resize a 6.9" image to fill it, the aspect ratios differ.
 
 29 numbered screenshots are available per device; App Store Connect accepts a
 maximum of **10** per size. Recommended ten, in upload order — the first three
@@ -272,28 +286,11 @@ form, so **it has to stay in sync with the table above** — if the app ever gai
 analytics or a network call, both change together.
 
 The privacy *label* being "no data" does **not** waive the privacy *policy URL*.
-Publish something like this at the URL you enter:
-
-```
-Trading Up — Privacy Policy
-Last updated: <date>
-
-Trading Up does not collect, transmit, or share any personal data.
-
-The app has no accounts, no sign-in, no analytics, no advertising, no
-third-party SDKs, and makes no network requests of any kind.
-
-Your game progress — cash, collection, grades and statistics — is stored in a
-single file inside the app's own private container on your device. It is never
-sent anywhere. Deleting the app deletes it permanently.
-
-If your device has iCloud device backups enabled, that file may be included in
-your own encrypted Apple backup. The developer has no access to it.
-
-Children: the app collects nothing from anyone, including children under 13.
-
-Questions: <your support email>
-```
+The policy is published at
+[`callmegreg.github.io/trading-up/privacy/`](https://callmegreg.github.io/trading-up/privacy/)
+and its source is [`site/privacy/index.html`](../site/privacy/index.html) —
+edit it there rather than copying the wording into this file, so the published
+page and the declared label can only ever change together.
 
 ---
 
@@ -320,8 +317,8 @@ outside the app.
 Regarding the age-rating gambling questions: the app has no wagering, betting,
 casino games or cash-out. Buying a pack always delivers six cards, so nothing is
 staked or lost on a roll. The randomised elements are the contents of a pack and
-a card's grade, both of which are randomised rewards rather than a bet. Pack
-odds are disclosed in the app.
+a card's grade, both of which are randomised rewards rather than a bet. The
+pack odds are published at https://callmegreg.github.io/trading-up/support/.
 
 All 250 creatures, their names, artwork, flavour text and set names are original
 works created for this app. No third-party or licensed content is used.
@@ -365,8 +362,10 @@ Connect reads it and stops asking.
 - [ ] App record created in App Store Connect with the name reserved
 - [ ] App Information filled in (§1) and Age Rating answered (§2)
 - [ ] Version 1.0 metadata pasted in (§3)
-- [ ] 10 iPhone 6.9" **and** 10 iPad 13" screenshots uploaded (§4)
-- [ ] Privacy policy live at its URL, App Privacy published as "Data Not Collected" (§5)
+- [ ] 10 iPhone 6.9", 10 iPhone 6.5" **and** 10 iPad 13" screenshots uploaded (§4)
+- [x] Privacy policy, support and marketing pages live on GitHub Pages
+      (`site/`, deployed by `.github/workflows/pages.yml`)
+- [ ] App Privacy published as "Data Not Collected" in App Store Connect (§5)
 - [ ] `TradingUp/PrivacyInfo.xcprivacy` present in the built bundle (§5) — without it
       the upload draws an automated ITMS-91053 rejection email
 - [ ] App Review notes and contact filled in (§6)
@@ -374,5 +373,6 @@ Connect reads it and stops asking.
 - [ ] `python3 tools/check_icon.py` passes — 1024×1024, opaque, square (§ issue #5 step 4)
 - [ ] `MARKETING_VERSION = 1.0`, `CURRENT_PROJECT_VERSION` bumped
 - [ ] Archive built with a Distribution signing identity and uploaded
+      ([APP_STORE.md § Build upload](APP_STORE.md#build-upload))
 - [ ] Build finished processing and is attached to the 1.0 version
 - [ ] "Manually release this version" selected, then Submit for Review
