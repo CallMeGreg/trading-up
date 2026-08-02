@@ -112,30 +112,6 @@ li {
   margin: 6px 0;
 }
 
-pre {
-  background: var(--bg1);
-  border: 1px solid var(--stroke);
-  border-radius: 10px;
-  padding: 14px 16px;
-  margin: 18px 0;
-  overflow-x: auto;
-  color: #cfd7e6;
-}
-
-code {
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
-    monospace;
-  font-size: 13.5px;
-}
-
-p code,
-li code {
-  background: var(--bg1);
-  border: 1px solid var(--stroke);
-  border-radius: 6px;
-  padding: 1px 5px;
-}
-
 a {
   color: var(--accent);
 }
