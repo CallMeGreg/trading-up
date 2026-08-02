@@ -14,7 +14,7 @@ enum Economy {
     static func gradeFee(set: Int) -> Double { gradeFees[clampIndex(set)] }
 
     /// The lowest pack price in the game — the least cash needed to buy any pack.
-    /// Falling below this with no sellable cards ends the game.
+    /// Falling below this with no way left to raise it ends the game.
     static var cheapestPackPrice: Double { packPrices.min() ?? 0 }
 
     // Booster box
@@ -59,6 +59,11 @@ enum Economy {
     static func gradeMultiplier(_ grade: Int) -> Double {
         gradeTable.first { $0.grade == grade }?.mult ?? 1.0
     }
+
+    /// The luckiest grade a card can roll *by value* — which is PSA 1, the 10×
+    /// "authentic oddity", not PSA 10. Used to judge whether a duplicate is
+    /// worth grading before it's sold.
+    static var luckiestGrade: Int { (gradeTable.max { $0.mult < $1.mult })?.grade ?? 10 }
 
     static func gradeLabel(_ grade: Int) -> String {
         switch grade {

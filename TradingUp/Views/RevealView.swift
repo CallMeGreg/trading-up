@@ -220,41 +220,45 @@ private struct SummaryView: View {
     private var pendingProceeds: Double { pendingDuplicates.reduce(0) { $0 + $1.sellValue } }
 
     var body: some View {
-        VStack(spacing: 0) {
-            ScrollView {
-                VStack(spacing: 18) {
-                    Text(result.isBox ? "Booster Box Opened!" : "Pack Opened!")
-                        .font(.system(size: 26, weight: .black, design: .rounded))
-                        .foregroundStyle(.white)
-                        .padding(.top, 28)
+        GeometryReader { geo in
+            let metrics = GridMetrics(container: geo.size.width)
+            VStack(spacing: 0) {
+                ScrollView {
+                    VStack(spacing: metrics.sectionSpacing) {
+                        Text(result.isBox ? "Booster Box Opened!" : "Pack Opened!")
+                            .font(.system(size: 26, weight: .black, design: .rounded))
+                            .foregroundStyle(.white)
+                            .padding(.top, metrics.titleTopPad)
 
-                    HStack(spacing: 10) {
-                        StatTile(label: "Cards", value: "\(result.pulled.count)")
-                        if result.isBox {
-                            StatTile(label: "Foils", value: "\(foils.count)", tint: Color(hex: "ff8ad6"))
-                            StatTile(label: "Ultras", value: "\(ultras.count)", tint: Color(hex: "b06cf7"))
-                        } else {
-                            StatTile(label: "New", value: "\(newCount)", tint: Color(hex: "ffd54a"))
-                            StatTile(label: "Foils", value: "\(foils.count)", tint: Color(hex: "ff8ad6"))
+                        HStack(spacing: 10) {
+                            StatTile(label: "Cards", value: "\(result.pulled.count)")
+                            if result.isBox {
+                                StatTile(label: "Foils", value: "\(foils.count)", tint: Color(hex: "ff8ad6"))
+                                StatTile(label: "Ultras", value: "\(ultras.count)", tint: Color(hex: "b06cf7"))
+                            } else {
+                                StatTile(label: "New", value: "\(newCount)", tint: Color(hex: "ffd54a"))
+                                StatTile(label: "Foils", value: "\(foils.count)", tint: Color(hex: "ff8ad6"))
+                            }
+                            StatTile(label: "Value", value: totalValue.moneyShort, tint: Palette.money)
                         }
-                        StatTile(label: "Value", value: totalValue.moneyShort, tint: Palette.money)
-                    }
 
-                    ForEach(result.bonuses) { bonus in
-                        BonusBanner(bonus: bonus)
-                    }
+                        ForEach(result.bonuses) { bonus in
+                            BonusBanner(bonus: bonus)
+                        }
 
-                    if result.isBox { boxGrid } else { packGrid }
+                        if result.isBox { boxGrid(metrics) } else { packGrid(metrics) }
+                    }
+                    .padding(16)
+                    .readableWidth(metrics.contentCap)
                 }
-                .padding(16)
-                .readableWidth(760)
+
+                if let pc = packCounter { packCounterBar(pc) }
+
+                finishButtons
+                    .padding(16)
+                    .readableWidth()
             }
-
-            if let pc = packCounter { packCounterBar(pc) }
-
-            finishButtons
-                .padding(16)
-                .readableWidth()
+            .frame(width: geo.size.width, height: geo.size.height)
         }
         .background(Palette.bg0.ignoresSafeArea())
         .onAppear(perform: computePlan)
@@ -274,11 +278,11 @@ private struct SummaryView: View {
 
     // MARK: Grids
 
-    private var boxGrid: some View {
+    private func boxGrid(_ m: GridMetrics) -> some View {
         VStack(spacing: 10) {
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 104), spacing: 12)], spacing: 12) {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: m.card), spacing: m.spacing)], spacing: m.spacing) {
                 ForEach(boxHighlights) { inst in
-                    CardView(card: inst.card, instance: inst, width: 104)
+                    CardView(card: inst.card, instance: inst, width: m.card)
                 }
             }
             if boxHighlights.count < result.pulled.count {
@@ -291,16 +295,17 @@ private struct SummaryView: View {
         .padding(.top, 4)
     }
 
-    private var packGrid: some View {
+    private func packGrid(_ m: GridMetrics) -> some View {
         VStack(spacing: 10) {
             if !pendingDuplicates.isEmpty {
-                Text("Tap a duplicate to keep or sell it")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(Palette.subtle)
+                Label("Tap a highlighted card to sell it or keep it", systemImage: "hand.tap.fill")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(Palette.tapCue)
+                    .multilineTextAlignment(.center)
             }
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 104), spacing: 12)], spacing: 12) {
+            LazyVGrid(columns: m.columns, spacing: m.spacing + m.chipRoom) {
                 ForEach(result.pulled) { inst in
-                    PackCardSlot(inst: inst, slot: slot(for: inst), width: 104) {
+                    PackCardSlot(inst: inst, slot: slot(for: inst), width: m.card) {
                         actionInst = inst
                     }
                 }
@@ -455,6 +460,46 @@ private struct SummaryView: View {
     }
 }
 
+/// Sizing for the pack-summary card grid.
+///
+/// A pack is always six cards, so it's laid out as a fixed three columns that
+/// stretch to fill whatever width the screen offers. On a phone that's the same
+/// ~104pt card as before; on an iPad — where fixed 104pt cards left the whole
+/// summary marooned in the top quarter of the screen — the cards grow to their
+/// full design size and spread across the width instead.
+private struct GridMetrics {
+    let contentCap: CGFloat
+    let spacing: CGFloat
+    let card: CGFloat
+    let sectionSpacing: CGFloat
+    let titleTopPad: CGFloat
+    /// Room below each card for the "sell or keep" chip that hangs off a pending
+    /// duplicate, so it never lands on top of the card's own value bar.
+    let chipRoom: CGFloat
+
+    /// Three across is what a phone already fit, and it keeps a six-card pack to
+    /// two tidy rows at every screen size.
+    private static let columnCount = 3
+
+    init(container: CGFloat) {
+        // Wider than the app's usual reading width: this screen is a grid of
+        // pictures, not a column of prose.
+        let wide = container >= 700
+        contentCap = wide ? 820 : 760
+        spacing = wide ? 18 : 12
+        sectionSpacing = wide ? 26 : 18
+        titleTopPad = wide ? 44 : 28
+        let usable = min(container, contentCap) - 32          // .padding(16) on each side
+        let perColumn = (usable - CGFloat(Self.columnCount - 1) * spacing) / CGFloat(Self.columnCount)
+        card = min(230, max(96, perColumn))                   // 230 is CardView's native size
+        chipRoom = 26 * min(1.7, max(1, card / 104))
+    }
+
+    var columns: [GridItem] {
+        Array(repeating: GridItem(.flexible(), spacing: spacing), count: Self.columnCount)
+    }
+}
+
 /// A single card on the pack summary with its NEW / duplicate / sold state.
 private struct PackCardSlot: View {
     let inst: CardInstance
@@ -462,7 +507,13 @@ private struct PackCardSlot: View {
     let width: CGFloat
     let onTap: () -> Void
 
+    @State private var pulse = false
+
     private var tappable: Bool { slot == .pendingDup || slot == .keptDup }
+    /// Chrome scales with the card, which is much larger on a tablet than the
+    /// 104pt phone card these badges were originally sized against.
+    private var s: CGFloat { min(1.7, max(1, width / 104)) }
+    private var corner: CGFloat { 16 * (width / 230) }
 
     /// Kept and sold cards are "processed" — desaturated so it's clear which
     /// cards still need a decision. Sold fades more and carries a stamp.
@@ -479,42 +530,76 @@ private struct PackCardSlot: View {
         CardView(card: inst.card, instance: inst, width: width)
             .saturation(isProcessed ? 0 : 1)
             .opacity(cardOpacity)
+            .overlay { if slot == .pendingDup { pendingRing } }
             .overlay(alignment: .topTrailing) { badgeView }
+            .overlay(alignment: .bottom) { if slot == .pendingDup { tapChip } }
             .overlay { if slot == .sold { soldStamp } }
             .contentShape(Rectangle())
             .onTapGesture { if tappable { Haptics.play(.light); onTap() } }
             .animation(.easeInOut(duration: 0.2), value: slot)
+            .onAppear {
+                guard slot == .pendingDup else { return }
+                withAnimation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true)) { pulse = true }
+            }
+    }
+
+    /// Duplicates are the only cards here that still need a decision, so they
+    /// get an unmissable cue of their own: a breathing accent ring and a tap
+    /// chip. A single line of grey hint text above the grid wasn't enough for
+    /// players to realise the cards themselves were buttons.
+    private var pendingRing: some View {
+        RoundedRectangle(cornerRadius: corner)
+            .strokeBorder(Palette.tapCue, lineWidth: 2.5 * s)
+            .shadow(color: Palette.tapCue.opacity(pulse ? 0.85 : 0.3), radius: 7 * s)
+            .opacity(pulse ? 1 : 0.55)
+            .allowsHitTesting(false)
+    }
+
+    private var tapChip: some View {
+        HStack(spacing: 3 * s) {
+            Image(systemName: "hand.tap.fill").font(.system(size: 8 * s, weight: .black))
+            Text("SELL OR KEEP").font(.system(size: 8 * s, weight: .black))
+        }
+        .foregroundStyle(.white)
+        .padding(.horizontal, 7 * s).padding(.vertical, 4 * s)
+        .background(Capsule().fill(Palette.tapCue))
+        .overlay(Capsule().strokeBorder(.white.opacity(0.4), lineWidth: 0.5))
+        .shadow(color: .black.opacity(0.5), radius: 3 * s, y: 1)
+        .scaleEffect(pulse ? 1.06 : 1)
+        .offset(y: 13 * s)
+        .allowsHitTesting(false)
     }
 
     @ViewBuilder private var badgeView: some View {
         if let b = badge {
             Text(b.text)
-                .font(.system(size: 9, weight: .black))
+                .font(.system(size: 9 * s, weight: .black))
                 .foregroundStyle(.white)
-                .padding(.horizontal, 7).padding(.vertical, 3)
+                .padding(.horizontal, 7 * s).padding(.vertical, 3 * s)
                 .background(Capsule().fill(b.color))
                 .overlay(Capsule().strokeBorder(.white.opacity(0.35), lineWidth: 0.5))
-                .shadow(color: .black.opacity(0.45), radius: 2, y: 1)
-                .offset(x: 5, y: -7)
+                .shadow(color: .black.opacity(0.45), radius: 2 * s, y: 1)
+                .offset(x: 5 * s, y: -7 * s)
         }
     }
 
     private var badge: (text: String, color: Color)? {
         switch slot {
-        case .newCard: return ("✦ NEW", Color(hex: "ffd54a"))
-        default:       return nil
+        case .newCard:    return ("✦ NEW", Color(hex: "ffd54a"))
+        case .keptDup:    return ("KEPT", Color(hex: "5b6b8a"))
+        default:          return nil
         }
     }
 
     private var soldStamp: some View {
         Text("SOLD\n+\(inst.sellValue.money)")
             .multilineTextAlignment(.center)
-            .font(.system(size: 13, weight: .black, design: .rounded))
+            .font(.system(size: 13 * s, weight: .black, design: .rounded))
             .foregroundStyle(.white)
-            .padding(.horizontal, 8).padding(.vertical, 6)
-            .background(RoundedRectangle(cornerRadius: 8).fill(Palette.money.opacity(0.92)))
+            .padding(.horizontal, 8 * s).padding(.vertical, 6 * s)
+            .background(RoundedRectangle(cornerRadius: 8 * s).fill(Palette.money.opacity(0.92)))
             .rotationEffect(.degrees(-11))
-            .shadow(color: .black.opacity(0.4), radius: 3, y: 1)
+            .shadow(color: .black.opacity(0.4), radius: 3 * s, y: 1)
     }
 }
 
@@ -543,20 +628,24 @@ struct BonusBanner: View {
 /// Rotating light rays behind rare pulls.
 struct GlowBurst: View {
     var color: Color
+    /// Overall diameter. Scaled from the card it sits behind so the effect can
+    /// never be wider than the screen it's drawn on.
+    var diameter: CGFloat = 440
     var body: some View {
         TimelineView(.animation) { tl in
             let angle = tl.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 12) / 12
             ZStack {
                 Circle()
                     .fill(RadialGradient(gradient: Gradient(colors: [color.opacity(0.5), .clear]),
-                                         center: .center, startRadius: 10, endRadius: 220))
-                    .frame(width: 440, height: 440)
+                                         center: .center,
+                                         startRadius: diameter / 44, endRadius: diameter / 2))
+                    .frame(width: diameter, height: diameter)
                 AngularGradient(
                     gradient: Gradient(stops: raysStops()),
                     center: .center,
                     angle: .degrees(angle * 360)
                 )
-                .frame(width: 420, height: 420)
+                .frame(width: diameter * 0.955, height: diameter * 0.955)
                 .mask(Circle())
                 .opacity(0.18)
                 .blendMode(.plusLighter)

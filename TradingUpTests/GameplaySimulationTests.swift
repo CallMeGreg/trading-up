@@ -76,7 +76,26 @@ final class GameplaySimulationTests: XCTestCase {
         broke.instances = [CardInstance(cardId: "S1-001")]
         XCTAssertTrue(broke.isGameOver, "broke with only last-copies should be game over")
         broke.instances.append(CardInstance(cardId: "S1-001"))
-        XCTAssertFalse(broke.isGameOver, "broke but holding a sellable duplicate should not be over")
+        XCTAssertTrue(broke.isGameOver,
+                      "a duplicate worth pennies can't buy a pack, so the run is still over")
+
+        // A duplicate only keeps the run alive if it actually bridges the gap.
+        var bridged = GameCore()
+        bridged.cash = Economy.cheapestPackPrice - 0.10
+        bridged.instances = [CardInstance(cardId: "S1-001"), CardInstance(cardId: "S1-001")]
+        XCTAssertFalse(bridged.isGameOver,
+                       "a duplicate that covers the shortfall should keep the run alive")
+
+        // Grading is the other way out: a raw rare sells for $2.21, but a lucky
+        // roll on a $2 grade makes it worth far more than the cheapest pack.
+        var gradeable = GameCore()
+        gradeable.cash = 2
+        gradeable.instances = [CardInstance(cardId: "S1-003"), CardInstance(cardId: "S1-003")]
+        XCTAssertLessThan(gradeable.cash + (gradeable.instances[0].sellValue), Economy.cheapestPackPrice,
+                          "selling that rare raw shouldn't be enough on its own")
+        XCTAssertFalse(gradeable.isGameOver, "a gradeable dupe you can afford to grade is a way out")
+        gradeable.cash = Economy.gradeFee(set: 1) - 0.01   // can't even pay the grading fee
+        XCTAssertTrue(gradeable.isGameOver, "no way out once the grading fee is out of reach too")
 
         XCTAssertEqual(Economy.cheapestPackPrice, 10, "cheapest pack price should be $10")
         var edge = GameCore()
@@ -85,6 +104,22 @@ final class GameplaySimulationTests: XCTestCase {
         XCTAssertTrue(edge.isGameOver, "just under cheapest pack price with no sellables = game over")
         edge.cash = Economy.cheapestPackPrice
         XCTAssertFalse(edge.isGameOver, "== cheapest pack price should still be in the game")
+    }
+
+    func testMaxRaisableCashCountsEachExtraOnce() {
+        var core = GameCore()
+        core.cash = 0
+        core.instances = [CardInstance(cardId: "S1-001"), CardInstance(cardId: "S1-001"),
+                          CardInstance(cardId: "S1-001")]
+        // Three copies means two are actually sellable — the last one can never go.
+        XCTAssertEqual(core.sellableExtras.count, 2)
+        XCTAssertEqual(core.maxRaisableCash, 2 * core.instances[0].sellValue, accuracy: 0.001)
+
+        // A lone copy is worth nothing to a player trying to raise cash.
+        core.instances = [CardInstance(cardId: "S1-001")]
+        core.cash = 5
+        XCTAssertTrue(core.sellableExtras.isEmpty)
+        XCTAssertEqual(core.maxRaisableCash, 5, accuracy: 0.001)
     }
 
     func testWinConditionAndBonusPayout() {
@@ -348,5 +383,83 @@ final class WideAndShortLayoutRenderTests: XCTestCase {
 
     func testLoseViewRendersAtIPadWidth() {
         XCTAssertEqual(rendersWithoutFailure(LoseView(), size: ipadSize), ipadSize)
+    }
+
+    func testWelcomeViewRendersAtLandscapePhoneSize() {
+        XCTAssertEqual(rendersWithoutFailure(WelcomeView(), size: landscapePhoneSize), landscapePhoneSize)
+    }
+
+    /// The reveal used to hang its glow (440pt) and particle field (460pt) off the
+    /// same ZStack as the card, in absolute points. On anything narrower than
+    /// those the stack overflowed and the hero card landed ~35pt right of centre.
+    /// They're a background/overlay now, so the view measures exactly one card.
+    func testRevealingCardViewIsExactlyCardSized() {
+        var rng = SeededRNG(3)
+        var core = GameCore()
+        guard let result = core.buyPack(set: 1, using: &rng) else {
+            XCTFail("expected a pack purchase to succeed")
+            return
+        }
+        // Slot 6 is always the rare/ultra hit — the pull that carries the effects.
+        guard let hit = result.pulled.last else { return XCTFail("empty pack") }
+        XCTAssertTrue(hit.card.rarity == .rare || hit.card.rarity == .ultra)
+
+        let width: CGFloat = 280
+        let renderer = ImageRenderer(content: RevealingCardView(inst: hit, isNew: true, width: width))
+        renderer.proposedSize = ProposedViewSize(width: 390, height: 700)   // iPhone 14
+        renderer.scale = 1
+        XCTAssertEqual(renderer.uiImage?.size, CGSize(width: width, height: width * 1.4))
+    }
+
+    /// There's little enough on the intro that nobody should have to scroll to
+    /// find the button that starts the game, so check the green CTA actually
+    /// lands on screen across the phone sizes people are playing on.
+    func testWelcomeViewShowsStartButtonWithoutScrolling() {
+        let devices: [(String, CGSize)] = [
+            ("iPhone 14", CGSize(width: 390, height: 763)),
+            ("iPhone 16/17", CGSize(width: 393, height: 759)),
+            ("iPhone 17 Pro", CGSize(width: 402, height: 795)),
+            ("iPhone 17 Pro Max", CGSize(width: 440, height: 874)),
+            ("iPad 11-inch", CGSize(width: 834, height: 1150)),
+        ]
+        for (name, size) in devices {
+            let renderer = ImageRenderer(content: WelcomeView().environment(game))
+            renderer.proposedSize = ProposedViewSize(size)
+            renderer.scale = 1
+            guard let image = renderer.uiImage else {
+                XCTFail("\(name): welcome screen failed to render")
+                continue
+            }
+            XCTAssertTrue(containsActionGreen(image, bottomFraction: 0.22),
+                          "\(name): 'Start Collecting' should be visible without scrolling")
+        }
+    }
+
+    /// Looks for the money-green of the primary button in the bottom slice of a
+    /// rendered screen.
+    private func containsActionGreen(_ image: UIImage, bottomFraction: CGFloat) -> Bool {
+        guard let cg = image.cgImage else { return false }
+        let w = cg.width, h = cg.height
+        var pixels = [UInt8](repeating: 0, count: w * h * 4)
+        guard let ctx = CGContext(data: &pixels, width: w, height: h, bitsPerComponent: 8,
+                                  bytesPerRow: w * 4, space: CGColorSpaceCreateDeviceRGB(),
+                                  bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+        else { return false }
+        ctx.draw(cg, in: CGRect(x: 0, y: 0, width: w, height: h))
+        for y in Int(CGFloat(h) * (1 - bottomFraction))..<h {
+            for x in stride(from: 0, to: w, by: 4) {
+                let i = (y * w + x) * 4
+                let r = Int(pixels[i]), g = Int(pixels[i + 1]), b = Int(pixels[i + 2])
+                if g > 150, g > r + 45, g > b + 35 { return true }
+            }
+        }
+        return false
+    }
+
+    /// The evolution line on a card's detail sheet draws each stage's shipped
+    /// illustration, so every card needs one in the asset catalogue.
+    func testEveryCardHasShippedArt() {
+        let missing = CardDatabase.all.filter { UIImage(named: $0.id) == nil }
+        XCTAssertTrue(missing.isEmpty, "cards without art: \(missing.prefix(5).map(\.id))")
     }
 }

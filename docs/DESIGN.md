@@ -14,8 +14,8 @@
 You are a card collector with **$100** starting cash. Buy packs, open them in an
 exciting reveal, and try to **collect all 250 creatures** across 5 sets. Sell
 duplicates back to the shop, gamble on **card grading** for value swings, and chase
-**foils** and **ultra rares**. Run out of money with nothing left to sell and you
-lose. Complete the collection and you win.
+**foils** and **ultra rares**. Run out of money with nothing left worth selling and
+you lose. Complete the collection and you win.
 
 It's a *slot‑machine‑meets‑collection* loop: the pack opening is the dopamine, the
 economy is the strategy, the 250‑card completion is the goal.
@@ -236,9 +236,13 @@ and one big multi‑pack open, **not** a bulk discount.
 
 ## 10. Win / lose & stats
 
-- **Lose:** cash drops **below the cheapest pack price ($10)** and you have **no
-  sellable cards left**. You can never sell your **last copy** of a unique card (you'd
-  lose collection progress), so "broke" means only singletons remain. A loss screen
+- **Lose:** cash drops **below the cheapest pack price ($10)** and **no amount of
+  selling could get you back to one**. You can never sell your **last copy** of a
+  unique card (you'd lose collection progress), so what's left to raise is your
+  duplicates — sold at the buylist price, or graded first when even the luckiest
+  roll would more than cover its own fee. Once that optimistic total still falls
+  short of $10, the run is provably finished and the loss screen appears
+  immediately, rather than making you sell out card-by-card first. A loss screen
   shows: cards collected per set, and total unique cards.
   - **This is now genuinely reachable.** The **sell‑back spread** (§6), the **steep
     per‑set price curve** (§3), and the **trimmed box/bonus payouts** (§8, §9) together

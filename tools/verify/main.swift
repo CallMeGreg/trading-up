@@ -119,10 +119,24 @@ do {
     broke.instances = [CardInstance(cardId: "S1-001")]
     check(broke.isGameOver, "broke with only last-copies = game over")
     broke.instances.append(CardInstance(cardId: "S1-001"))
-    check(!broke.isGameOver, "broke but holding a sellable duplicate = not over")
+    check(broke.isGameOver, "broke with a dupe worth pennies = still game over")
+    broke.cash = Economy.cheapestPackPrice - 0.10
+    check(!broke.isGameOver, "a dupe that covers the shortfall = still in the game")
+
+    // Grading is the other escape hatch, so a gradeable dupe you can afford to
+    // send in has to count even when selling it raw wouldn't be enough.
+    var gamble = GameCore()
+    gamble.cash = 2
+    gamble.instances = [CardInstance(cardId: "S1-003"), CardInstance(cardId: "S1-003")]
+    check(gamble.cash + gamble.instances[0].sellValue < Economy.cheapestPackPrice,
+          "that rare sold raw wouldn't reach a pack")
+    check(!gamble.isGameOver, "a gradeable dupe you can afford to grade = a way out")
+    gamble.cash = Economy.gradeFee(set: 1) - 0.01
+    check(gamble.isGameOver, "gradeable dupe but no fee money = game over")
 
     // Loss threshold is the cheapest pack price ($10), NOT $0: you lose once you
-    // can no longer afford even the cheapest pack and have nothing left to sell.
+    // can no longer afford even the cheapest pack, and selling everything you
+    // could spare (grading the worthwhile ones first) still wouldn't get you one.
     check(Economy.cheapestPackPrice == 10, "cheapest pack price is $10")
     var edge = GameCore()
     edge.instances = [CardInstance(cardId: "S1-001")]   // only a last copy (unsellable)
@@ -130,6 +144,14 @@ do {
     check(edge.isGameOver, "cash just under cheapest pack with no sellables = game over")
     edge.cash = Economy.cheapestPackPrice               // exactly $10 — can still buy a pack
     check(!edge.isGameOver, "cash == cheapest pack price = still in the game")
+
+    // Only genuine extras count: with three copies, two can go and one must stay.
+    var extras = GameCore()
+    extras.cash = 0
+    extras.instances = Array(repeating: CardInstance(cardId: "S1-001"), count: 3)
+    check(extras.sellableExtras.count == 2, "3 copies = 2 sellable extras")
+    check(abs(extras.maxRaisableCash - 2 * extras.instances[0].sellValue) < 0.001,
+          "raisable cash counts each extra exactly once")
 }
 
 print("\n== Win condition & bonuses ==")

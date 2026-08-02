@@ -176,41 +176,49 @@ struct RevealingCardView: View {
     }
 
     var body: some View {
+        // The flip stack alone defines this view's layout. Everything else —
+        // glow, particles, flash, badge — rides along as a background/overlay so
+        // it can't push the card around: the 460pt particle field is wider than
+        // a 390pt phone, and as a ZStack sibling it dragged rare pulls ~35pt off
+        // centre on an iPhone 14. The effects are sized off `width` too, so they
+        // stay in proportion on every device instead of being fixed at iPad scale.
         ZStack {
+            CardBack(set: inst.card.set, width: width)
+                .opacity(faceUp ? 0 : 1)
+                .rotation3DEffect(.degrees(180), axis: (x: 0, y: 1, z: 0))   // keep un-mirrored
+            CardView(card: inst.card, instance: inst, width: width)
+                .opacity(faceUp ? 1 : 0)
+        }
+        .rotation3DEffect(.degrees(rotation), axis: (x: 0, y: 1, z: 0), perspective: 0.45)
+        .overlay {
+            if isBig && faceUp { sheenSweep }
+        }
+        .background {
             if isSpecial {
-                GlowBurst(color: burstColor)
+                GlowBurst(color: burstColor, diameter: width * 1.57)
                     .scaleEffect(faceUp ? 1 : 0.55)
                     .opacity(faceUp ? 1 : 0)
                     .animation(.easeOut(duration: 0.4), value: faceUp)
             }
-
-            ZStack {
-                CardBack(set: inst.card.set, width: width)
-                    .opacity(faceUp ? 0 : 1)
-                    .rotation3DEffect(.degrees(180), axis: (x: 0, y: 1, z: 0))   // keep un-mirrored
-                CardView(card: inst.card, instance: inst, width: width)
-                    .opacity(faceUp ? 1 : 0)
-            }
-            .rotation3DEffect(.degrees(rotation), axis: (x: 0, y: 1, z: 0), perspective: 0.45)
-            .overlay {
-                if isBig && faceUp { sheenSweep }
-            }
-
+        }
+        .overlay {
             if showParticles && isSpecial {
                 ParticleBurst(colors: particleColors,
                               count: isBig ? 34 : 20,
                               duration: isBig ? 1.15 : 0.9,
-                              radius: isBig ? 210 : 150,
+                              radius: width * (isBig ? 0.75 : 0.54),
                               seed: seedFromID())
-                    .frame(width: 460, height: 460)
+                    .frame(width: fxSize, height: fxSize)
             }
-
+        }
+        .overlay {
             Color.white
                 .opacity(flash)
                 .blendMode(.plusLighter)
                 .allowsHitTesting(false)
-                .ignoresSafeArea()
-
+                .frame(width: fxSize, height: fxSize)
+        }
+        .overlay {
             if isNew {
                 Color.clear
                     .frame(width: width, height: width * 1.4)
@@ -220,6 +228,10 @@ struct RevealingCardView: View {
         }
         .onAppear(perform: run)
     }
+
+    /// Footprint of the burst effects, scaled off the card so a reveal looks the
+    /// same on a 4.7" phone as it does on a 13" iPad.
+    private var fxSize: CGFloat { width * 1.64 }
 
     /// The gold "NEW" flag that pops onto a brand-new card as it turns face-up —
     /// the same badge shown on the pack summary, so the reveal reads consistently.

@@ -74,7 +74,16 @@ struct CardDetailView: View {
             RoundedRectangle(cornerRadius: 10)
                 .fill(game.owns(c.id) ? AnyShapeStyle(c.element.artGradient) : AnyShapeStyle(Palette.bg0.opacity(0.5)))
             if game.owns(c.id) {
-                SigilView(seed: c.name + c.element.rawValue, element: c.element).padding(6)
+                // Same shipped illustration the card itself uses, so the line
+                // reads as a row of familiar creatures rather than placeholders.
+                if let art = UIImage(named: c.id) {
+                    Image(uiImage: art)
+                        .resizable()
+                        .interpolation(.high)
+                        .scaledToFill()
+                } else {
+                    SigilView(seed: c.name + c.element.rawValue, element: c.element).padding(6)
+                }
             } else {
                 Image(systemName: "questionmark")
                     .font(.system(size: 22, weight: .black))
@@ -85,6 +94,7 @@ struct CardDetailView: View {
                               lineWidth: c.id == card.id ? 2 : 1)
         }
         .frame(width: 68, height: 68)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 
     // MARK: Copies
