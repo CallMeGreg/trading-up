@@ -380,5 +380,6 @@ Connect reads it and stops asking.
 - [ ] `python3 tools/check_icon.py` passes — 1024×1024, opaque, square (§ issue #5 step 4)
 - [ ] `MARKETING_VERSION = 1.0`, `CURRENT_PROJECT_VERSION` bumped
 - [ ] Archive built with a Distribution signing identity and uploaded
+      ([APP_STORE.md § Build upload](APP_STORE.md#build-upload))
 - [ ] Build finished processing and is attached to the 1.0 version
 - [ ] "Manually release this version" selected, then Submit for Review

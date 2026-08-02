@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Export options for an App Store build. Used by:
+
+    xcodebuild -exportArchive -archivePath build/TradingUp.xcarchive \
+      -exportOptionsPlist tools/ExportOptions.plist \
+      -exportPath build/export -allowProvisioningUpdates
+
+  teamID is deliberately absent — xcodebuild reads it off the archive, so this
+  file carries no account-specific values and works for whoever is signing.
+-->
+<plist version="1.0">
+<dict>
+	<key>method</key>
+	<string>app-store-connect</string>
+	<key>destination</key>
+	<string>export</string>
+	<key>uploadSymbols</key>
+	<true/>
+</dict>
+</plist>
