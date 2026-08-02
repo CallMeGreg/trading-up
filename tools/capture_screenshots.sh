@@ -21,7 +21,11 @@
 # Required App Store Connect sizes (the app ships TARGETED_DEVICE_FAMILY "1,2",
 # so iPad screenshots are required too):
 #   iPhone 6.9"  1320x2868  — iPhone 17 Pro Max / 16 Pro Max
+#   iPhone 6.5"  1242x2688  — iPhone 11 Pro Max / XS Max
 #   iPad 13"     2064x2752  — iPad Pro 13-inch (M4 or later)
+#
+# The 6.5" slot is its own upload in App Store Connect and rejects a 6.9" image,
+# so it gets its own capture rather than a resize of the 6.9" set.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -48,13 +52,14 @@ case "$ONLY" in
   *) echo "--only must be all, playthrough or endgame (got '$ONLY')" >&2; exit 2 ;;
 esac
 if [ ${#DEVICES[@]} -eq 0 ]; then
-  DEVICES=("iPhone 17 Pro Max" "iPad Pro 13-inch (M5)")
+  DEVICES=("iPhone 17 Pro Max" "iPhone 11 Pro Max" "iPad Pro 13-inch (M5)")
 fi
 
 slugify() { echo "$1" | tr '[:upper:] ' '[:lower:]-' | tr -cd 'a-z0-9.-'; }
 
 udid_for() {
-  xcrun simctl list devices available -j \
+  local name=$1 udid devicetype runtime
+  udid=$(xcrun simctl list devices available -j \
     | /usr/bin/python3 -c "
 import json, sys
 name = sys.argv[1]
@@ -63,8 +68,33 @@ for runtime, devices in sorted(data.items(), reverse=True):
     for d in devices:
         if d['name'] == name and d.get('isAvailable'):
             print(d['udid']); sys.exit(0)
-sys.exit('no available simulator named ' + name)
-" "$1"
+" "$name")
+  if [ -n "$udid" ]; then
+    echo "$udid"
+    return 0
+  fi
+  # Xcode doesn't ship a simulator for every size the App Store still asks for
+  # — the 6.5" iPhone has to be created — so make one from its device type
+  # rather than making the operator do it by hand.
+  devicetype=$(xcrun simctl list devicetypes -j | /usr/bin/python3 -c "
+import json, sys
+name = sys.argv[1]
+for dt in json.load(sys.stdin)['devicetypes']:
+    if dt['name'] == name:
+        print(dt['identifier']); sys.exit(0)
+sys.exit('no simulator device type named ' + name)
+" "$name")
+  runtime=$(xcrun simctl list runtimes -j | /usr/bin/python3 -c "
+import json, sys
+ios = [r for r in json.load(sys.stdin)['runtimes']
+       if r.get('isAvailable') and r.get('platform') == 'iOS']
+if not ios:
+    sys.exit('no available iOS simulator runtime')
+ios.sort(key=lambda r: [int(p) for p in r['version'].split('.')])
+print(ios[-1]['identifier'])
+")
+  echo "    creating simulator: $name" >&2
+  xcrun simctl create "$name" "$devicetype" "$runtime"
 }
 
 export_shots() {   # export_shots <xcresult> <destination-dir>

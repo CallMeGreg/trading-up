@@ -192,13 +192,19 @@ produced by `tools/capture_screenshots.sh`.
 > good roll works for marketing, but if you want to keep a specific set, archive
 > it outside the repo (a zip on the GitHub Release is the tidy option).
 
-**Both of these are required**, because the app ships
-`TARGETED_DEVICE_FAMILY = "1,2"` (universal iPhone + iPad):
+**All three of these are required**, because the app ships
+`TARGETED_DEVICE_FAMILY = "1,2"` (universal iPhone + iPad), and App Store
+Connect keeps the 6.5" iPhone as its own upload that rejects a 6.9" image:
 
 | Display class | Size | Folder |
 | --- | --- | --- |
 | iPhone 6.9" | 1320 × 2868 | `docs/screenshots/appstore/iphone-17-pro-max/` |
+| iPhone 6.5" | 1242 × 2688 | `docs/screenshots/appstore/iphone-11-pro-max/` |
 | iPad 13" | 2064 × 2752 | `docs/screenshots/appstore/ipad-pro-13-inch-m5/` |
+
+The 6.5" slot also accepts 1284 × 2778 (and either size rotated to landscape),
+but the capture uses 1242 × 2688 because that's what the simulator shoots
+natively — don't resize a 6.9" image to fill it, the aspect ratios differ.
 
 29 numbered screenshots are available per device; App Store Connect accepts a
 maximum of **10** per size. Recommended ten, in upload order — the first three
@@ -365,7 +371,7 @@ Connect reads it and stops asking.
 - [ ] App record created in App Store Connect with the name reserved
 - [ ] App Information filled in (§1) and Age Rating answered (§2)
 - [ ] Version 1.0 metadata pasted in (§3)
-- [ ] 10 iPhone 6.9" **and** 10 iPad 13" screenshots uploaded (§4)
+- [ ] 10 iPhone 6.9", 10 iPhone 6.5" **and** 10 iPad 13" screenshots uploaded (§4)
 - [ ] Privacy policy live at its URL, App Privacy published as "Data Not Collected" (§5)
 - [ ] `TradingUp/PrivacyInfo.xcprivacy` present in the built bundle (§5) — without it
       the upload draws an automated ITMS-91053 rejection email

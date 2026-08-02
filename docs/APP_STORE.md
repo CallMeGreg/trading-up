@@ -22,16 +22,21 @@ completed collection (`tools/seed_save.py`) so the win screen, a finished set an
 a booster box are covered too.
 
 ```bash
-tools/capture_screenshots.sh                      # both required sizes, ~10 minutes
+tools/capture_screenshots.sh                      # all required sizes, ~15 minutes
 tools/capture_screenshots.sh "iPhone 17 Pro Max"  # just one device
 tools/capture_screenshots.sh --only endgame       # refresh shots 25-29 only
 ```
 
 Output lands in `docs/screenshots/appstore/<device>/` — 29 numbered PNGs per
-device at **1320×2868** (iPhone 6.9") and **2064×2752** (iPad 13"). Both are
-required: the target ships `TARGETED_DEVICE_FAMILY = "1,2"`, so App Store Connect
-asks for an iPad set as well as an iPhone set. `tools/check_screenshots.py <dir>`
-re‑validates sizes and alpha channels, and the capture script runs it for you.
+device at **1320×2868** (iPhone 6.9"), **1242×2688** (iPhone 6.5") and
+**2064×2752** (iPad 13"). All three are required: the target ships
+`TARGETED_DEVICE_FAMILY = "1,2"`, so App Store Connect asks for an iPad set as
+well as an iPhone set, and it keeps the 6.5" iPhone as a separate upload that
+rejects a 6.9" image. `tools/check_screenshots.py <dir>` re‑validates sizes and
+alpha channels, and the capture script runs it for you.
+
+Xcode ships simulators for the 6.9" iPhone and 13" iPad but not the 6.5" one, so
+the script creates that simulator on first run.
 
 Those PNGs are **gitignored on purpose** — they're build output, and ~65 MB a
 capture would dwarf the rest of the repo. Regenerate on demand; the set you
