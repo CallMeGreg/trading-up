@@ -150,12 +150,15 @@ a:hover {
   font-size: 13px;
 }
 
-/* Marketing shots, in the same order and with the same captions as the README. */
+/* Marketing shots, in the same order and with the same captions as the README.
+   Sized to always fit on one line — 1fr columns can't overflow the panel, and
+   the max-width keeps them from ballooning on a wide screen. */
 .shots {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 10px;
-  margin: 26px 0 4px;
+  gap: clamp(4px, 1.4vw, 10px);
+  max-width: 540px;
+  margin: 26px auto 4px;
   padding: 0;
   list-style: none;
 }
@@ -169,15 +172,15 @@ a:hover {
   width: 100%;
   height: auto;
   border: 1px solid var(--stroke);
-  border-radius: 10px;
+  border-radius: 8px;
   background: var(--bg1);
 }
 
 .shots b {
   display: block;
-  margin-top: 8px;
+  margin-top: 6px;
   color: var(--subtle);
-  font-size: 13px;
+  font-size: clamp(9px, 1.9vw, 13px);
   font-weight: 600;
   text-align: center;
 }
@@ -302,22 +305,6 @@ footer a {
   text-decoration: underline;
 }
 
-@media (max-width: 700px) {
-  .shots {
-    grid-auto-flow: column;
-    grid-auto-columns: 132px;
-    grid-template-columns: none;
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
-    scroll-snap-type: x proximity;
-    padding-bottom: 6px;
-  }
-
-  .shots li {
-    scroll-snap-align: center;
-  }
-}
-
 @media (max-width: 520px) {
   .cards {
     grid-template-columns: 1fr;
@@ -325,13 +312,6 @@ footer a {
 
   main {
     padding: 4px 20px 22px;
-  }
-
-  .shots {
-    margin-left: -20px;
-    margin-right: -20px;
-    padding-left: 20px;
-    padding-right: 20px;
   }
 
   table {
