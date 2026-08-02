@@ -13,10 +13,11 @@ ads, no accounts, no network access, 250 cards across 5 sets.
 
 | Field | Recommended value | Notes |
 | --- | --- | --- |
-| **Name** (30) | `Trading Up` | 10/30. If taken, use `Trading Up: Card Collector` (26) or `Trading Up — Sprytes` (20). Check availability *before* creating the record — the name is reserved the moment you create it. |
+| **Name** (30) | `Trading Up TCG` | 14/30. **In use** — `Trading Up` was the first choice; the record was created as `Trading Up TCG`. The name is reserved the moment the record is created. |
 | **Subtitle** (30) | `Rip packs, chase the rares` | 26/30. Indexed for search, so it earns its keywords. Alternates: `Open packs. Build the binder.` (29), `A card collecting economy sim` (29). |
 | **Bundle ID** | `com.callmegreg.tradingup` | Must match `PRODUCT_BUNDLE_IDENTIFIER` in the project. Create the App ID in the Developer portal first. |
-| **SKU** | `TRADINGUP-IOS-001` | Private. Never shown to users, can't be changed later. |
+| **SKU** | `trading-up` | **In use.** Private, never shown to users, and can't be changed once the record exists. |
+| **Apple ID** | `6792863289` | Assigned by App Store Connect; you'll need it for `altool` uploads and support requests. |
 | **Primary Language** | `English (U.S.)` | |
 | **Primary Category** | `Games` | |
 | **Primary Subcategory 1** | `Card` | The most literal match — this is a trading-card game. |
