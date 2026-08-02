@@ -246,9 +246,16 @@ tbody tr:last-child td {
   display: grid;
   gap: 12px;
   grid-template-columns: 1fr 1fr;
+  grid-auto-rows: 1fr;
   margin: 24px 0 4px;
   padding: 0;
   list-style: none;
+}
+
+/* Grid item, so the link stretches to the row height and both boxes match
+   however the descriptions wrap. */
+.cards li {
+  display: grid;
 }
 
 .cards a {
