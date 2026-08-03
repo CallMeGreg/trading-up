@@ -458,7 +458,7 @@ def shelf_row(defs, x, y, w, set_no, owned, unlocked, remaining=0):
         g = defs.linear([("0%", pal[1], "1"), ("100%", pal[2], "1")], x1=0, y1=0, x2=1, y2=0)
         out.append(rrect(tx, by, tw, bh, 13, grad=g))
         out.append(rrect(tx, by, tw, bh, 13, stroke="#ffffff", sw=1, opacity=0.2))
-        out.append(text(tx + 14, by + 24, "Rip a pack", 15, "#ffffff", weight=700))
+        out.append(text(tx + 14, by + 24, "Buy a pack", 15, "#ffffff", weight=700))
         out.append(text(tx + tw - 14, by + 24, money(PACK_PRICES[set_no]), 15, "#ffffff",
                         weight=900, anchor="end"))
         ly = by + bh + 15
@@ -500,10 +500,9 @@ def screen_shop(defs):
     out.append(progress(defs, 70, 92, SCREEN_W - 70 - 18 - 44, 63 / 250, MONEY, h=6))
     out.append(text(SCREEN_W - 18, 99, "63/250", 11, SUBTLE, weight=700, anchor="end", family=MONO))
 
-    y = 142
-    out.append(text(m + 2, y, "PACKS", 11, SUBTLE, weight=800, tracking=1.4))
-    out.append(text(SCREEN_W - m - 2, y, "5 SETS", 11, SUBTLE, weight=800, tracking=1.4, anchor="end"))
-    y += 12
+    # Shelf starts one gutter below the pinned header, matching ShopView's
+    # LazyVStack top padding now that the section eyebrow is gone.
+    y = 128
 
     rows = [(1, 24, True, 0), (2, 21, True, 0), (3, 18, True, 0), (4, 0, False, 12), (5, 0, False, 37)]
     for set_no, owned, unlocked, remaining in rows:
