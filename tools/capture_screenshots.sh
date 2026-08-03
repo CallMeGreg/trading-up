@@ -35,6 +35,9 @@ SCHEME=TradingUpScreenshots
 BUNDLE_ID=com.callmegreg.tradingup
 DERIVED=${DERIVED_DATA:-build/screenshots-dd}
 OUT_ROOT=docs/screenshots/appstore
+# Last shot number the playthrough pass owns; the endgame pass picks up after
+# it. Mirrors `playthroughShots` in ScreenshotTests.swift.
+PLAYTHROUGH_LAST=24
 WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
 
@@ -125,6 +128,23 @@ seed_completed_save() {   # seed_completed_save <udid>
   /usr/bin/python3 tools/seed_save.py "$container/Documents/tradingup_save.json"
 }
 
+# Drop the numbered shots a pass is about to re-take. The game is random, so a
+# re-run can land the same moments on different numbers (a bonus that showed up
+# in pack 3 last time turning up in pack 2 now) — without this, the old file
+# survives under its old number and the directory ends up with both.
+clear_shots() {   # clear_shots <dir> <first> <last>
+  local dir=$1 first=$2 last=$3 f n
+  [ -d "$dir" ] || return 0
+  for f in "$dir"/*.png; do
+    [ -e "$f" ] || continue
+    n=$(basename "$f" | sed -n 's/^\([0-9]\{1,\}\)-.*/\1/p')
+    [ -n "$n" ] || continue
+    if [ "$((10#$n))" -ge "$first" ] && [ "$((10#$n))" -le "$last" ]; then
+      rm -f "$f"
+    fi
+  done
+}
+
 for device in "${DEVICES[@]}"; do
   slug=$(slugify "$device")
   udid=$(udid_for "$device")
@@ -156,6 +176,7 @@ for device in "${DEVICES[@]}"; do
       -destination "platform=iOS Simulator,id=$udid" -derivedDataPath "$DERIVED" \
       -only-testing:TradingUpUITests/ScreenshotTests/testPlaythroughCapturesAppStoreScreenshots \
       -resultBundlePath "$result" -quiet
+    clear_shots "$dest" 1 "$PLAYTHROUGH_LAST"
     export_shots "$result" "$dest"
   else
     # The playthrough normally installs the app; on its own the endgame pass
@@ -172,6 +193,7 @@ for device in "${DEVICES[@]}"; do
       -destination "platform=iOS Simulator,id=$udid" -derivedDataPath "$DERIVED" \
       -only-testing:TradingUpUITests/ScreenshotTests/testEndgameShowcaseScreenshots \
       -resultBundlePath "$result-endgame" -quiet
+    clear_shots "$dest" "$((PLAYTHROUGH_LAST + 1))" 999
     export_shots "$result-endgame" "$dest"
   fi
 
