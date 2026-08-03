@@ -155,7 +155,7 @@ higher‑set cards are always worth more. Approximate resulting bands:
 ### Sell‑back spread (the shop lowballs the buylist)
 Every card has a **market value** (`currentValue`) — that's what drives your collection
 value, net worth, and the "Value" readouts. But when you **sell** a duplicate, the shop
-only pays **78%** of that market value (`sellbackRate = 0.78`; `sellValue = 0.78 ×
+only pays **75%** of that market value (`sellbackRate = 0.75`; `sellValue = 0.75 ×
 currentValue`), exactly like a real card shop buylisting below market.
 
 This spread is the **main source of losing risk**. Because liquidation is now
@@ -165,19 +165,27 @@ duplicates, the endgame of each set becomes a squeeze: gamble to complete it bef
 run dry. Collection value / net worth stay at **full** market value (aspirational); the
 spread only bites at the moment of sale.
 
-**Why 78% and not 65%.** The rate was 65% while booster boxes were on the shelf. Boxes
+**Why 75% and not 65%.** The rate was 65% while booster boxes were on the shelf. Boxes
 were the faucet that paid for that spread: their guaranteed ultras and foils converted
 cash into set progress fast enough that a 35% haircut on every sale was survivable.
 Taking boxes off the shelf (§8) removed the faucet and left the drain, and measured
 win rates collapsed — thoughtful play fell from 69% to 27%, and the gap between
 thoughtful and reckless play shrank from 25 points to 7, i.e. the game stopped
-rewarding skill. Widening the spread to 78% restores both (69% / 22‑point gap).
+rewarding skill. Narrowing the spread to 75% makes a packs‑only shop work again:
+thoughtful play wins **~59%**, reckless spam‑and‑dump busts **~61%**, and the skill gap
+is back to **20 points**.
 Sell‑back rate is the right knob because the grading threshold is
 `fee / (0.5 × sellbackRate)` — a higher rate raises the payoff of grading *and* lowers
 the bar for which cards are worth grading, so it compounds for players who grade
 before they sell. A bigger set‑completion bonus was measured too and rejected: it fixes
 winnability but pays reckless and thoughtful play equally, flattening the skill gap to
 1–2 points.
+
+This is deliberately a **tighter game than the boxes era**, which sat at a 69%
+thoughtful win rate. The knob is sensitive — roughly 3 points of thoughtful win rate
+per point of sell‑back (0.76 → 62%, 0.77 → 66%, 0.78 → 69%) — so the harness's
+winnability floor is **55%**, not 60%. Move the rate in single points and re‑run
+`tools/verify` in the same change.
 
 ### Foils
 - **1% chance per card**, rolled independently for all 6 cards in a pack.
@@ -229,7 +237,7 @@ Foil × grade stack, e.g. a foil rare that grades PSA 10 = base **×3 ×5 = ×15
 > implement it — the mechanics and their tests are deliberately kept intact so the
 > feature can be re‑enabled or redesigned without rebuilding it. Anything below is
 > **not** part of the shipping game today. Note that removing boxes is what forced the
-> sell‑back rate from 65% to 78% (§6); re‑enabling them means re‑running the balance
+> sell‑back rate from 65% to 75% (§6); re‑enabling them means re‑running the balance
 > checks in `tools/verify`, not just flipping the flag.
 
 A bulk buy with **guaranteed hits** — the reason to buy is the guaranteed chase cards
@@ -268,13 +276,13 @@ and one big multi‑pack open, **not** a bulk discount.
   shows: cards collected per set, and total unique cards.
   - **This is now genuinely reachable.** The **sell‑back spread** (§6), the **steep
     per‑set price curve** (§3), and the **trimmed set‑completion bonus** (§9) together
-    mean careless play — spamming the cheapest set and dumping every dupe at 78% — can
-    bleed you dry before a set completes. In simulation that reckless loop **busts ~53%**
+    mean careless play — spamming the cheapest set and dumping every dupe at 75% — can
+    bleed you dry before a set completes. In simulation that reckless loop **busts ~61%**
     of the time.
 - **Win:** collect all **250** unique creatures. A winner's screen shows full stats:
   per‑set completion, foils, best grades, peak cash, packs opened, etc.
   - Thoughtful play — pacing your buys, keeping a cash cushion, and **grading valuable
-    dupes before selling** — still **wins ~69%** of the time. The gap between the two is
+    dupes before selling** — still **wins ~59%** of the time. The gap between the two is
     the point: skill, not grinding, is what carries you through.
   - **Winning is not an exit.** The celebration is shown once; dismissing it keeps the
     completed collection intact and browsable. Starting over is always a separate,

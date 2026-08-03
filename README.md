@@ -77,7 +77,7 @@ On the pack summary, brand‑new cards are flagged **✦ NEW**. Tap any duplicat
 keep or sell it individually, or use **Sell Duplicates** / **Keep All** at the
 bottom — the sell total updates live as you decide each card.
 
-The shop buys at a **buylist spread**: you get **78%** of a card's market value.
+The shop buys at a **buylist spread**: you get **75%** of a card's market value.
 Churning packs and dumping dupes slowly bleeds money, and that spread is the
 game's main risk. You can **never sell your last copy** of a card, so your
 collection is always safe.

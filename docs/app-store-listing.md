@@ -118,7 +118,7 @@ Buy a pack, rip it, and find out what you got. Six cards - three commons, two un
 THE LOOP
 
 - Rip packs. Every pack opens card by card, and the hit slot is always saved for last.
-- Sell your extras. The shop buys duplicates back at 78% of market value, and that spread is the thing that will bankrupt you.
+- Sell your extras. The shop buys duplicates back at 75% of market value, and that spread is the thing that will bankrupt you.
 - Grade your best. Pay a fee, roll a PSA score. A 10 is a 5x payday and a 1 is a freak 10x jackpot, but anything from 2 to 7 is worth less than the card you put in.
 - Cash in bonuses. Complete an evolution line for a payout; complete a whole set for a much bigger one.
 

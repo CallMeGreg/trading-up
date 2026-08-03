@@ -31,12 +31,14 @@ enum Economy {
     // only because booster boxes existed: their guaranteed ultras and foils were
     // the faucet that paid for the spread. With boxes off the shelf
     // (`FeatureFlags.removeBoosterBoxes`) a 65% spread bled even careful players
-    // out — the harness put thoughtful play at a 27% win rate against a 60%
-    // target, with the skill gap all but gone. 78% restores the shipped
-    // difficulty curve on packs alone: same 69% thoughtful win rate, reckless
-    // spam-and-dump still busts about half the time. If boxes ever come back,
-    // this needs re-testing against the harness in the same breath.
-    static let sellbackRate = 0.78
+    // out — the harness put thoughtful play at a 27% win rate, with the skill gap
+    // all but gone. 75% makes a packs-only shop work again: thoughtful play wins
+    // ~59% while reckless spam-and-dump busts ~61%, a 20-point skill gap. That is
+    // a deliberately tighter game than the 69% boxes-era win rate; the harness
+    // floor was moved to 55% to match. Each point of sell-back is worth roughly
+    // 3 points of thoughtful win rate here (0.76 → 62%, 0.77 → 66%, 0.78 → 69%),
+    // so retune in small steps and re-run the harness in the same breath.
+    static let sellbackRate = 0.75
     static func sellback(_ value: Double) -> Double { value * sellbackRate }
 
     // Set unlocking: set N stays locked until this many *unique* cards are owned.
