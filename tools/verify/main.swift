@@ -164,7 +164,7 @@ do {
     check(core.claimedEvoLines.count == 65, "all 65 evolution lines marked complete")
     check(events.count == 70, "70 bonus events (65 evo + 5 set)")
     // per set: 6 trios×2.0 + 7 duos×1.0 + 1 set×15 = 34.0 × pack price
-    let expected = 34.0 * (10 + 30 + 75 + 160 + 320)
+    let expected = 34.0 * (10 + 30 + 75 + 160 + 400)
     check(abs(core.cash - (100 + expected)) < 0.01, "bonus payout exact: $\(expected)")
     let again = core.checkBonuses()
     check(again.isEmpty, "bonuses are not paid twice")
@@ -521,7 +521,7 @@ do {
 
 print("\n== Economy knobs (tempo & risk) ==")
 do {
-    check(Economy.packPrices == [10, 30, 75, 160, 320], "steeper pack prices [10,30,75,160,320]")
+    check(Economy.packPrices == [10, 30, 75, 160, 400], "steeper pack prices [10,30,75,160,400]")
     check(Economy.gradeFees == [2, 4, 6, 8, 10], "flat grade-fee ramp [2,4,6,8,10]")
     check(abs(Economy.sellbackRate - 0.65) < 1e-9, "shop buys dupes at 65% of market")
     var boxesOK = true, bonusOK = true

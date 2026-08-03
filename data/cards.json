@@ -3012,7 +3012,7 @@
     "evolvesFromId": null,
     "evolvesToId": "S5-002",
     "flavor": "Colder where it has recently stood.",
-    "baseValue": 7.1
+    "baseValue": 8.87
   },
   {
     "id": "S5-002",
@@ -3027,7 +3027,7 @@
     "evolvesFromId": "S5-001",
     "evolvesToId": "S5-003",
     "flavor": "Moonlight passes straight through it.",
-    "baseValue": 26.37
+    "baseValue": 32.96
   },
   {
     "id": "S5-003",
@@ -3042,7 +3042,7 @@
     "evolvesFromId": "S5-002",
     "evolvesToId": null,
     "flavor": "Dreams leak out of it as fog.",
-    "baseValue": 72.65
+    "baseValue": 90.81
   },
   {
     "id": "S5-004",
@@ -3057,7 +3057,7 @@
     "evolvesFromId": null,
     "evolvesToId": "S5-005",
     "flavor": "Its whisper sounds like distant thunder.",
-    "baseValue": 5.69
+    "baseValue": 7.11
   },
   {
     "id": "S5-005",
@@ -3072,7 +3072,7 @@
     "evolvesFromId": "S5-004",
     "evolvesToId": "S5-006",
     "flavor": "Older than the dark it came from.",
-    "baseValue": 26.9
+    "baseValue": 33.62
   },
   {
     "id": "S5-006",
@@ -3087,7 +3087,7 @@
     "evolvesFromId": "S5-005",
     "evolvesToId": null,
     "flavor": "Fades at dawn, returns at dusk.",
-    "baseValue": 61.88
+    "baseValue": 77.35
   },
   {
     "id": "S5-007",
@@ -3102,7 +3102,7 @@
     "evolvesFromId": null,
     "evolvesToId": "S5-008",
     "flavor": "Walks through walls when unwatched.",
-    "baseValue": 6.08
+    "baseValue": 7.6
   },
   {
     "id": "S5-008",
@@ -3117,7 +3117,7 @@
     "evolvesFromId": "S5-007",
     "evolvesToId": "S5-009",
     "flavor": "It pools like ink in the corners of a room.",
-    "baseValue": 24.16
+    "baseValue": 30.2
   },
   {
     "id": "S5-009",
@@ -3132,7 +3132,7 @@
     "evolvesFromId": "S5-008",
     "evolvesToId": null,
     "flavor": "Casts no shadow of its own.",
-    "baseValue": 67.37
+    "baseValue": 84.22
   },
   {
     "id": "S5-010",
@@ -3147,7 +3147,7 @@
     "evolvesFromId": null,
     "evolvesToId": "S5-011",
     "flavor": "Its footsteps make no sound at all.",
-    "baseValue": 5.22
+    "baseValue": 6.53
   },
   {
     "id": "S5-011",
@@ -3162,7 +3162,7 @@
     "evolvesFromId": "S5-010",
     "evolvesToId": "S5-012",
     "flavor": "Candles gutter when it enters.",
-    "baseValue": 20.99
+    "baseValue": 26.24
   },
   {
     "id": "S5-012",
@@ -3177,7 +3177,7 @@
     "evolvesFromId": "S5-011",
     "evolvesToId": null,
     "flavor": "Feeds on starlight and secrets.",
-    "baseValue": 81.77
+    "baseValue": 102.22
   },
   {
     "id": "S5-013",
@@ -3192,7 +3192,7 @@
     "evolvesFromId": null,
     "evolvesToId": "S5-014",
     "flavor": "It borrows the shapes of other shadows.",
-    "baseValue": 6.74
+    "baseValue": 8.43
   },
   {
     "id": "S5-014",
@@ -3207,7 +3207,7 @@
     "evolvesFromId": "S5-013",
     "evolvesToId": "S5-015",
     "flavor": "Night gathers close wherever it curls up.",
-    "baseValue": 23.75
+    "baseValue": 29.69
   },
   {
     "id": "S5-015",
@@ -3222,7 +3222,7 @@
     "evolvesFromId": "S5-014",
     "evolvesToId": null,
     "flavor": "Its purr is felt more than heard.",
-    "baseValue": 60.6
+    "baseValue": 75.75
   },
   {
     "id": "S5-016",
@@ -3237,7 +3237,7 @@
     "evolvesFromId": null,
     "evolvesToId": "S5-017",
     "flavor": "Stars reflect in its coal-dark coat.",
-    "baseValue": 6.53
+    "baseValue": 8.17
   },
   {
     "id": "S5-017",
@@ -3252,7 +3252,7 @@
     "evolvesFromId": "S5-016",
     "evolvesToId": "S5-018",
     "flavor": "It unspools from under the furniture at dusk.",
-    "baseValue": 20.25
+    "baseValue": 25.31
   },
   {
     "id": "S5-018",
@@ -3267,7 +3267,7 @@
     "evolvesFromId": "S5-017",
     "evolvesToId": null,
     "flavor": "The dark feels warmer where it has been.",
-    "baseValue": 58.87
+    "baseValue": 73.59
   },
   {
     "id": "S5-019",
@@ -3282,7 +3282,7 @@
     "evolvesFromId": null,
     "evolvesToId": "S5-020",
     "flavor": "Slips between one moment and the next.",
-    "baseValue": 7.96
+    "baseValue": 9.95
   },
   {
     "id": "S5-020",
@@ -3297,7 +3297,7 @@
     "evolvesFromId": "S5-019",
     "evolvesToId": null,
     "flavor": "Its outline blurs at the edges.",
-    "baseValue": 24.68
+    "baseValue": 30.85
   },
   {
     "id": "S5-021",
@@ -3312,7 +3312,7 @@
     "evolvesFromId": null,
     "evolvesToId": "S5-022",
     "flavor": "Where it sleeps, the stars go dim.",
-    "baseValue": 7.99
+    "baseValue": 9.99
   },
   {
     "id": "S5-022",
@@ -3327,7 +3327,7 @@
     "evolvesFromId": "S5-021",
     "evolvesToId": null,
     "flavor": "It counts secrets the way others count sheep.",
-    "baseValue": 22.74
+    "baseValue": 28.43
   },
   {
     "id": "S5-023",
@@ -3342,7 +3342,7 @@
     "evolvesFromId": null,
     "evolvesToId": "S5-024",
     "flavor": "Lanterns dim to a whisper near it.",
-    "baseValue": 14.7
+    "baseValue": 18.38
   },
   {
     "id": "S5-024",
@@ -3357,7 +3357,7 @@
     "evolvesFromId": "S5-023",
     "evolvesToId": null,
     "flavor": "Born in the space between stars.",
-    "baseValue": 28.62
+    "baseValue": 35.77
   },
   {
     "id": "S5-025",
@@ -3372,7 +3372,7 @@
     "evolvesFromId": null,
     "evolvesToId": "S5-026",
     "flavor": "It slips through keyholes without a sound.",
-    "baseValue": 6.92
+    "baseValue": 8.65
   },
   {
     "id": "S5-026",
@@ -3387,7 +3387,7 @@
     "evolvesFromId": "S5-025",
     "evolvesToId": null,
     "flavor": "Its eyes are the last light before sleep.",
-    "baseValue": 24.2
+    "baseValue": 30.25
   },
   {
     "id": "S5-027",
@@ -3402,7 +3402,7 @@
     "evolvesFromId": null,
     "evolvesToId": "S5-028",
     "flavor": "Its eyes hold a piece of the night sky.",
-    "baseValue": 7.35
+    "baseValue": 9.18
   },
   {
     "id": "S5-028",
@@ -3417,7 +3417,7 @@
     "evolvesFromId": "S5-027",
     "evolvesToId": null,
     "flavor": "Dusk arrives early wherever it wanders.",
-    "baseValue": 44.78
+    "baseValue": 55.97
   },
   {
     "id": "S5-029",
@@ -3432,7 +3432,7 @@
     "evolvesFromId": null,
     "evolvesToId": "S5-030",
     "flavor": "It wears the midnight like a familiar coat.",
-    "baseValue": 8.27
+    "baseValue": 10.34
   },
   {
     "id": "S5-030",
@@ -3447,7 +3447,7 @@
     "evolvesFromId": "S5-029",
     "evolvesToId": null,
     "flavor": "Cold follows it as warmth follows fire.",
-    "baseValue": 24.13
+    "baseValue": 30.16
   },
   {
     "id": "S5-031",
@@ -3462,7 +3462,7 @@
     "evolvesFromId": null,
     "evolvesToId": "S5-032",
     "flavor": "It naps in the hollow beneath a stair.",
-    "baseValue": 5.79
+    "baseValue": 7.24
   },
   {
     "id": "S5-032",
@@ -3477,7 +3477,7 @@
     "evolvesFromId": "S5-031",
     "evolvesToId": null,
     "flavor": "Its yawn swallows the nearest candle flame.",
-    "baseValue": 26.85
+    "baseValue": 33.56
   },
   {
     "id": "S5-033",
@@ -3492,7 +3492,7 @@
     "evolvesFromId": null,
     "evolvesToId": null,
     "flavor": "Owls fall silent when it passes below.",
-    "baseValue": 7.41
+    "baseValue": 9.26
   },
   {
     "id": "S5-034",
@@ -3507,7 +3507,7 @@
     "evolvesFromId": null,
     "evolvesToId": null,
     "flavor": "It folds itself thin to hide in twilight.",
-    "baseValue": 6.31
+    "baseValue": 7.89
   },
   {
     "id": "S5-035",
@@ -3522,7 +3522,7 @@
     "evolvesFromId": null,
     "evolvesToId": null,
     "flavor": "The night sky misses a star while it wakes.",
-    "baseValue": 5.59
+    "baseValue": 6.99
   },
   {
     "id": "S5-036",
@@ -3537,7 +3537,7 @@
     "evolvesFromId": null,
     "evolvesToId": null,
     "flavor": "Its breath frosts the glass from within.",
-    "baseValue": 14.11
+    "baseValue": 17.63
   },
   {
     "id": "S5-037",
@@ -3552,7 +3552,7 @@
     "evolvesFromId": null,
     "evolvesToId": null,
     "flavor": "It leaves cold spots that linger till noon.",
-    "baseValue": 8.27
+    "baseValue": 10.33
   },
   {
     "id": "S5-038",
@@ -3567,7 +3567,7 @@
     "evolvesFromId": null,
     "evolvesToId": null,
     "flavor": "Shadows lengthen to point the way it went.",
-    "baseValue": 8.5
+    "baseValue": 10.63
   },
   {
     "id": "S5-039",
@@ -3582,7 +3582,7 @@
     "evolvesFromId": null,
     "evolvesToId": null,
     "flavor": "It drinks the last of the evening light.",
-    "baseValue": 8.21
+    "baseValue": 10.26
   },
   {
     "id": "S5-040",
@@ -3597,7 +3597,7 @@
     "evolvesFromId": null,
     "evolvesToId": null,
     "flavor": "Its whisper carries a chill down the spine.",
-    "baseValue": 5.86
+    "baseValue": 7.32
   },
   {
     "id": "S5-041",
@@ -3612,7 +3612,7 @@
     "evolvesFromId": null,
     "evolvesToId": null,
     "flavor": "Mirrors show it a heartbeat too late.",
-    "baseValue": 7.47
+    "baseValue": 9.33
   },
   {
     "id": "S5-042",
@@ -3627,7 +3627,7 @@
     "evolvesFromId": null,
     "evolvesToId": null,
     "flavor": "It is quietest just before it vanishes.",
-    "baseValue": 7.7
+    "baseValue": 9.62
   },
   {
     "id": "S5-043",
@@ -3642,7 +3642,7 @@
     "evolvesFromId": null,
     "evolvesToId": null,
     "flavor": "The dark rearranges itself to let it by.",
-    "baseValue": 6.36
+    "baseValue": 7.95
   },
   {
     "id": "S5-044",
@@ -3657,7 +3657,7 @@
     "evolvesFromId": null,
     "evolvesToId": null,
     "flavor": "Its eyes open like two new moons.",
-    "baseValue": 5.67
+    "baseValue": 7.09
   },
   {
     "id": "S5-045",
@@ -3672,7 +3672,7 @@
     "evolvesFromId": null,
     "evolvesToId": null,
     "flavor": "It gathers dusk into a place to sleep.",
-    "baseValue": 48.33
+    "baseValue": 60.41
   },
   {
     "id": "S5-046",
@@ -3687,7 +3687,7 @@
     "evolvesFromId": null,
     "evolvesToId": null,
     "flavor": "Clocks seem to slow while it is near.",
-    "baseValue": 24.72
+    "baseValue": 30.9
   },
   {
     "id": "S5-047",
@@ -3702,7 +3702,7 @@
     "evolvesFromId": null,
     "evolvesToId": null,
     "flavor": "It threads through the gaps in the lamplight.",
-    "baseValue": 133.92
+    "baseValue": 167.4
   },
   {
     "id": "S5-048",
@@ -3717,7 +3717,7 @@
     "evolvesFromId": null,
     "evolvesToId": null,
     "flavor": "Nightfall feels like it is coming home.",
-    "baseValue": 205.13
+    "baseValue": 256.41
   },
   {
     "id": "S5-049",
@@ -3732,7 +3732,7 @@
     "evolvesFromId": null,
     "evolvesToId": null,
     "flavor": "Its dreams spill out as creeping mist.",
-    "baseValue": 394.42
+    "baseValue": 493.02
   },
   {
     "id": "S5-050",
@@ -3747,6 +3747,6 @@
     "evolvesFromId": null,
     "evolvesToId": null,
     "flavor": "Born from the shadow a comet left behind.",
-    "baseValue": 198.81
+    "baseValue": 248.51
   }
 ]

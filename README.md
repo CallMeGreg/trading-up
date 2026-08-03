@@ -63,7 +63,7 @@ in‑app purchases, no internet connection.
 
 Each of the five sets sells a **Pack** (6 cards) or a **Booster Box** (12 packs,
 with guaranteed foils and ultras). Higher sets cost steeply more — $10 → $30 →
-$75 → $160 → $320 — but hold far more valuable cards. A box costs **11× the pack
+$75 → $160 → $400 — but hold far more valuable cards. A box costs **11× the pack
 price**, so you buy it for the guaranteed chase cards, not for a discount.
 
 ### ✨ Rip it
@@ -117,7 +117,7 @@ discarded.
 | 2 | **Tidecaller** | Water / ice | $30 |
 | 3 | **Verdspire** | Grass / nature | $75 |
 | 4 | **Voltcrest** | Electric / storm | $160 |
-| 5 | **Umbral Reach** | Shadow / cosmic | $320 |
+| 5 | **Umbral Reach** | Shadow / cosmic | $400 |
 
 Each set is 50 cards with its own creatures, evolution lines, flavor text and
 rarity spread, and unlocks as your collection grows.

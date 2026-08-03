@@ -58,7 +58,7 @@ It prints `ALL CHECKS PASSED ✅` on success, and checks, among other things:
 - **pack expected value matches each set's target curve** — 1.0× / 0.9× / 0.8× / 0.7× /
   0.6× of the pack price for sets 1–5 (Monte Carlo);
 - the **PSA grade odds** match the spec exactly and sum to 100%;
-- the **economy knobs** are set as designed — steep pack prices `[10,30,75,160,320]`,
+- the **economy knobs** are set as designed — steep pack prices `[10,30,75,160,400]`,
   flat grade fees `[2,4,6,8,10]`, booster box at 11× pack price, set‑completion bonus at
   15× pack price, and a **65% sell‑back rate**;
 - the **sell‑back spread** works — a duplicate sells for 65% of market value, and
@@ -71,8 +71,8 @@ It prints `ALL CHECKS PASSED ✅` on success, and checks, among other things:
 - **winning doesn't erase your collection** — the celebration shows once, and dismissing
   it leaves the finished collection browsable;
 - **strategy simulations** hold the "moderate" difficulty target — reckless
-  spam‑and‑dump play **busts ~44%** of the time, while thoughtful play (pace buys, grade
-  valuable dupes before selling) still **wins ~77%**, a clear skill gap;
+  spam‑and‑dump play **busts ~56%** of the time, while thoughtful play (pace buys, grade
+  valuable dupes before selling) still **wins ~67%**, a clear skill gap;
 - selling protects your last copy; the game‑over check is correct;
 - collecting all 250 triggers the win and pays every evolution/set bonus exactly
   once.
