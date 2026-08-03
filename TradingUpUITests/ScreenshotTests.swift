@@ -46,11 +46,14 @@ final class ScreenshotTests: XCTestCase {
                                     "expected a full marketing set, captured \(shotIndex)")
     }
 
-    /// Late-game showcase: the win celebration, a finished set, and a booster
-    /// box — the parts of the game a $100 starting bankroll can't reach in a
-    /// three-minute run. `tools/capture_screenshots.sh` seeds a completed save
-    /// before running this, so everything on screen is still the real app
-    /// rendering real state.
+    /// Late-game showcase: the win celebration and a finished set — the parts of
+    /// the game a $100 starting bankroll can't reach in a three-minute run.
+    /// `tools/capture_screenshots.sh` seeds a completed save before running this,
+    /// so everything on screen is still the real app rendering real state.
+    ///
+    /// The booster-box pass at the end is dormant: boxes are off the shelf behind
+    /// `FeatureFlags.removeBoosterBoxes`, so `buyBox` never appears and the pass
+    /// no-ops. It's kept so the shots come back for free if boxes ever return.
     func testEndgameShowcaseScreenshots() throws {
         shotBase = Self.playthroughShots
         shotCap = Self.endgameShots
@@ -70,6 +73,7 @@ final class ScreenshotTests: XCTestCase {
         XCTAssertTrue(buyPack.waitForExistence(timeout: 15))
         shot("shop-all-sets-unlocked", settle: 1.0)
 
+        // No-op while boxes are off the shelf; the shop never renders this button.
         let box = buyBox
         guard box.waitForExistence(timeout: 10), box.isEnabled else { return }
         box.tap()
@@ -229,7 +233,7 @@ final class ScreenshotTests: XCTestCase {
     }
 
     /// Back to the shop, where crossing 25 unique cards has opened up set 2 and
-    /// its pricier packs and booster boxes.
+    /// its pricier packs.
     private func shopAfterUnlockingSetTwo() throws {
         openTab("Shop")
         XCTAssertTrue(buyPack.waitForExistence(timeout: 15), "shop never came back")

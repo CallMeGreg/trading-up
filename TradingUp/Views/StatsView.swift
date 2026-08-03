@@ -59,21 +59,13 @@ struct StatsView: View {
 
                     VStack(alignment: .leading, spacing: 12) {
                         header("Haul")
-                        grid(scope == .run ? [
-                            ("Packs Opened", "\(s.packsOpened)"),
-                            ("Boxes Opened", "\(s.boxesOpened)"),
-                            ("Best Grade", s.bestGrade == 0 ? "—" : "PSA \(s.bestGrade)"),
-                            ("Cards Pulled", "\(s.cardsPulled)"),
-                            ("Ultras Pulled", "\(s.ultrasPulled)"),
-                            ("Foils Pulled", "\(s.foilsPulled)"),
-                        ] : [
-                            ("Packs Opened", "\(lifetime.packsOpened)"),
-                            ("Boxes Opened", "\(lifetime.boxesOpened)"),
-                            ("Best Grade", lifetime.bestGrade == 0 ? "—" : "PSA \(lifetime.bestGrade)"),
-                            ("Cards Pulled", "\(lifetime.cardsPulled)"),
-                            ("Ultras Pulled", "\(lifetime.ultrasPulled)"),
-                            ("Foils Pulled", "\(lifetime.foilsPulled)"),
-                        ])
+                        grid(scope == .run
+                             ? Self.haulTiles(packs: s.packsOpened, boxes: s.boxesOpened,
+                                              bestGrade: s.bestGrade, cards: s.cardsPulled,
+                                              ultras: s.ultrasPulled, foils: s.foilsPulled)
+                             : Self.haulTiles(packs: lifetime.packsOpened, boxes: lifetime.boxesOpened,
+                                              bestGrade: lifetime.bestGrade, cards: lifetime.cardsPulled,
+                                              ultras: lifetime.ultrasPulled, foils: lifetime.foilsPulled))
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .panel()
@@ -144,6 +136,22 @@ struct StatsView: View {
 
     private func header(_ t: String) -> some View {
         Text(t.uppercased()).font(.system(size: 12, weight: .black)).foregroundStyle(Palette.subtle)
+    }
+
+    /// The "Haul" tiles, shared by the run and all-time scopes so the two can't
+    /// drift apart. `Boxes Opened` is omitted entirely while booster boxes are
+    /// off the shelf — a permanent zero is worse than no tile at all.
+    static func haulTiles(packs: Int, boxes: Int, bestGrade: Int,
+                          cards: Int, ultras: Int, foils: Int) -> [(String, String)] {
+        var tiles = [("Packs Opened", "\(packs)")]
+        if FeatureFlags.boosterBoxesAvailable {
+            tiles.append(("Boxes Opened", "\(boxes)"))
+        }
+        tiles.append(("Best Grade", bestGrade == 0 ? "—" : "PSA \(bestGrade)"))
+        tiles.append(("Cards Pulled", "\(cards)"))
+        tiles.append(("Ultras Pulled", "\(ultras)"))
+        tiles.append(("Foils Pulled", "\(foils)"))
+        return tiles
     }
 
     private func grid(_ items: [(String, String)]) -> some View {

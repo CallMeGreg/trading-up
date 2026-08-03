@@ -22,7 +22,7 @@ jobs:
         run: sudo xcode-select -s /Applications/Xcode_16.4.app
       - name: Compile and run tools/verify/main.swift
         run: |
-          swiftc TradingUp/Models/Card.swift TradingUp/Models/Economy.swift TradingUp/Models/GameCore.swift TradingUp/Models/Persistence.swift TradingUp/Generated/CardData.swift tools/verify/main.swift -o /tmp/tu_verify
+          swiftc TradingUp/Models/Card.swift TradingUp/Models/Economy.swift TradingUp/Models/FeatureFlags.swift TradingUp/Models/GameCore.swift TradingUp/Models/Persistence.swift TradingUp/Generated/CardData.swift tools/verify/main.swift -o /tmp/tu_verify
           /tmp/tu_verify
 
   build:

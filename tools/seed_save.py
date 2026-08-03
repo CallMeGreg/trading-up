@@ -2,9 +2,9 @@
 """Write a Trading Up save file representing a finished collection.
 
 Used by tools/capture_screenshots.sh to reach the late-game screens — the win
-celebration, a completed set, a booster box you can actually afford — that a
-$100 starting bankroll can't get to inside a short automated playthrough. The
-app then renders that state for real; nothing about the UI is faked.
+celebration, a completed set, a bankroll deep enough for set 5 — that a $100
+starting bankroll can't get to inside a short automated playthrough. The app
+then renders that state for real; nothing about the UI is faked.
 
     python3 tools/seed_save.py <destination.json>
 
@@ -41,9 +41,11 @@ def build(cards):
         line_sizes[card["lineId"]] = line_sizes.get(card["lineId"], 0) + 1
     evo_lines = sorted(line for line, size in line_sizes.items() if size > 1)
 
+    # 322 packs x 6 cards = the 1,932 pulls below. Boxes are off the shelf, so a
+    # seeded save can't claim any without describing a game nobody can play.
     stats = {
-        "packsOpened": 214,
-        "boxesOpened": 9,
+        "packsOpened": 322,
+        "boxesOpened": 0,
         "cardsPulled": 1932,
         "foilsPulled": 19,
         "ultrasPulled": 47,
@@ -55,7 +57,7 @@ def build(cards):
         "peakCardValue": 940.0,
         "peakSale": 611.0,
     }
-    lifetime = dict(stats, runsStarted=3, runsWon=1, bestRunPacks=214)
+    lifetime = dict(stats, runsStarted=3, runsWon=1, bestRunPacks=322)
 
     core = {
         "cash": CASH,

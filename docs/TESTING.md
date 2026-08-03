@@ -43,6 +43,7 @@ Only the Swift toolchain from Command Line Tools is required:
 ```bash
 swiftc TradingUp/Models/Card.swift \
        TradingUp/Models/Economy.swift \
+       TradingUp/Models/FeatureFlags.swift \
        TradingUp/Models/GameCore.swift \
        TradingUp/Models/Persistence.swift \
        TradingUp/Generated/CardData.swift \
@@ -59,9 +60,10 @@ It prints `ALL CHECKS PASSED ✅` on success, and checks, among other things:
   0.6× of the pack price for sets 1–5 (Monte Carlo);
 - the **PSA grade odds** match the spec exactly and sum to 100%;
 - the **economy knobs** are set as designed — steep pack prices `[10,30,75,160,400]`,
-  flat grade fees `[2,4,6,8,10]`, booster box at 11× pack price, set‑completion bonus at
-  15× pack price, and a **65% sell‑back rate**;
-- the **sell‑back spread** works — a duplicate sells for 65% of market value, and
+  flat grade fees `[2,4,6,8,10]`, booster box at 11× pack price (still modelled even
+  though the shop no longer sells one), set‑completion bonus at 15× pack price, and a
+  **75% sell‑back rate**;
+- the **sell‑back spread** works — a duplicate sells for 75% of market value, and
   buying into an already‑complete set then dumping the dupes is a **net loss** (the
   core losing risk);
 - the **save format is forward‑compatible** — a payload missing newer keys (or missing
@@ -71,8 +73,10 @@ It prints `ALL CHECKS PASSED ✅` on success, and checks, among other things:
 - **winning doesn't erase your collection** — the celebration shows once, and dismissing
   it leaves the finished collection browsable;
 - **strategy simulations** hold the "moderate" difficulty target — reckless
-  spam‑and‑dump play **busts ~56%** of the time, while thoughtful play (pace buys, grade
-  valuable dupes before selling) still **wins ~67%**, a clear skill gap;
+  spam‑and‑dump play **busts ~61%** of the time, while thoughtful play (pace buys, grade
+  valuable dupes before selling) still **wins ~59%**, a clear skill gap. The simulated
+  shop respects `FeatureFlags.removeBoosterBoxes`, so these numbers describe the game
+  as it actually ships;
 - selling protects your last copy; the game‑over check is correct;
 - collecting all 250 triggers the win and pays every evolution/set bonus exactly
   once.

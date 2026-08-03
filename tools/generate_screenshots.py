@@ -349,7 +349,6 @@ SCREEN_W, SCREEN_H = 393, 852
 
 
 PACK_PRICES = {1: 10.0, 2: 30.0, 3: 75.0, 4: 160.0, 5: 400.0}
-BOX_PACKS, BOX_ULTRAS, BOX_FOILS = 12, 3, 2
 
 
 def pack_thumb(defs, x, y, w, set_no, dim=False):
@@ -429,7 +428,7 @@ def progress_ring(defs, cx, cy, r, value, total, tint):
 
 
 def shelf_row(defs, x, y, w, set_no, owned, unlocked, remaining=0):
-    """One SetShelfRow: pack art, title + ring, one buy, box as a quiet line."""
+    """One SetShelfRow: pack art, title + ring, one buy."""
     ele = SET_ELEMENT[set_no]
     pal = ELEMENT[ele]
     h = 108 if unlocked else 84
@@ -458,19 +457,9 @@ def shelf_row(defs, x, y, w, set_no, owned, unlocked, remaining=0):
         g = defs.linear([("0%", pal[1], "1"), ("100%", pal[2], "1")], x1=0, y1=0, x2=1, y2=0)
         out.append(rrect(tx, by, tw, bh, 13, grad=g))
         out.append(rrect(tx, by, tw, bh, 13, stroke="#ffffff", sw=1, opacity=0.2))
-        out.append(text(tx + 14, by + 24, "Rip a pack", 15, "#ffffff", weight=700))
+        out.append(text(tx + 14, by + 24, "Buy a pack", 15, "#ffffff", weight=700))
         out.append(text(tx + tw - 14, by + 24, money(PACK_PRICES[set_no]), 15, "#ffffff",
                         weight=900, anchor="end"))
-        ly = by + bh + 15
-        # One text run with tspans so the renderer lays out the advances; the
-        # price keeps the app's emphasis without hand-measured offsets.
-        out.append('<text x="%.2f" y="%.2f" font-family="%s" font-size="12" font-weight="600" '
-                   'xml:space="preserve" fill="%s"><tspan>%s</tspan><tspan fill="%s" font-weight="700">%s</tspan>'
-                   '<tspan>%s</tspan></text>' % (
-                       tx + 3, ly, ROUND, SUBTLE, esc("Booster box \u00b7 "), TEXT,
-                       esc(money(PACK_PRICES[set_no] * 11)),
-                       esc(" \u00b7 \u2265%d ultra, \u2265%d foil" % (BOX_ULTRAS, BOX_FOILS))))
-        out.append(text(x + w - 16, ly, "\u203a", 14, SUBTLE, weight=700, anchor="end"))
     else:
         out.append(text(x + w - 16, y + 34, "\U0001f512", 14, SUBTLE, weight=700, anchor="end"))
         cy = y + 54
@@ -500,10 +489,9 @@ def screen_shop(defs):
     out.append(progress(defs, 70, 92, SCREEN_W - 70 - 18 - 44, 63 / 250, MONEY, h=6))
     out.append(text(SCREEN_W - 18, 99, "63/250", 11, SUBTLE, weight=700, anchor="end", family=MONO))
 
-    y = 142
-    out.append(text(m + 2, y, "PACKS", 11, SUBTLE, weight=800, tracking=1.4))
-    out.append(text(SCREEN_W - m - 2, y, "5 SETS", 11, SUBTLE, weight=800, tracking=1.4, anchor="end"))
-    y += 12
+    # Shelf starts one gutter below the pinned header, matching ShopView's
+    # LazyVStack top padding now that the section eyebrow is gone.
+    y = 128
 
     rows = [(1, 24, True, 0), (2, 21, True, 0), (3, 18, True, 0), (4, 0, False, 12), (5, 0, False, 37)]
     for set_no, owned, unlocked, remaining in rows:
@@ -685,7 +673,7 @@ def screen_win(defs):
 
 SCENES = [
     ("01_reveal", screen_reveal, "Every pull is a thrill.", "Rip packs and reveal cards one by one \u2014 chase foils and ultra rares."),
-    ("02_shop", screen_shop, "Start with $100. Rip packs.", "Buy packs and booster boxes across five sets \u2014 without going broke."),
+    ("02_shop", screen_shop, "Start with $100. Rip packs.", "Buy packs across five sets \u2014 without going broke."),
     ("03_collection", screen_collection, "Collect all 250 Sprytes.", "Five sets, 250 original creatures, foils and dupes to hunt down."),
     ("04_grade", screen_grade, "Grade your best pulls.", "Send rares to grading and roll for a jackpot PSA 10."),
     ("05_win", screen_win, "Build the ultimate collection.", "Complete evolution lines and full sets for big cash bonuses."),

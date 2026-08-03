@@ -14,7 +14,6 @@ struct ShopView: View {
                 WalletHeader(freeze: freeze)
                 ScrollView {
                     LazyVStack(spacing: 12) {
-                        SectionEyebrow(title: "Packs", trailing: "\(CardDatabase.setCount) sets")
                         ForEach(1...CardDatabase.setCount, id: \.self) { set in
                             SetShelfRow(set: set, freeze: freeze, revealInFlight: isRevealInFlight) { buyPack(set) } onBuyBox: { buyBox(set) }
                         }
@@ -187,25 +186,6 @@ struct WalletHeader: View {
     }
 }
 
-/// The small all-caps label that heads a list section.
-struct SectionEyebrow: View {
-    let title: String
-    var trailing: String? = nil
-
-    var body: some View {
-        HStack {
-            Text(title.uppercased())
-            Spacer()
-            if let trailing { Text(trailing.uppercased()) }
-        }
-        .font(.system(size: 11, weight: .heavy))
-        .tracking(1.4)
-        .foregroundStyle(Palette.subtle)
-        .padding(.horizontal, 2)
-        .padding(.bottom, 2)
-    }
-}
-
 // MARK: - Per-set shelf row
 
 /// One set on the shop shelf: the pack itself, how far the set has come, one
@@ -293,7 +273,7 @@ struct SetShelfRow: View {
         VStack(spacing: 8) {
             Button(action: onBuyPack) {
                 HStack {
-                    Text("Rip a pack").font(.system(size: 15, weight: .bold))
+                    Text("Buy a pack").font(.system(size: 15, weight: .bold))
                     Spacer(minLength: 8)
                     Text(packPrice.money).font(.system(size: 15, weight: .black, design: .rounded))
                 }
@@ -313,7 +293,7 @@ struct SetShelfRow: View {
             .buttonStyle(.plain)
             .disabled(!canBuyPack)
             .accessibilityIdentifier("buyPack")
-            .accessibilityLabel("Rip a pack, \(CardDatabase.setName(set)), 6 cards, \(packPrice.money)")
+            .accessibilityLabel("Buy a pack, \(CardDatabase.setName(set)), 6 cards, \(packPrice.money)")
 
             if FeatureFlags.boosterBoxesAvailable {
                 Button(action: onBuyBox) {

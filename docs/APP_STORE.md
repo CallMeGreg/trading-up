@@ -19,8 +19,8 @@ The screenshots you actually upload are captured by *playing the game*.
 packs with the $100 the game gives you, rips them card by card, sells the
 duplicates, grades a rare and browses the collection it built — taking
 full‑resolution device screenshots along the way. A second short pass seeds a
-completed collection (`tools/seed_save.py`) so the win screen, a finished set and
-a booster box are covered too.
+completed collection (`tools/seed_save.py`) so the win screen and a finished set
+are covered too.
 
 ```bash
 tools/capture_screenshots.sh                      # all required sizes, ~15 minutes
