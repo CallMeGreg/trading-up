@@ -20,6 +20,13 @@ final class ScreenshotTests: XCTestCase {
     private static let playthroughShots = 24
     private static let endgameShots = 6
 
+    /// A PSA 9 or 10 is the roll worth putting in front of a shopper — grading
+    /// paying off is the hook, not a card losing three quarters of its value.
+    /// Together they're a 25% outcome, so the grading pass sends in several
+    /// rares and keeps the frame from the first one that lands.
+    private static let showcaseGrades = ["PSA 9", "PSA 10"]
+    private static let maxGradeAttempts = 5
+
     private var app: XCUIApplication!
     private var shotIndex = 0
     private var shotBase = 0
@@ -202,20 +209,71 @@ final class ScreenshotTests: XCTestCase {
     }
 
     /// Grading: pay the fee on a rare and roll a PSA score. The reveal overlay
-    /// is the single most game-y moment in the app, so it earns a screenshot.
+    /// is the single most game-y moment in the app, so it earns a screenshot —
+    /// but only a high grade actually sells the mechanic, and that's a 25% roll.
+    ///
+    /// So this sends rares in one at a time and keeps the frame from the first
+    /// PSA 9 or 10 it sees, settling for the last roll if the luck never comes.
+    /// Nothing is stacked: every score here is the game's own `rollGrade`, we
+    /// just keep playing until the shot is worth keeping.
     private func gradeARare() throws {
-        let grade = button(labelStartingWith: "Grade")
-        if grade.waitForExistence(timeout: 5), grade.isEnabled {
+        // Start from the grid so the number of rares actually available decides
+        // how many attempts there are — running out mid-loop would mean never
+        // taking the shot at all.
+        closeDetail()
+        let attempts = min(Self.maxGradeAttempts, max(gridCards.count, 1))
+
+        for index in 0..<attempts {
+            guard openCard(at: index) else { break }
+
+            let grade = button(labelStartingWith: "Grade")
+            guard grade.waitForExistence(timeout: 5), grade.isEnabled else {
+                closeDetail()          // already graded, or the fee is out of reach
+                continue
+            }
             grade.tap()
+
             let cont = button(labeled: "Continue")
-            if cont.waitForExistence(timeout: 10) {
+            guard cont.waitForExistence(timeout: 10) else {
+                closeDetail()
+                continue
+            }
+
+            if rolledShowcaseGrade || index == attempts - 1 {
                 shot("grading-psa-reveal", settle: 1.2)
                 cont.tap()
+                shot("card-detail-graded-copy", settle: 1.0)
+                break
             }
-            shot("card-detail-graded-copy", settle: 1.0)
+            cont.tap()
+            closeDetail()
         }
-        if doneButton.exists { doneButton.tap() }
+
+        closeDetail()
         tapFilter("Rare+")   // clear the filter again
+    }
+
+    /// True while the reveal overlay is showing a grade worth screenshotting.
+    private var rolledShowcaseGrade: Bool {
+        Self.showcaseGrades.contains { staticText($0).exists }
+    }
+
+    /// Opens the nth owned card in the collection grid, scrolling it into reach
+    /// if the run owns enough rares to push it off-screen.
+    private func openCard(at index: Int) -> Bool {
+        var card = gridCards.element(boundBy: index)
+        guard card.waitForExistence(timeout: 5) else { return false }
+        if !card.isHittable {
+            app.swipeUp()
+            card = gridCards.element(boundBy: index)
+            guard card.waitForExistence(timeout: 5), card.isHittable else { return false }
+        }
+        card.tap()
+        return doneButton.waitForExistence(timeout: 10)
+    }
+
+    private func closeDetail() {
+        if doneButton.exists { doneButton.tap() }
     }
 
     /// The stats tab — run totals, per-set progress and the all-time record.
