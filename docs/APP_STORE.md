@@ -125,6 +125,10 @@ xcodebuild -exportArchive -archivePath build/TradingUp.xcarchive \
   -exportPath build/export -allowProvisioningUpdates
 ```
 
+`-archivePath` puts the archive exactly where you asked, which also means
+**Xcode Organizer won't list it** — see the note below if you plan to upload
+that way.
+
 That leaves `build/export/TradingUp.ipa`. Confirm it really is a store build
 before spending an upload on it — the export writes a summary next to the
 `.ipa` recording which certificate signed it:
@@ -154,6 +158,30 @@ Then send it up, whichever way suits:
   App. Authenticates with the Apple ID already signed into Xcode, so there's
   nothing else to set up. Easiest for a first submission, and it skips the
   export step above.
+
+  Organizer only scans `~/Library/Developer/Xcode/Archives/<date>/`, so an
+  archive built to `-archivePath build/…` is invisible there no matter how
+  cleanly it built. Drop `-archivePath` and xcodebuild writes straight to that
+  folder under the name Xcode would have given it:
+
+  ```bash
+  xcodebuild archive -project TradingUp.xcodeproj -scheme TradingUp \
+    -destination "generic/platform=iOS" \
+    DEVELOPMENT_TEAM="$TEAM_ID" -allowProvisioningUpdates
+  ```
+
+  To rescue one you already built to `build/`, move it across:
+
+  ```bash
+  DEST=~/Library/Developer/Xcode/Archives/$(date +%F)
+  mkdir -p "$DEST"
+  mv build/TradingUp.xcarchive \
+    "$DEST/TradingUp $(date '+%-m-%-d-%y, %-I.%M %p').xcarchive"
+  ```
+
+  The filename is cosmetic — Organizer reads each `Info.plist` for the version
+  and date it displays — but matching the convention keeps the folder tidy.
+
 - **Command line** — needs an App Store Connect API key (Users and Access ▸
   Integrations ▸ App Store Connect API). Put the `.p8` in
   `~/.appstoreconnect/private_keys/`, then:
