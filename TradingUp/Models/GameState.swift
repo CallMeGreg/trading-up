@@ -63,15 +63,18 @@ final class GameState {
 
     @discardableResult
     func buyBox(set: Int) -> OpenResult? {
+        guard FeatureFlags.boosterBoxesAvailable else { return nil }
         let r = core.buyBox(set: set, using: &rng)
         if r != nil { save() }
         return r
     }
 
     /// Open a box as a sequence of packs (all cards added immediately, revealed
-    /// pack-by-pack). Returns one result per pack, or nil if unaffordable/locked.
+    /// pack-by-pack). Returns one result per pack, or nil if unaffordable/locked
+    /// — or if booster boxes have been removed from the shop.
     @discardableResult
     func buyBoxPacks(set: Int) -> [OpenResult]? {
+        guard FeatureFlags.boosterBoxesAvailable else { return nil }
         let r = core.buyBoxPacks(set: set, using: &rng)
         if r != nil { save() }
         return r

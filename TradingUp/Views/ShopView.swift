@@ -209,8 +209,8 @@ struct SectionEyebrow: View {
 // MARK: - Per-set shelf row
 
 /// One set on the shop shelf: the pack itself, how far the set has come, one
-/// obvious buy, and the booster box as a quiet second line rather than a rival
-/// button.
+/// obvious buy, and — unless `FeatureFlags.removeBoosterBoxes` is on — the
+/// booster box as a quiet second line rather than a rival button.
 struct SetShelfRow: View {
     @Environment(GameState.self) var game: GameState
     let set: Int
@@ -315,27 +315,29 @@ struct SetShelfRow: View {
             .accessibilityIdentifier("buyPack")
             .accessibilityLabel("Rip a pack, \(CardDatabase.setName(set)), 6 cards, \(packPrice.money)")
 
-            Button(action: onBuyBox) {
-                HStack(spacing: 6) {
-                    Text("Booster box · ").foregroundStyle(Palette.subtle)
-                    + Text(boxPrice.money).foregroundStyle(Palette.text).fontWeight(.bold)
-                    + Text(" · ≥\(Economy.boxGuaranteeUltras) ultra, ≥\(Economy.boxGuaranteeFoils) foil").foregroundStyle(Palette.subtle)
-                    Spacer(minLength: 4)
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(Palette.subtle)
+            if FeatureFlags.boosterBoxesAvailable {
+                Button(action: onBuyBox) {
+                    HStack(spacing: 6) {
+                        Text("Booster box · ").foregroundStyle(Palette.subtle)
+                        + Text(boxPrice.money).foregroundStyle(Palette.text).fontWeight(.bold)
+                        + Text(" · ≥\(Economy.boxGuaranteeUltras) ultra, ≥\(Economy.boxGuaranteeFoils) foil").foregroundStyle(Palette.subtle)
+                        Spacer(minLength: 4)
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(Palette.subtle)
+                    }
+                    .font(.system(size: 12, weight: .semibold))
+                    .lineLimit(1).minimumScaleFactor(0.75)
+                    .padding(.horizontal, 3)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
+                    .opacity(canBuyBox ? 1 : 0.5)
                 }
-                .font(.system(size: 12, weight: .semibold))
-                .lineLimit(1).minimumScaleFactor(0.75)
-                .padding(.horizontal, 3)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .contentShape(Rectangle())
-                .opacity(canBuyBox ? 1 : 0.5)
+                .buttonStyle(.plain)
+                .disabled(!canBuyBox)
+                .accessibilityIdentifier("buyBox")
+                .accessibilityLabel("Buy Booster Box, \(CardDatabase.setName(set)), \(Economy.boxPacks) packs, \(boxPrice.money)")
             }
-            .buttonStyle(.plain)
-            .disabled(!canBuyBox)
-            .accessibilityIdentifier("buyBox")
-            .accessibilityLabel("Buy Booster Box, \(CardDatabase.setName(set)), \(Economy.boxPacks) packs, \(boxPrice.money)")
         }
     }
 

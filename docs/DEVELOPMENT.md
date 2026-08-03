@@ -52,6 +52,7 @@ TradingUp/
     GameCore.swift           Deterministic game state: buy / open / sell / grade / bonuses
     Persistence.swift        Versioned save envelope, load hygiene, corrupt-save quarantine
     GameState.swift          @Observable wrapper: randomness + autosave for SwiftUI
+    FeatureFlags.swift       Build-time switches (see "Feature flags" below)
   Generated/
     CardData.swift           The 250 cards (auto-generated — do not edit by hand)
   Views/                     SwiftUI screens (Shop, Collection, pack opening, etc.)
@@ -89,6 +90,20 @@ chance, grade odds/multipliers, box guarantees, bonuses) live in
 Re‑run the [verify harness](TESTING.md#the-simulation-harness-no-xcode-needed)
 after any economy change — it enforces the target difficulty curve, not just
 correctness.
+
+## Feature flags
+
+`TradingUp/Models/FeatureFlags.swift` holds build-time switches for behaviour we
+want to turn on or off by editing one line, rather than deleting code and later
+digging it back out of git history. Change the value, rebuild — there's no
+runtime toggle and nothing is persisted.
+
+| Flag | Default | Effect when `true` |
+| --- | --- | --- |
+| `removeBoosterBoxes` | `false` | Takes booster boxes off the shop shelf. `SetShelfRow` drops its "Booster box · …" line and `GameState.buyBox` / `buyBoxPacks` refuse the sale, so no other call site can spend cash on a box the shop no longer offers. Box artwork and the "Boxes Opened" stats stay, since they describe boxes a player already opened. |
+
+Each flag is covered by `TradingUpTests/FeatureFlagTests.swift` in **both**
+states, so flipping one is a one-line change rather than a leap of faith.
 
 ## Regenerating content
 
