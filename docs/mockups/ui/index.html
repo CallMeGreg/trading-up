@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Trading Up — Pack &amp; Home Screen Mockups</title>
+  <link rel="stylesheet" href="ui.css" />
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <span class="brand-mark">TU</span>
+      <div>
+        <div class="brand-title">Trading Up</div>
+        <div class="brand-sub">Pack &amp; home screen mockups</div>
+      </div>
+    </div>
+    <nav class="nav">
+      <a href="#packs">Packs</a>
+      <a href="#home">Home screen</a>
+      <a href="#interactions">Interactions</a>
+      <a href="#recommend">Recommendation</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section class="intro">
+    <h1>Three pack directions, three home‑screen directions.</h1>
+    <p>
+      Nothing in the app has changed — this is a gallery so you can pick a direction.
+      Everything uses the real palette (<code>Theme.swift</code>), real set names and real prices
+      ($10 / $30 / $75 / $160 / $400, box = 11×). Packs and phone screens are live HTML: hover a
+      pack for the foil sheen, click one to tear it open, tap around the phone screens.
+    </p>
+    <div class="pill-row">
+      <span class="pill">Goal 1 · make a pack feel <b>physical</b></span>
+      <span class="pill">Goal 2 · one obvious action per screen</span>
+      <span class="pill">Goal 3 · show odds &amp; progress without a wall of text</span>
+    </div>
+  </section>
+
+  <!-- ============================ PACKS ============================ -->
+  <section id="packs">
+    <div class="section-head">
+      <h2>1 · The pack</h2>
+      <p>
+        Today a pack is a rounded rectangle with a gradient and an emoji. None of the cues that make
+        a real pack feel like a pack are there: the crimped heat‑seal edge, the mylar sheen, the
+        bulge of cards inside, the printed odds, the tear line. Each option below fixes that a
+        different way.
+      </p>
+    </div>
+
+    <!-- P1 -->
+    <article class="option">
+      <div class="option-head">
+        <span class="tag tag-a">Option P1</span>
+        <h3>Foil Wrapper</h3>
+        <p class="lede">A real mylar booster wrapper: serrated crimp top and bottom, holographic sheen,
+        wrinkle highlights, a bulge where the cards sit, and the pull odds printed on the front like
+        actual packaging.</p>
+      </div>
+      <div class="option-body">
+        <div class="stage stage-dark" id="p1-stage"></div>
+        <div class="notes">
+          <h4>Why this one</h4>
+          <ul>
+            <li><b>Reads as a pack instantly.</b> The crimp and the sheen are the two cues your eye uses to identify a foil wrapper.</li>
+            <li><b>Odds live on the wrapper</b> (“3 COMMON · 2 UNCOMMON · 1 RARE+ · 1% FOIL”), so players learn the pack math without a tutorial screen.</li>
+            <li><b>Scales down cleanly</b> to a 64pt shop thumbnail — the silhouette still reads as a pack.</li>
+            <li><b>Set identity</b> comes from the element palette plus a foil‑stamped set name, so all five sets share one wrapper template and never look samey.</li>
+          </ul>
+          <h4>Cost</h4>
+          <p>One new <code>PackWrapper</code> SwiftUI view: a zig‑zag <code>Shape</code> for the crimp, a
+          <code>TimelineView</code> sheen (already used in <code>SealedPackView</code>), and 3–4 gradient overlays.
+          No assets.</p>
+          <div class="swatch-row" id="p1-swatches"></div>
+        </div>
+      </div>
+    </article>
+
+    <div class="compare" id="anatomy-block">
+      <h4>Pack anatomy</h4>
+      <p class="muted">What each part is doing, and roughly what it costs to build.</p>
+      <div class="stage" style="min-height:0;padding:26px 20px" id="p1-anatomy"></div>
+    </div>
+
+    <!-- P2 -->
+    <article class="option">
+      <div class="option-head">
+        <span class="tag tag-b">Option P2</span>
+        <h3>Sealed Bundle</h3>
+        <p class="lede">The pack is the cards: six branded card backs stacked and slightly fanned,
+        wrapped in a paper belly band with a wax‑style seal. You can see exactly what you bought.</p>
+      </div>
+      <div class="option-body">
+        <div class="stage stage-dark" id="p2-stage"></div>
+        <div class="notes">
+          <h4>Why this one</h4>
+          <ul>
+            <li><b>“6 cards” is shown, not stated.</b> The stack depth <em>is</em> the count.</li>
+            <li><b>Best transition into the reveal</b> — the bundle fans into the six reveal slots, so the pack literally becomes the cards. No cut, no dissolve.</li>
+            <li>Reuses the <code>CardBack</code> view you already ship, so it’s the cheapest option to build.</li>
+            <li>Boxes read as a taller stack of bundles.</li>
+          </ul>
+          <h4>Trade‑off</h4>
+          <p>Less “sealed product” tension than a wrapper — you’re looking at cards, not at a mystery.
+          Slightly weaker as a tiny shop thumbnail, since a fanned stack is a busier silhouette.</p>
+          <div class="swatch-row" id="p2-swatches"></div>
+        </div>
+      </div>
+    </article>
+
+    <!-- P3 -->
+    <article class="option">
+      <div class="option-head">
+        <span class="tag tag-c">Option P3</span>
+        <h3>Display Box &amp; Tray</h3>
+        <p class="lede">The booster box gets its own object: a 3‑D shrink‑wrapped box that opens to a
+        tray of 12 pack tops. You pull packs out of the tray one at a time instead of watching 72 cards fly by.</p>
+      </div>
+      <div class="option-body">
+        <div class="stage stage-dark" id="p3-stage"></div>
+        <div class="notes">
+          <h4>Why this one</h4>
+          <ul>
+            <li><b>Fixes the box, not the pack.</b> Today a $110 box looks like a $10 pack with different text — the biggest purchase in the game has the smallest visual payoff.</li>
+            <li><b>Pacing.</b> A 12‑pack tray gives a visible “how much is left”, and each pull is its own moment.</li>
+            <li><b>Guarantees get a home</b>: the ≥3 ultra / ≥2 foil promise is printed on the box like a real case‑hit guarantee, and the tray marks which packs held them afterwards.</li>
+            <li>Pairs with either P1 or P2 — this is the box half of whichever pack you pick.</li>
+          </ul>
+          <h4>Cost</h4>
+          <p>Three faces with <code>rotation3DEffect</code>, a gloss overlay and a tray grid. The tray also
+          replaces the current “pack N of 12” counter.</p>
+          <div class="swatch-row" id="p3-swatches"></div>
+        </div>
+      </div>
+    </article>
+
+    <div class="compare">
+      <h4>Side by side, at shop‑thumbnail size</h4>
+      <p class="muted">This is the size that actually matters — it’s how a pack appears in the shop list.</p>
+      <div class="thumb-strip" id="thumb-strip"></div>
+    </div>
+  </section>
+
+  <!-- ============================ HOME ============================ -->
+  <section id="home">
+    <div class="section-head">
+      <h2>2 · The home screen</h2>
+      <p>
+        Today the Shop is five stacked panels, each with a colour banner and two near‑identical
+        gradient buttons — ten buttons on one screen, no clear primary action, and the pack (the thing
+        the whole game is about) is never actually pictured. Every option below keeps the same
+        information and the same three tabs, but changes what’s in charge.
+      </p>
+    </div>
+
+    <div class="screens" id="screens"></div>
+
+    <div class="matrix">
+      <table>
+        <thead>
+          <tr><th>&nbsp;</th><th>H0 · Today</th><th>H1 · Shelf List</th><th>H2 · Pack Counter</th><th>H3 · Storefront</th></tr>
+        </thead>
+        <tbody>
+          <tr><th>Primary action</th><td class="bad">10 buttons, none primary</td><td class="good">1 per row, box demoted</td><td class="good">Exactly 1 on screen</td><td class="ok">1 per shelf</td></tr>
+          <tr><th>Pack is visible</th><td class="bad">Never</td><td class="good">Thumbnail per set</td><td class="good">Hero, full size</td><td class="good">Standing on shelves</td></tr>
+          <tr><th>Sets per screen</th><td class="ok">~2</td><td class="good">4–5</td><td class="bad">1 (rail to switch)</td><td class="ok">2–3</td></tr>
+          <tr><th>Cash always visible</th><td class="bad">Scrolls away</td><td class="good">Sticky wallet bar</td><td class="good">Sticky wallet bar</td><td class="good">Sticky wallet bar</td></tr>
+          <tr><th>Locked sets</th><td class="ok">Grey panel + text</td><td class="good">Silhouette + “12 more”</td><td class="good">Frosted pack on rail</td><td class="good">Empty shelf slot</td></tr>
+          <tr><th>Build effort</th><td>—</td><td class="good">Low — restyles <code>SetShopCard</code></td><td class="ok">Medium — new paging layout</td><td class="bad">High — needs shelf art</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ======================== INTERACTIONS ========================= -->
+  <section id="interactions">
+    <div class="section-head">
+      <h2>3 · Opening it</h2>
+      <p>
+        Whichever pack you pick, the open is the best three seconds in the game. Two candidate
+        gestures — try them both.
+      </p>
+    </div>
+
+    <div class="interaction-grid">
+      <div class="interaction">
+        <div class="stage stage-dark stage-sm" id="tear-tap"></div>
+        <h4>A · Tap to tear <span class="tag tag-a">today, upgraded</span></h4>
+        <p>One tap: the crimp strip rips off, the wrapper falls away and the card stack rises into
+        place. Fast, accessible, one‑handed, and works identically for a box.</p>
+        <p class="muted">Keeps the current interaction contract — <code>SealedPackView</code> already
+        tears on tap — so nothing to re‑learn, just a much better animation.</p>
+      </div>
+      <div class="interaction">
+        <div class="stage stage-dark stage-sm" id="tear-swipe"></div>
+        <h4>B · Swipe to rip <span class="tag tag-b">tactile</span></h4>
+        <p>Drag across the top crimp and the tear follows your finger, with a rising haptic rumble the
+        further you pull. Release past ~60% and it rips; release early and it snaps back.</p>
+        <p class="muted">More satisfying, and the resistance sells the “physical” story. Needs a tap
+        fallback for accessibility, and a first‑run hint so nobody gets stuck staring at a sealed pack.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================= RECOMMENDATION ====================== -->
+  <section id="recommend">
+    <div class="section-head">
+      <h2>Recommendation</h2>
+    </div>
+    <div class="reco">
+      <div class="reco-card">
+        <div class="reco-num">P1</div>
+        <div>
+          <h4>Foil Wrapper for the pack</h4>
+          <p>Biggest “that’s a real pack” payoff per line of code, works at every size from a 64pt shop
+          thumbnail to a full‑screen hero, and it’s the only option that gets the odds in front of players
+          naturally. Add <b>P3</b>’s box and tray on top of it for booster boxes.</p>
+        </div>
+      </div>
+      <div class="reco-card">
+        <div class="reco-num">H1</div>
+        <div>
+          <h4>Shelf List for home</h4>
+          <p>Keeps everything that works about today’s screen — one scroll, all five sets, honest
+          progress — and fixes what doesn’t: it shows the pack, promotes one action per set, demotes the
+          box to a secondary, and pins cash so you always know what you can afford. <b>H2</b> is the more
+          exciting screen if you want the pack to be the whole home screen; <b>H3</b> is the same idea
+          with real charm but real art cost.</p>
+        </div>
+      </div>
+      <div class="reco-card">
+        <div class="reco-num">A</div>
+        <div>
+          <h4>Tap to tear, with swipe as a stretch</h4>
+          <p>Ship tap (it’s the current contract and it’s accessible), then add swipe‑to‑rip behind the
+          same view once the wrapper exists.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="foot">
+    Mockups only · nothing under <code>TradingUp/</code> was modified · delete <code>docs/mockups/ui/</code> to drop them.
+  </footer>
+</main>
+
+<script src="ui.js"></script>
+</body>
+</html>

@@ -175,3 +175,8 @@ Preview the card visual style in a browser without building the app:
 cd docs/mockups && python3 -m http.server 8787
 # then open http://localhost:8787
 ```
+
+`docs/mockups/ui/` is a second, separate gallery: proposed directions for the
+**booster pack** and the **Shop home screen** (three options each, plus the
+tear‑open interaction). Open `http://localhost:8787/ui/` from the same server.
+Nothing in it ships — it exists to pick a direction before any SwiftUI changes.
