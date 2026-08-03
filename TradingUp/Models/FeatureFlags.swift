@@ -24,7 +24,7 @@ enum FeatureFlags {
     /// Deliberately *not* gated: the reveal flow's box art and the "Boxes
     /// Opened" stat tiles. Those describe boxes a player already opened, and
     /// erasing that history would be a lie about their save.
-    static var removeBoosterBoxes = false
+    static var removeBoosterBoxes = true
 
     /// Whether the shop should still sell booster boxes. Reads better at the
     /// call site than negating ``removeBoosterBoxes`` in a dozen places.
