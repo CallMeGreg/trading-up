@@ -241,11 +241,21 @@ h4 { font-size: 14px; margin: 20px 0 8px; letter-spacing: .2px; }
 }
 @keyframes sheen { 0% { left: -60%; } 60%, 100% { left: 130%; } }
 
+/* Three bands: brand on top, art in the middle, set stamp at the foot. The
+   middle band takes the slack, so the sigil sits optically centred whatever
+   type is showing. */
 .wrapper .content {
   position: relative; z-index: 2; height: 100%;
-  display: flex; flex-direction: column; align-items: center;
-  padding: calc(var(--w) * .115) calc(var(--w) * .07) calc(var(--w) * .06);
+  display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+  padding: calc(var(--w) * .10) calc(var(--w) * .07) calc(var(--w) * .085);
   text-align: center;
+}
+.wrapper .band-top, .wrapper .band-bot {
+  width: 100%; display: flex; flex-direction: column; align-items: center; flex: 0 0 auto;
+}
+.wrapper .band-mid {
+  flex: 1 1 auto; width: 100%; min-height: 0;
+  display: flex; align-items: center; justify-content: center;
 }
 .wrapper .brandline {
   font: 900 calc(var(--w) * .072)/1 ui-rounded, -apple-system, sans-serif;
@@ -257,7 +267,7 @@ h4 { font-size: 14px; margin: 20px 0 8px; letter-spacing: .2px; }
   background: linear-gradient(90deg, transparent, rgba(255,255,255,.6), transparent);
 }
 .wrapper .emblem {
-  width: 52%; aspect-ratio: 1; margin: calc(var(--w) * .01) 0;
+  width: 66%; aspect-ratio: 1;
   filter: drop-shadow(0 2px 6px rgba(0,0,0,.5));
 }
 .wrapper .emblem svg { width: 100%; height: 100%; display: block; }
@@ -274,21 +284,14 @@ h4 { font-size: 14px; margin: 20px 0 8px; letter-spacing: .2px; }
   font: 800 calc(var(--w) * .055)/1 -apple-system, sans-serif;
   letter-spacing: calc(var(--w) * .028); color: rgba(255,255,255,.82);
 }
-.wrapper .odds {
-  margin-top: auto; width: 100%;
-  border-radius: calc(var(--w) * .022);
-  background: rgba(0,0,0,.34); border: 1px solid rgba(255,255,255,.16);
-  padding: calc(var(--w) * .032) calc(var(--w) * .03);
-  font: 800 calc(var(--w) * .042)/1.35 -apple-system, sans-serif;
-  letter-spacing: .3px; color: rgba(255,255,255,.8);
-}
-.wrapper .odds b { color: var(--gold); }
 
-/* small sizes: micro-text turns to mush, so drop it and let the emblem carry */
+/* small sizes: micro-text turns to mush, so drop it and let the art carry */
 .wrapper.sz-mini .brandline, .wrapper.sz-mini .rule { display: none; }
-.wrapper.sz-mini .content { padding-top: calc(var(--w) * .09); }
-.wrapper.sz-mini .emblem { width: 66%; }
-.wrapper.sz-mini .setname { font-size: calc(var(--w) * .16); margin-top: calc(var(--w) * .04); }
+.wrapper.sz-mini .content { padding: calc(var(--w) * .075) calc(var(--w) * .06) calc(var(--w) * .08); }
+.wrapper.sz-mini .emblem { width: 82%; }
+.wrapper.sz-mini .setname { font-size: calc(var(--w) * .16); margin-top: 0; }
+.wrapper.sz-micro .content { padding: calc(var(--w) * .08) calc(var(--w) * .06); }
+.wrapper.sz-micro .emblem { width: 88%; }
 
 .wrapper .burst {
   position: absolute; z-index: 3; top: calc(var(--w) * .13); right: calc(var(--w) * .025);
@@ -303,17 +306,6 @@ h4 { font-size: 14px; margin: 20px 0 8px; letter-spacing: .2px; }
   font: 900 calc(var(--w) * .105)/1 ui-rounded, -apple-system, sans-serif;
 }
 .wrapper .burst i small { display: block; font-size: calc(var(--w) * .038); letter-spacing: .5px; }
-
-.wrapper .tearline {
-  position: absolute; z-index: 3; left: 0; right: 0; top: calc(var(--w) * .035);
-  display: flex; align-items: center; gap: 5px; padding: 0 calc(var(--w) * .05);
-  font: 800 calc(var(--w) * .033)/1 -apple-system, sans-serif;
-  letter-spacing: calc(var(--w) * .012); color: rgba(255,255,255,.5);
-}
-.wrapper .tearline::after {
-  content: ""; flex: 1; height: 1px;
-  background: repeating-linear-gradient(90deg, rgba(255,255,255,.45) 0 4px, transparent 4px 8px);
-}
 
 /* tear-open animation */
 .pack.tearing .crimp-top { animation: rip .5s ease-in forwards; }
@@ -370,14 +362,13 @@ h4 { font-size: 14px; margin: 20px 0 8px; letter-spacing: .2px; }
   border-radius: calc(var(--cw) * .04);
 }
 .cardback .glyph {
-  position: absolute; inset: 0; display: flex; flex-direction: column;
-  align-items: center; justify-content: center; gap: calc(var(--cw) * .01);
+  position: absolute; inset: 0; display: flex;
+  align-items: center; justify-content: center;
 }
-.cardback .glyph b {
-  font: 900 calc(var(--cw) * .18)/1 ui-rounded, -apple-system, sans-serif;
-  color: rgba(255,255,255,.92);
+.cardback .glyph span {
+  font-size: calc(var(--cw) * .30); line-height: 1;
+  filter: drop-shadow(0 calc(var(--cw) * .012) calc(var(--cw) * .03) rgba(0,0,0,.55));
 }
-.cardback .glyph span { font-size: calc(var(--cw) * .105); }
 .cardback .foot {
   position: absolute; bottom: calc(var(--cw) * .08); left: 0; right: 0; text-align: center;
   font: 900 calc(var(--cw) * .062)/1 ui-rounded, -apple-system, sans-serif;
@@ -502,10 +493,6 @@ h4 { font-size: 14px; margin: 20px 0 8px; letter-spacing: .2px; }
   background: linear-gradient(180deg, rgba(255,255,255,.5), rgba(255,255,255,.05));
 }
 .tray .slot.gone { background: #0a0e15; box-shadow: inset 0 3px 8px rgba(0,0,0,.8); }
-.tray .slot.hit::after {
-  content: "★"; position: absolute; inset: 0; display: grid; place-items: center;
-  color: var(--gold); font-size: 13px; text-shadow: 0 1px 3px rgba(0,0,0,.8);
-}
 .tray-caption { font-size: 11px; color: var(--subtle); letter-spacing: .4px; text-align: center; margin-top: 8px; }
 
 /* ==================================================================

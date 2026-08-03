@@ -85,10 +85,14 @@ function makeSigil(seedStr, type) {
 // ================================================================ P1 · foil wrapper
 
 /**
- * detail: 'full'  — hero pack: odds strip, tear line, "6 cards" burst
- *         'mid'   — ~110px: emblem, set name, kind
- *         'mini'  — ~60px shop thumbnail: emblem + set name only
- *         'micro' — ~34px rail chip: emblem only
+ * The wrapper is one template at every size — a top band (brand), a centred
+ * sigil, and a bottom band (set name + kind). Detail levels only decide how
+ * much of the type survives; the art always stays optically centred.
+ *
+ * detail: 'full'  — hero pack: brand, big sigil, set name, "6 cards" burst
+ *         'mid'   — ~110px: same, no burst
+ *         'mini'  — ~60px shop thumbnail: sigil + set name
+ *         'micro' — ~34px rail chip: sigil only
  */
 function packWrapper(setNo, { w = 190, detail = 'full', isBox = false, cls = '' } = {}) {
   const s = bySet(setNo);
@@ -99,14 +103,18 @@ function packWrapper(setNo, { w = 190, detail = 'full', isBox = false, cls = '' 
     <div class="crimp crimp-top"></div>
     <div class="face">
       <div class="holo"></div>
-      ${full ? `<div class="tearline">TEAR</div>` : ''}
       <div class="content">
-        ${micro ? '' : `<div class="brandline">TRADING UP</div>`}
-        ${full || mid ? `<div class="rule"></div>` : ''}
-        <div class="emblem" style="${micro ? 'width:74%' : ''}">${sig}</div>
-        ${micro ? '' : `<div class="setname">${s.name}</div>`}
-        ${full || mid ? `<div class="kind">${isBox ? 'BOOSTER BOX' : 'BOOSTER PACK'}</div>` : ''}
-        ${full ? `<div class="odds">3 COMMON · 2 UNCOMMON<br>1 RARE OR ULTRA · <b>1% FOIL</b></div>` : ''}
+        <div class="band-top">
+          ${micro ? '' : `<div class="brandline">TRADING UP</div>`}
+          ${full || mid ? `<div class="rule"></div>` : ''}
+        </div>
+        <div class="band-mid">
+          <div class="emblem">${sig}</div>
+        </div>
+        <div class="band-bot">
+          ${micro ? '' : `<div class="setname">${s.name}</div>`}
+          ${full || mid ? `<div class="kind">${isBox ? 'BOOSTER BOX' : 'BOOSTER PACK'}</div>` : ''}
+        </div>
       </div>
       ${full ? `<div class="burst"><i>6<small>CARDS</small></i></div>` : ''}
       <div class="sheen"></div>
@@ -126,7 +134,7 @@ function cardBack(setNo, cw) {
       <i style="width:${cw * 0.44}px;height:${cw * 0.44}px"></i>
       <i style="width:${cw * 0.32}px;height:${cw * 0.32}px"></i>
     </div>
-    <div class="glyph"><b>TU</b><span>${EMOJI[s.type]}</span></div>
+    <div class="glyph"><span>${EMOJI[s.type]}</span></div>
     <div class="foot">TRADING UP</div>
     <div class="inner-rule"></div>
   </div>`;
@@ -148,7 +156,7 @@ function bundle(setNo, { cw = 175, cls = '' } = {}) {
   <div class="bundle ${cls}" style="--cw:${cw}px;${vars(s.type)}" data-set="${setNo}">
     ${layers.join('')}
     <div class="band">${bandText}</div>
-    <div class="seal">TU</div>
+    <div class="seal">${EMOJI[s.type]}</div>
   </div>`;
 }
 
@@ -171,12 +179,13 @@ function box3d(setNo, { bw = 200 } = {}) {
   </div>`;
 }
 
-function tray(setNo, { used = 0, hits = [] } = {}) {
+// Slots only ever say "still sealed" or "already opened" — never which pack is
+// carrying the box guarantee, since that would spoil the pull before the tear.
+function tray(setNo, { used = 0 } = {}) {
   const s = bySet(setNo);
   let slots = '';
   for (let i = 0; i < 12; i++) {
-    const cls = i < used ? 'gone' : (hits.includes(i) ? 'hit' : '');
-    slots += `<div class="slot ${cls}"></div>`;
+    slots += `<div class="slot ${i < used ? 'gone' : ''}"></div>`;
   }
   return `<div><div class="tray" style="${vars(s.type)}">${slots}</div>
     <div class="tray-caption">${12 - used} of 12 packs left</div></div>`;
@@ -438,8 +447,8 @@ document.getElementById('p1-anatomy').innerHTML = `
       <div class="lbl l l2"><b>Foil sheen</b>Slow diagonal glint, 3.4s loop</div>
       <div class="lbl l l3"><b>Bulge</b>Inner shadow = cards inside</div>
       <div class="lbl r r1"><b>Card count</b>Foil starburst, 6 cards</div>
-      <div class="lbl r r2"><b>Set stamp</b>Gold‑foil set name + emblem</div>
-      <div class="lbl r r3"><b>Printed odds</b>The pack math, on the pack</div>
+      <div class="lbl r r2"><b>Centred art</b>The sigil is the hero at every size</div>
+      <div class="lbl r r3"><b>Set stamp</b>Gold‑foil name over BOOSTER PACK</div>
       ${packWrapper(1, { w: 170, detail: 'full' })}
     </div>`;
 
@@ -459,7 +468,7 @@ document.getElementById('p2-swatches').innerHTML =
 // ---- P3 stage
 document.getElementById('p3-stage').innerHTML = `
   ${stageItem('Sealed box', box3d(1, { bw: 200 }), 'Emberfall · $110')}
-  ${stageItem('Opened · pack tray', tray(1, { used: 4, hits: [7, 10] }), '★ = pack that held a guarantee')}
+  ${stageItem('Opened · pack tray', tray(1, { used: 4 }), 'Every sealed pack looks identical')}
   ${stageItem('Set 5 box', box3d(5, { bw: 150 }), 'Umbral Reach · $4,400')}`;
 
 document.getElementById('p3-swatches').innerHTML =
