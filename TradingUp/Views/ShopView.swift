@@ -10,15 +10,20 @@ struct ShopView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 16) {
-                    CashHeader(freeze: freeze)
-                    ForEach(1...CardDatabase.setCount, id: \.self) { set in
-                        SetShopCard(set: set, freeze: freeze, revealInFlight: isRevealInFlight) { buyPack(set) } onBuyBox: { buyBox(set) }
+            VStack(spacing: 0) {
+                WalletHeader(freeze: freeze)
+                ScrollView {
+                    LazyVStack(spacing: 12) {
+                        SectionEyebrow(title: "Packs", trailing: "\(CardDatabase.setCount) sets")
+                        ForEach(1...CardDatabase.setCount, id: \.self) { set in
+                            SetShelfRow(set: set, freeze: freeze, revealInFlight: isRevealInFlight) { buyPack(set) } onBuyBox: { buyBox(set) }
+                        }
                     }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 12)
+                    .padding(.bottom, 20)
+                    .readableWidth()
                 }
-                .padding(16)
-                .readableWidth()
             }
             .background(Palette.screen.ignoresSafeArea())
             .toolbar(.hidden, for: .navigationBar)
@@ -109,55 +114,108 @@ struct ShopFreeze {
     }
 }
 
-// MARK: - Cash header
+// MARK: - Wallet header
 
-struct CashHeader: View {
+/// The money bar that stays put at the top of the shop. Cash is the number that
+/// decides every tap on this screen, so it never scrolls out of reach.
+struct WalletHeader: View {
     @Environment(GameState.self) var game: GameState
     var freeze: ShopFreeze? = nil
 
     private var uniqueCount: Int { freeze?.uniqueCount ?? game.uniqueCount }
 
     var body: some View {
-        VStack(spacing: 12) {
-            HStack(alignment: .firstTextBaseline) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("CASH").font(.system(size: 11, weight: .bold)).foregroundStyle(Palette.subtle)
+        VStack(spacing: 9) {
+            HStack(alignment: .center, spacing: 10) {
+                HStack(spacing: 8) {
+                    Text("$")
+                        .font(.system(size: 15, weight: .black, design: .rounded))
+                        .foregroundStyle(Color(hex: "06301b"))
+                        .frame(width: 30, height: 30)
+                        .background(
+                            Circle().fill(
+                                RadialGradient(colors: [Color(hex: "b8ffd6"), Palette.money, Color(hex: "2c9c5c")],
+                                               center: UnitPoint(x: 0.35, y: 0.3), startRadius: 1, endRadius: 26)
+                            )
+                        )
+                        .shadow(color: Palette.money.opacity(0.35), radius: 3, y: 2)
                     Text(game.cash.money)
-                        .font(.system(size: 34, weight: .black, design: .rounded))
+                        .font(.system(size: 26, weight: .black, design: .rounded))
                         .foregroundStyle(Palette.money)
                         .contentTransition(.numericText())
+                        .lineLimit(1).minimumScaleFactor(0.6)
                 }
-                Spacer()
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text("NET WORTH").font(.system(size: 11, weight: .bold)).foregroundStyle(Palette.subtle)
-                    Text(game.netWorth.money)
-                        .font(.system(size: 18, weight: .bold, design: .rounded))
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Cash \(game.cash.money)")
+
+                Spacer(minLength: 0)
+
+                VStack(alignment: .trailing, spacing: 1) {
+                    Text("NET WORTH")
+                        .font(.system(size: 10, weight: .heavy)).tracking(0.8)
+                        .foregroundStyle(Palette.subtle)
+                    Text(game.netWorth.moneyShort)
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
                         .foregroundStyle(Palette.text)
                 }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Net worth \(game.netWorth.money)")
             }
-            VStack(spacing: 4) {
-                HStack {
-                    Text("Collection").font(.system(size: 12, weight: .semibold)).foregroundStyle(Palette.subtle)
-                    Spacer()
-                    Text("\(uniqueCount) / \(game.totalCards)")
-                        .font(.system(size: 12, weight: .bold, design: .monospaced))
-                        .foregroundStyle(Palette.text)
-                }
+
+            HStack(spacing: 8) {
+                Text("BINDER")
+                    .font(.system(size: 11, weight: .bold)).tracking(0.3)
+                    .foregroundStyle(Palette.subtle)
                 ProgressBar(value: Double(uniqueCount), total: Double(game.totalCards),
-                            tint: .white)
+                            tint: Palette.money, height: 6)
+                Text("\(uniqueCount)/\(game.totalCards)")
+                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                    .foregroundStyle(Palette.subtle)
             }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Collection \(uniqueCount) of \(game.totalCards)")
         }
-        .panel()
+        .padding(.horizontal, 18)
+        .padding(.top, 6)
+        .padding(.bottom, 12)
+        .readableWidth()
+        .frame(maxWidth: .infinity)
+        .background(Palette.bg1.opacity(0.96))
+        .overlay(alignment: .bottom) {
+            Rectangle().fill(.white.opacity(0.07)).frame(height: 1)
+        }
     }
 }
 
-// MARK: - Per-set shop card
+/// The small all-caps label that heads a list section.
+struct SectionEyebrow: View {
+    let title: String
+    var trailing: String? = nil
 
-struct SetShopCard: View {
+    var body: some View {
+        HStack {
+            Text(title.uppercased())
+            Spacer()
+            if let trailing { Text(trailing.uppercased()) }
+        }
+        .font(.system(size: 11, weight: .heavy))
+        .tracking(1.4)
+        .foregroundStyle(Palette.subtle)
+        .padding(.horizontal, 2)
+        .padding(.bottom, 2)
+    }
+}
+
+// MARK: - Per-set shelf row
+
+/// One set on the shop shelf: the pack itself, how far the set has come, one
+/// obvious buy, and the booster box as a quiet second line rather than a rival
+/// button.
+struct SetShelfRow: View {
     @Environment(GameState.self) var game: GameState
     let set: Int
     var freeze: ShopFreeze? = nil
-    /// Disables both buy buttons while a reveal is pending/on screen, so the
+    /// Disables both buys while a reveal is pending/on screen, so the
     /// affordance matches the behaviour instead of silently swallowing taps.
     var revealInFlight: Bool = false
     let onBuyPack: () -> Void
@@ -172,101 +230,166 @@ struct SetShopCard: View {
     private var unlocked: Bool { displayUnique >= unlockThreshold }
 
     var body: some View {
-        VStack(spacing: 0) {
-            banner
-            if unlocked {
-                unlockedBody
-            } else {
-                lockedBody
+        HStack(alignment: .center, spacing: 14) {
+            PackWrapper(set: set, width: 58, detail: .mini)
+                .opacity(unlocked ? 1 : 0.35)
+                .saturation(unlocked ? 1 : 0.4)
+                .brightness(unlocked ? 0 : -0.15)
+            VStack(alignment: .leading, spacing: 9) {
+                title
+                if unlocked { unlockedActions } else { lockedCallout }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(.leading, 16)
+        .padding(.trailing, 14)
+        .padding(.vertical, 14)
+        .background {
+            ZStack(alignment: .leading) {
+                Palette.panel
+                RadialGradient(colors: [element.palette[2].opacity(unlocked ? 0.26 : 0.08), .clear],
+                               center: .topLeading, startRadius: 0, endRadius: 260)
+                LinearGradient(colors: [element.palette[1], element.palette[2]],
+                               startPoint: .top, endPoint: .bottom)
+                    .frame(width: 4)
+                    .opacity(unlocked ? 1 : 0.4)
             }
         }
-        .background(RoundedRectangle(cornerRadius: 18).fill(Palette.panel))
-        .overlay(RoundedRectangle(cornerRadius: 18).strokeBorder(Palette.stroke, lineWidth: 1))
-        .clipShape(RoundedRectangle(cornerRadius: 18))
+        .clipShape(RoundedRectangle(cornerRadius: 20))
+        .overlay(RoundedRectangle(cornerRadius: 20).strokeBorder(Palette.stroke, lineWidth: 1))
     }
 
-    private var unlockedBody: some View {
-        VStack(spacing: 12) {
-            HStack {
-                Text("\(owned) / 50 collected")
-                    .font(.system(size: 12, weight: .semibold)).foregroundStyle(Palette.subtle)
-                Spacer()
-                if owned == 50 {
-                    Label("Complete", systemImage: "checkmark.seal.fill")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(Palette.money)
-                }
-            }
-            ProgressBar(value: Double(owned), total: 50, tint: element.palette[1])
-
-            BigButton(
-                title: "Buy Pack",
-                subtitle: "6 cards · \(packPrice.money)",
-                systemImage: "shippingbox.fill",
-                tint: [element.palette[1], element.palette[2]],
-                enabled: game.canAffordPack(set: set) && !revealInFlight,
-                action: onBuyPack
-            )
-            BigButton(
-                title: "Buy Booster Box",
-                subtitle: "\(Economy.boxPacks) packs · \(boxPrice.money) · ≥\(Economy.boxGuaranteeUltras) ultra, ≥\(Economy.boxGuaranteeFoils) foil",
-                systemImage: "cube.box.fill",
-                tint: [element.palette[2], element.palette[3]],
-                enabled: game.canAffordBox(set: set) && !revealInFlight,
-                action: onBuyBox
-            )
-        }
-        .padding(16)
-    }
-
-    private var lockedBody: some View {
-        let have = min(displayUnique, unlockThreshold)
-        let remaining = max(0, unlockThreshold - displayUnique)
-        return VStack(spacing: 12) {
-            HStack(spacing: 6) {
-                Image(systemName: "lock.fill").font(.system(size: 13, weight: .bold))
-                Text("Locked").font(.system(size: 14, weight: .bold))
-                Spacer()
-                Text("\(have) / \(unlockThreshold)")
-                    .font(.system(size: 12, weight: .bold, design: .monospaced))
+    private var title: some View {
+        HStack(alignment: .top, spacing: 10) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(CardDatabase.setName(set))
+                    .font(.system(size: 19, weight: .bold, design: .rounded))
                     .foregroundStyle(Palette.text)
+                    .lineLimit(1).minimumScaleFactor(0.7)
+                Text(unlocked ? "Set \(set) · \(owned) of 50 collected" : "Set \(set) · locked")
+                    .font(.system(size: 11.5, weight: .semibold))
+                    .foregroundStyle(Palette.subtle)
             }
-            .foregroundStyle(Palette.subtle)
-
-            Text("Collect **\(remaining) more** unique card\(remaining == 1 ? "" : "s") (\(unlockThreshold) total) to unlock \(CardDatabase.setName(set)).")
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(Palette.subtle)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-            ProgressBar(value: Double(have), total: Double(unlockThreshold), tint: element.palette[1])
+            Spacer(minLength: 0)
+            if unlocked {
+                if owned == 50 {
+                    Image(systemName: "checkmark.seal.fill")
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundStyle(Palette.money)
+                        .accessibilityLabel("Set complete")
+                } else {
+                    ProgressRing(value: owned, total: 50, tint: element.palette[1])
+                }
+            } else {
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundStyle(Palette.subtle)
+            }
         }
-        .padding(16)
+        .accessibilityElement(children: .combine)
     }
 
-    private var banner: some View {
-        ZStack {
-            LinearGradient(colors: [element.palette[2], element.palette[3]],
-                           startPoint: .leading, endPoint: .trailing)
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("SET \(set)").font(.system(size: 11, weight: .black)).foregroundStyle(.white.opacity(0.75))
-                    Text(CardDatabase.setName(set))
-                        .font(.system(size: 22, weight: .black, design: .rounded))
-                        .foregroundStyle(.white)
+    private var unlockedActions: some View {
+        VStack(spacing: 8) {
+            Button(action: onBuyPack) {
+                HStack {
+                    Text("Rip a pack").font(.system(size: 15, weight: .bold))
+                    Spacer(minLength: 8)
+                    Text(packPrice.money).font(.system(size: 15, weight: .black, design: .rounded))
                 }
-                Spacer()
-                if !unlocked {
-                    Image(systemName: "lock.fill")
-                        .font(.system(size: 28, weight: .bold))
-                        .foregroundStyle(.white.opacity(0.85))
-                }
+                .foregroundStyle(.white)
+                .padding(.vertical, 11).padding(.horizontal, 14)
+                .frame(maxWidth: .infinity)
+                .background(
+                    RoundedRectangle(cornerRadius: 13).fill(
+                        LinearGradient(colors: canBuyPack ? [element.palette[1], element.palette[2]]
+                                                          : [Palette.stroke, Palette.stroke.opacity(0.7)],
+                                       startPoint: .leading, endPoint: .trailing)
+                    )
+                )
+                .overlay(RoundedRectangle(cornerRadius: 13).strokeBorder(.white.opacity(0.2), lineWidth: 1))
+                .opacity(canBuyPack ? 1 : 0.55)
             }
-            .padding(.horizontal, 16)
+            .buttonStyle(.plain)
+            .disabled(!canBuyPack)
+            .accessibilityIdentifier("buyPack")
+            .accessibilityLabel("Rip a pack, \(CardDatabase.setName(set)), 6 cards, \(packPrice.money)")
+
+            Button(action: onBuyBox) {
+                HStack(spacing: 6) {
+                    Text("Booster box · ").foregroundStyle(Palette.subtle)
+                    + Text(boxPrice.money).foregroundStyle(Palette.text).fontWeight(.bold)
+                    + Text(" · ≥\(Economy.boxGuaranteeUltras) ultra, ≥\(Economy.boxGuaranteeFoils) foil").foregroundStyle(Palette.subtle)
+                    Spacer(minLength: 4)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(Palette.subtle)
+                }
+                .font(.system(size: 12, weight: .semibold))
+                .lineLimit(1).minimumScaleFactor(0.75)
+                .padding(.horizontal, 3)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+                .opacity(canBuyBox ? 1 : 0.5)
+            }
+            .buttonStyle(.plain)
+            .disabled(!canBuyBox)
+            .accessibilityIdentifier("buyBox")
+            .accessibilityLabel("Buy Booster Box, \(CardDatabase.setName(set)), \(Economy.boxPacks) packs, \(boxPrice.money)")
         }
-        .frame(height: 74)
-        .saturation(unlocked ? 1 : 0.3)
-        .opacity(unlocked ? 1 : 0.85)
+    }
+
+    private var lockedCallout: some View {
+        let remaining = max(0, unlockThreshold - displayUnique)
+        return HStack(spacing: 8) {
+            Image(systemName: "lock.fill").font(.system(size: 11, weight: .bold))
+            Text("**\(remaining) more** unique card\(remaining == 1 ? "" : "s") to unlock")
+                .font(.system(size: 12.5, weight: .semibold))
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+        }
+        .foregroundStyle(Palette.subtle)
+        .padding(.horizontal, 14).padding(.vertical, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 13)
+                .strokeBorder(Palette.stroke, style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
+        )
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Locked. Collect \(remaining) more unique cards to unlock \(CardDatabase.setName(set)).")
+    }
+
+    private var canBuyPack: Bool { game.canAffordPack(set: set) && !revealInFlight }
+    private var canBuyBox: Bool { game.canAffordBox(set: set) && !revealInFlight }
+}
+
+/// Set completion as a dial: the number plus how much of the circle is filled,
+/// which reads faster in a list than a full-width bar per row.
+struct ProgressRing: View {
+    let value: Int
+    let total: Int
+    var tint: Color = Palette.money
+    var size: CGFloat = 42
+
+    private var fraction: Double {
+        guard total > 0 else { return 0 }
+        return max(0, min(1, Double(value) / Double(total)))
+    }
+
+    var body: some View {
+        ZStack {
+            Circle().strokeBorder(.white.opacity(0.09), lineWidth: 4)
+            Circle()
+                .trim(from: 0, to: fraction)
+                .stroke(tint, style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                .rotationEffect(.degrees(-90))
+                .padding(2)
+            Text("\(value)")
+                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .foregroundStyle(Palette.text)
+        }
+        .frame(width: size, height: size)
+        .accessibilityHidden(true)
     }
 }
 

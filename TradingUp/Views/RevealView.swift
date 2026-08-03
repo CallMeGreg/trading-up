@@ -73,15 +73,15 @@ struct RevealView: View {
             // On a short frame (e.g. 402pt-tall landscape phone) a fixed 280pt-wide
             // card (392pt tall) plus its chrome would overflow, so scale the card
             // down to whatever height is actually available instead of clipping.
-            let chrome: CGFloat = isBox ? 210 : 170
+            let chrome: CGFloat = isBox ? 262 : 170
             let availableForCard = max(120, geo.size.height - chrome)
             let cardWidth = min(280, availableForCard / 1.4, geo.size.width * 0.78)
 
             VStack(spacing: 20) {
                 if isBox {
-                    Text("Pack \(packIndex + 1) of \(packCount)")
-                        .font(.system(size: 12, weight: .heavy, design: .rounded))
-                        .foregroundStyle(Palette.subtle)
+                    PackTray(set: set, opened: packIndex + 1, total: packCount,
+                             width: min(260, geo.size.width - 60), columns: packCount,
+                             caption: "Pack \(packIndex + 1) of \(packCount)")
                         .padding(.top, 16)
                 }
                 HStack(spacing: 7) {
@@ -671,37 +671,22 @@ struct GlowBurst: View {
 struct PackArtwork: View {
     let set: Int
     var isBox: Bool
-    private var element: Element { Element.theme(forSet: set) }
+    /// 0 = sealed. Drives the wrapper's crimp tearing off / the box splitting.
+    var tearTop: Double = 0
+    /// 0 = intact. Drives the body falling out of frame after the crimp goes.
+    var dropBody: Double = 0
 
     var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 18)
-                .fill(LinearGradient(colors: [element.palette[1], element.palette[3]],
-                                     startPoint: .topLeading, endPoint: .bottomTrailing))
-            RoundedRectangle(cornerRadius: 18)
-                .fill(LinearGradient(colors: [.clear, .white.opacity(0.7), .clear],
-                                     startPoint: .topLeading, endPoint: .bottomTrailing))
-                .blendMode(.plusLighter)
-                .opacity(0.25)
-            VStack(spacing: 10) {
-                Text("TRADING UP")
-                    .font(.system(size: 15, weight: .black, design: .rounded))
-                    .foregroundStyle(.white)
-                    .tracking(2)
-                Text(element.emoji).font(.system(size: 64))
-                Text(CardDatabase.setName(set).uppercased())
-                    .font(.system(size: 16, weight: .heavy))
-                    .foregroundStyle(.white.opacity(0.95))
-                    .tracking(1)
-                Text(isBox ? "BOOSTER BOX" : "BOOSTER PACK")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(.white.opacity(0.7))
+        Group {
+            if isBox {
+                BoosterBoxArt(set: set, width: 296)
+                    .scaleEffect(1 - 0.06 * dropBody)
+                    .offset(y: 30 * dropBody - 26 * tearTop)
+                    .opacity(1 - dropBody)
+            } else {
+                PackWrapper(set: set, width: 218, detail: .full,
+                            animatedSheen: true, tearTop: tearTop, dropBody: dropBody)
             }
-            .padding(20)
-            RoundedRectangle(cornerRadius: 18)
-                .strokeBorder(.white.opacity(0.25), lineWidth: 1.5)
         }
-        .frame(width: isBox ? 230 : 190, height: isBox ? 240 : 300)
-        .shadow(color: .black.opacity(0.5), radius: 20, y: 10)
     }
 }
