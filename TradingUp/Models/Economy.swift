@@ -7,7 +7,7 @@ enum Economy {
     static let packSize = 6
 
     // Per-set pricing (set 1...5)
-    static let packPrices: [Double] = [10, 30, 75, 160, 320]
+    static let packPrices: [Double] = [10, 30, 75, 160, 400]
     static let gradeFees:  [Double] = [2, 4, 6, 8, 10]
 
     static func packPrice(set: Int) -> Double { packPrices[clampIndex(set)] }

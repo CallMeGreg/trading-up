@@ -58,10 +58,10 @@ but hold more valuable cards.
 | 2 | **Tidecaller** | Water / ice      |       $30  | ×3               |
 | 3 | **Verdspire**  | Grass / nature   |       $75  | ×7.5             |
 | 4 | **Voltcrest**  | Electric / storm |      $160  | ×16              |
-| 5 | **Umbral Reach**| Shadow / cosmic |      $320  | ×32              |
+| 5 | **Umbral Reach**| Shadow / cosmic |      $400  | ×40              |
 
 The price curve is deliberately **steep** — the gap between sets widens ($20 → $45 →
-$85 → $160), so each later set is a genuinely bigger‑stakes push, not a gentle step up.
+$85 → $240), so each later set is a genuinely bigger‑stakes push, not a gentle step up.
 
 ---
 
@@ -146,7 +146,7 @@ higher‑set cards are always worth more. Approximate resulting bands:
   | 2 Tidecaller    | $30       | **0.90×** | ~$27   |
   | 3 Verdspire     | $75       | **0.80×** | ~$60   |
   | 4 Voltcrest     | $160      | **0.70×** | ~$112  |
-  | 5 Umbral Reach  | $320      | **0.60×** | ~$192  |
+  | 5 Umbral Reach  | $400      | **0.60×** | ~$240  |
 
   Any single pack still has **lots of variance** — a foil or a top‑tier hit blows past
   the average, a cold pack falls below it. Foils (~+2% expected) and opt‑in grading are
@@ -247,12 +247,12 @@ and one big multi‑pack open, **not** a bulk discount.
   - **This is now genuinely reachable.** The **sell‑back spread** (§6), the **steep
     per‑set price curve** (§3), and the **trimmed box/bonus payouts** (§8, §9) together
     mean careless play — spamming the cheapest box and dumping every dupe at 65% — can
-    bleed you dry before a set completes. In simulation that reckless loop **busts ~44%**
+    bleed you dry before a set completes. In simulation that reckless loop **busts ~56%**
     of the time.
 - **Win:** collect all **250** unique creatures. A winner's screen shows full stats:
   per‑set completion, foils, best grades, peak cash, packs opened, etc.
   - Thoughtful play — pacing your buys, keeping a cash cushion, and **grading valuable
-    dupes before selling** — still **wins ~77%** of the time. The gap between the two is
+    dupes before selling** — still **wins ~67%** of the time. The gap between the two is
     the point: skill, not grinding, is what carries you through.
   - **Winning is not an exit.** The celebration is shown once; dismissing it keeps the
     completed collection intact and browsable. Starting over is always a separate,

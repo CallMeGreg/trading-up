@@ -130,7 +130,7 @@ final class GameplaySimulationTests: XCTestCase {
         XCTAssertEqual(core.claimedSets.count, 5)
         XCTAssertEqual(core.claimedEvoLines.count, 65)
         XCTAssertEqual(events.count, 70, "65 evolution + 5 set bonuses")
-        let expected = 34.0 * (10 + 30 + 75 + 160 + 320)
+        let expected = 34.0 * (10 + 30 + 75 + 160 + 400)
         XCTAssertEqual(core.cash, 100 + expected, accuracy: 0.01)
         XCTAssertTrue(core.checkBonuses().isEmpty, "bonuses should not be paid twice")
     }

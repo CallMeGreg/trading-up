@@ -7,7 +7,7 @@ import XCTest
 /// a fast unit-test suite.
 final class EconomyRulesTests: XCTestCase {
     func testPackPricesAndGradeFees() {
-        XCTAssertEqual(Economy.packPrices, [10, 30, 75, 160, 320], "steeper pack prices")
+        XCTAssertEqual(Economy.packPrices, [10, 30, 75, 160, 400], "steeper pack prices")
         XCTAssertEqual(Economy.gradeFees, [2, 4, 6, 8, 10], "flat grade-fee ramp")
         XCTAssertEqual(Economy.sellbackRate, 0.65, accuracy: 1e-9, "shop buys dupes at 65% of market")
     }
