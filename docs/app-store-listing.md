@@ -118,10 +118,9 @@ Buy a pack, rip it, and find out what you got. Six cards - three commons, two un
 THE LOOP
 
 - Rip packs. Every pack opens card by card, and the hit slot is always saved for last.
-- Sell your extras. The shop buys duplicates back at 65% of market value, and that spread is the thing that will bankrupt you.
+- Sell your extras. The shop buys duplicates back at 78% of market value, and that spread is the thing that will bankrupt you.
 - Grade your best. Pay a fee, roll a PSA score. A 10 is a 5x payday and a 1 is a freak 10x jackpot, but anything from 2 to 7 is worth less than the card you put in.
 - Cash in bonuses. Complete an evolution line for a payout; complete a whole set for a much bigger one.
-- Chase booster boxes. Twelve packs with guaranteed ultras and foils, priced so you buy them for the chase and not for the discount.
 
 FIVE SETS, 250 CARDS
 
@@ -323,9 +322,8 @@ pack odds are published at https://callmegreg.github.io/trading-up/support/.
 All 250 creatures, their names, artwork, flavour text and set names are original
 works created for this app. No third-party or licensed content is used.
 
-To reach the end state quickly: the shop's "Booster Box" (12 packs, guaranteed
-ultra rares and foils) is the fastest way to grow the collection, and the
-Collection and Stats tabs show progress at any time.
+To reach the end state quickly: buy and rip packs from set 1, sell the duplicates
+to fund the next set, and the Collection and Stats tabs show progress at any time.
 ```
 
 ---

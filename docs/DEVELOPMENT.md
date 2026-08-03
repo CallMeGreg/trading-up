@@ -100,7 +100,7 @@ runtime toggle and nothing is persisted.
 
 | Flag | Default | Effect when `true` |
 | --- | --- | --- |
-| `removeBoosterBoxes` | `false` | Takes booster boxes off the shop shelf. `SetShelfRow` drops its "Booster box · …" line and `GameState.buyBox` / `buyBoxPacks` refuse the sale, so no other call site can spend cash on a box the shop no longer offers. Box artwork and the "Boxes Opened" stats stay, since they describe boxes a player already opened. |
+| `removeBoosterBoxes` | `true` | Takes booster boxes off the shop shelf. `SetShelfRow` drops its "Booster box · …" line, `GameState.buyBox` / `buyBoxPacks` refuse the sale so no other call site can spend cash on a box the shop no longer offers, and the "Boxes Opened" tile is dropped from the Stats, win and share‑card screens. `GameCore` and `Economy` keep the box mechanics and their tests, so re‑enabling is a one‑line change — but see `docs/DESIGN.md` §6: boxes paid for the sell‑back spread, so turning them back on needs a balance pass, not just a flag flip. |
 
 Each flag is covered by `TradingUpTests/FeatureFlagTests.swift` in **both**
 states, so flipping one is a one-line change rather than a leap of faith.

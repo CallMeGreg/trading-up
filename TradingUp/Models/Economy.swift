@@ -24,9 +24,19 @@ enum Economy {
     static func boxPrice(set: Int) -> Double { packPrice(set: set) * 11 }
 
     // Sell-back spread: the shop buys duplicates back at a fraction of their market
-    // value, so churning packs/boxes and dumping dupes is a net loss over time. This
+    // value, so churning packs and dumping dupes is a net loss over time. This
     // is the main source of losing risk — filling out a set squeezes your cash.
-    static let sellbackRate = 0.65
+    //
+    // Calibrated against what the shop actually sells. At 65% this was survivable
+    // only because booster boxes existed: their guaranteed ultras and foils were
+    // the faucet that paid for the spread. With boxes off the shelf
+    // (`FeatureFlags.removeBoosterBoxes`) a 65% spread bled even careful players
+    // out — the harness put thoughtful play at a 27% win rate against a 60%
+    // target, with the skill gap all but gone. 78% restores the shipped
+    // difficulty curve on packs alone: same 69% thoughtful win rate, reckless
+    // spam-and-dump still busts about half the time. If boxes ever come back,
+    // this needs re-testing against the harness in the same breath.
+    static let sellbackRate = 0.78
     static func sellback(_ value: Double) -> Double { value * sellbackRate }
 
     // Set unlocking: set N stays locked until this many *unique* cards are owned.

@@ -349,7 +349,6 @@ SCREEN_W, SCREEN_H = 393, 852
 
 
 PACK_PRICES = {1: 10.0, 2: 30.0, 3: 75.0, 4: 160.0, 5: 400.0}
-BOX_PACKS, BOX_ULTRAS, BOX_FOILS = 12, 3, 2
 
 
 def pack_thumb(defs, x, y, w, set_no, dim=False):
@@ -429,7 +428,7 @@ def progress_ring(defs, cx, cy, r, value, total, tint):
 
 
 def shelf_row(defs, x, y, w, set_no, owned, unlocked, remaining=0):
-    """One SetShelfRow: pack art, title + ring, one buy, box as a quiet line."""
+    """One SetShelfRow: pack art, title + ring, one buy."""
     ele = SET_ELEMENT[set_no]
     pal = ELEMENT[ele]
     h = 108 if unlocked else 84
@@ -461,16 +460,6 @@ def shelf_row(defs, x, y, w, set_no, owned, unlocked, remaining=0):
         out.append(text(tx + 14, by + 24, "Buy a pack", 15, "#ffffff", weight=700))
         out.append(text(tx + tw - 14, by + 24, money(PACK_PRICES[set_no]), 15, "#ffffff",
                         weight=900, anchor="end"))
-        ly = by + bh + 15
-        # One text run with tspans so the renderer lays out the advances; the
-        # price keeps the app's emphasis without hand-measured offsets.
-        out.append('<text x="%.2f" y="%.2f" font-family="%s" font-size="12" font-weight="600" '
-                   'xml:space="preserve" fill="%s"><tspan>%s</tspan><tspan fill="%s" font-weight="700">%s</tspan>'
-                   '<tspan>%s</tspan></text>' % (
-                       tx + 3, ly, ROUND, SUBTLE, esc("Booster box \u00b7 "), TEXT,
-                       esc(money(PACK_PRICES[set_no] * 11)),
-                       esc(" \u00b7 \u2265%d ultra, \u2265%d foil" % (BOX_ULTRAS, BOX_FOILS))))
-        out.append(text(x + w - 16, ly, "\u203a", 14, SUBTLE, weight=700, anchor="end"))
     else:
         out.append(text(x + w - 16, y + 34, "\U0001f512", 14, SUBTLE, weight=700, anchor="end"))
         cy = y + 54
@@ -684,7 +673,7 @@ def screen_win(defs):
 
 SCENES = [
     ("01_reveal", screen_reveal, "Every pull is a thrill.", "Rip packs and reveal cards one by one \u2014 chase foils and ultra rares."),
-    ("02_shop", screen_shop, "Start with $100. Rip packs.", "Buy packs and booster boxes across five sets \u2014 without going broke."),
+    ("02_shop", screen_shop, "Start with $100. Rip packs.", "Buy packs across five sets \u2014 without going broke."),
     ("03_collection", screen_collection, "Collect all 250 Sprytes.", "Five sets, 250 original creatures, foils and dupes to hunt down."),
     ("04_grade", screen_grade, "Grade your best pulls.", "Send rares to grading and roll for a jackpot PSA 10."),
     ("05_win", screen_win, "Build the ultimate collection.", "Complete evolution lines and full sets for big cash bonuses."),

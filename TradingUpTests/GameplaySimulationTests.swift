@@ -230,9 +230,11 @@ final class GameplaySimulationTests: XCTestCase {
 final class ShopPurchaseGuardTests: XCTestCase {
     var dir: URL!
     var game: GameState!
+    private var shippedFlag: Bool!
 
     override func setUp() {
         super.setUp()
+        shippedFlag = FeatureFlags.removeBoosterBoxes
         dir = URL(fileURLWithPath: NSTemporaryDirectory())
             .appendingPathComponent("tu_tests_\(UUID().uuidString)")
         try! FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
@@ -246,6 +248,7 @@ final class ShopPurchaseGuardTests: XCTestCase {
     }
 
     override func tearDown() {
+        FeatureFlags.removeBoosterBoxes = shippedFlag
         try? FileManager.default.removeItem(at: dir)
         super.tearDown()
     }
@@ -283,7 +286,12 @@ final class ShopPurchaseGuardTests: XCTestCase {
         XCTAssertEqual(buyInvocations, 2)
     }
 
+    /// The same double-tap guard, over a box purchase. Boxes are off the shelf
+    /// in the shipping build, so this turns them on explicitly rather than
+    /// relying on whatever another test happened to leave behind — the guard
+    /// still has to hold on the day they come back.
     func testSecondBoxPurchaseWhileRevealIsPendingIsBlocked() {
+        FeatureFlags.removeBoosterBoxes = false
         var freeze: ShopFreeze?
         var pending: PendingOpen?
         var buyInvocations = 0

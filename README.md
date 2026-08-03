@@ -61,10 +61,9 @@ in‑app purchases, no internet connection.
 
 ### 🛒 Buy a pack
 
-Each of the five sets sells a **Pack** (6 cards) or a **Booster Box** (12 packs,
-with guaranteed foils and ultras). Higher sets cost steeply more — $10 → $30 →
-$75 → $160 → $400 — but hold far more valuable cards. A box costs **11× the pack
-price**, so you buy it for the guaranteed chase cards, not for a discount.
+Each of the five sets sells a **Pack** of 6 cards. Higher sets cost steeply more —
+$10 → $30 → $75 → $160 → $400 — but hold far more valuable cards, so working your
+way up is the only route to the expensive half of the collection.
 
 ### ✨ Rip it
 
@@ -78,7 +77,7 @@ On the pack summary, brand‑new cards are flagged **✦ NEW**. Tap any duplicat
 keep or sell it individually, or use **Sell Duplicates** / **Keep All** at the
 bottom — the sell total updates live as you decide each card.
 
-The shop buys at a **buylist spread**: you get **65%** of a card's market value.
+The shop buys at a **buylist spread**: you get **78%** of a card's market value.
 Churning packs and dumping dupes slowly bleeds money, and that spread is the
 game's main risk. You can **never sell your last copy** of a card, so your
 collection is always safe.

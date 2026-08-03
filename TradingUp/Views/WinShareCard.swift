@@ -32,7 +32,9 @@ struct WinShareCard: View {
             HStack(spacing: 10) {
                 StatTile(label: "Net Worth", value: netWorth.moneyShort, tint: Palette.money)
                 StatTile(label: "Packs", value: "\(s.packsOpened)")
-                StatTile(label: "Boxes", value: "\(s.boxesOpened)")
+                if FeatureFlags.boosterBoxesAvailable {
+                    StatTile(label: "Boxes", value: "\(s.boxesOpened)")
+                }
             }
             HStack(spacing: 10) {
                 StatTile(label: "Foils", value: "\(s.foilsPulled)", tint: Color(hex: "ff8ad6"))

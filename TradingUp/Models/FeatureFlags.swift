@@ -12,18 +12,27 @@ enum FeatureFlags {
     /// Takes booster boxes off the shelf, leaving single packs as the only
     /// thing the shop sells.
     ///
-    /// **Currently disabled** — boxes are still offered, so the app behaves
-    /// exactly as it did before this flag existed. Flip to `true` and:
+    /// **Currently enabled** — the shop sells packs only. The mechanic was
+    /// pulled rather than deleted because it is likely to come back in some
+    /// form, and reading one flag beats resurrecting a feature from git
+    /// history. While this is `true`:
     ///
     /// - `SetShelfRow` drops its "Booster box · …" line, so a set row is just
     ///   the pack buy.
     /// - `GameState.buyBox(set:)` / `buyBoxPacks(set:)` refuse the sale, so no
     ///   stale call site, deep link, or UI test can spend the player's cash on
     ///   something the shop no longer advertises.
+    /// - The "Boxes Opened" / "Boxes" tiles disappear from Stats, the win
+    ///   screen and the shareable win card, instead of reporting a permanent
+    ///   zero at the player.
+    /// - The verify harness buys packs only, so the difficulty curve it
+    ///   enforces is the one players actually face.
     ///
-    /// Deliberately *not* gated: the reveal flow's box art and the "Boxes
-    /// Opened" stat tiles. Those describe boxes a player already opened, and
-    /// erasing that history would be a lie about their save.
+    /// What the flag does *not* touch is everything under `GameCore` — pack
+    /// composition, the ultra/foil guarantees, box pricing — which stays intact
+    /// and fully covered by tests. It closes the shop door; it doesn't
+    /// dismantle the room behind it. Box counts already recorded in a save are
+    /// likewise left alone, so flipping this back is lossless.
     static var removeBoosterBoxes = true
 
     /// Whether the shop should still sell booster boxes. Reads better at the
