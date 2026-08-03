@@ -70,7 +70,7 @@ final class ScreenshotTests: XCTestCase {
         XCTAssertTrue(buyPack.waitForExistence(timeout: 15))
         shot("shop-all-sets-unlocked", settle: 1.0)
 
-        let box = button(labelStartingWith: "Buy Booster Box")
+        let box = buyBox
         guard box.waitForExistence(timeout: 10), box.isEnabled else { return }
         box.tap()
 
@@ -350,7 +350,8 @@ final class ScreenshotTests: XCTestCase {
 
     // MARK: - Element lookup
 
-    private var buyPack: XCUIElement { button(labelStartingWith: "Buy Pack") }
+    private var buyPack: XCUIElement { app.buttons["buyPack"].firstMatch }
+    private var buyBox: XCUIElement { app.buttons["buyBox"].firstMatch }
     /// Anchored on "Duplicate" so it can't collide with the keep-or-sell
     /// sheet's "Sell for $x" button while that sheet is open.
     private var sellDuplicates: XCUIElement {

@@ -348,51 +348,168 @@ def panel(defs, x, y, w, h):
 SCREEN_W, SCREEN_H = 393, 852
 
 
+PACK_PRICES = {1: 10.0, 2: 30.0, 3: 75.0, 4: 160.0, 5: 400.0}
+BOX_PACKS, BOX_ULTRAS, BOX_FOILS = 12, 3, 2
+
+
+def pack_thumb(defs, x, y, w, set_no, dim=False):
+    """The shop's 58pt PackWrapper: crimped foil sleeve, sigil, set name."""
+    ele = SET_ELEMENT[set_no]
+    pal = ELEMENT[ele]
+    crimp = w * 0.085
+    tooth = w * 0.072
+    fh = w * 1.30
+    out = []
+    op = 0.4 if dim else 1.0
+
+    def crimp_band(cy, point_down):
+        g = defs.linear([("0%", pal[1], "1"), ("100%", pal[2], "1")], x1=0, y1=0, x2=1, y2=0)
+        pts = []
+        n = max(2, int(round(w / tooth)))
+        step = w / n
+        if point_down:
+            pts.append("M%.2f %.2f" % (x, cy))
+            for i in range(n):
+                pts.append("L%.2f %.2f L%.2f %.2f" % (
+                    x + step * (i + 0.5), cy + step * 0.5, x + step * (i + 1), cy))
+            pts.append("L%.2f %.2f L%.2f %.2f Z" % (x + w, cy - crimp, x, cy - crimp))
+        else:
+            pts.append("M%.2f %.2f" % (x, cy))
+            for i in range(n):
+                pts.append("L%.2f %.2f L%.2f %.2f" % (
+                    x + step * (i + 0.5), cy - step * 0.5, x + step * (i + 1), cy))
+            pts.append("L%.2f %.2f L%.2f %.2f Z" % (x + w, cy + crimp, x, cy + crimp))
+        return '<path d="%s" fill="url(#%s)" opacity="%.2f"/>' % (" ".join(pts), g, op)
+
+    top = y + tooth * 0.5
+    out.append(crimp_band(top + crimp, True))
+    face = defs.linear([("0%", pal[1], "1"), ("42%", pal[2], "1"), ("100%", pal[3], "1")],
+                       x1=0.29, y1=0, x2=0.71, y2=1)
+    out.append(rrect(x, top + crimp, w, fh, 1.5, grad=face, opacity=op))
+    sheen = defs.linear([("0%", "#ffffff", "0"), ("45%", "#ffffff", "0.30"),
+                         ("62%", "#ffffff", "0.03"), ("100%", "#ffffff", "0")], x1=0, y1=0, x2=1, y2=1)
+    clip = defs.clip_rrect(x, top + crimp, w, fh, 1.5)
+    out.append('<g clip-path="url(#%s)">%s</g>' % (
+        clip, rrect(x - w * 0.5, top + crimp, w * 0.7, fh, 0, grad=sheen, opacity=op)))
+    out.append(crimp_band(top + crimp + fh, False))
+
+    # sigil: ring + six spokes, mirroring SigilView
+    cx, cy = x + w / 2, top + crimp + fh * 0.42
+    rad = w * 0.30
+    out.append(circle(cx, cy, rad * 0.78, stroke="#ffffff", sw=1.1, opacity=0.30 * op))
+    for i in range(6):
+        a = i / 6.0 * 2 * math.pi - math.pi / 2
+        out.append(circle(cx + math.cos(a) * rad, cy + math.sin(a) * rad, w * 0.05,
+                          fill=pal[0], opacity=0.85 * op))
+        out.append(line(cx, cy, cx + math.cos(a) * rad, cy + math.sin(a) * rad,
+                        pal[0], 1.4, opacity=0.55 * op))
+    out.append(circle(cx, cy, w * 0.09, fill=pal[0], opacity=0.9 * op))
+
+    gold = defs.linear([("0%", "#fff6d0", "1"), ("55%", "#ffd54a", "1"), ("100%", "#b8860b", "1")])
+    name = SET_NAME[set_no]
+    size = w * 0.16 if len(name) <= 10 else w * 0.115
+    out.append(text(cx, top + crimp + fh * 0.87, name, size, "url(#%s)" % gold,
+                    weight=900, anchor="middle", opacity=op))
+    return "".join(out)
+
+
+def progress_ring(defs, cx, cy, r, value, total, tint):
+    out = [circle(cx, cy, r, stroke="#ffffff", sw=4, opacity=0.09)]
+    frac = max(0.0, min(1.0, value / float(total)))
+    if frac > 0:
+        a0 = -math.pi / 2
+        a1 = a0 + frac * 2 * math.pi
+        large = 1 if frac > 0.5 else 0
+        out.append('<path d="M%.2f %.2f A%.2f %.2f 0 %d 1 %.2f %.2f" fill="none" stroke="%s" '
+                   'stroke-width="4" stroke-linecap="round"/>' % (
+                       cx + math.cos(a0) * r, cy + math.sin(a0) * r, r, r, large,
+                       cx + math.cos(a1) * r, cy + math.sin(a1) * r, tint))
+    out.append(text(cx, cy + 4, str(value), 11, TEXT, weight=700, anchor="middle"))
+    return "".join(out)
+
+
+def shelf_row(defs, x, y, w, set_no, owned, unlocked, remaining=0):
+    """One SetShelfRow: pack art, title + ring, one buy, box as a quiet line."""
+    ele = SET_ELEMENT[set_no]
+    pal = ELEMENT[ele]
+    h = 108 if unlocked else 84
+    out = [rrect(x, y, w, h, 20, fill=PANEL, stroke=STROKE, sw=1)]
+    glow = defs.radial([("0%", pal[2], "0.26" if unlocked else "0.08"), ("100%", pal[2], "0")],
+                       cx=0.05, cy=0.05, r=0.85)
+    clip = defs.clip_rrect(x, y, w, h, 20)
+    out.append('<g clip-path="url(#%s)">%s%s</g>' % (
+        clip, rrect(x, y, w, h, 0, grad=glow),
+        rrect(x, y, 4, h, 0, grad=defs.linear([("0%", pal[1], "1"), ("100%", pal[2], "1")]),
+              opacity=1.0 if unlocked else 0.4)))
+
+    pw = 42
+    out.append(pack_thumb(defs, x + 16, y + (h - pw * 1.47) / 2, pw, set_no, dim=not unlocked))
+
+    tx = x + 16 + pw + 14
+    tw = w - (tx - x) - 14
+    out.append(text(tx, y + 30, SET_NAME[set_no], 19, TEXT, weight=800))
+    sub = "Set %d \u00b7 %d of 50 collected" % (set_no, owned) if unlocked else "Set %d \u00b7 locked" % set_no
+    out.append(text(tx, y + 46, sub, 11.5, SUBTLE, weight=600))
+
+    if unlocked:
+        out.append(progress_ring(defs, x + w - 14 - 21, y + 34, 19, owned, 50, pal[1]))
+        by = y + 56
+        bh = 38
+        g = defs.linear([("0%", pal[1], "1"), ("100%", pal[2], "1")], x1=0, y1=0, x2=1, y2=0)
+        out.append(rrect(tx, by, tw, bh, 13, grad=g))
+        out.append(rrect(tx, by, tw, bh, 13, stroke="#ffffff", sw=1, opacity=0.2))
+        out.append(text(tx + 14, by + 24, "Rip a pack", 15, "#ffffff", weight=700))
+        out.append(text(tx + tw - 14, by + 24, money(PACK_PRICES[set_no]), 15, "#ffffff",
+                        weight=900, anchor="end"))
+        ly = by + bh + 15
+        # One text run with tspans so the renderer lays out the advances; the
+        # price keeps the app's emphasis without hand-measured offsets.
+        out.append('<text x="%.2f" y="%.2f" font-family="%s" font-size="12" font-weight="600" '
+                   'xml:space="preserve" fill="%s"><tspan>%s</tspan><tspan fill="%s" font-weight="700">%s</tspan>'
+                   '<tspan>%s</tspan></text>' % (
+                       tx + 3, ly, ROUND, SUBTLE, esc("Booster box \u00b7 "), TEXT,
+                       esc(money(PACK_PRICES[set_no] * 11)),
+                       esc(" \u00b7 \u2265%d ultra, \u2265%d foil" % (BOX_ULTRAS, BOX_FOILS))))
+        out.append(text(x + w - 16, ly, "\u203a", 14, SUBTLE, weight=700, anchor="end"))
+    else:
+        out.append(text(x + w - 16, y + 34, "\U0001f512", 14, SUBTLE, weight=700, anchor="end"))
+        cy = y + 54
+        out.append('<rect x="%.2f" y="%.2f" width="%.2f" height="%.2f" rx="13" fill="none" '
+                   'stroke="%s" stroke-width="1" stroke-dasharray="4 3"/>' % (tx, cy, tw, 34, STROKE))
+        out.append(text(tx + 14, cy + 22,
+                        "%d more unique cards to unlock" % remaining, 12.5, SUBTLE, weight=600))
+
+    return "".join(out), h
+
+
 def screen_shop(defs):
     out = [rrect(0, 0, SCREEN_W, SCREEN_H, 0,
                  grad=defs.linear([("0%", BG1, "1"), ("100%", BG0, "1")]))]
     m = 16
-    # Cash header panel
-    y = 60
-    out.append(panel(defs, m, y, SCREEN_W - 2 * m, 118))
-    out.append(text(m + 16, y + 26, "CASH", 11, SUBTLE, weight=700))
-    out.append(text(m + 16, y + 60, "$248.50", 34, MONEY, weight=900))
-    out.append(text(SCREEN_W - m - 16, y + 26, "NET WORTH", 11, SUBTLE, weight=700, anchor="end"))
-    out.append(text(SCREEN_W - m - 16, y + 52, "$1,062.75", 18, TEXT, weight=700, anchor="end"))
-    out.append(text(m + 16, y + 88, "Collection", 12, SUBTLE, weight=600))
-    out.append(text(SCREEN_W - m - 16, y + 88, "63 / 250", 12, TEXT, weight=700, anchor="end", family=MONO))
-    out.append(progress(defs, m + 16, y + 98, SCREEN_W - 2 * m - 32, 63 / 250, "#ffffff"))
+    # Pinned wallet header
+    out.append(rrect(0, 0, SCREEN_W, 116, 0, fill=BG1, opacity=0.96))
+    out.append(line(0, 116, SCREEN_W, 116, "#ffffff", 1, opacity=0.07))
+    cg = defs.radial([("0%", "#b8ffd6", "1"), ("55%", MONEY, "1"), ("100%", "#2c9c5c", "1")],
+                     cx=0.35, cy=0.3, r=0.85)
+    out.append(circle(18 + 15, 62, 15, grad=cg))
+    out.append(text(18 + 15, 67, "$", 15, "#06301b", weight=900, anchor="middle"))
+    out.append(text(18 + 38, 72, "$248.50", 26, MONEY, weight=900))
+    out.append(text(SCREEN_W - 18, 58, "NET WORTH", 10, SUBTLE, weight=800, anchor="end", tracking=0.8))
+    out.append(text(SCREEN_W - 18, 74, "$1,062.75", 15, TEXT, weight=700, anchor="end"))
+    out.append(text(18, 99, "BINDER", 11, SUBTLE, weight=700))
+    out.append(progress(defs, 70, 92, SCREEN_W - 70 - 18 - 44, 63 / 250, MONEY, h=6))
+    out.append(text(SCREEN_W - 18, 99, "63/250", 11, SUBTLE, weight=700, anchor="end", family=MONO))
 
-    # Set 1 shop card (unlocked)
-    y = 200
-    card_w = SCREEN_W - 2 * m
-    out.append(rrect(m, y, card_w, 250, 18, fill=PANEL, stroke=STROKE, sw=1))
-    # banner
-    bg = defs.linear([("0%", ELEMENT["fire"][2], "1"), ("100%", ELEMENT["fire"][3], "1")], x1=0, y1=0, x2=1, y2=0)
-    clip = defs.clip_rrect(m, y, card_w, 74, 18)
-    out.append('<g clip-path="url(#%s)">%s</g>' % (clip, rrect(m, y, card_w, 74, 0, grad=bg)))
-    out.append(text(m + 16, y + 26, "SET 1", 11, "#ffffff", weight=900, opacity=0.75))
-    out.append(text(m + 16, y + 52, "Emberfall", 22, "#ffffff", weight=900))
-    out.append(text(m + 16, y + 98, "24 / 50 collected", 12, SUBTLE, weight=600))
-    out.append(progress(defs, m + 16, y + 108, card_w - 32, 24 / 50, ELEMENT["fire"][1]))
-    out.append(big_button(defs, m + 16, y + 128, card_w - 32, "Buy Pack", "6 cards \u00b7 $10.00",
-                          [ELEMENT["fire"][1], ELEMENT["fire"][2]]))
-    out.append(big_button(defs, m + 16, y + 188, card_w - 32, "Buy Booster Box",
-                          "12 packs \u00b7 $100.00 \u00b7 \u22653 ultra, \u22652 foil",
-                          [ELEMENT["fire"][2], ELEMENT["fire"][3]]))
+    y = 142
+    out.append(text(m + 2, y, "PACKS", 11, SUBTLE, weight=800, tracking=1.4))
+    out.append(text(SCREEN_W - m - 2, y, "5 SETS", 11, SUBTLE, weight=800, tracking=1.4, anchor="end"))
+    y += 12
 
-    # Set 2 (unlocked, partial) peeking
-    y = 470
-    out.append(rrect(m, y, card_w, 250, 18, fill=PANEL, stroke=STROKE, sw=1))
-    bg2 = defs.linear([("0%", ELEMENT["water"][2], "1"), ("100%", ELEMENT["water"][3], "1")], x1=0, y1=0, x2=1, y2=0)
-    clip2 = defs.clip_rrect(m, y, card_w, 74, 18)
-    out.append('<g clip-path="url(#%s)">%s</g>' % (clip2, rrect(m, y, card_w, 74, 0, grad=bg2)))
-    out.append(text(m + 16, y + 26, "SET 2", 11, "#ffffff", weight=900, opacity=0.75))
-    out.append(text(m + 16, y + 52, "Tidecaller", 22, "#ffffff", weight=900))
-    out.append(text(m + 16, y + 98, "9 / 50 collected", 12, SUBTLE, weight=600))
-    out.append(progress(defs, m + 16, y + 108, card_w - 32, 9 / 50, ELEMENT["water"][1]))
-    out.append(big_button(defs, m + 16, y + 128, card_w - 32, "Buy Pack", "6 cards \u00b7 $18.00",
-                          [ELEMENT["water"][1], ELEMENT["water"][2]]))
+    rows = [(1, 24, True, 0), (2, 21, True, 0), (3, 18, True, 0), (4, 0, False, 12), (5, 0, False, 37)]
+    for set_no, owned, unlocked, remaining in rows:
+        svg, h = shelf_row(defs, m, y, SCREEN_W - 2 * m, set_no, owned, unlocked, remaining)
+        out.append(svg)
+        y += h + 12
 
     out.append(tab_bar(defs, SCREEN_W, 788))
     return "".join(out)

@@ -13,4 +13,5 @@ Everything that isn't the public [README](../README.md).
 Other things in this folder:
 
 - `mockups/` — interactive HTML card‑style mockups. `cd docs/mockups && python3 -m http.server 8787`
+- `mockups/ui/` — proposed pack + Shop home screen directions (three options each). Same server, `/ui/`
 - `screenshots/` — the rendered marketing shots the README embeds

@@ -21,8 +21,8 @@ struct SplitMix64 {
 // MARK: - Branded card back
 
 /// The reverse of a card, shown before it flips face-up. Themed to the set's
-/// element with a concentric emblem and gold frame — deliberately symmetric so
-/// the 3D flip never reveals mirrored text.
+/// element with a concentric emblem around the element mark and a gold frame —
+/// deliberately symmetric so the 3D flip never reveals mirrored text.
 struct CardBack: View {
     let set: Int
     var width: CGFloat = 280
@@ -48,12 +48,9 @@ struct CardBack: View {
                         .frame(width: (128 - CGFloat(k) * 28) * s, height: (128 - CGFloat(k) * 28) * s)
                         .rotationEffect(.degrees(45))
                 }
-                VStack(spacing: 1 * s) {
-                    Text("TU")
-                        .font(.system(size: 34 * s, weight: .black, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.92))
-                    Text(e.emoji).font(.system(size: 20 * s))
-                }
+                Text(e.emoji)
+                    .font(.system(size: 62 * s))
+                    .shadow(color: .black.opacity(0.55), radius: 5 * s, y: 2 * s)
             }
 
             Text("TRADING UP")
@@ -302,6 +299,10 @@ struct SealedPackView: View {
     @State private var floaty = false
     @State private var hint = false
     @State private var tearing = false
+    /// Split from `tearing` so the crimp rips off first and the body only falls
+    /// once it's gone — a pack opens in two beats, not one.
+    @State private var tearTop: Double = 0
+    @State private var dropBody: Double = 0
     @State private var flash: Double = 0
 
     var body: some View {
@@ -310,12 +311,9 @@ struct SealedPackView: View {
                 VStack(spacing: 28) {
                     Spacer(minLength: 0)
                     ZStack {
-                        PackArtwork(set: set, isBox: isBox)
+                        PackArtwork(set: set, isBox: isBox, tearTop: tearTop, dropBody: dropBody)
                             .rotationEffect(.degrees(floaty ? 1.6 : -1.6))
                             .offset(y: floaty ? -9 : 9)
-                            .scaleEffect(tearing ? 1.22 : 1)
-                            .opacity(tearing ? 0 : 1)
-                            .overlay { shimmer }
                     }
                     VStack(spacing: 6) {
                         Text(isBox ? "Booster Box" : "\(CardDatabase.setName(set)) Pack")
@@ -352,29 +350,14 @@ struct SealedPackView: View {
         }
     }
 
-    /// A slow diagonal glint traveling across the sealed wrapper.
-    private var shimmer: some View {
-        TimelineView(.animation) { tl in
-            let t = tl.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 3) / 3
-            GeometryReader { geo in
-                LinearGradient(colors: [.clear, .white.opacity(0.4), .clear],
-                               startPoint: .topLeading, endPoint: .bottomTrailing)
-                    .frame(width: geo.size.width * 0.4)
-                    .rotationEffect(.degrees(22))
-                    .offset(x: (CGFloat(t) * 2 - 1) * geo.size.width)
-                    .blendMode(.plusLighter)
-            }
-            .mask(RoundedRectangle(cornerRadius: 18))
-        }
-        .allowsHitTesting(false)
-    }
-
     private func open() {
         guard !tearing else { return }
         Haptics.play(isBox ? .heavy : .medium)
-        withAnimation(.easeIn(duration: 0.3)) { tearing = true }
-        withAnimation(.easeOut(duration: 0.12)) { flash = 0.45 }
-        withAnimation(.easeOut(duration: 0.35).delay(0.1)) { flash = 0 }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.28) { onOpen() }
+        tearing = true
+        withAnimation(.easeIn(duration: 0.34)) { tearTop = 1 }
+        withAnimation(.easeIn(duration: 0.42).delay(0.1)) { dropBody = 1 }
+        withAnimation(.easeOut(duration: 0.12).delay(0.12)) { flash = 0.45 }
+        withAnimation(.easeOut(duration: 0.35).delay(0.22)) { flash = 0 }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.42) { onOpen() }
     }
 }
