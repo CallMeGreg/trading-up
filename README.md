@@ -10,7 +10,7 @@
 
 A card‑collecting economy game for iPhone and iPad, built in SwiftUI.
 
-[![Platform](https://img.shields.io/badge/platform-iOS%2017%2B-lightgrey)](#requirements)
+[![Platform](https://img.shields.io/badge/platform-iOS%2017%2B-lightgrey)](docs/DEVELOPMENT.md#requirements)
 [![Made with SwiftUI](https://img.shields.io/badge/made%20with-SwiftUI-orange)](https://developer.apple.com/xcode/swiftui/)
 [![Dependencies](https://img.shields.io/badge/dependencies-zero-brightgreen)](#no-catches)
 [![CI](https://github.com/CallMeGreg/trading-up/actions/workflows/ci.yml/badge.svg)](https://github.com/CallMeGreg/trading-up/actions/workflows/ci.yml)
@@ -134,28 +134,10 @@ rarity spread, and unlocks as your collection grows.
   and is never sent anywhere.
 - **Plays entirely offline**, on both iPhone and iPad.
 
-## Build it from source
-
-### Requirements
-
-macOS with **Xcode 16+** and an **iOS 17+ Simulator**. That's it — the app has
-**zero third‑party dependencies** and all 250 cards are embedded in the binary.
-
-### Run it
-
-```bash
-git clone https://github.com/CallMeGreg/trading-up.git
-cd trading-up
-xed .            # or double-click TradingUp.xcodeproj
-```
-
-Pick a simulator in the scheme selector and press **▶︎ Run** (`⌘R`). You start
-with $100 — open the **Shop** tab, buy a pack, and tap to reveal.
-
-Full instructions, project layout and the content generators are in
-[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
-
 ## Documentation
+
+For anyone working on the app — including how to
+[build and run it from source](docs/DEVELOPMENT.md).
 
 | Doc | What's in it |
 | --- | --- |

@@ -70,7 +70,7 @@ docs/                        Everything in this folder — design, dev, testing,
 tools/
   generate_cards.py          Regenerates data/cards.json AND Generated/CardData.swift
   generate_art.py            Regenerates the 250 card illustrations (needs rsvg-convert)
-  generate_icon.py           Regenerates the app icon (needs Pillow)
+  generate_icon.py           Regenerates the app icon (needs rsvg-convert)
   generate_sfx.py            Regenerates the 3 sound effects (stdlib only)
   generate_screenshots.py    Renders framed marketing scenes (needs rsvg-convert)
   capture_screenshots.sh     Plays the game in a Simulator and captures real screenshots
