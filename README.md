@@ -42,18 +42,18 @@ in‑app purchases, no internet connection.
 
 <table>
 <tr>
-<td width="20%"><img src="docs/screenshots/02_shop_1290x2796.png" alt="The shop, with five sets and $100 to spend"></td>
-<td width="20%"><img src="docs/screenshots/01_reveal_1290x2796.png" alt="An ultra rare flipping over during a pack reveal"></td>
-<td width="20%"><img src="docs/screenshots/03_collection_1290x2796.png" alt="The collection grid filling in"></td>
-<td width="20%"><img src="docs/screenshots/04_grade_1290x2796.png" alt="A card coming back from grading as a PSA 10"></td>
-<td width="20%"><img src="docs/screenshots/05_win_1290x2796.png" alt="The Master Collector win screen"></td>
+<td width="20%"><img src="docs/screenshots/03_home_progress_1242x2688.png" alt="The shop showing pack-buying progress across five sets"></td>
+<td width="20%"><img src="docs/screenshots/02_rare_hit_1242x2688.png" alt="A rare flipping over during a pack reveal"></td>
+<td width="20%"><img src="docs/screenshots/05_collection_1242x2688.png" alt="The collection grid filling in"></td>
+<td width="20%"><img src="docs/screenshots/06_grade_1242x2688.png" alt="A card coming back from grading as a PSA 10"></td>
+<td width="20%"><img src="docs/screenshots/08_set_complete_1242x2688.png" alt="A completed set paying out its bonus"></td>
 </tr>
 <tr>
 <td align="center"><b>Shop</b></td>
 <td align="center"><b>Rip packs</b></td>
 <td align="center"><b>Collect</b></td>
 <td align="center"><b>Grade</b></td>
-<td align="center"><b>Win</b></td>
+<td align="center"><b>Set bonus</b></td>
 </tr>
 </table>
 
