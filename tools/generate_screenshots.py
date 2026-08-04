@@ -39,6 +39,8 @@ BG0, BG1 = "#0b0e14", "#121722"
 PANEL, PANEL_HI = "#1a2130", "#232c40"
 STROKE = "#2c3750"
 TEXT, SUBTLE, MONEY = "#e7ecf5", "#8a94a6", "#5be08a"
+# Pack-summary badging: the gold "NEW" flag (RevealView) and the blue tap cue.
+NEW_FLAG, TAP_CUE = "#ffd54a", "#4f9dff"
 
 ELEMENT = {
     "fire":     ["#ffd15c", "#ff7a1a", "#e01f1f", "#5c1004"],
@@ -697,8 +699,60 @@ def screen_pack_sealed(defs):
     return "".join(out)
 
 
+def tap_glyph(cx, cy, size, fill):
+    """A simplified `hand.tap.fill`: folded hand with the index finger extended.
+
+    Drawn in a 10x10 design box and scaled, so it stays legible at the ~9pt the
+    chip renders it at.
+    """
+    u = size / 10.0
+    out = []
+    # folded fingers first, so the palm covers where they'd meet it
+    for kx, ky, kr in ((0.7, -1.3, 1.25), (2.3, -0.6, 1.15), (3.5, 0.5, 1.0)):
+        out.append(circle(cx + kx * u, cy + ky * u, kr * u, fill=fill))
+    # extended index finger
+    out.append(rrect(cx - 2.9 * u, cy - 5.0 * u, 1.9 * u, 5.4 * u, 0.95 * u, fill=fill))
+    # palm
+    out.append(rrect(cx - 3.2 * u, cy - 1.4 * u, 6.9 * u, 5.9 * u, 2.4 * u, fill=fill))
+    return "".join(out)
+
+
+def new_flag(right, top, s):
+    """The gold "NEW" flag the app pins to the corner of a fresh pull."""
+    label, fs = "\u2726 NEW", 9 * s
+    w, h = len(label) * fs * 0.62 + 14 * s, fs * 1.25 + 6 * s
+    x, y = right + 5 * s - w, top - 7 * s
+    return "".join([
+        rrect(x, y, w, h, h / 2, fill=NEW_FLAG),
+        rrect(x, y, w, h, h / 2, stroke="#ffffff", sw=0.5, opacity=0.35),
+        text(x + w / 2, y + h / 2 + fs * 0.36, label, fs, "#ffffff",
+             weight=900, anchor="middle"),
+    ])
+
+
+def sell_or_keep_chip(cx, cy, s):
+    """The blue "SELL OR KEEP" tap chip that hangs off a pending duplicate."""
+    label, fs = "SELL OR KEEP", 8 * s
+    gw, gap, pad = 9 * s, 3 * s, 7 * s
+    tw = len(label) * fs * 0.62
+    w, h = pad * 2 + gw + gap + tw, fs * 1.25 + 8 * s
+    x = cx - w / 2
+    return "".join([
+        rrect(x, cy - h / 2, w, h, h / 2, fill=TAP_CUE),
+        rrect(x, cy - h / 2, w, h, h / 2, stroke="#ffffff", sw=0.5, opacity=0.4),
+        tap_glyph(x + pad + gw / 2, cy, gw, "#ffffff"),
+        text(x + pad + gw + gap + tw / 2, cy + fs * 0.36, label, fs, "#ffffff",
+             weight=900, anchor="middle"),
+    ])
+
+
 def screen_pack_summary(defs):
-    """The post-pack summary: some new, some duplicates, keep-or-sell in reach."""
+    """The post-pack summary: some new, some duplicates, keep-or-sell in reach.
+
+    Badging mirrors the app's own `PackCardSlot` (RevealView.swift): a gold
+    "NEW" flag pinned to the corner of a fresh pull, and a blue tap ring plus
+    "SELL OR KEEP" chip on every duplicate still waiting on a decision.
+    """
     out = [rrect(0, 0, SCREEN_W, SCREEN_H, 0,
                  grad=defs.linear([("0%", BG1, "1"), ("100%", BG0, "1")]))]
     m = 16
@@ -709,22 +763,22 @@ def screen_pack_summary(defs):
     gap = 12
     col_w = (SCREEN_W - 2 * m - 2 * gap) / 3
     y0 = 150
+    card_h = col_w * 1.4
+    # Chrome scales with the card, exactly as the app scales off its 104pt phone card.
+    s = min(1.7, max(1.0, col_w / 104))
     pulls = [("S1-011", True), ("S1-024", False), ("S1-003", True),
              ("S1-007", False), ("S1-031", True), ("S1-018", False)]
     for idx, (cid, is_new) in enumerate(pulls):
         row, col = divmod(idx, 3)
         x = m + (col_w + gap) * col
-        yy = y0 + (col_w * 1.4 + 30) * row
+        yy = y0 + (card_h + 30) * row
         out.append(full_card(defs, x, yy, col_w, cid, foil=(cid == "S1-003")))
-        chip_w = col_w * 0.66
-        ty = yy + col_w * 1.4 + 8
         if is_new:
-            g = defs.linear([("0%", "#5be08a", "1"), ("100%", "#2c9c5c", "1")], x1=0, y1=0, x2=1, y2=0)
-            out.append(rrect(x + (col_w - chip_w) / 2, ty, chip_w, 18, 9, grad=g))
-            out.append(text(x + col_w / 2, ty + 13, "NEW", 11, "#06301b", weight=900, anchor="middle"))
+            out.append(new_flag(x + col_w, yy, s))
         else:
-            out.append(rrect(x + (col_w - chip_w) / 2, ty, chip_w, 18, 9, fill=BG0, stroke=STROKE, sw=1))
-            out.append(text(x + col_w / 2, ty + 13, "DUPLICATE", 9.5, SUBTLE, weight=800, anchor="middle"))
+            out.append(rrect(x, yy, col_w, card_h, 16 * (col_w / 230),
+                             stroke=TAP_CUE, sw=2.5 * s))
+            out.append(sell_or_keep_chip(x + col_w / 2, yy + card_h + 4 * s, s))
 
     # keep-or-sell action bar
     by = 702
