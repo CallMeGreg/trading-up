@@ -125,6 +125,24 @@ def line(x1, y1, x2, y2, stroke, sw=1.0, opacity=1.0):
         x1, y1, x2, y2, stroke, sw, opacity)
 
 
+def ell(cx, cy, rx, ry, fill=None, opacity=1.0, grad=None):
+    f = "url(#%s)" % grad if grad else (fill or "none")
+    return '<ellipse cx="%.2f" cy="%.2f" rx="%.2f" ry="%.2f" fill="%s" opacity="%.3f"/>' % (
+        cx, cy, rx, ry, f, opacity)
+
+
+def path(d, fill=None, stroke=None, sw=1.0, opacity=1.0, grad=None, cap="round"):
+    f = "url(#%s)" % grad if grad else (fill or "none")
+    s = (' stroke="%s" stroke-width="%.2f" stroke-linecap="%s" stroke-linejoin="round"'
+         % (stroke, sw, cap)) if stroke else ""
+    return '<path d="%s" fill="%s"%s opacity="%.3f"/>' % (d, f, s, opacity)
+
+
+def poly(pts, fill=None, stroke=None, sw=1.0, opacity=1.0, grad=None):
+    d = "M%.2f %.2f " % pts[0] + " ".join("L%.2f %.2f" % p for p in pts[1:]) + " Z"
+    return path(d, fill=fill, stroke=stroke, sw=sw, opacity=opacity, grad=grad)
+
+
 def text(x, y, s, size, fill, weight=600, anchor="start", family=ROUND,
          tracking=None, italic=False, opacity=1.0):
     a = {"start": "start", "middle": "middle", "end": "end"}[anchor]
@@ -173,6 +191,12 @@ class Defs:
                        for o, c, a in stops)
         self.items[key] = ('<radialGradient id="%s" cx="%s" cy="%s" r="%s">%s</radialGradient>'
                             % (key, cx, cy, r, body))
+        return key
+
+    def blur(self, r):
+        key = "bl_%d" % (hash(("blur", r)) & 0xFFFFFFFF)
+        self.items[key] = ('<filter id="%s" x="-60%%" y="-60%%" width="220%%" height="220%%">'
+                           '<feGaussianBlur stdDeviation="%.2f"/></filter>') % (key, r)
         return key
 
     def clip_rrect(self, x, y, w, h, r):
@@ -359,7 +383,263 @@ SCREEN_W, SCREEN_H = 393, 852
 PACK_PRICES = {1: 10.0, 2: 30.0, 3: 75.0, 4: 160.0, 5: 400.0}
 
 
+def _blend(a, b, t):
+    """Interpolate two hex colours, mirroring blend() in SetArt.swift."""
+    ai = [int(a[i:i + 2], 16) for i in (0, 2, 4)]
+    bi = [int(b[i:i + 2], 16) for i in (0, 2, 4)]
+    return "#%02x%02x%02x" % tuple(int(round(ai[i] + (bi[i] - ai[i]) * t)) for i in range(3))
+
+
+# Crown lobes: angle, distance, size. Deliberately uneven, so the silhouette
+# breaks into leaf clusters instead of settling into a smooth cloud.
+_LOBES = [(-2.35, 0.78, 0.46), (-1.62, 0.66, 0.50), (-1.05, 0.80, 0.44), (-0.42, 0.80, 0.42),
+          (0.24, 0.70, 0.44), (0.95, 0.58, 0.36), (1.75, 0.55, 0.34), (2.35, 0.74, 0.42),
+          (2.95, 0.80, 0.44)]
+
+
+def _tree(defs, x, base, crown_y, r, depth, op=1.0, detail=True):
+    """One tree, mirroring SetScene.tree in SetArt.swift: tapered trunk, forked
+    branches, lobed crown. depth runs 0 (far, hazed back) to 1 (front, lit)."""
+    shell = _blend("06240e", "093315", depth)
+    body = _blend("11421d", "3fbb52", depth)
+    lit = _blend("1e6129", "96f57e", depth)
+    bark = _blend("0a2711", "48331a", depth)
+    bark_dark = _blend("051b0a", "171007", depth)
+    out = []
+
+    w = r * 0.15 + 0.55
+    ctrl = base - (base - crown_y) * 0.55
+    trunk = defs.linear([("0%", bark, "1"), ("100%", bark_dark, "1")], x1=0, y1=0, x2=1, y2=0.6)
+    out.append(path("M%.2f %.2f Q%.2f %.2f %.2f %.2f L%.2f %.2f Q%.2f %.2f %.2f %.2f Z" % (
+        x - w * 1.7, base, x - w * 0.85, ctrl, x - w * 0.45, crown_y,
+        x + w * 0.45, crown_y, x + w * 0.85, ctrl, x + w * 1.7, base),
+        grad=trunk, opacity=op))
+    for side in (-1, 1):
+        out.append(path("M%.2f %.2f Q%.2f %.2f %.2f %.2f" % (
+            x, crown_y + r * 0.85, x + side * r * 0.16, crown_y + r * 0.55,
+            x + side * r * 0.6, crown_y + r * 0.1),
+            stroke=bark, sw=max(0.7, w * 0.55), opacity=op))
+
+    def crown(scale, dx, dy, fill, opacity):
+        # Opaque lobes inside one group: the union reads as a single mass, and
+        # the group opacity keeps overlaps from seaming.
+        parts = [ell(x + dx, crown_y + dy, r * 0.62 * scale, r * 0.66 * scale, fill=fill)]
+        for a, d, sz in _LOBES:
+            parts.append(ell(x + dx + math.cos(a) * r * d * 0.9 * scale,
+                             crown_y + dy + math.sin(a) * r * d * scale,
+                             r * sz * scale, r * sz * 0.92 * scale, fill=fill))
+        return '<g opacity="%.3f">%s</g>' % (opacity, "".join(parts))
+
+    out.append(crown(1, 0, 0, shell, op))
+    out.append(crown(0.84, -r * 0.05, -r * 0.09, body, op))
+    out.append(crown(0.46, -r * 0.16, -r * 0.26, lit, 0.5 * op))
+    if depth > 0.25:
+        for a, d in ((-2.45, 0.82), (-1.72, 0.74), (-1.1, 0.84), (-0.55, 0.86)):
+            out.append(ell(x + math.cos(a) * r * d * 0.9, crown_y + math.sin(a) * r * d,
+                           r * 0.26, r * 0.2, fill=lit, opacity=0.55 * op))
+    if not detail:
+        return "".join(out)
+
+    for a, d in ((-2.5, 1.0), (-1.75, 0.96), (-0.95, 1.02), (-0.18, 0.98), (2.55, 0.98)):
+        bx, by = x + math.cos(a) * r * d * 0.9, crown_y + math.sin(a) * r * d
+        tx, ty = x + math.cos(a) * r * (d + 0.2) * 0.9, crown_y + math.sin(a) * r * (d + 0.2)
+        nx, ny = -math.sin(a) * r * 0.18, math.cos(a) * r * 0.18
+        out.append(poly([(bx + nx, by + ny), (tx, ty), (bx - nx, by - ny)], fill=body, opacity=op))
+
+    out.append(path("M%.2f %.2f Q%.2f %.2f %.2f %.2f" % (
+        x - w * 1.35, base - 2, x - w * 1.1, base - (base - crown_y) * 0.5,
+        x - w * 0.5, crown_y + 4), stroke="#4faf4f", sw=w * 0.55, opacity=0.35 * op))
+    return "".join(out)
+
+
+def _wisp(x, y, s, op):
+    w, h = 5.2 * s, 6.4 * s
+    d = ("M%.2f %.2f L%.2f %.2f A%.2f %.2f 0 0 1 %.2f %.2f L%.2f %.2f "
+         "L%.2f %.2f L%.2f %.2f L%.2f %.2f Z") % (
+        x - w, y + h, x - w, y - h * 0.15, w, w, x + w, y - h * 0.15,
+        x + w, y + h, x + w * 0.5, y + h * 0.55, x, y + h, x - w * 0.5, y + h * 0.55)
+    out = [path(d, fill="#d9b3ff", opacity=0.72 * op)]
+    for ex in (-w * 0.42, w * 0.42):
+        out.append(ell(x + ex, y - h * 0.05, 1.1 * s, 1.5 * s, fill="#1f0d3d", opacity=0.85 * op))
+    return "".join(out)
+
+
+def set_emblem(defs, cx, cy, size, set_no, op=1.0):
+    """Per-set pack artwork, an SVG echo of SetEmblem/SetScene in SetArt.swift.
+
+    Drawn in the same 100x100 design space the SwiftUI Canvas uses, then scaled
+    into place, so the marketing screenshots match what ships in the app.
+    """
+    pal = ELEMENT[SET_ELEMENT[set_no]]
+    hi, mid, deep, dark = pal
+    k = size / 100.0
+    o = []
+
+    def wash(wx, wy, color):
+        g = defs.radial([("0%", color, "0.92"), ("62%", color, "0.62"), ("100%", color, "0")])
+        return circle(wx, wy, 50, grad=g, opacity=0.95 * op)
+
+    def soft(body, r):
+        return '<g filter="url(#%s)">%s</g>' % (defs.blur(r), body)
+
+    if set_no == 1:  # Emberfall - volcano, magma, rock
+        o.append(wash(50, 56, "#2a0f08"))
+        o.append(soft(poly([(45, 32), (55, 32), (58, 22), (42, 22)],
+                           fill="#6b4a3a", opacity=0.45 * op), 2.2))
+        o.append(soft("".join([
+            ell(50, 19, 17, 8, fill="#6b4a3a", opacity=0.8 * op),
+            ell(37, 22, 10, 6, fill="#5e4034", opacity=0.7 * op),
+            ell(63, 21, 11, 6, fill="#5e4034", opacity=0.7 * op),
+            ell(50, 13, 9, 5, fill="#7a5949", opacity=0.5 * op)]), 2.4))
+        o.append(poly([(66, 76), (78, 48), (90, 76)], fill=dark, opacity=0.55 * op))
+        o.append(poly([(12, 76), (24, 52), (36, 76)], fill=dark, opacity=0.5 * op))
+        cone = defs.linear([("0%", "#8a4a34", "1"), ("55%", "#5a2c20", "1"), ("100%", "#33150f", "1")])
+        o.append(poly([(16, 78), (41, 33), (59, 33), (84, 78)], grad=cone, opacity=op))
+        o.append(path("M41 33 L16 78", stroke="#c9714a", sw=1.4, opacity=0.5 * op))
+        o.append(path("M59 33 L84 78", stroke="#8d4630", sw=1.2, opacity=0.35 * op))
+        for d, sw, a in (("M46 34 C43 46 39 56 33 76", 2.6, 0.95),
+                         ("M54 34 C58 47 62 58 68 76", 2.4, 0.9),
+                         ("M50 34 C50 50 49 62 47 77", 1.9, 0.8)):
+            o.append(path(d, stroke=mid, sw=sw, opacity=a * op))
+            o.append(path(d, stroke=hi, sw=sw * 0.42, opacity=a * 0.9 * op))
+        o.append(soft(ell(50, 33, 11, 4.4, fill=mid, opacity=0.9 * op), 2.0))
+        o.append(ell(50, 33, 9, 3.0, fill=mid, opacity=0.95 * op))
+        o.append(ell(50, 32, 5.4, 2.0, fill=hi, opacity=op))
+        pool = defs.linear([("0%", hi, "1"), ("45%", mid, "1"), ("100%", deep, "1")])
+        o.append(ell(50, 80, 34, 7.5, grad=pool, opacity=0.95 * op))
+        for rx, ry, rw in ((33, 81, 5.5), (50, 83, 4.6), (66, 80, 5.0)):
+            o.append(poly([(rx - rw, ry), (rx, ry - 2.6), (rx + rw, ry), (rx, ry + 2.6)],
+                          fill="#2a0f08", opacity=0.85 * op))
+        for ex, ey, er in ((28, 46, 1.5), (72, 40, 1.3), (22, 62, 1.2), (80, 58, 1.4), (34, 30, 1.1)):
+            o.append(circle(ex, ey, er, fill=hi, opacity=0.85 * op))
+
+    elif set_no == 2:  # Tidecaller - small islands amongst massive swells
+        o.append(wash(50, 54, "#061c40"))
+        o.append(circle(33, 21, 5.5, fill="#dff2ff", opacity=0.85 * op))
+        for sx, sy in ((22, 34), (44, 16), (58, 12), (70, 24), (26, 15), (78, 38)):
+            o.append(circle(sx, sy, 0.9, fill="#ffffff", opacity=0.6 * op))
+        body = defs.linear([("0%", hi, "1"), ("34%", mid, "1"), ("100%", deep, "1")],
+                           x1=0.15, y1=0, x2=0.85, y2=1)
+        crest = ("M28 82 C24 50 34 24 54 22 C72 20 85 32 84 48 C83 62 74 70 62 68 "
+                 "C72 64 77 54 72 45 C66 35 53 34 46 44 C39 54 38 68 40 82 Z")
+        o.append(path(crest, grad=body, opacity=op))
+        o.append(path("M28 82 C24 50 34 24 54 22 C72 20 85 32 84 48 C83 62 74 70 62 68",
+                      stroke="#ffffff", sw=2.6, opacity=0.92 * op))
+        for d in ("M62 68 C60 74 58 78 57 82", "M69 66 C69 73 68 78 67 82",
+                  "M39 60 C37 68 37 75 38 82"):
+            o.append(path(d, stroke=hi, sw=1.4, opacity=0.5 * op))
+        for fx, fy, fr in ((36, 34, 2.4), (44, 25, 2.9), (55, 21, 3.1), (67, 24, 2.4),
+                           (78, 33, 2.0), (61, 68, 2.6)):
+            o.append(circle(fx, fy, fr, fill="#ffffff", opacity=0.9 * op))
+        for sx, sy in ((30, 26), (40, 17), (52, 13), (66, 15), (76, 22)):
+            o.append(circle(sx, sy, 1.1, fill="#dff2ff", opacity=0.7 * op))
+        sea = defs.linear([("0%", mid, "1"), ("100%", "#061c40", "1")])
+        o.append(ell(48, 86, 40, 13, grad=sea, opacity=0.95 * op))
+        for ix, ib, iw in ((28, 74, 9), (48, 77, 7)):
+            o.append(path("M%.2f %.2f Q%.2f %.2f %.2f %.2f Z" % (
+                ix - iw, ib, ix, ib - iw * 0.85, ix + iw, ib), fill="#2b4a70", opacity=op))
+            o.append(path("M%.2f %.2f Q%.2f %.2f %.2f %.2f" % (
+                ix - iw * 0.7, ib - iw * 0.25, ix, ib - iw * 0.9, ix + iw * 0.35, ib - iw * 0.55),
+                stroke="#7fb0dc", sw=1.1, opacity=0.55 * op))
+            o.append(path("M%.2f %.2f L%.2f %.2f" % (ix, ib, ix + 1, ib - iw * 1.5),
+                          stroke="#6fd6a6", sw=1.2, opacity=0.9 * op))
+            for a in (-1, 1):
+                o.append(path("M%.2f %.2f Q%.2f %.2f %.2f %.2f" % (
+                    ix + 1, ib - iw * 1.5, ix + 1 + a * 3, ib - iw * 1.9,
+                    ix + 1 + a * 6, ib - iw * 1.5), stroke="#6fd6a6", sw=1.1, opacity=0.9 * op))
+        for wx, wy, ww in ((26, 86, 9), (48, 90, 8), (68, 85, 7)):
+            o.append(ell(wx, wy, ww, 2.4, fill=hi, opacity=0.3 * op))
+
+    elif set_no == 3:  # Verdspire - mossy jungle
+        o.append(wash(50, 48, "#051d0b"))
+        day = defs.radial([("0%", "#b6e88a", "0.22"), ("50%", "#2f9e44", "0.07"),
+                           ("100%", "#07240f", "0")], cy=0.35)
+        o.append(circle(50, 40, 40, grad=day, opacity=op))
+        for fx, fbase, fcy, fr in ((16, 78, 56, 6.5), (37, 77, 53, 5.4),
+                                   (63, 77, 54, 5.8), (85, 78, 57, 6.2)):
+            o.append(_tree(defs, fx, fbase, fcy, fr, 0, op, detail=False))
+        beam = defs.linear([("0%", "#eaffb0", "0"), ("50%", "#eaffb0", "0.13"),
+                            ("100%", "#eaffb0", "0")])
+        for bx, bw, spread in ((37, 5, 22), (68, 4, 18)):
+            o.append(poly([(bx, 16), (bx + bw, 16), (bx + bw + spread, 90), (bx - spread * 0.3, 90)],
+                          grad=beam, opacity=op))
+        o.append(_tree(defs, 23, 85, 34, 12.5, 0.5, op))
+        o.append(_tree(defs, 79, 85, 37, 11.5, 0.45, op))
+        o.append(_tree(defs, 51, 88, 22, 15.0, 1.0, op))
+        for vx, vy0, vy1, sway in ((36, 31, 60, 4), (65, 30, 64, -4),
+                                   (12, 42, 62, 3.5), (90, 46, 66, -3)):
+            o.append(path("M%.2f %.2f Q%.2f %.2f %.2f %.2f" % (
+                vx, vy0, vx + sway * 1.9, (vy0 + vy1) / 2, vx + sway, vy1),
+                stroke="#1f6b30", sw=1.1, opacity=op))
+        floor = defs.linear([("0%", "#0c3417", "0"), ("20%", "#0c3417", "1"),
+                             ("50%", "#1c5f2b", "1"), ("80%", "#0c3417", "1"),
+                             ("100%", "#0c3417", "0")], x1=0, y1=0, x2=1, y2=0)
+        o.append(ell(50, 89, 42, 9, grad=floor, opacity=0.95 * op))
+        for mx, my, mr in ((30, 85, 11), (60, 86, 10), (80, 88, 8), (17, 88, 8)):
+            o.append(ell(mx, my, mr, mr * 0.22, fill="#3fae52", opacity=0.35 * op))
+        for fx, a in ((11, 1), (89, -1)):
+            for i in range(4):
+                o.append(path("M%.2f 91 Q%.2f %.2f %.2f %.2f" % (
+                    fx, fx + a * (3 + i * 2), 83 - i * 2, fx + a * (5 + i * 4), 77 - i * 4),
+                    stroke="#3fbf5f", sw=1.4, opacity=0.85 * op))
+        for gx, gy in ((33, 50), (66, 42), (44, 62), (74, 64), (18, 64), (40, 38), (85, 52)):
+            o.append(circle(gx, gy, 1.1, fill="#f6ffcf", opacity=0.7 * op))
+
+    elif set_no == 4:  # Voltcrest - static, thunderstorms
+        o.append(wash(50, 50, "#231a05"))
+        o.append(poly([(14, 82), (30, 64), (42, 74), (56, 60), (70, 73), (86, 82)],
+                      fill="#333e60", opacity=op))
+        o.append(path("M14 82 L30 64 L42 74 L56 60 L70 73 L86 82", stroke="#8fa0c8",
+                      sw=1.1, opacity=0.38 * op))
+        o.append(soft("".join(
+            ell(bx, by, br, br * 0.62, fill="#39415f", opacity=op)
+            for bx, by, br in ((30, 30, 15), (48, 25, 17), (66, 29, 15), (48, 33, 16))), 0.7))
+        for bx, by, br in ((34, 24, 9), (52, 19, 10), (66, 24, 8)):
+            o.append(ell(bx, by, br, br * 0.5, fill="#5a6389", opacity=0.55 * op))
+        glow = defs.radial([("0%", hi, "0.55"), ("100%", hi, "0")])
+        o.append(soft(circle(52, 50, 30, grad=glow, opacity=op), 3.0))
+        bolt = [(54, 30), (43, 52), (53, 51), (42, 76), (67, 46), (57, 47), (65, 28)]
+        o.append(poly(bolt, fill=mid, opacity=op))
+        o.append(path("M56 32 L47 51 L56 50 L48 68", stroke="#fffbe0", sw=1.6, opacity=0.9 * op))
+        for sx, sy, ss in ((28, 44, 1.0), (74, 40, 0.9), (34, 62, 0.8), (78, 60, 1.0)):
+            o.append(poly([(sx, sy - 8 * ss), (sx - 4 * ss, sy), (sx, sy - 1 * ss),
+                           (sx - 2 * ss, sy + 8 * ss), (sx + 5 * ss, sy - 2 * ss),
+                           (sx + 1 * ss, sy - 1 * ss), (sx + 4 * ss, sy - 8 * ss)],
+                          fill=mid, opacity=0.8 * op))
+        for rx, ry in ((20, 40), (26, 56), (40, 38), (62, 36), (80, 50), (86, 36)):
+            o.append(path("M%.2f %.2f L%.2f %.2f" % (rx, ry, rx - 2, ry + 12),
+                          stroke=hi, sw=1.1, opacity=0.35 * op))
+        for sx, sy, ss in ((36, 34, 3.2), (70, 56, 2.8), (24, 66, 2.4), (64, 22, 2.6)):
+            o.append(path("M%.2f %.2f L%.2f %.2f M%.2f %.2f L%.2f %.2f" % (
+                sx, sy - ss, sx, sy + ss, sx - ss, sy, sx + ss, sy),
+                stroke="#fffbe0", sw=1.2, opacity=0.8 * op))
+
+    else:  # Umbral Reach - shadow, spirits, eclipse
+        o.append(wash(50, 50, "#170830"))
+        halo = defs.radial([("0%", hi, "0.5"), ("100%", hi, "0")])
+        o.append(soft(circle(57, 27, 26, grad=halo, opacity=op), 2.4))
+        o.append(circle(57, 27, 14, fill="#120726", opacity=op))
+        o.append(circle(57, 27, 14, stroke="#e9d4ff", sw=2.0, opacity=0.95 * op))
+        o.append(ell(50, 82, 38, 10, fill="#2a1250", opacity=0.9 * op))
+        for tx, a in ((18, 1), (84, -1)):
+            o.append(path("M%.2f 80 L%.2f 56" % (tx, tx + a * 3), stroke="#3a2060",
+                          sw=2.2, opacity=op))
+            for i in (0, 1):
+                o.append(path("M%.2f %.2f L%.2f %.2f" % (
+                    tx + a * 2, 64 - i * 5, tx + a * (8 + i * 2), 58 - i * 7),
+                    stroke="#3a2060", sw=1.5, opacity=op))
+        o.append(_wisp(36, 62, 1.15, op))
+        o.append(_wisp(72, 60, 0.85, op))
+        o.append(_wisp(54, 52, 0.6, 0.7 * op))
+        for dx, dy in ((22, 30), (40, 22), (76, 46), (30, 48), (66, 70), (86, 26), (14, 62)):
+            o.append(circle(dx, dy, 1.0, fill="#e9d4ff", opacity=0.55 * op))
+
+    return '<g transform="translate(%.2f,%.2f) scale(%.4f)">%s</g>' % (
+        cx - size / 2, cy - size / 2, k, "".join(o))
+
+
 def pack_thumb(defs, x, y, w, set_no, dim=False):
+
     """The shop's 58pt PackWrapper: crimped foil sleeve, sigil, set name."""
     ele = SET_ELEMENT[set_no]
     pal = ELEMENT[ele]
@@ -400,17 +680,9 @@ def pack_thumb(defs, x, y, w, set_no, dim=False):
         clip, rrect(x - w * 0.5, top + crimp, w * 0.7, fh, 0, grad=sheen, opacity=op)))
     out.append(crimp_band(top + crimp + fh, False))
 
-    # sigil: ring + six spokes, mirroring SigilView
+    # per-set emblem, mirroring SetEmblem / SetScene
     cx, cy = x + w / 2, top + crimp + fh * 0.42
-    rad = w * 0.30
-    out.append(circle(cx, cy, rad * 0.78, stroke="#ffffff", sw=1.1, opacity=0.30 * op))
-    for i in range(6):
-        a = i / 6.0 * 2 * math.pi - math.pi / 2
-        out.append(circle(cx + math.cos(a) * rad, cy + math.sin(a) * rad, w * 0.05,
-                          fill=pal[0], opacity=0.85 * op))
-        out.append(line(cx, cy, cx + math.cos(a) * rad, cy + math.sin(a) * rad,
-                        pal[0], 1.4, opacity=0.55 * op))
-    out.append(circle(cx, cy, w * 0.09, fill=pal[0], opacity=0.9 * op))
+    out.append(set_emblem(defs, cx, cy, w * 0.66, set_no, op))
 
     gold = defs.linear([("0%", "#fff6d0", "1"), ("55%", "#ffd54a", "1"), ("100%", "#b8860b", "1")])
     name = SET_NAME[set_no]

@@ -142,6 +142,17 @@ stripped out, so "same shape, different colour" counts as a duplicate. Keep it a
 The app shows these via `UIImage(named: card.id)` in `CardView`; the procedural
 `SigilView` stays as an automatic fallback if an image is ever missing.
 
+### Pack art
+
+Booster packs and booster boxes do *not* use card art. `TradingUp/Views/SetArt.swift`
+draws a themed miniature landscape per set with a SwiftUI `Canvas` — volcano
+(Emberfall), curling swell over islands (Tidecaller), a stand of jungle trees (Verdspire),
+thunderhead and bolt (Voltcrest), eclipse and spirits (Umbral Reach). Use it as
+`SetEmblem(set: 1)`; it fills whatever frame you give it, drawing in a fixed
+100×100 design space, and skips fine particle detail below 64 pt so shop
+thumbnails stay readable. `tools/generate_screenshots.py` mirrors the same scenes
+in SVG (`set_emblem`) — change one, change the other.
+
 ### App icon
 
 The icon is Emberpup, card 001, drawn by the *same* code that draws his card art,

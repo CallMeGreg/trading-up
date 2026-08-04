@@ -51,6 +51,18 @@ emblems generated from a card's name and type. Those have been replaced by the
 creatures; `SigilView` survives only as the fallback if an art asset ever goes
 missing.
 
+**Pack art** is drawn in code too, but it is *landscape*, not creature: each set
+gets its own hand-built miniature scene in `SetArt.swift` (`SetEmblem`), so a
+booster is recognisable by silhouette alone before you read the name —
+**Emberfall** an erupting volcano over a magma pool, **Tidecaller** small islands
+under a curling swell, **Verdspire** a stand of mossy jungle trees, **Voltcrest** a bolt
+splitting a thunderhead above a ridge, **Umbral Reach** an eclipse over drifting
+spirits. Every scene is drawn in a 100×100 design space and scaled to the pack,
+the booster box and the 58 pt shop shelf; fine detail (embers, spray, rain,
+pollen) is dropped below 64 pt so the small sizes stay legible.
+`tools/generate_screenshots.py` redraws the same scenes in SVG so the marketing
+screenshots match the app.
+
 ---
 
 ## 2. Brand / naming
