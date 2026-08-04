@@ -10,7 +10,7 @@
 
 A card‑collecting economy game for iPhone and iPad, built in SwiftUI.
 
-[![Platform](https://img.shields.io/badge/platform-iOS%2017%2B-lightgrey)](#requirements)
+[![Platform](https://img.shields.io/badge/platform-iOS%2017%2B-lightgrey)](docs/DEVELOPMENT.md#requirements)
 [![Made with SwiftUI](https://img.shields.io/badge/made%20with-SwiftUI-orange)](https://developer.apple.com/xcode/swiftui/)
 [![Dependencies](https://img.shields.io/badge/dependencies-zero-brightgreen)](#no-catches)
 [![CI](https://github.com/CallMeGreg/trading-up/actions/workflows/ci.yml/badge.svg)](https://github.com/CallMeGreg/trading-up/actions/workflows/ci.yml)
@@ -42,20 +42,23 @@ in‑app purchases, no internet connection.
 
 <table>
 <tr>
-<td width="20%"><img src="docs/screenshots/03_home_progress_1242x2688.png" alt="The shop showing pack-buying progress across five sets"></td>
-<td width="20%"><img src="docs/screenshots/02_rare_hit_1242x2688.png" alt="A rare flipping over during a pack reveal"></td>
-<td width="20%"><img src="docs/screenshots/05_collection_1242x2688.png" alt="The collection grid filling in"></td>
-<td width="20%"><img src="docs/screenshots/06_grade_1242x2688.png" alt="A card coming back from grading as a PSA 10"></td>
-<td width="20%"><img src="docs/screenshots/08_set_complete_1242x2688.png" alt="A completed set paying out its bonus"></td>
+<td width="20%"><img src="docs/screenshots/app/01-shop.png" alt="The shop: cash, binder progress, and five sets of packs with the later ones still locked"></td>
+<td width="20%"><img src="docs/screenshots/app/02-rip-packs.png" alt="A new rare flipping over during a pack reveal"></td>
+<td width="20%"><img src="docs/screenshots/app/03-keep-or-sell.png" alt="The pack summary paying out evolution bonuses, with the duplicate ready to sell"></td>
+<td width="20%"><img src="docs/screenshots/app/04-grade.png" alt="A card coming back from grading as a PSA 10, worth five times what it was"></td>
+<td width="20%"><img src="docs/screenshots/app/05-collect.png" alt="The collection grid filling in, unowned cards still locked"></td>
 </tr>
 <tr>
 <td align="center"><b>Shop</b></td>
 <td align="center"><b>Rip packs</b></td>
-<td align="center"><b>Collect</b></td>
+<td align="center"><b>Keep or sell</b></td>
 <td align="center"><b>Grade</b></td>
-<td align="center"><b>Set bonus</b></td>
+<td align="center"><b>Collect</b></td>
 </tr>
 </table>
+
+<sub>Real screenshots from the current build, captured on an iPhone by
+<a href="docs/APP_STORE.md#screenshots"><code>tools/capture_screenshots.sh</code></a>.</sub>
 
 ## How to play
 
@@ -131,28 +134,10 @@ rarity spread, and unlocks as your collection grows.
   and is never sent anywhere.
 - **Plays entirely offline**, on both iPhone and iPad.
 
-## Build it from source
-
-### Requirements
-
-macOS with **Xcode 16+** and an **iOS 17+ Simulator**. That's it — the app has
-**zero third‑party dependencies** and all 250 cards are embedded in the binary.
-
-### Run it
-
-```bash
-git clone https://github.com/CallMeGreg/trading-up.git
-cd trading-up
-xed .            # or double-click TradingUp.xcodeproj
-```
-
-Pick a simulator in the scheme selector and press **▶︎ Run** (`⌘R`). You start
-with $100 — open the **Shop** tab, buy a pack, and tap to reveal.
-
-Full instructions, project layout and the content generators are in
-[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
-
 ## Documentation
+
+For anyone working on the app — including how to
+[build and run it from source](docs/DEVELOPMENT.md).
 
 | Doc | What's in it |
 | --- | --- |

@@ -32,8 +32,9 @@ __pycache__/
 # and grow it again on every refresh. Upload them to App Store Connect (which
 # then holds the submitted set) or attach a zip to the GitHub Release.
 #
-# The much smaller rendered marketing shots in docs/screenshots/*.png ARE
-# checked in — the README uses them.
+# The five shrunk copies in docs/screenshots/app/ and site/screenshots/ ARE
+# checked in — the README and the website embed them, and
+# tools/publish_screenshots.sh regenerates them from a capture.
 docs/screenshots/appstore/
 
 # Misc

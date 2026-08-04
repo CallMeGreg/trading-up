@@ -1,15 +1,26 @@
 #!/usr/bin/env python3
-"""Spryte card art — deterministic creature illustrations for all 250 cards.
+"""Spryte card art — 250 individually designed creature illustrations.
 
-Sets are perfectly parallel (same 13 evolution lines + 18 singles in the same
-structural roles), so we define one creature archetype per slot and restyle it per
-element (palette + accents) + per-set scene + evolution stage. The 15 ultra
-legendaries are bespoke. Art is name-aligned: the archetype for each slot matches
-the card names (canine line -> pup/hound/wolf, etc.).
+Every card is its own creature. Nothing is a recolour of anything else:
+
+  * Each **set has its own design language** (see SETSTYLE below) that changes the
+    actual geometry — torso silhouette, limbs, head, eyes, mouth, crest, tail and
+    surface treatment — not just the palette.
+  * Each **slot** (canine, golem, dragon, moth, ...) gets a *different concept per
+    set*: SLOT_BASE holds the family default, SET_OVR replaces body plan, build,
+    head, crest, tail and flourishes per (set, slot), and resolve() merges them.
+    Emberfall's hound and Umbral Reach's hound share a name suffix and nothing else.
+  * Each **evolution stage** adds real structure (horns, manes, wings, extra
+    limbs, orbiting shards), so a stage 3 is never a scaled-up stage 1.
+  * The 15 ultra legendaries stay fully bespoke.
+
+`dupes` proves it: it hashes each creature's geometry with palette and elemental
+accents stripped out, and fails if two cards resolve to the same character design.
 
 Commands (needs `rsvg-convert` from librsvg: `brew install librsvg`):
-  python3 tools/generate_art.py assets   # (re)render the 250 card assets + mockup SVGs
+  python3 tools/generate_art.py assets    # (re)render the 250 card assets + mockup SVGs
   python3 tools/generate_art.py qa [n]    # QA contact sheet(s) to /tmp for review
+  python3 tools/generate_art.py dupes     # assert all 250 designs are distinct
 
 Outputs:
   - asset PNGs  TradingUp/Assets.xcassets/CardArt/<id>.imageset/<id>.png  (864x600)
@@ -25,32 +36,246 @@ VB_W, VB_H = 216, 150
 
 # --------------------------------------------------------------- element palettes
 ELE = {
-    "fire":     dict(pal=["#ffe08a","#ff8a2a","#e01f1f","#4a0f04"], glow="#ffd15c", acc="fire"),
-    "rock":     dict(pal=["#f4cf94","#c98a3c","#7a4a24","#2c1a0c"], glow="#ffcf8a", acc="rock"),
-    "water":    dict(pal=["#c2f0ff","#4bb6ff","#1e5bd6","#08245c"], glow="#bff0ff", acc="water"),
-    "grass":    dict(pal=["#dcffa8","#78dd63","#2f9e44","#123f1e"], glow="#eaffb4", acc="grass"),
-    "electric": dict(pal=["#fff6b0","#ffd21a","#f5a300","#5a3d00"], glow="#fff6b0", acc="electric"),
-    "shadow":   dict(pal=["#e2c8ff","#a06cf6","#5b2bb3","#160a2e"], glow="#ecd8ff", acc="shadow"),
+    "fire":     dict(pal=["#ffe08a", "#ff8a2a", "#e01f1f", "#4a0f04"], glow="#ffd15c", acc="fire"),
+    "rock":     dict(pal=["#f4cf94", "#c98a3c", "#7a4a24", "#2c1a0c"], glow="#ffcf8a", acc="rock"),
+    "water":    dict(pal=["#c2f0ff", "#4bb6ff", "#1e5bd6", "#08245c"], glow="#bff0ff", acc="water"),
+    "grass":    dict(pal=["#dcffa8", "#78dd63", "#2f9e44", "#123f1e"], glow="#eaffb4", acc="grass"),
+    "electric": dict(pal=["#fff6b0", "#ffd21a", "#f5a300", "#5a3d00"], glow="#fff6b0", acc="electric"),
+    "shadow":   dict(pal=["#e2c8ff", "#a06cf6", "#5b2bb3", "#160a2e"], glow="#ecd8ff", acc="shadow"),
 }
+
+# ------------------------------------------------------------ per-set design DNA
+# Every set draws from a different shape language. These are the knobs the
+# morphology primitives read; the primitives themselves branch on set number.
+SETSTYLE = {
+    1: dict(name="Emberfall",    crust="#2b1109", seam="#ff7a1a", ash="#5a4038", ember="#ffbf5c"),
+    2: dict(name="Tidecaller",   ice="#e6fbff",   deep="#062a63", foam="#ffffff", kelp="#0f7d7d"),
+    3: dict(name="Verdspire",    bark="#6b4a24",  leaf="#2f9e44", bloom="#ff9ec7", spore="#f4ffce"),
+    4: dict(name="Voltcrest",    metal="#98a3bd", arc="#fff6b0",  rubber="#241f14", copper="#e8a83c"),
+    5: dict(name="Umbral Reach", void="#0a0518",  star="#ffffff", neb="#8a5cf0",   rift="#ff9bf5"),
+}
+# Every style carries every key so per-set lookup tables can be written inline.
+_STYDEF = dict(crust="#2b1109", seam="#ff7a1a", ash="#5a4038", ember="#ffbf5c",
+               ice="#e6fbff", deep="#062a63", foam="#ffffff", kelp="#0f7d7d",
+               bark="#6b4a24", leaf="#2f9e44", bloom="#ff9ec7", spore="#f4ffce",
+               metal="#98a3bd", arc="#fff6b0", rubber="#241f14", copper="#e8a83c",
+               void="#0a0518", star="#ffffff", neb="#8a5cf0", rift="#ff9bf5", coral="#ff9a6b")
+SETSTYLE = {k: dict(_STYDEF, **v) for k, v in SETSTYLE.items()}
+
 
 def H(s):
     return int(hashlib.md5(s.encode()).hexdigest(), 16)
 
+
+class Rng:
+    """Tiny deterministic LCG so art never shifts between runs."""
+
+    def __init__(self, seed):
+        self.s = (seed ^ 0x9E3779B9) & 0x7FFFFFFF or 1
+
+    def nxt(self):
+        self.s = (1103515245 * self.s + 12345) & 0x7FFFFFFF
+        return self.s
+
+    def f(self, a=0.0, b=1.0):
+        return a + (b - a) * (self.nxt() / 0x7FFFFFFF)
+
+    def i(self, a, b):
+        return a + self.nxt() % (b - a + 1)
+
+    def pick(self, seq):
+        return seq[self.nxt() % len(seq)]
+
+
 def vary(name):
     h = H(name)
     return dict(
-        spots=(h & 3),                 # 0..3
-        earv=(h >> 2) & 1,
-        eyes=(2 if (h >> 3) & 7 == 0 else 2),  # mostly 2
-        horns=1 + ((h >> 4) & 1),      # 1..2
-        jitter=((h >> 5) & 7) - 3.5,   # -3.5..3.5
+        spots=(h & 3),
+        marks=1 + ((h >> 2) & 2),
+        jitter=((h >> 5) & 7) - 3.5,
         flip=(h >> 8) & 1,
-        seed=h,
+        seed=h & 0x7FFFFFFF,
     )
 
-# ------------------------------------------------------------------------ helpers
-def defs(uid, e):
+
+# ------------------------------------------------------------------ svg plumbing
+class Ctx:
+    """Per-card drawing context: set DNA, palette, unique ids, extra <defs>."""
+
+    def __init__(self, uid, e, setno, var, name=""):
+        self.uid, self.e, self.s, self.var, self.name = uid, e, setno, var, name
+        self.sty = SETSTYLE[setno]
+        self.pal = e["pal"]
+        self.glow = e["glow"]
+        self.ink = "#cbb6ff" if setno == 5 else e["pal"][3]
+        self.el = e["acc"]
+        self.n = 0
+        self.defs = []
+
+    def nid(self, tag):
+        self.n += 1
+        return f"{tag}{self.uid}_{self.n}"
+
+    def rng(self, salt=0):
+        return Rng(self.var["seed"] + salt * 7919)
+
+
+def fmt(*vals):
+    return " ".join(f"{v:.1f}" for v in vals)
+
+
+# ------------------------------------------------------------- shape vocabulary
+def smooth_poly(pts):
+    """Closed curve through the midpoints of a point ring (organic silhouette)."""
+    n = len(pts)
+    mids = [((pts[i][0] + pts[(i + 1) % n][0]) / 2, (pts[i][1] + pts[(i + 1) % n][1]) / 2) for i in range(n)]
+    d = f"M{mids[-1][0]:.1f},{mids[-1][1]:.1f}"
+    for i in range(n):
+        d += f" Q{pts[i][0]:.1f},{pts[i][1]:.1f} {mids[i][0]:.1f},{mids[i][1]:.1f}"
+    return d + " Z"
+
+
+def sharp_poly(pts):
+    return "M" + " L".join(f"{x:.1f},{y:.1f}" for x, y in pts) + " Z"
+
+
+def ring(cx, cy, rx, ry, n, seed, amp=0.14, phase=0.0):
+    r = Rng(seed)
+    return [(cx + math.cos(2 * math.pi * i / n + phase) * rx * (1 - amp + 2 * amp * r.f()),
+             cy + math.sin(2 * math.pi * i / n + phase) * ry * (1 - amp + 2 * amp * r.f()))
+            for i in range(n)]
+
+
+def crag(cx, cy, rx, ry, seed, n=11, amp=0.16):
+    """Fractured volcanic mass: hard corners, uneven crust."""
+    return sharp_poly(ring(cx, cy, rx, ry, n, seed, amp))
+
+
+def teardrop(cx, cy, rx, ry, tilt=0.0):
+    """Streamlined hydrodynamic mass, blunt at the left, tapered right."""
+    return (f"M{cx - rx:.1f},{cy + tilt:.1f} "
+            f"C{cx - rx:.1f},{cy - ry * 1.28:.1f} {cx + rx * 0.34:.1f},{cy - ry * 1.05:.1f} {cx + rx:.1f},{cy - ry * 0.22:.1f} "
+            f"C{cx + rx * 1.05:.1f},{cy + ry * 0.1:.1f} {cx + rx * 0.4:.1f},{cy + ry * 1.16:.1f} {cx - rx:.1f},{cy + tilt:.1f} Z")
+
+
+def lobed(cx, cy, rx, ry, seed, lobes=3):
+    """Mossy overgrown mass: rounded, asymmetric, budding upward."""
+    r = Rng(seed)
+    pts = []
+    n = 9
+    for i in range(n):
+        a = 2 * math.pi * i / n
+        k = 1.0 + (0.2 * math.sin(lobes * a + r.f(0, 2)) if math.sin(a) < 0 else 0.02)
+        pts.append((cx + math.cos(a) * rx * k, cy + math.sin(a) * ry * k))
+    return smooth_poly(pts)
+
+
+def chamfer(cx, cy, rx, ry, cut=0.34):
+    """Machined hard-edged chassis: an octagon with bevelled corners."""
+    cx_, cy_ = cx, cy
+    kx, ky = rx * cut, ry * cut
+    return sharp_poly([
+        (cx_ - rx, cy_ - ry + ky), (cx_ - rx + kx, cy_ - ry), (cx_ + rx - kx, cy_ - ry),
+        (cx_ + rx, cy_ - ry + ky), (cx_ + rx, cy_ + ry - ky), (cx_ + rx - kx, cy_ + ry),
+        (cx_ - rx + kx, cy_ + ry), (cx_ - rx, cy_ + ry - ky),
+    ])
+
+
+def riftshape(cx, cy, rx, ry, seed, bite=0.5):
+    """Void mass with a crescent torn out of it — nothing here is fully solid."""
+    r = Rng(seed)
+    pts = ring(cx, cy, rx, ry, 10, seed, 0.1)
+    d = smooth_poly(pts)
+    ang = r.f(-0.5, 0.5) + 0.6
+    bx, by = cx + math.cos(ang) * rx * 0.72, cy + math.sin(ang) * ry * 0.5
+    br = min(rx, ry) * bite
+    d += (f" M{bx - br:.1f},{by:.1f} a{br:.1f},{br * 0.86:.1f} 0 1 0 {br * 2:.1f},0 "
+          f"a{br * 0.72:.1f},{br * 0.62:.1f} 0 1 1 {-br * 2:.1f},0 Z")
+    return d
+
+
+def starfield(x, y, w, h, seed, count=22, tint="#ffffff"):
+    r = Rng(seed)
+    out = ""
+    for _ in range(count):
+        px, py = x + r.f(0, w), y + r.f(0, h)
+        rad = r.f(0.35, 1.5)
+        out += f'<circle cx="{px:.1f}" cy="{py:.1f}" r="{rad:.2f}" fill="{tint}" opacity="{r.f(0.35, 1):.2f}"/>'
+    for _ in range(3):
+        px, py = x + r.f(0, w), y + r.f(0, h)
+        out += star(px, py, r.f(1.6, 2.8), tint, 0.9)
+    return out
+
+
+def eye(cx, cy, r, glow="#fff", look=0.6, angry=False, glowy=False):
+    base = glow if glowy else "#ffffff"
+    pupil = "#1a1020"
+    s = f'<ellipse cx="{cx:.1f}" cy="{cy:.1f}" rx="{r:.1f}" ry="{r * 1.14:.1f}" fill="{base}"/>'
+    s += f'<circle cx="{cx + look:.1f}" cy="{cy + r * 0.12:.1f}" r="{r * 0.6:.1f}" fill="{pupil}"/>'
+    s += f'<circle cx="{cx - r * 0.24 + look:.1f}" cy="{cy - r * 0.36:.1f}" r="{r * 0.24:.1f}" fill="#fff"/>'
+    if angry:
+        s += (f'<path d="M{cx - r * 1.3:.1f},{cy - r * 1.5:.1f} L{cx + r * 1.1:.1f},{cy - r * 0.5:.1f}" '
+              f'stroke="{pupil}" stroke-width="{r * 0.5:.1f}" stroke-linecap="round"/>')
+    return s
+
+
+def star(x, y, r, c="#fff", op=0.9):
+    return (f'<path d="M{x:.1f},{y - r:.1f} L{x + r * 0.28:.1f},{y - r * 0.28:.1f} L{x + r:.1f},{y:.1f} '
+            f'L{x + r * 0.28:.1f},{y + r * 0.28:.1f} L{x:.1f},{y + r:.1f} L{x - r * 0.28:.1f},{y + r * 0.28:.1f} '
+            f'L{x - r:.1f},{y:.1f} L{x - r * 0.28:.1f},{y - r * 0.28:.1f} Z" fill="{c}" opacity="{op}"/>')
+
+
+def tuft(el, cx, cy, s, e, rot=0):
+    """Small elemental motif — a flame, droplet, leaf, bolt, shard or star."""
+    pal, glow, stroke = e["pal"], e["glow"], e["pal"][3]
+    g = f'<g transform="rotate({rot:.0f} {cx:.1f} {cy:.1f})" stroke="{stroke}" stroke-width="1.1" stroke-linejoin="round">'
+    if el == "fire":
+        g += (f'<path d="M{cx:.1f},{cy + s:.1f} C{cx - 0.8 * s:.1f},{cy + 0.2 * s:.1f} {cx - 0.5 * s:.1f},{cy - 0.4 * s:.1f} {cx:.1f},{cy - s:.1f} '
+              f'C{cx + 0.5 * s:.1f},{cy - 0.4 * s:.1f} {cx + 0.8 * s:.1f},{cy + 0.2 * s:.1f} {cx:.1f},{cy + s:.1f} Z" fill="{glow}"/>')
+        g += (f'<path d="M{cx:.1f},{cy + 0.5 * s:.1f} C{cx - 0.4 * s:.1f},{cy + 0.1 * s:.1f} {cx - 0.25 * s:.1f},{cy - 0.25 * s:.1f} {cx:.1f},{cy - 0.6 * s:.1f} '
+              f'C{cx + 0.25 * s:.1f},{cy - 0.25 * s:.1f} {cx + 0.4 * s:.1f},{cy + 0.1 * s:.1f} {cx:.1f},{cy + 0.5 * s:.1f} Z" fill="{pal[1]}" stroke="none"/>')
+    elif el == "water":
+        g += f'<path d="M{cx:.1f},{cy - s:.1f} L{cx + 0.72 * s:.1f},{cy + s:.1f} Q{cx:.1f},{cy + 0.45 * s:.1f} {cx - 0.72 * s:.1f},{cy + s:.1f} Z" fill="{pal[0]}"/>'
+        g += f'<line x1="{cx:.1f}" y1="{cy - 0.5 * s:.1f}" x2="{cx:.1f}" y2="{cy + 0.7 * s:.1f}" stroke="{pal[2]}" stroke-width="0.9"/>'
+    elif el == "grass":
+        g += f'<path d="M{cx:.1f},{cy - s:.1f} Q{cx + 0.7 * s:.1f},{cy:.1f} {cx:.1f},{cy + s:.1f} Q{cx - 0.7 * s:.1f},{cy:.1f} {cx:.1f},{cy - s:.1f} Z" fill="{pal[0]}"/>'
+        g += f'<line x1="{cx:.1f}" y1="{cy - 0.7 * s:.1f}" x2="{cx:.1f}" y2="{cy + 0.7 * s:.1f}" stroke="{pal[2]}" stroke-width="0.9"/>'
+    elif el == "electric":
+        g += (f'<polygon points="{cx - 0.2 * s:.1f},{cy - s:.1f} {cx + 0.5 * s:.1f},{cy - s:.1f} {cx + 0.05 * s:.1f},{cy - 0.05 * s:.1f} '
+              f'{cx + 0.45 * s:.1f},{cy - 0.05 * s:.1f} {cx - 0.35 * s:.1f},{cy + s:.1f} {cx - 0.02 * s:.1f},{cy + 0.05 * s:.1f} '
+              f'{cx - 0.5 * s:.1f},{cy + 0.05 * s:.1f} {cx:.1f},{cy - 0.2 * s:.1f}" fill="{glow}"/>')
+    elif el == "rock":
+        g += f'<path d="M{cx:.1f},{cy - s:.1f} L{cx + 0.55 * s:.1f},{cy - 0.1 * s:.1f} L{cx:.1f},{cy + s:.1f} L{cx - 0.55 * s:.1f},{cy - 0.1 * s:.1f} Z" fill="{pal[0]}"/>'
+        g += f'<line x1="{cx:.1f}" y1="{cy - s:.1f}" x2="{cx:.1f}" y2="{cy + s:.1f}" stroke="{pal[2]}" stroke-width="0.8"/>'
+    else:  # shadow
+        g += star(cx, cy, s, glow, 1)
+        g = g.replace("<path", '<path stroke="' + stroke + '" stroke-width="1"', 1)
+    return g + "</g>"
+
+
+def spots(el, pts, e):
     pal, glow = e["pal"], e["glow"]
+    out = ""
+    for (x, y, r) in pts:
+        if el == "shadow":
+            out += star(x, y, r * 1.2, glow, .9)
+        elif el == "electric":
+            out += star(x, y, r * 1.1, glow, .85)
+        elif el == "grass":
+            out += f'<path d="M{x:.1f},{y - r:.1f} Q{x + r:.1f},{y:.1f} {x:.1f},{y + r:.1f} Q{x - r:.1f},{y:.1f} {x:.1f},{y - r:.1f} Z" fill="{pal[3]}" opacity=".5"/>'
+        elif el == "water":
+            out += f'<circle cx="{x:.1f}" cy="{y:.1f}" r="{r:.1f}" fill="{pal[0]}" opacity=".6"/>'
+        elif el == "rock":
+            out += f'<path d="M{x:.1f},{y - r:.1f} L{x + r * .6:.1f},{y:.1f} L{x:.1f},{y + r:.1f} L{x - r * .6:.1f},{y:.1f} Z" fill="{pal[3]}" opacity=".45"/>'
+        else:
+            out += f'<circle cx="{x:.1f}" cy="{y:.1f}" r="{r:.1f}" fill="{glow}" opacity=".7"/>'
+    return out
+
+
+def defs(ctx):
+    uid, e = ctx.uid, ctx.e
+    pal, glow, sty = e["pal"], e["glow"], ctx.sty
+    extra = "".join(ctx.defs)
     return f"""
   <defs>
     <linearGradient id="body{uid}" x1="0" y1="0" x2="0" y2="1">
@@ -63,6 +288,17 @@ def defs(uid, e):
     <linearGradient id="belly{uid}" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0%" stop-color="#ffffff" stop-opacity=".92"/><stop offset="100%" stop-color="{pal[0]}"/>
     </linearGradient>
+    <linearGradient id="void{uid}" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0%" stop-color="#4c2a86"/><stop offset="55%" stop-color="#2a1352"/>
+      <stop offset="100%" stop-color="#100628"/>
+    </linearGradient>
+    <linearGradient id="metal{uid}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#c9d2e6"/><stop offset="45%" stop-color="#7d879f"/>
+      <stop offset="100%" stop-color="#333a4d"/>
+    </linearGradient>
+    <linearGradient id="wood{uid}" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#9a6d3a"/><stop offset="100%" stop-color="#4a3016"/>
+    </linearGradient>
     <radialGradient id="stage{uid}" cx="50%" cy="62%" r="55%">
       <stop offset="0%" stop-color="{glow}" stop-opacity=".55"/><stop offset="70%" stop-color="{glow}" stop-opacity="0"/>
     </radialGradient>
@@ -70,71 +306,21 @@ def defs(uid, e):
       <stop offset="0%" stop-color="#ffffff" stop-opacity=".95"/>
       <stop offset="45%" stop-color="{pal[0]}"/><stop offset="100%" stop-color="{pal[2]}"/>
     </radialGradient>
+    <radialGradient id="halo{uid}" cx="50%" cy="50%" r="50%">
+      <stop offset="60%" stop-color="{glow}" stop-opacity="0"/><stop offset="100%" stop-color="{glow}" stop-opacity=".5"/>
+    </radialGradient>
+    <linearGradient id="rim{uid}" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="{sty.get('rift', glow)}"/><stop offset="100%" stop-color="{glow}" stop-opacity=".2"/>
+    </linearGradient>{extra}
   </defs>"""
 
-def eye(cx, cy, r, glow="#fff", look=0.6, angry=False, glowy=False):
-    base = glow if glowy else "#ffffff"
-    pupil = "#1a1020"
-    s = f'<ellipse cx="{cx}" cy="{cy}" rx="{r}" ry="{r*1.14}" fill="{base}"/>'
-    s += f'<circle cx="{cx+look}" cy="{cy+r*0.12}" r="{r*0.6}" fill="{pupil}"/>'
-    s += f'<circle cx="{cx-r*0.24+look}" cy="{cy-r*0.36}" r="{r*0.24}" fill="#fff"/>'
-    if angry:
-        s += f'<path d="M{cx-r*1.3},{cy-r*1.5} L{cx+r*1.1},{cy-r*0.5}" stroke="{pupil}" stroke-width="{r*0.5}" stroke-linecap="round"/>'
-    return s
-
-def star(x, y, r, c="#fff", op=0.9):
-    return (f'<path d="M{x},{y-r} L{x+r*0.28},{y-r*0.28} L{x+r},{y} L{x+r*0.28},{y+r*0.28} '
-            f'L{x},{y+r} L{x-r*0.28},{y+r*0.28} L{x-r},{y} L{x-r*0.28},{y-r*0.28} Z" fill="{c}" opacity="{op}"/>')
-
-# ---- element accent motif: a small decorative "tuft" pointing up at (cx,cy) ----
-def tuft(el, cx, cy, s, e, rot=0):
-    pal, glow, stroke = e["pal"], e["glow"], e["pal"][3]
-    g = f'<g transform="rotate({rot} {cx} {cy})" stroke="{stroke}" stroke-width="1.1" stroke-linejoin="round">'
-    a = el
-    if a == "fire":
-        g += (f'<path d="M{cx},{cy+s} C{cx-0.8*s},{cy+0.2*s} {cx-0.5*s},{cy-0.4*s} {cx},{cy-s} '
-              f'C{cx+0.5*s},{cy-0.4*s} {cx+0.8*s},{cy+0.2*s} {cx},{cy+s} Z" fill="{glow}"/>')
-        g += (f'<path d="M{cx},{cy+0.5*s} C{cx-0.4*s},{cy+0.1*s} {cx-0.25*s},{cy-0.25*s} {cx},{cy-0.6*s} '
-              f'C{cx+0.25*s},{cy-0.25*s} {cx+0.4*s},{cy+0.1*s} {cx},{cy+0.5*s} Z" fill="{pal[1]}" stroke="none"/>')
-    elif a == "water":
-        g += f'<path d="M{cx},{cy-s} L{cx+0.72*s},{cy+s} Q{cx},{cy+0.45*s} {cx-0.72*s},{cy+s} Z" fill="{pal[0]}"/>'
-        g += f'<line x1="{cx}" y1="{cy-0.5*s}" x2="{cx}" y2="{cy+0.7*s}" stroke="{pal[2]}" stroke-width="0.9"/>'
-    elif a == "grass":
-        g += f'<path d="M{cx},{cy-s} Q{cx+0.7*s},{cy} {cx},{cy+s} Q{cx-0.7*s},{cy} {cx},{cy-s} Z" fill="{pal[0]}"/>'
-        g += f'<line x1="{cx}" y1="{cy-0.7*s}" x2="{cx}" y2="{cy+0.7*s}" stroke="{pal[2]}" stroke-width="0.9"/>'
-    elif a == "electric":
-        g += (f'<polygon points="{cx-0.2*s},{cy-s} {cx+0.5*s},{cy-s} {cx+0.05*s},{cy-0.05*s} '
-              f'{cx+0.45*s},{cy-0.05*s} {cx-0.35*s},{cy+s} {cx-0.02*s},{cy+0.05*s} {cx-0.5*s},{cy+0.05*s} {cx},{cy-0.2*s}" '
-              f'fill="{glow}"/>')
-    elif a == "rock":
-        g += f'<path d="M{cx},{cy-s} L{cx+0.55*s},{cy-0.1*s} L{cx},{cy+s} L{cx-0.55*s},{cy-0.1*s} Z" fill="{pal[0]}"/>'
-        g += f'<line x1="{cx}" y1="{cy-s}" x2="{cx}" y2="{cy+s}" stroke="{pal[2]}" stroke-width="0.8"/>'
-    else:  # shadow
-        g += star(cx, cy, s, glow, 1)
-        g = g.replace("<path", '<path stroke="'+stroke+'" stroke-width="1"', 1)
-    return g + "</g>"
-
-def spots(el, pts, e):
-    """small surface marks appropriate to the element at [(x,y,r),...]"""
-    pal, glow = e["pal"], e["glow"]
-    out = ""
-    for (x, y, r) in pts:
-        if el == "shadow":
-            out += star(x, y, r*1.2, glow, .9)
-        elif el == "electric":
-            out += star(x, y, r*1.1, glow, .85)
-        elif el == "grass":
-            out += f'<path d="M{x},{y-r} Q{x+r},{y} {x},{y+r} Q{x-r},{y} {x},{y-r} Z" fill="{pal[3]}" opacity=".5"/>'
-        elif el == "water":
-            out += f'<circle cx="{x}" cy="{y}" r="{r}" fill="{pal[0]}" opacity=".6"/>'
-        elif el == "rock":
-            out += f'<path d="M{x},{y-r} L{x+r*.6},{y} L{x},{y+r} L{x-r*.6},{y} Z" fill="{pal[3]}" opacity=".45"/>'
-        else:  # fire ember
-            out += f'<circle cx="{x}" cy="{y}" r="{r}" fill="{glow}" opacity=".7"/>'
-    return out
 
 # --------------------------------------------------------------------------- scenes
 def scene_fire(uid):
+    """Emberfall: a caldera at dusk — lava terraces, obsidian spires, falling ash."""
+    ash = "".join(f'<circle cx="{x}" cy="{y}" r="{r}" fill="#ffcf6a" opacity="{op}"/>'
+                  for x, y, r, op in [(30, 52, 1.8, .9), (70, 34, 1.3, .8), (120, 60, 1.6, .85), (160, 30, 1.2, .7),
+                                      (188, 66, 1.7, .8), (50, 84, 1.2, .7), (96, 26, 1.1, .7), (142, 44, 1.0, .6)])
     return f"""
   <defs>
     <linearGradient id="sky{uid}" x1="0" y1="0" x2="0" y2="1">
@@ -153,15 +339,18 @@ def scene_fire(uid):
   <rect x="0" y="118" width="{VB_W}" height="32" fill="url(#lava{uid})"/>
   <path d="M0,150 L0,138 Q54,128 108,138 T216,136 L216,150 Z" fill="#ffb24d" opacity=".9"/>
   <path d="M0,150 L0,144 Q54,136 108,144 T216,142 L216,150 Z" fill="#fff0b0" opacity=".7"/>
-  {''.join(f'<circle cx="{x}" cy="{y}" r="{r}" fill="#ffcf6a" opacity="{op}"/>' for x,y,r,op in [(30,52,1.8,.9),(70,34,1.3,.8),(120,60,1.6,.85),(160,30,1.2,.7),(188,66,1.7,.8),(50,84,1.2,.7),(96,26,1.1,.7)])}
+  {ash}
   <ellipse cx="108" cy="118" rx="86" ry="30" fill="url(#stage{uid})"/>"""
 
+
 def scene_water(uid):
+    """Tidecaller: a sunlit trench — god rays, kelp, drifting bubbles."""
     rays = ""
-    for x, w in [(24,16),(70,22),(120,14),(168,26)]:
-        rays += f'<polygon points="{x},0 {x+w},0 {x+w+34},150 {x+18},150" fill="#bfeaff" opacity=".08"/>'
-    bubbles = "".join(f'<circle cx="{x}" cy="{y}" r="{r}" fill="#dff6ff" opacity="{op}"/>' for x,y,r,op in
-                      [(34,44,2.4,.5),(58,80,1.6,.4),(180,40,2.8,.5),(150,96,1.8,.4),(196,110,2.2,.45),(90,30,1.4,.4),(120,120,1.6,.4)])
+    for x, w in [(24, 16), (70, 22), (120, 14), (168, 26)]:
+        rays += f'<polygon points="{x},0 {x + w},0 {x + w + 34},150 {x + 18},150" fill="#bfeaff" opacity=".08"/>'
+    bubbles = "".join(f'<circle cx="{x}" cy="{y}" r="{r}" fill="#dff6ff" opacity="{op}"/>' for x, y, r, op in
+                      [(34, 44, 2.4, .5), (58, 80, 1.6, .4), (180, 40, 2.8, .5), (150, 96, 1.8, .4),
+                       (196, 110, 2.2, .45), (90, 30, 1.4, .4), (120, 120, 1.6, .4)])
     return f"""
   <defs>
     <linearGradient id="sky{uid}" x1="0" y1="0" x2="0" y2="1">
@@ -179,43 +368,54 @@ def scene_water(uid):
   {bubbles}
   <ellipse cx="108" cy="86" rx="92" ry="46" fill="url(#stage{uid})"/>"""
 
+
 def scene_grass(uid):
+    """Verdspire: the canopy floor — trunks, light shafts, drifting pollen."""
     shafts = ""
-    for x, w in [(40,20),(96,26),(160,18)]:
-        shafts += f'<polygon points="{x},0 {x+w},0 {x+w+26},150 {x+14},150" fill="#eaffb0" opacity=".10"/>'
-    pollen = "".join(f'<circle cx="{x}" cy="{y}" r="{r}" fill="#f6ffcf" opacity="{op}"/>' for x,y,r,op in
-                     [(34,52,1.6,.7),(72,34,1.2,.6),(150,44,1.6,.65),(186,64,1.3,.6),(110,28,1.1,.6),(60,96,1.3,.6)])
-    blades = "".join(f'<path d="M{x},150 C{x-3},{y} {x-1},{y-8} {x+2},{y-14}" stroke="#1c5a2a" stroke-width="3" fill="none" stroke-linecap="round"/>'
-                     for x,y in [(12,120),(30,112),(190,116),(206,122),(150,126)])
+    for x, w in [(40, 20), (96, 26), (160, 18)]:
+        shafts += f'<polygon points="{x},0 {x + w},0 {x + w + 26},150 {x + 14},150" fill="#eaffb0" opacity=".10"/>'
+    pollen = "".join(f'<circle cx="{x}" cy="{y}" r="{r}" fill="#f6ffcf" opacity="{op}"/>' for x, y, r, op in
+                     [(34, 52, 1.6, .7), (72, 34, 1.2, .6), (150, 44, 1.6, .65), (186, 64, 1.3, .6),
+                      (110, 28, 1.1, .6), (60, 96, 1.3, .6)])
+    blades = "".join(f'<path d="M{x},150 C{x - 3},{y} {x - 1},{y - 8} {x + 2},{y - 14}" stroke="#1c5a2a" stroke-width="3" fill="none" stroke-linecap="round"/>'
+                     for x, y in [(12, 120), (30, 112), (190, 116), (206, 122), (150, 126)])
     return f"""
   <defs>
     <linearGradient id="sky{uid}" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#4fb85e"/><stop offset="50%" stop-color="#2c8a3e"/><stop offset="100%" stop-color="#0c2f16"/>
+      <stop offset="0%" stop-color="#2a7d3d"/><stop offset="50%" stop-color="#15522480"/><stop offset="100%" stop-color="#06180c"/>
     </linearGradient>
   </defs>
   <rect x="0" y="0" width="{VB_W}" height="{VB_H}" fill="url(#sky{uid})"/>
-  <g fill="#1c5f2b" opacity=".85">
+  <g fill="#123f1e" opacity=".9">
     <rect x="18" y="10" width="20" height="140" rx="10"/><rect x="176" y="4" width="24" height="146" rx="12"/>
   </g>
-  <g fill="#134a20" opacity=".7">
+  <g fill="#0d3517" opacity=".8">
     <ellipse cx="30" cy="20" rx="34" ry="20"/><ellipse cx="188" cy="14" rx="40" ry="22"/><ellipse cx="108" cy="6" rx="70" ry="18"/>
   </g>
   {shafts}
-  <g fill="#2f9e44" opacity=".8">
+  <g fill="#1f7a33" opacity=".85">
     <path d="M46,10 q-10,10 -4,22 q10,-4 8,-20 Z"/><path d="M170,8 q10,10 4,22 q-10,-4 -6,-20 Z"/>
   </g>
   {pollen}
-  <path d="M0,150 L0,128 Q54,140 108,130 T216,132 L216,150 Z" fill="#12451f"/>
+  <path d="M0,150 L0,128 Q54,140 108,130 T216,132 L216,150 Z" fill="#0a2f14"/>
   {blades}
   <ellipse cx="108" cy="96" rx="92" ry="44" fill="url(#stage{uid})"/>"""
 
+
 def scene_electric(uid):
+    """Voltcrest: a storm ridge — thunderheads, pylon silhouettes, live sparks."""
     bolts = ""
     for pts in ["150,2 138,40 150,40 132,86", "44,0 34,30 44,30 30,64"]:
         bolts += f'<polyline points="{pts}" fill="none" stroke="#fff29a" stroke-width="2" opacity=".35"/>'
-    rain = "".join(f'<line x1="{x}" y1="{y}" x2="{x-4}" y2="{y+16}" stroke="#cfe0ff" stroke-width="1" opacity=".2"/>'
-                   for x,y in [(30,20),(70,50),(110,10),(150,60),(190,30),(90,90),(200,90)])
-    sparks = "".join(star(x,y,r,"#fff6b0",op) for x,y,r,op in [(60,40,2.4,.8),(170,52,2,.7),(120,30,2.2,.75),(48,96,1.8,.7),(196,100,2,.7)])
+    rain = "".join(f'<line x1="{x}" y1="{y}" x2="{x - 4}" y2="{y + 16}" stroke="#cfe0ff" stroke-width="1" opacity=".2"/>'
+                   for x, y in [(30, 20), (70, 50), (110, 10), (150, 60), (190, 30), (90, 90), (200, 90)])
+    sparks = "".join(star(x, y, r, "#fff6b0", op) for x, y, r, op in
+                     [(60, 40, 2.4, .8), (170, 52, 2, .7), (120, 30, 2.2, .75), (48, 96, 1.8, .7), (196, 100, 2, .7)])
+    pylons = ""
+    for px, ph in [(22, 44), (196, 52)]:
+        pylons += (f'<g stroke="#101218" stroke-width="2" fill="none" opacity=".75">'
+                   f'<path d="M{px - 8},130 L{px},{130 - ph} L{px + 8},130 M{px - 5},{130 - ph * 0.4:.0f} L{px + 5},{130 - ph * 0.4:.0f} '
+                   f'M{px - 3},{130 - ph * 0.72:.0f} L{px + 3},{130 - ph * 0.72:.0f}"/></g>')
     return f"""
   <defs>
     <linearGradient id="sky{uid}" x1="0" y1="0" x2="0" y2="1">
@@ -229,636 +429,1799 @@ def scene_electric(uid):
   {bolts}
   {rain}
   {sparks}
+  {pylons}
   <path d="M0,150 L0,126 Q54,138 108,128 T216,130 L216,150 Z" fill="#181812"/>
   <ellipse cx="108" cy="92" rx="92" ry="44" fill="url(#stage{uid})"/>"""
 
+
 def scene_shadow(uid):
-    stars = "".join(star(x,y,r,"#ffffff",op) for x,y,r,op in
-                    [(26,26,2,.9),(64,14,1.4,.7),(96,34,1.7,.8),(140,18,1.3,.7),(178,30,2,.85),(200,60,1.5,.7),
-                     (40,70,1.3,.6),(120,96,1.4,.6),(190,104,1.6,.7),(54,112,1.2,.6),(150,58,1.2,.6),(84,72,1.1,.6)])
-    dust = "".join(f'<circle cx="{x}" cy="{y}" r="{r}" fill="#cdb3ff" opacity="{op}"/>' for x,y,r,op in
-                   [(48,44,1,.5),(150,40,1.2,.5),(180,80,1,.45),(70,100,1,.45)])
+    """Umbral Reach: deep space — a ringed dead world, nebula veils, a torn horizon."""
+    stars = "".join(star(x, y, r, "#ffffff", op) for x, y, r, op in
+                    [(26, 26, 2, .9), (64, 14, 1.4, .7), (96, 34, 1.7, .8), (140, 18, 1.3, .7), (178, 30, 2, .85),
+                     (200, 60, 1.5, .7), (40, 70, 1.3, .6), (120, 96, 1.4, .6), (190, 104, 1.6, .7), (54, 112, 1.2, .6),
+                     (150, 58, 1.2, .6), (84, 72, 1.1, .6), (12, 46, 1.1, .55), (168, 82, 1.0, .5)])
+    dust = "".join(f'<circle cx="{x}" cy="{y}" r="{r}" fill="#cdb3ff" opacity="{op}"/>' for x, y, r, op in
+                   [(48, 44, 1, .5), (150, 40, 1.2, .5), (180, 80, 1, .45), (70, 100, 1, .45)])
     return f"""
   <defs>
     <radialGradient id="sky{uid}" cx="52%" cy="40%" r="80%">
-      <stop offset="0%" stop-color="#33195e"/><stop offset="55%" stop-color="#1a0d38"/><stop offset="100%" stop-color="#070316"/>
+      <stop offset="0%" stop-color="#271248"/><stop offset="55%" stop-color="#140925"/><stop offset="100%" stop-color="#05020f"/>
     </radialGradient>
     <radialGradient id="neb{uid}" cx="50%" cy="46%" r="42%">
-      <stop offset="0%" stop-color="#8a5cf0" stop-opacity=".55"/><stop offset="100%" stop-color="#8a5cf0" stop-opacity="0"/>
+      <stop offset="0%" stop-color="#7a4fdd" stop-opacity=".3"/><stop offset="100%" stop-color="#7a4fdd" stop-opacity="0"/>
     </radialGradient>
+    <radialGradient id="neb2{uid}" cx="26%" cy="70%" r="46%">
+      <stop offset="0%" stop-color="#ff6fd8" stop-opacity=".16"/><stop offset="100%" stop-color="#ff6fd8" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="orb2{uid}" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#4a2b7a"/><stop offset="100%" stop-color="#150a2c"/>
+    </linearGradient>
   </defs>
   <rect x="0" y="0" width="{VB_W}" height="{VB_H}" fill="url(#sky{uid})"/>
   <ellipse cx="108" cy="70" rx="96" ry="66" fill="url(#neb{uid})"/>
+  <ellipse cx="60" cy="104" rx="86" ry="52" fill="url(#neb2{uid})"/>
   {stars}
+  <g opacity=".85">
+    <circle cx="176" cy="34" r="19" fill="url(#orb2{uid})"/>
+    <circle cx="176" cy="34" r="19" fill="none" stroke="#9c7bdc" stroke-width="0.8" opacity=".7"/>
+    <ellipse cx="176" cy="34" rx="30" ry="8" fill="none" stroke="#d9c6ff" stroke-width="1.6" opacity=".55" transform="rotate(-18 176 34)"/>
+    <ellipse cx="176" cy="34" rx="36" ry="10" fill="none" stroke="#b79bff" stroke-width="0.9" opacity=".4" transform="rotate(-18 176 34)"/>
+  </g>
   {dust}
   <path d="M0,150 L0,132 Q54,142 108,133 T216,135 L216,150 Z" fill="#0b0620"/>
-  <ellipse cx="108" cy="92" rx="92" ry="44" fill="url(#stage{uid})"/>"""
+  <path d="M0,134 Q54,144 108,135 T216,137" fill="none" stroke="#a06cf6" stroke-width="1" opacity=".5"/>
+  <ellipse cx="108" cy="96" rx="78" ry="34" fill="url(#stage{uid})" opacity=".45"/>"""
+
 
 SCENES = {1: scene_fire, 2: scene_water, 3: scene_grass, 4: scene_electric, 5: scene_shadow}
 
-# ------------------------------------------------------- structural role mapping
-# (copied from tools/generate_cards.py so name -> slot/stage is exact, not guessed)
+
+# ==================================================================================
+# SET MORPHOLOGY
+# ----------------------------------------------------------------------------------
+# The same call produces genuinely different geometry in every set. Emberfall is
+# fractured crust; Tidecaller is streamlined and buoyant; Verdspire is lobed and
+# overgrown; Voltcrest is machined and chamfered; Umbral Reach is torn open, half
+# missing, and full of stars.
+# ==================================================================================
+def P(ctx, d, fill, sw=2.2, extra=""):
+    return (f'<path d="{d}" fill="{fill}" stroke="{ctx.ink}" stroke-width="{sw}" '
+            f'stroke-linejoin="round"{extra}/>')
+
+
+def sh_shape(ctx, cx, cy, rx, ry, seed=0):
+    """The set's silhouette language, as a bare path."""
+    s, sd = ctx.s, seed or ctx.var["seed"]
+    if s == 1:
+        return crag(cx, cy, rx, ry, sd, n=9, amp=0.11)
+    if s == 2:
+        return teardrop(cx, cy, rx, ry)
+    if s == 3:
+        return lobed(cx, cy, rx, ry, sd)
+    if s == 4:
+        return chamfer(cx, cy, rx, ry)
+    return riftshape(cx, cy, rx, ry, sd)
+
+
+def sh_torso(ctx, cx, cy, rx, ry, fill=None, seed=0, belly=True, sw=2.2):
+    """Body mass + the set's surface treatment."""
+    s, uid, pal, sty = ctx.s, ctx.uid, ctx.pal, ctx.sty
+    d = sh_shape(ctx, cx, cy, rx, ry, seed)
+    fill = fill or f"url(#body{uid})"
+    g = ""
+    if s == 5:
+        cid = ctx.nid("cl")
+        ctx.defs.append(f'<clipPath id="{cid}"><path d="{d}"/></clipPath>')
+        g += P(ctx, d, f"url(#void{uid})", sw)
+        g += f'<g clip-path="url(#{cid})">'
+        g += f'<path d="{d}" fill="{fill}" opacity=".34"/>'
+        g += starfield(cx - rx, cy - ry, rx * 2, ry * 2, (seed or ctx.var["seed"]) + 11,
+                       count=int(6 + rx * ry / 42), tint=sty["star"])
+        g += f'<ellipse cx="{cx - rx * 0.45:.1f}" cy="{cy - ry * 0.5:.1f}" rx="{rx * 0.7:.1f}" ry="{ry * 0.55:.1f}" fill="{sty["neb"]}" opacity=".3"/>'
+        g += "</g>"
+        g += f'<path d="{d}" fill="none" stroke="url(#rim{uid})" stroke-width="1.6" opacity=".9"/>'
+        return g
+    g += P(ctx, d, fill, sw)
+    if belly:
+        by = cy + ry * 0.34
+        if s == 1:
+            g += (f'<path d="{crag(cx - rx * 0.05, by, rx * 0.58, ry * 0.52, (seed or ctx.var["seed"]) + 5, 7, 0.1)}" '
+                  f'fill="url(#belly{uid})" opacity=".88"/>')
+        elif s == 2:
+            g += (f'<path d="M{cx - rx * 0.82:.1f},{cy + ry * 0.1:.1f} Q{cx - rx * 0.1:.1f},{cy + ry * 1.12:.1f} '
+                  f'{cx + rx * 0.72:.1f},{cy + ry * 0.16:.1f} Q{cx - rx * 0.05:.1f},{cy + ry * 0.62:.1f} '
+                  f'{cx - rx * 0.82:.1f},{cy + ry * 0.1:.1f} Z" fill="url(#belly{uid})" opacity=".95"/>')
+        elif s == 3:
+            g += f'<ellipse cx="{cx:.1f}" cy="{by:.1f}" rx="{rx * 0.54:.1f}" ry="{ry * 0.5:.1f}" fill="url(#belly{uid})" opacity=".9"/>'
+        else:
+            g += (f'<rect x="{cx - rx * 0.52:.1f}" y="{by - ry * 0.34:.1f}" width="{rx * 1.04:.1f}" height="{ry * 0.66:.1f}" '
+                  f'rx="{ry * 0.22:.1f}" fill="url(#belly{uid})" opacity=".92"/>')
+    g += sh_marks(ctx, cx, cy, rx, ry, seed)
+    return g
+
+
+def sh_marks(ctx, cx, cy, rx, ry, seed=0):
+    """Surface treatment: fissures / facets+gills / bark rings+buds / plating+coils."""
+    s, sty, pal, r = ctx.s, ctx.sty, ctx.pal, ctx.rng(3 + (seed & 7))
+    g = ""
+    if s == 1:
+        for _ in range(3):
+            x, y = cx + r.f(-.55, .55) * rx, cy + r.f(-.6, .2) * ry
+            d = f"M{x:.1f},{y:.1f}"
+            for _ in range(3):
+                x += r.f(-.2, .2) * rx
+                y += r.f(.12, .3) * ry
+                d += f" L{x:.1f},{y:.1f}"
+            g += f'<path d="{d}" fill="none" stroke="{sty["seam"]}" stroke-width="1.5" stroke-linecap="round" opacity=".9"/>'
+        g += (f'<path d="{crag(cx - rx * 0.3, cy - ry * 0.45, rx * 0.42, ry * 0.34, (seed or 1) + 3, 6, .2)}" '
+              f'fill="{sty["crust"]}" opacity=".45"/>')
+    elif s == 2:
+        for i in range(3):
+            fx = cx - rx * 0.4 + i * rx * 0.3
+            g += (f'<path d="M{fx:.1f},{cy - ry * 0.62:.1f} L{fx + rx * 0.16:.1f},{cy - ry * 0.1:.1f} '
+                  f'L{fx - rx * 0.1:.1f},{cy - ry * 0.05:.1f} Z" fill="{sty["ice"]}" opacity=".3"/>')
+        for i in range(3):
+            gx = cx - rx * 0.5 + i * rx * 0.17
+            g += (f'<path d="M{gx:.1f},{cy - ry * 0.16:.1f} q{rx * 0.06:.1f},{ry * 0.32:.1f} 0,{ry * 0.56:.1f}" '
+                  f'fill="none" stroke="{pal[2]}" stroke-width="1.3" opacity=".75"/>')
+    elif s == 3:
+        for i in (0, 1):
+            ry2 = ry * (0.55 + i * 0.3)
+            g += (f'<path d="M{cx - rx * 0.72:.1f},{cy - ry * 0.1 + i * ry * 0.34:.1f} q{rx * 0.7:.1f},{ry2 * 0.42:.1f} {rx * 1.44:.1f},0" '
+                  f'fill="none" stroke="{sty["bark"]}" stroke-width="1.4" opacity=".55"/>')
+        for i in range(2 + (ctx.var["spots"] & 1)):
+            bx, by = cx + r.f(-.55, .6) * rx, cy + r.f(-.55, .1) * ry
+            g += f'<circle cx="{bx:.1f}" cy="{by:.1f}" r="{r.f(1.8, 3.0):.1f}" fill="{sty["bloom"]}" stroke="{ctx.ink}" stroke-width="0.8"/>'
+    elif s == 4:
+        uid = ctx.uid
+        cid = ctx.nid("cl")
+        ctx.defs.append(f'<clipPath id="{cid}"><path d="{chamfer(cx, cy, rx, ry)}"/></clipPath>')
+        g += f'<g clip-path="url(#{cid})">'
+        plate = chamfer(cx, cy - ry * 0.62, rx * 1.04, ry * 0.72)
+        g += f'<path d="{plate}" fill="url(#metal{uid})" opacity=".95"/>'
+        g += (f'<line x1="{cx - rx:.1f}" y1="{cy - ry * 0.1:.1f}" x2="{cx + rx:.1f}" y2="{cy - ry * 0.1:.1f}" '
+              f'stroke="{ctx.ink}" stroke-width="1.6" opacity=".8"/>')
+        for i in range(5):
+            bx = cx - rx * 0.7 + i * rx * 0.35
+            g += (f'<circle cx="{bx:.1f}" cy="{cy - ry * 0.28:.1f}" r="1.7" fill="{sty["metal"]}" '
+                  f'stroke="{ctx.ink}" stroke-width="0.8"/>')
+        for i in range(3):
+            vx = cx + rx * (0.18 + i * 0.24)
+            g += (f'<rect x="{vx:.1f}" y="{cy + ry * 0.14:.1f}" width="{rx * 0.1:.1f}" height="{ry * 0.42:.1f}" '
+                  f'rx="{rx * 0.05:.1f}" fill="{ctx.ink}" opacity=".55"/>')
+        for i in range(3):
+            wx = cx - rx * 0.62 + i * rx * 0.24
+            g += (f'<path d="M{wx:.1f},{cy + ry * 0.02:.1f} q{rx * 0.12:.1f},{ry * 0.3:.1f} 0,{ry * 0.6:.1f}" '
+                  f'fill="none" stroke="{sty["copper"]}" stroke-width="2" opacity=".9"/>')
+        g += "</g>"
+        g += (f'<circle cx="{cx - rx * 0.36:.1f}" cy="{cy - ry * 0.55:.1f}" r="{ry * 0.2:.1f}" fill="{sty["arc"]}" '
+              f'stroke="{ctx.ink}" stroke-width="1.2"/>')
+        g += (f'<circle cx="{cx - rx * 0.36:.1f}" cy="{cy - ry * 0.55:.1f}" r="{ry * 0.09:.1f}" fill="{ctx.ink}"/>')
+    return g
+
+
+def sh_ground(ctx, cx, cy, rx):
+    """Contact with the world: scorched, buoyant, rooted, charged or absent."""
+    s, sty = ctx.s, ctx.sty
+    if s == 1:
+        return (f'<ellipse cx="{cx:.1f}" cy="{cy:.1f}" rx="{rx:.1f}" ry="{rx * 0.2:.1f}" fill="#000" opacity=".26"/>'
+                f'<ellipse cx="{cx:.1f}" cy="{cy:.1f}" rx="{rx * 0.72:.1f}" ry="{rx * 0.13:.1f}" fill="{sty["seam"]}" opacity=".4"/>')
+    if s == 2:
+        g = f'<ellipse cx="{cx:.1f}" cy="{cy + 6:.1f}" rx="{rx * 0.8:.1f}" ry="{rx * 0.14:.1f}" fill="#000" opacity=".16"/>'
+        for i in (0, 1):
+            g += (f'<ellipse cx="{cx:.1f}" cy="{cy + 6:.1f}" rx="{rx * (0.5 + i * 0.42):.1f}" ry="{rx * (0.1 + i * 0.07):.1f}" '
+                  f'fill="none" stroke="{sty["ice"]}" stroke-width="1" opacity="{0.4 - i * 0.16:.2f}"/>')
+        return g
+    if s == 3:
+        g = f'<ellipse cx="{cx:.1f}" cy="{cy:.1f}" rx="{rx:.1f}" ry="{rx * 0.19:.1f}" fill="#000" opacity=".24"/>'
+        for i, dx in enumerate((-0.9, -0.5, 0.6, 1.0)):
+            g += (f'<path d="M{cx + rx * dx:.1f},{cy + 3:.1f} q{-2 if i % 2 else 2},-6 {1 if i % 2 else -1},-11" '
+                  f'fill="none" stroke="{sty["leaf"]}" stroke-width="2.2" stroke-linecap="round"/>')
+        return g
+    if s == 4:
+        g = f'<ellipse cx="{cx:.1f}" cy="{cy:.1f}" rx="{rx:.1f}" ry="{rx * 0.18:.1f}" fill="#000" opacity=".26"/>'
+        g += (f'<polyline points="{cx - rx * 0.9:.1f},{cy + 3:.1f} {cx - rx * 0.4:.1f},{cy - 1:.1f} {cx - rx * 0.55:.1f},{cy + 4:.1f} '
+              f'{cx + rx * 0.1:.1f},{cy:.1f}" fill="none" stroke="{sty["arc"]}" stroke-width="1.3" opacity=".8"/>')
+        return g
+    # Umbral Reach: they do not touch the ground — a well of dark and a faint ring
+    g = f'<ellipse cx="{cx:.1f}" cy="{cy + 4:.1f}" rx="{rx * 0.86:.1f}" ry="{rx * 0.17:.1f}" fill="#05020f" opacity=".65"/>'
+    g += (f'<ellipse cx="{cx:.1f}" cy="{cy + 4:.1f}" rx="{rx * 1.02:.1f}" ry="{rx * 0.22:.1f}" fill="none" '
+          f'stroke="{ctx.glow}" stroke-width="1" opacity=".38"/>')
+    return g
+
+
+def sh_leg(ctx, x, top, w, h, back=False):
+    """One leg, in the set's idiom."""
+    s, uid, pal, sty = ctx.s, ctx.uid, ctx.pal, ctx.sty
+    fill = f"url(#body2{uid})" if back else f"url(#body{uid})"
+    op = ' opacity=".85"' if back else ""
+    if s == 1:
+        d = (f"M{x - w / 2:.1f},{top:.1f} L{x + w / 2:.1f},{top:.1f} L{x + w * 0.62:.1f},{top + h * 0.7:.1f} "
+             f"L{x + w * 0.78:.1f},{top + h:.1f} L{x - w * 0.78:.1f},{top + h:.1f} L{x - w * 0.62:.1f},{top + h * 0.7:.1f} Z")
+        g = P(ctx, d, fill, 2.1, op)
+        g += f'<line x1="{x:.1f}" y1="{top + h * 0.25:.1f}" x2="{x:.1f}" y2="{top + h * 0.8:.1f}" stroke="{sty["seam"]}" stroke-width="1.2" opacity=".8"/>'
+        g += (f'<ellipse cx="{x:.1f}" cy="{top + h:.1f}" rx="{w * 0.86:.1f}" ry="{w * 0.34:.1f}" '
+              f'fill="{sty["crust"]}" stroke="{ctx.ink}" stroke-width="1.4"{op}/>')
+        return g
+    if s == 2:
+        d = (f"M{x - w * 0.5:.1f},{top:.1f} Q{x - w * 0.72:.1f},{top + h * 0.7:.1f} {x - w * 0.95:.1f},{top + h:.1f} "
+             f"Q{x:.1f},{top + h * 1.12:.1f} {x + w * 0.95:.1f},{top + h:.1f} "
+             f"Q{x + w * 0.72:.1f},{top + h * 0.7:.1f} {x + w * 0.5:.1f},{top:.1f} Z")
+        g = P(ctx, d, fill, 2.0, op)
+        for i in (-1, 0, 1):
+            g += (f'<line x1="{x + i * w * 0.3:.1f}" y1="{top + h * 0.35:.1f}" x2="{x + i * w * 0.62:.1f}" y2="{top + h * 0.92:.1f}" '
+                  f'stroke="{pal[2]}" stroke-width="1" opacity=".7"/>')
+        g += (f'<ellipse cx="{x:.1f}" cy="{top + h:.1f}" rx="{w * 1.02:.1f}" ry="{w * 0.3:.1f}" '
+              f'fill="{sty["ice"]}" stroke="{ctx.ink}" stroke-width="1.3"{op}/>')
+        return g
+    if s == 3:
+        g = (f'<path d="M{x:.1f},{top:.1f} q{-w * 0.5:.1f},{h * 0.45:.1f} {-w * 0.16:.1f},{h:.1f}" fill="none" '
+             f'stroke="url(#wood{uid})" stroke-width="{w * 0.86:.1f}" stroke-linecap="round"/>')
+        g += (f'<path d="M{x:.1f},{top:.1f} q{-w * 0.5:.1f},{h * 0.45:.1f} {-w * 0.16:.1f},{h:.1f}" fill="none" '
+              f'stroke="{ctx.ink}" stroke-width="1" opacity=".5"/>')
+        for i in (-1, 1):
+            g += (f'<path d="M{x - w * 0.16:.1f},{top + h:.1f} q{i * w * 0.5:.1f},{2:.1f} {i * w * 0.78:.1f},{5:.1f}" '
+                  f'fill="none" stroke="{sty["bark"]}" stroke-width="2.6" stroke-linecap="round"/>')
+        g += (f'<ellipse cx="{x - w * 0.16:.1f}" cy="{top + h:.1f}" rx="{w * 0.5:.1f}" ry="{w * 0.2:.1f}" '
+              f'fill="{sty["bark"]}" stroke="{ctx.ink}" stroke-width="1.2"/>')
+        return g
+    if s == 4:
+        g = (f'<polyline points="{x:.1f},{top:.1f} {x + w * 0.7:.1f},{top + h * 0.42:.1f} {x - w * 0.4:.1f},{top + h * 0.6:.1f} '
+             f'{x + w * 0.2:.1f},{top + h:.1f}" fill="none" stroke="url(#metal{uid})" stroke-width="{w * 0.72:.1f}" '
+             f'stroke-linejoin="round" stroke-linecap="round"/>')
+        g += (f'<rect x="{x - w * 0.5:.1f}" y="{top + h * 0.86:.1f}" width="{w:.1f}" height="{h * 0.2:.1f}" rx="2" '
+              f'fill="{sty["rubber"]}" stroke="{ctx.ink}" stroke-width="1.2"/>')
+        return g
+    # Umbral Reach: limbs float free of the body and fade into nothing
+    d = (f"M{x - w * 0.5:.1f},{top + h * 0.18:.1f} L{x + w * 0.5:.1f},{top + h * 0.18:.1f} "
+         f"L{x + w * 0.16:.1f},{top + h:.1f} L{x - w * 0.16:.1f},{top + h:.1f} Z")
+    g = P(ctx, d, f"url(#void{uid})", 1.8, ' opacity=".95"')
+    g += f'<path d="{d}" fill="none" stroke="url(#rim{uid})" stroke-width="1.2" opacity=".8"/>'
+    g += star(x, top + h + 2, 2.2, ctx.glow, .9)
+    return g
+
+
+def sh_arm(ctx, sx, sy, ex, ey, w):
+    """Upper limb / claw arm."""
+    s, uid, sty = ctx.s, ctx.uid, ctx.sty
+    if s == 1:
+        return (f'<path d="M{sx:.1f},{sy:.1f} L{ex:.1f},{ey:.1f}" stroke="url(#body2{uid})" stroke-width="{w:.1f}" '
+                f'stroke-linecap="round"/><path d="M{sx:.1f},{sy:.1f} L{ex:.1f},{ey:.1f}" stroke="{sty["seam"]}" '
+                f'stroke-width="1.1" opacity=".7"/>')
+    if s == 2:
+        mx, my = (sx + ex) / 2 - 6, (sy + ey) / 2
+        return (f'<path d="M{sx:.1f},{sy:.1f} Q{mx:.1f},{my:.1f} {ex:.1f},{ey:.1f}" fill="none" '
+                f'stroke="url(#body{uid})" stroke-width="{w:.1f}" stroke-linecap="round"/>')
+    if s == 3:
+        mx, my = (sx + ex) / 2 + 5, (sy + ey) / 2 - 4
+        return (f'<path d="M{sx:.1f},{sy:.1f} Q{mx:.1f},{my:.1f} {ex:.1f},{ey:.1f}" fill="none" '
+                f'stroke="url(#wood{uid})" stroke-width="{w:.1f}" stroke-linecap="round"/>')
+    if s == 4:
+        mx, my = (sx + ex) / 2 + 7, (sy + ey) / 2 - 7
+        return (f'<polyline points="{sx:.1f},{sy:.1f} {mx:.1f},{my:.1f} {ex:.1f},{ey:.1f}" fill="none" '
+                f'stroke="url(#metal{uid})" stroke-width="{w:.1f}" stroke-linejoin="round" stroke-linecap="round"/>')
+    return (f'<path d="M{sx:.1f},{sy:.1f} L{ex:.1f},{ey:.1f}" stroke="#3d1d70" stroke-width="{w:.1f}" '
+            f'stroke-linecap="round"/><path d="M{sx:.1f},{sy:.1f} L{ex:.1f},{ey:.1f}" stroke="url(#rim{uid})" '
+            f'stroke-width="1.1" opacity=".8"/>')
+
+
+def sh_head(ctx, hx, hy, r, kind="muzzle", look=-1.0, mood="calm"):
+    """Cranium in the set's idiom + a slot-specific face (muzzle/beak/jaw/...)."""
+    s, uid, pal, sty, ink = ctx.s, ctx.uid, ctx.pal, ctx.sty, ctx.ink
+    g = ""
+    d = sh_shape(ctx, hx, hy, r, r * 0.96, ctx.var["seed"] + 31)
+    if s == 1:
+        g += P(ctx, d, f"url(#body{uid})", 2.1)
+        g += (f'<path d="M{hx - r * 0.95:.1f},{hy - r * 0.32:.1f} L{hx + r * 0.5:.1f},{hy - r * 0.86:.1f} '
+              f'L{hx + r * 0.98:.1f},{hy - r * 0.26:.1f} Z" fill="{sty["crust"]}" opacity=".55"/>')
+    elif s == 2:
+        g += (f'<path d="M{hx + r * 0.5:.1f},{hy - r * 0.9:.1f} q{r * 1.1:.1f},{r * 0.3:.1f} {r * 0.4:.1f},{r * 1.5:.1f} '
+              f'q{-r * 0.5:.1f},{-r * 0.3:.1f} {-r * 0.7:.1f},{-r * 0.5:.1f} Z" fill="url(#body2{uid})" '
+              f'stroke="{ink}" stroke-width="1.6" stroke-linejoin="round"/>')
+        g += f'<circle cx="{hx:.1f}" cy="{hy:.1f}" r="{r:.1f}" fill="url(#body{uid})" stroke="{ink}" stroke-width="2.1"/>'
+        g += f'<path d="M{hx - r * 0.8:.1f},{hy - r * 0.5:.1f} q{r * 0.6:.1f},{-r * 0.25:.1f} {r * 1.2:.1f},{r * 0.1:.1f}" fill="none" stroke="{sty["ice"]}" stroke-width="1.4" opacity=".6"/>'
+    elif s == 3:
+        g += P(ctx, d, f"url(#body{uid})", 2.1)
+        g += (f'<path d="M{hx - r * 0.98:.1f},{hy - r * 0.42:.1f} a{r:.1f},{r * 0.7:.1f} 0 0 1 {r * 1.96:.1f},0 '
+              f'q{-r:.1f},{r * 0.28:.1f} {-r * 1.96:.1f},0 Z" fill="{sty["leaf"]}" stroke="{ink}" stroke-width="1.5"/>')
+    elif s == 4:
+        g += P(ctx, d, f"url(#body{uid})", 2.1)
+        g += (f'<rect x="{hx - r * 0.98:.1f}" y="{hy - r * 0.34:.1f}" width="{r * 1.96:.1f}" height="{r * 0.5:.1f}" '
+              f'rx="{r * 0.16:.1f}" fill="{sty["rubber"]}" opacity=".75"/>')
+    else:
+        cid = ctx.nid("cl")
+        ctx.defs.append(f'<clipPath id="{cid}"><path d="{d}"/></clipPath>')
+        g += P(ctx, d, f"url(#void{uid})", 2.0)
+        g += (f'<g clip-path="url(#{cid})"><path d="{d}" fill="url(#body{uid})" opacity=".3"/>'
+              + starfield(hx - r, hy - r, r * 2, r * 2, ctx.var["seed"] + 71, count=8, tint=sty["star"]) + "</g>")
+        g += f'<path d="{d}" fill="none" stroke="url(#rim{uid})" stroke-width="1.5" opacity=".9"/>'
+        g += (f'<path d="M{hx - r * 0.9:.1f},{hy - r * 0.15:.1f} a{r * 0.92:.1f},{r * 0.8:.1f} 0 0 1 {r * 1.8:.1f},0 Z" '
+              f'fill="{sty["neb"]}" opacity=".28"/>')
+    # slot-specific face front (creatures face left)
+    if kind == "muzzle":
+        g += (f'<ellipse cx="{hx - r * 0.78:.1f}" cy="{hy + r * 0.36:.1f}" rx="{r * 0.46:.1f}" ry="{r * 0.32:.1f}" '
+              f'fill="url(#body{uid})" stroke="{ink}" stroke-width="1.6"/>')
+        g += f'<circle cx="{hx - r * 1.1:.1f}" cy="{hy + r * 0.24:.1f}" r="{r * 0.14:.1f}" fill="{ink}"/>'
+    elif kind == "feline":
+        g += (f'<path d="M{hx - r * 0.98:.1f},{hy + r * 0.18:.1f} q{r * 0.34:.1f},{r * 0.5:.1f} {r * 0.72:.1f},{r * 0.12:.1f}" '
+              f'fill="url(#body{uid})" stroke="{ink}" stroke-width="1.4"/>')
+        g += f'<path d="M{hx - r * 0.74:.1f},{hy + r * 0.12:.1f} l{-r * 0.16:.1f},{-r * 0.16:.1f} l{r * 0.32:.1f},0 Z" fill="{ink}"/>'
+    elif kind == "beak":
+        g += (f'<path d="M{hx - r * 0.7:.1f},{hy + r * 0.05:.1f} L{hx - r * 1.75:.1f},{hy + r * 0.2:.1f} '
+              f'L{hx - r * 0.66:.1f},{hy + r * 0.56:.1f} Z" fill="{ctx.glow}" stroke="{ink}" stroke-width="1.4" stroke-linejoin="round"/>')
+    elif kind == "jaw":
+        g += (f'<path d="M{hx - r * 0.2:.1f},{hy - r * 0.1:.1f} L{hx - r * 1.85:.1f},{hy + r * 0.1:.1f} '
+              f'L{hx - r * 1.7:.1f},{hy + r * 0.62:.1f} L{hx - r * 0.2:.1f},{hy + r * 0.7:.1f} Z" '
+              f'fill="url(#body2{uid})" stroke="{ink}" stroke-width="1.6" stroke-linejoin="round"/>')
+        g += (f'<path d="M{hx - r * 1.6:.1f},{hy + r * 0.18:.1f} l{r * 0.1:.1f},{r * 0.3:.1f} l{r * 0.16:.1f},{-r * 0.28:.1f} '
+              f'l{r * 0.14:.1f},{r * 0.3:.1f} l{r * 0.16:.1f},{-r * 0.3:.1f}" fill="#fff" stroke="none"/>')
+    elif kind == "toad":
+        g += (f'<path d="M{hx - r * 1.25:.1f},{hy + r * 0.18:.1f} q{r * 1.25:.1f},{r * 0.95:.1f} {r * 2.4:.1f},{-r * 0.05:.1f} '
+              f'q{-r * 1.2:.1f},{r * 0.28:.1f} {-r * 2.4:.1f},{r * 0.05:.1f} Z" fill="url(#body2{uid})" '
+              f'stroke="{ink}" stroke-width="1.7" stroke-linejoin="round"/>')
+        for sgn, bx in ((-1, hx - r * 0.52), (1, hx + r * 0.5)):
+            g += (f'<circle cx="{bx:.1f}" cy="{hy - r * 0.62:.1f}" r="{r * 0.44:.1f}" fill="url(#body{uid})" '
+                  f'stroke="{ink}" stroke-width="1.6"/>')
+        g += f'<circle cx="{hx - r * 1.02:.1f}" cy="{hy - r * 0.05:.1f}" r="{r * 0.1:.1f}" fill="{ink}"/>'
+    elif kind == "trunk":
+        g += (f'<path d="M{hx - r * 0.6:.1f},{hy + r * 0.2:.1f} q{-r * 0.9:.1f},{r * 0.3:.1f} {-r * 0.75:.1f},{r * 1.1:.1f}" '
+              f'fill="none" stroke="url(#body{uid})" stroke-width="{r * 0.38:.1f}" stroke-linecap="round"/>')
+    return g
+
+
+def sh_eyes(ctx, x, y, r, look=-1.0, mood="calm", pair=True, gap=None):
+    """Eyes carry a lot of a set's personality."""
+    s, sty = ctx.s, ctx.sty
+    gap = gap if gap is not None else r * 2.4
+    xs = [x, x + gap] if pair else [x]
+    angry = mood == "fierce"
+    g = ""
+    for i, ex in enumerate(xs):
+        rr = r if i == 0 else r * 0.92
+        if s == 1:
+            g += eye(ex, y, rr, glow=ctx.glow, look=look * rr, angry=angry, glowy=True)
+            g += f'<path d="M{ex - rr * 1.2:.1f},{y - rr * 1.5:.1f} l{rr * 2.2:.1f},{-rr * 0.3:.1f}" stroke="{sty["crust"]}" stroke-width="{rr * 0.5:.1f}" stroke-linecap="round"/>'
+        elif s == 2:
+            g += eye(ex, y, rr * 1.12, glow="#ffffff", look=look * rr, angry=angry)
+            g += f'<circle cx="{ex + rr * 0.5:.1f}" cy="{y - rr * 0.7:.1f}" r="{rr * 0.26:.1f}" fill="#fff" opacity=".9"/>'
+        elif s == 3:
+            g += eye(ex, y, rr, glow="#ffffff", look=look * rr, angry=angry)
+            g += (f'<path d="M{ex - rr * 1.2:.1f},{y - rr * 1.05:.1f} q{rr * 1.2:.1f},{-rr * 0.9:.1f} {rr * 2.4:.1f},{-rr * 0.1:.1f}" '
+                  f'fill="none" stroke="{sty["leaf"]}" stroke-width="1.5" stroke-linecap="round"/>')
+        elif s == 4:
+            g += (f'<rect x="{ex - rr * 1.15:.1f}" y="{y - rr * 0.85:.1f}" width="{rr * 2.3:.1f}" height="{rr * 1.7:.1f}" '
+                  f'rx="{rr * 0.45:.1f}" fill="{sty["arc"]}" stroke="{ctx.ink}" stroke-width="1.2"/>')
+            g += (f'<rect x="{ex - rr * 0.28 + look * rr * 0.4:.1f}" y="{y - rr * 0.6:.1f}" width="{rr * 0.6:.1f}" '
+                  f'height="{rr * 1.2:.1f}" rx="{rr * 0.25:.1f}" fill="#1a1020"/>')
+        else:
+            g += f'<circle cx="{ex:.1f}" cy="{y:.1f}" r="{rr * 1.7:.1f}" fill="{ctx.glow}" opacity=".16"/>'
+            g += (f'<ellipse cx="{ex:.1f}" cy="{y:.1f}" rx="{rr * 1.02:.1f}" ry="{rr * 1.16:.1f}" fill="#0b0620" '
+                  f'stroke="{sty["rift"]}" stroke-width="1.1"/>')
+            g += f'<circle cx="{ex + look * rr * 0.2:.1f}" cy="{y:.1f}" r="{rr * 0.6:.1f}" fill="{sty["star"]}"/>'
+            g += star(ex + look * rr * 0.2, y, rr * 0.92, "#ffffff", .95)
+            if angry:
+                g += (f'<path d="M{ex - rr * 1.25:.1f},{y - rr * 2.05:.1f} L{ex + rr * 1.15:.1f},{y - rr * 1.45:.1f}" '
+                      f'stroke="{sty["rift"]}" stroke-width="{rr * 0.42:.1f}" stroke-linecap="round"/>')
+    return g
+
+
+def sh_mouth(ctx, x, y, w, kind="smile"):
+    s, ink = ctx.s, ctx.ink
+    if kind == "none":
+        return ""
+    if kind == "fang":
+        g = f'<path d="M{x:.1f},{y:.1f} q{w * 0.5:.1f},{w * 0.52:.1f} {w:.1f},0 Z" fill="{ink}"/>'
+        g += f'<path d="M{x + w * 0.18:.1f},{y + w * 0.06:.1f} l{w * 0.08:.1f},{w * 0.26:.1f} l{w * 0.12:.1f},{-w * 0.26:.1f} Z" fill="#fff"/>'
+        g += f'<path d="M{x + w * 0.62:.1f},{y + w * 0.06:.1f} l{w * 0.08:.1f},{w * 0.24:.1f} l{w * 0.12:.1f},{-w * 0.24:.1f} Z" fill="#fff"/>'
+        return g
+    if kind == "grin":
+        return (f'<path d="M{x:.1f},{y:.1f} q{w * 0.5:.1f},{w * 0.44:.1f} {w:.1f},0" fill="none" stroke="{ink}" '
+                f'stroke-width="1.6" stroke-linecap="round"/>'
+                f'<path d="M{x + w * 0.2:.1f},{y + w * 0.12:.1f} l0,{w * 0.16:.1f} M{x + w * 0.5:.1f},{y + w * 0.2:.1f} l0,{w * 0.16:.1f} '
+                f'M{x + w * 0.78:.1f},{y + w * 0.14:.1f} l0,{w * 0.14:.1f}" stroke="{ink}" stroke-width="1.1"/>')
+    if kind == "slit":
+        return f'<line x1="{x:.1f}" y1="{y:.1f}" x2="{x + w:.1f}" y2="{y + w * 0.12:.1f}" stroke="{ink}" stroke-width="1.6" stroke-linecap="round"/>'
+    if kind == "void":
+        return (f'<ellipse cx="{x + w * 0.5:.1f}" cy="{y + w * 0.1:.1f}" rx="{w * 0.34:.1f}" ry="{w * 0.2:.1f}" '
+                f'fill="#05020f" stroke="{ctx.glow}" stroke-width="1" opacity=".95"/>')
+    return (f'<path d="M{x:.1f},{y:.1f} q{w * 0.5:.1f},{w * 0.4:.1f} {w:.1f},0" fill="none" stroke="{ink}" '
+            f'stroke-width="1.5" stroke-linecap="round"/>')
+
+
+def sh_ears(ctx, hx, hy, r, kind="point", spread=1.0):
+    """Ear pair. Shape comes from the slot, material from the set."""
+    s, uid, pal, sty, ink = ctx.s, ctx.uid, ctx.pal, ctx.sty, ctx.ink
+    if kind == "none":
+        return ""
+    g = ""
+    for sgn, ex in ((-1, hx - r * 0.42 * spread), (1, hx + r * 0.52 * spread)):
+        base = hy - r * 0.5
+        h = {"point": 1.25, "round": 0.7, "long": 1.85, "tuft": 1.35, "small": 0.55}[kind] * r
+        w = {"point": 0.4, "round": 0.62, "long": 0.34, "tuft": 0.42, "small": 0.4}[kind] * r
+        rot = sgn * (10 if kind != "long" else 6)
+        if kind == "round":
+            g += (f'<circle cx="{ex:.1f}" cy="{base - h * 0.2:.1f}" r="{w:.1f}" fill="url(#body{uid})" '
+                  f'stroke="{ink}" stroke-width="1.6"/>')
+            if s == 2:
+                g += f'<circle cx="{ex:.1f}" cy="{base - h * 0.2:.1f}" r="{w * 0.5:.1f}" fill="{sty["ice"]}" opacity=".5"/>'
+            elif s == 4:
+                g += f'<circle cx="{ex:.1f}" cy="{base - h * 0.2:.1f}" r="{w * 0.45:.1f}" fill="{sty["copper"]}" opacity=".8"/>'
+            elif s == 5:
+                g += star(ex, base - h * 0.2, w * 0.55, ctx.glow, .9)
+            continue
+        if s == 1:
+            d = (f"M{ex - w:.1f},{base:.1f} L{ex - w * 0.2:.1f},{base - h * 0.6:.1f} L{ex + w * 0.15:.1f},{base - h:.1f} "
+                 f"L{ex + w * 0.55:.1f},{base - h * 0.45:.1f} L{ex + w:.1f},{base:.1f} Z")
+        elif s == 2:
+            d = (f"M{ex - w:.1f},{base:.1f} Q{ex - w * 0.4:.1f},{base - h:.1f} {ex + w * 0.9:.1f},{base - h * 0.72:.1f} "
+                 f"Q{ex + w * 0.5:.1f},{base - h * 0.2:.1f} {ex + w:.1f},{base:.1f} Z")
+        elif s == 3:
+            d = (f"M{ex:.1f},{base:.1f} Q{ex - w * 1.5:.1f},{base - h * 0.55:.1f} {ex:.1f},{base - h:.1f} "
+                 f"Q{ex + w * 1.5:.1f},{base - h * 0.55:.1f} {ex:.1f},{base:.1f} Z")
+        elif s == 4:
+            d = (f"M{ex - w:.1f},{base:.1f} L{ex - w * 0.45:.1f},{base - h:.1f} L{ex + w * 0.2:.1f},{base - h * 0.55:.1f} "
+                 f"L{ex + w * 0.75:.1f},{base - h * 0.9:.1f} L{ex + w:.1f},{base:.1f} Z")
+        else:
+            d = (f"M{ex - w:.1f},{base:.1f} Q{ex - w * 0.9:.1f},{base - h:.1f} {ex + w * 0.25:.1f},{base - h * 1.05:.1f} "
+                 f"Q{ex + w * 0.1:.1f},{base - h * 0.4:.1f} {ex + w:.1f},{base:.1f} Z")
+        fill = f"url(#void{uid})" if s == 5 else f"url(#body{uid})"
+        g += f'<g transform="rotate({rot} {ex:.1f} {base:.1f})">' + P(ctx, d, fill, 1.7)
+        if s == 3:
+            g += f'<line x1="{ex:.1f}" y1="{base:.1f}" x2="{ex:.1f}" y2="{base - h * 0.85:.1f}" stroke="{ink}" stroke-width="1" opacity=".55"/>'
+        if s == 5:
+            g += f'<path d="{d}" fill="none" stroke="url(#rim{uid})" stroke-width="1.1" opacity=".85"/>'
+        if kind == "tuft":
+            g += tuft(ctx.el, ex, base - h * 1.1, r * 0.34, ctx.e, rot)
+        g += "</g>"
+    return g
+
+
+def sh_crest(ctx, hx, hy, r, kind="none", stage=1):
+    """Head furniture: horns, antlers, frills, crowns, caps, haloes."""
+    s, uid, pal, sty, ink, el, e = ctx.s, ctx.uid, ctx.pal, ctx.sty, ctx.ink, ctx.el, ctx.e
+    if kind == "none":
+        return ""
+    g = ""
+    top = hy - r * 0.86
+    if kind == "horn":
+        L = r * (1.05 + 0.34 * stage)
+        for sgn in (-1, 1):
+            bx = hx + sgn * r * 0.42
+            if s == 1:
+                d = (f"M{bx - r * 0.26:.1f},{top:.1f} L{bx + sgn * r * 0.34:.1f},{top - L * 0.62:.1f} "
+                     f"L{bx + sgn * r * 0.16:.1f},{top - L:.1f} L{bx + r * 0.28:.1f},{top - L * 0.16:.1f} Z")
+                g += P(ctx, d, sty["ember"], 1.6)
+            elif s == 2:
+                tipx = bx + sgn * r * 0.5
+                d = (f"M{bx - r * 0.26:.1f},{top:.1f} L{bx - sgn * r * 0.04:.1f},{top - L * 0.72:.1f} "
+                     f"L{tipx:.1f},{top - L * 1.1:.1f} L{bx + sgn * r * 0.2:.1f},{top - L * 0.42:.1f} "
+                     f"L{bx + r * 0.26:.1f},{top:.1f} Z")
+                g += P(ctx, d, pal[1], 1.4, ' opacity=".95"')
+                g += (f'<path d="M{bx:.1f},{top:.1f} L{tipx:.1f},{top - L * 1.1:.1f}" stroke="{sty["ice"]}" '
+                      f'stroke-width="1.2" opacity=".85"/>')
+            elif s == 3:
+                g += (f'<path d="M{bx:.1f},{top:.1f} q{sgn * r * 0.3:.1f},{-L * 0.6:.1f} {sgn * r * 0.05:.1f},{-L:.1f}" '
+                      f'fill="none" stroke="url(#wood{uid})" stroke-width="{r * 0.24:.1f}" stroke-linecap="round"/>')
+                g += tuft("grass", bx + sgn * r * 0.08, top - L, r * 0.3, ELE["grass"], sgn * 26)
+            elif s == 4:
+                g += (f'<rect x="{bx - r * 0.11:.1f}" y="{top - L:.1f}" width="{r * 0.22:.1f}" height="{L:.1f}" rx="{r * 0.08:.1f}" '
+                      f'fill="url(#metal{uid})" stroke="{ink}" stroke-width="1.3"/>')
+                g += f'<circle cx="{bx:.1f}" cy="{top - L:.1f}" r="{r * 0.16:.1f}" fill="{sty["arc"]}" stroke="{ink}" stroke-width="1"/>'
+            else:
+                g += (f'<path d="M{bx - r * 0.2:.1f},{top:.1f} Q{bx + sgn * r * 0.55:.1f},{top - L * 0.65:.1f} '
+                      f'{bx + sgn * r * 0.16:.1f},{top - L:.1f} Q{bx + sgn * r * 0.02:.1f},{top - L * 0.5:.1f} '
+                      f'{bx + r * 0.2:.1f},{top:.1f} Z" fill="url(#void{uid})" stroke="url(#rim{uid})" stroke-width="1.4"/>')
+                g += star(bx + sgn * r * 0.16, top - L, r * 0.22, sty["star"], .95)
+        if s == 4 and stage >= 2:
+            g += (f'<path d="M{hx - r * 0.42:.1f},{top - r * 0.9:.1f} q{r * 0.42:.1f},{r * 0.5:.1f} {r * 0.84:.1f},0" '
+                  f'fill="none" stroke="{sty["arc"]}" stroke-width="1.6" opacity=".9" stroke-dasharray="3 2"/>')
+    elif kind == "antler":
+        for sgn in (-1, 1):
+            bx = hx + sgn * r * 0.36
+            stroke = {1: sty["ember"], 2: sty["ice"], 3: f"url(#wood{uid})", 4: f"url(#metal{uid})", 5: "#4a2585"}[s]
+            g += f'<g fill="none" stroke="{stroke}" stroke-width="{r * 0.2:.1f}" stroke-linecap="round">'
+            g += f'<path d="M{bx:.1f},{top:.1f} q{sgn * r * 0.2:.1f},{-r * 0.7:.1f} {sgn * r * 0.1:.1f},{-r * 1.3:.1f}"/>'
+            g += f'<path d="M{bx + sgn * r * 0.14:.1f},{top - r * 0.72:.1f} q{sgn * r * 0.6:.1f},{-r * 0.16:.1f} {sgn * r * 0.86:.1f},{-r * 0.6:.1f}"/>'
+            g += f'<path d="M{bx + sgn * r * 0.1:.1f},{top - r * 1.06:.1f} q{sgn * r * 0.46:.1f},{-r * 0.22:.1f} {sgn * r * 0.6:.1f},{-r * 0.72:.1f}"/>'
+            g += "</g>"
+            if s == 5:
+                g += (f'<g fill="none" stroke="url(#rim{uid})" stroke-width="1" opacity=".9" stroke-linecap="round">'
+                      f'<path d="M{bx:.1f},{top:.1f} q{sgn * r * 0.2:.1f},{-r * 0.7:.1f} {sgn * r * 0.1:.1f},{-r * 1.3:.1f}"/>'
+                      f'<path d="M{bx + sgn * r * 0.14:.1f},{top - r * 0.72:.1f} q{sgn * r * 0.6:.1f},{-r * 0.16:.1f} {sgn * r * 0.86:.1f},{-r * 0.6:.1f}"/>'
+                      f'<path d="M{bx + sgn * r * 0.1:.1f},{top - r * 1.06:.1f} q{sgn * r * 0.46:.1f},{-r * 0.22:.1f} {sgn * r * 0.6:.1f},{-r * 0.72:.1f}"/></g>')
+            if s == 3:
+                g += tuft("grass", bx + sgn * r * 0.7, top - r * 1.3, r * 0.3, ELE["grass"], sgn * 30)
+            elif s == 5:
+                g += star(bx + sgn * r * 0.7, top - r * 1.3, r * 0.26, sty["star"], .95)
+            elif s == 1:
+                g += tuft("fire", bx + sgn * r * 0.1, top - r * 1.5, r * 0.32, e, sgn * 8)
+    elif kind == "frill":
+        n = 5 + stage
+        for i in range(n):
+            a = math.pi * (0.12 + 0.76 * i / (n - 1))
+            px, py = hx - math.cos(a) * r * 1.05, hy - math.sin(a) * r * 1.05
+            qx, qy = hx - math.cos(a) * r * 1.9, hy - math.sin(a) * r * 1.9
+            if s == 2:
+                g += (f'<path d="M{px:.1f},{py:.1f} L{qx:.1f},{qy:.1f}" stroke="{pal[2]}" stroke-width="1.3" '
+                      f'stroke-linecap="round" opacity=".75"/>')
+            elif s == 4:
+                g += f'<path d="M{px:.1f},{py:.1f} L{qx:.1f},{qy:.1f}" stroke="{sty["copper"]}" stroke-width="{r * 0.2:.1f}" stroke-linecap="round"/>'
+            elif s == 5:
+                g += star(qx, qy, r * 0.2, sty["star"], .9)
+                g += f'<path d="M{px:.1f},{py:.1f} L{qx:.1f},{qy:.1f}" stroke="{ctx.glow}" stroke-width="1" opacity=".5"/>'
+            else:
+                g += tuft(el, (px + qx) / 2, (py + qy) / 2, r * 0.42, e, math.degrees(a) - 90)
+        if s == 2:
+            web = (f'M{hx - r * 1.75:.1f},{hy + r * 0.1:.1f} '
+                   f'A{r * 1.75:.1f},{r * 1.9:.1f} 0 0 1 {hx + r * 1.75:.1f},{hy + r * 0.1:.1f} '
+                   f'Q{hx:.1f},{hy - r * 0.35:.1f} {hx - r * 1.75:.1f},{hy + r * 0.1:.1f} Z')
+            g = (f'<path d="{web}" fill="{pal[1]}" opacity=".75" stroke="{ink}" stroke-width="1.5" '
+                 f'stroke-linejoin="round"/>') + g
+            g += (f'<path d="M{hx - r * 1.75:.1f},{hy + r * 0.1:.1f} '
+                  f'A{r * 1.75:.1f},{r * 1.9:.1f} 0 0 1 {hx + r * 1.75:.1f},{hy + r * 0.1:.1f}" '
+                  f'fill="none" stroke="{sty["coral"]}" stroke-width="1.6" opacity=".85"/>')
+    elif kind == "crown":
+        n = 3 + stage
+        for i in range(n):
+            a = math.pi * (0.2 + 0.6 * i / max(1, n - 1))
+            px, py = hx - math.cos(a) * r * 0.92, hy - math.sin(a) * r * 1.0
+            if s == 5:
+                g += f'<circle cx="{px:.1f}" cy="{py - r * 0.2:.1f}" r="{r * 0.16:.1f}" fill="{sty["star"]}"/>'
+                g += f'<circle cx="{px:.1f}" cy="{py - r * 0.2:.1f}" r="{r * 0.3:.1f}" fill="none" stroke="{ctx.glow}" stroke-width="0.9" opacity=".7"/>'
+            elif s == 4:
+                sh = r * (0.55 + 0.5 * math.sin(math.pi * (i + 0.5) / n))
+                g += (f'<line x1="{px:.1f}" y1="{py:.1f}" x2="{px:.1f}" y2="{py - sh:.1f}" '
+                      f'stroke="url(#metal{uid})" stroke-width="{r * 0.14:.1f}" stroke-linecap="round"/>')
+                g += (f'<circle cx="{px:.1f}" cy="{py - sh:.1f}" r="{r * 0.15:.1f}" fill="{sty["arc"]}" '
+                      f'stroke="{ink}" stroke-width="1"/>')
+                if i:
+                    g += (f'<path d="M{px - r * 0.28:.1f},{py - sh * 0.55:.1f} q{r * 0.14:.1f},{-r * 0.2:.1f} {r * 0.28:.1f},0" '
+                          f'fill="none" stroke="{sty["arc"]}" stroke-width="1.1" opacity=".8"/>')
+            elif s == 2:
+                sh = r * (0.5 + 0.42 * math.sin(math.pi * (i + 0.5) / n))
+                g += (f'<path d="M{px - r * 0.2:.1f},{py:.1f} L{px:.1f},{py - sh:.1f} '
+                      f'L{px + r * 0.2:.1f},{py:.1f} Z" fill="{pal[1]}" opacity=".9" stroke="{ink}" '
+                      f'stroke-width="1.2" stroke-linejoin="round"/>')
+                g += (f'<path d="M{px:.1f},{py:.1f} L{px:.1f},{py - sh * 0.8:.1f}" stroke="{sty["ice"]}" '
+                      f'stroke-width="1.1" opacity=".8"/>')
+            else:
+                g += tuft(el, px, py - r * 0.28, r * 0.42, e, math.degrees(a) - 90)
+    elif kind == "cap":
+        w = r * (1.25 + 0.12 * stage)
+        capfill = {1: sty["ember"], 2: sty["ice"], 3: sty["bloom"], 4: f"url(#metal{uid})", 5: f"url(#void{uid})"}[s]
+        g += P(ctx, f"M{hx - w:.1f},{hy - r * 0.42:.1f} a{w:.1f},{w * 0.78:.1f} 0 0 1 {w * 2:.1f},0 Z", capfill, 1.8)
+        dots = 3 + stage
+        rr = ctx.rng(9)
+        for i in range(dots):
+            dx = hx - w * 0.7 + i * (w * 1.4 / max(1, dots - 1))
+            g += (f'<circle cx="{dx:.1f}" cy="{hy - r * 0.42 - rr.f(2, w * 0.5):.1f}" r="{rr.f(1.2, 2.2):.1f}" '
+                  f'fill="{sty["star"] if s == 5 else "#ffffff"}" opacity=".8"/>')
+    elif kind == "plume":
+        if s == 5:
+            g += f'<ellipse cx="{hx:.1f}" cy="{top - r * 0.5:.1f}" rx="{r * 1.0:.1f}" ry="{r * 0.28:.1f}" fill="none" stroke="{ctx.glow}" stroke-width="1.6" opacity=".8"/>'
+            g += star(hx - r * 0.9, top - r * 0.5, r * 0.22, sty["star"], .95)
+        else:
+            g += tuft(el, hx, top - r * 0.42, r * (0.5 + 0.12 * stage), e, 0)
+            if stage >= 2:
+                g += tuft(el, hx - r * 0.42, top - r * 0.2, r * 0.34, e, -22)
+                g += tuft(el, hx + r * 0.42, top - r * 0.2, r * 0.34, e, 22)
+    elif kind == "halo":
+        rr = r * (1.5 + 0.14 * stage)
+        if s == 5:
+            g += (f'<ellipse cx="{hx:.1f}" cy="{hy - r * 1.15:.1f}" rx="{rr:.1f}" ry="{rr * 0.3:.1f}" fill="none" '
+                  f'stroke="{ctx.glow}" stroke-width="2" opacity=".85" transform="rotate(-12 {hx:.1f} {hy - r * 1.15:.1f})"/>')
+            g += (f'<ellipse cx="{hx:.1f}" cy="{hy - r * 1.15:.1f}" rx="{rr * 1.28:.1f}" ry="{rr * 0.4:.1f}" fill="none" '
+                  f'stroke="{sty["rift"]}" stroke-width="1" opacity=".55" transform="rotate(-12 {hx:.1f} {hy - r * 1.15:.1f})"/>')
+        elif s == 4:
+            g += (f'<ellipse cx="{hx:.1f}" cy="{hy - r * 1.2:.1f}" rx="{rr:.1f}" ry="{rr * 0.32:.1f}" fill="none" '
+                  f'stroke="{sty["arc"]}" stroke-width="1.6" stroke-dasharray="4 3" opacity=".9"/>')
+        elif s == 2:
+            g += (f'<ellipse cx="{hx:.1f}" cy="{hy - r * 1.2:.1f}" rx="{rr:.1f}" ry="{rr * 0.3:.1f}" fill="none" '
+                  f'stroke="{sty["foam"]}" stroke-width="1.4" opacity=".7"/>')
+        elif s == 3:
+            for i in range(6):
+                a = 2 * math.pi * i / 6
+                g += tuft("grass", hx + math.cos(a) * rr, hy - r * 1.2 + math.sin(a) * rr * 0.32, r * 0.24, ELE["grass"], math.degrees(a))
+        else:
+            for i in range(5):
+                a = math.pi * (0.1 + 0.8 * i / 4)
+                g += f'<circle cx="{hx + math.cos(a) * rr:.1f}" cy="{hy - r * 1.2 - math.sin(a) * rr * 0.4:.1f}" r="{r * 0.13:.1f}" fill="{ctx.glow}" opacity=".85"/>'
+    return g
+
+
+def sh_spine(ctx, cx, cy, rx, ry, kind="spikes", n=4, up=1.0):
+    """Along-the-back structure: crest spikes, sails, leaf rows, coils, ring stacks."""
+    s, uid, pal, sty, ink, el, e = ctx.s, ctx.uid, ctx.pal, ctx.sty, ctx.ink, ctx.el, ctx.e
+    if kind == "none":
+        return ""
+    g = ""
+    for i in range(n):
+        t = i / max(1, n - 1)
+        px = cx - rx * 0.72 + t * rx * 1.44
+        py = cy - ry * (0.86 + 0.2 * math.sin(math.pi * t)) * up
+        h = ry * (0.4 + 0.28 * math.sin(math.pi * t))
+        if kind == "spikes":
+            if s == 1:
+                g += P(ctx, f"M{px - h * 0.42:.1f},{py:.1f} L{px:.1f},{py - h:.1f} L{px + h * 0.42:.1f},{py:.1f} Z", sty["crust"], 1.5)
+            elif s == 2:
+                g += P(ctx, f"M{px - h * 0.46:.1f},{py:.1f} Q{px - h * 0.1:.1f},{py - h * 1.05:.1f} "
+                            f"{px + h * 0.46:.1f},{py:.1f} Z", pal[1], 1.3, ' opacity=".9"')
+                g += (f'<path d="M{px - h * 0.1:.1f},{py - h * 0.15:.1f} L{px - h * 0.1:.1f},{py - h * 0.8:.1f}" '
+                      f'stroke="{sty["ice"]}" stroke-width="1.1" opacity=".75"/>')
+            elif s == 3:
+                g += tuft("grass", px, py - h * 0.55, h * 0.6, ELE["grass"], (t - 0.5) * 40)
+            elif s == 4:
+                g += P(ctx, f"M{px - h * 0.3:.1f},{py:.1f} L{px - h * 0.12:.1f},{py - h:.1f} L{px + h * 0.3:.1f},{py - h * 0.68:.1f} Z", f"url(#metal{uid})", 1.3)
+            else:
+                g += P(ctx, f"M{px - h * 0.34:.1f},{py:.1f} Q{px:.1f},{py - h * 1.2:.1f} {px + h * 0.34:.1f},{py:.1f} Z", f"url(#void{uid})", 1.3)
+                g += star(px, py - h * 0.75, h * 0.2, sty["star"], .9)
+        elif kind == "sail":
+            g += f'<path d="M{px:.1f},{py:.1f} L{px:.1f},{py - h * 1.3:.1f}" stroke="{pal[2]}" stroke-width="1.4"/>'
+        elif kind == "coil":
+            g += (f'<path d="M{px - h * 0.4:.1f},{py:.1f} q{h * 0.4:.1f},{-h * 0.9:.1f} {h * 0.8:.1f},0" fill="none" '
+                  f'stroke="{sty.get("copper", pal[1])}" stroke-width="2" opacity=".9"/>')
+        elif kind == "rings":
+            g += (f'<ellipse cx="{px:.1f}" cy="{py + h * 0.2:.1f}" rx="{h * 0.62:.1f}" ry="{h * 0.22:.1f}" fill="none" '
+                  f'stroke="{ctx.glow}" stroke-width="1.2" opacity=".75" transform="rotate(-16 {px:.1f} {py:.1f})"/>')
+    if kind == "sail":
+        pts = " ".join(f"{cx - rx * 0.72 + (i / max(1, n - 1)) * rx * 1.44:.1f},{cy - ry * (1.1 + 0.4 * math.sin(math.pi * i / max(1, n - 1))):.1f}" for i in range(n))
+        g = (f'<polygon points="{cx - rx * 0.72:.1f},{cy - ry * 0.6:.1f} {pts} {cx + rx * 0.72:.1f},{cy - ry * 0.6:.1f}" '
+             f'fill="url(#body2{uid})" stroke="{ink}" stroke-width="1.6" opacity=".92"/>') + g
+    return g
+
+
+def sh_tail(ctx, x, y, size, kind="plume", flip=1):
+    """Tails read at a glance, so every set gets its own vocabulary."""
+    s, uid, pal, sty, ink, el, e = ctx.s, ctx.uid, ctx.pal, ctx.sty, ctx.ink, ctx.el, ctx.e
+    if kind == "none":
+        return ""
+    g = ""
+    if kind == "plume":
+        if s == 1:
+            for i, (dx, dy, sc) in enumerate([(0.2, -0.2, 1.0), (0.75, -0.75, 0.72), (1.2, -1.35, 0.5)]):
+                g += tuft("fire", x + size * dx * flip, y + size * dy, size * 0.55 * sc, e, flip * 24)
+        elif s == 2:
+            g += (f'<path d="M{x:.1f},{y:.1f} q{size * 0.9 * flip:.1f},{-size * 0.2:.1f} {size * 1.15 * flip:.1f},{-size * 1.05:.1f} '
+                  f'q{-size * 0.2 * flip:.1f},{size * 0.86:.1f} {-size * 1.15 * flip:.1f},{size * 0.45:.1f} Z" '
+                  f'fill="url(#body{uid})" stroke="{ink}" stroke-width="1.6"/>')
+            for i in (0, 1):
+                g += f'<circle cx="{x + size * (1.25 + i * 0.4) * flip:.1f}" cy="{y - size * (1.1 + i * 0.5):.1f}" r="{2.4 - i:.1f}" fill="{sty["foam"]}" opacity=".8"/>'
+        elif s == 3:
+            g += (f'<path d="M{x:.1f},{y:.1f} q{size * 0.8 * flip:.1f},{-size * 0.3:.1f} {size * 1.0 * flip:.1f},{-size * 1.1:.1f}" '
+                  f'fill="none" stroke="url(#wood{uid})" stroke-width="{size * 0.22:.1f}" stroke-linecap="round"/>')
+            for i in range(3):
+                g += tuft("grass", x + size * (0.4 + i * 0.3) * flip, y - size * (0.35 + i * 0.4), size * 0.34, ELE["grass"], flip * (40 - i * 26))
+        elif s == 4:
+            g += (f'<polyline points="{x:.1f},{y:.1f} {x + size * 0.6 * flip:.1f},{y - size * 0.3:.1f} '
+                  f'{x + size * 0.3 * flip:.1f},{y - size * 0.75:.1f} {x + size * 1.05 * flip:.1f},{y - size * 1.2:.1f}" '
+                  f'fill="none" stroke="{ctx.glow}" stroke-width="{size * 0.24:.1f}" stroke-linejoin="round" stroke-linecap="round"/>')
+            g += f'<circle cx="{x + size * 1.05 * flip:.1f}" cy="{y - size * 1.2:.1f}" r="{size * 0.2:.1f}" fill="{sty["arc"]}" stroke="{ink}" stroke-width="1"/>'
+        else:
+            g += (f'<path d="M{x:.1f},{y:.1f} Q{x + size * 1.1 * flip:.1f},{y - size * 0.4:.1f} {x + size * 1.7 * flip:.1f},{y - size * 1.3:.1f} '
+                  f'Q{x + size * 0.8 * flip:.1f},{y - size * 0.3:.1f} {x:.1f},{y + size * 0.28:.1f} Z" '
+                  f'fill="url(#void{uid})" stroke="url(#rim{uid})" stroke-width="1.4" opacity=".95"/>')
+            for i in range(3):
+                g += star(x + size * (0.6 + i * 0.5) * flip, y - size * (0.3 + i * 0.42), size * (0.22 - i * 0.04), sty["star"], .9)
+    elif kind == "brush":
+        g += (f'<path d="M{x:.1f},{y + size * 0.3:.1f} Q{x + size * 0.9 * flip:.1f},{y + size * 0.3:.1f} '
+              f'{x + size * 1.3 * flip:.1f},{y - size * 0.95:.1f} Q{x + size * 0.5 * flip:.1f},{y - size * 0.2:.1f} '
+              f'{x:.1f},{y - size * 0.35:.1f} Z" fill="url(#{"void" if s == 5 else "body2"}{uid})" '
+              f'stroke="{ink}" stroke-width="1.7"/>')
+        for i, (dx, dy, r) in enumerate([(0.3, 0.0, 0.5), (0.78, -0.42, 0.42), (1.16, -0.95, 0.3)]):
+            px, py = x + size * dx * flip, y + size * dy
+            d2 = sh_shape(ctx, px, py, size * r, size * r * 0.94, ctx.var["seed"] + 60 + i * 7)
+            g += P(ctx, d2, f"url(#void{uid})" if s == 5 else f"url(#body{uid})", 1.5)
+            if s == 5:
+                g += star(px, py, size * r * 0.5, sty["star"], .85)
+            elif s == 2:
+                g += f'<circle cx="{px:.1f}" cy="{py:.1f}" r="{size * r * 0.45:.1f}" fill="{sty["ice"]}" opacity=".45"/>'
+            elif s == 1:
+                g += tuft("fire", px, py - size * r * 0.6, size * r * 0.55, e, flip * 20)
+    elif kind == "fluke":
+        g += (f'<path d="M{x:.1f},{y:.1f} q{size * 0.9 * flip:.1f},{-size * 0.1:.1f} {size * 1.1 * flip:.1f},{-size * 0.15:.1f} '
+              f'l{size * 0.5 * flip:.1f},{-size * 0.85:.1f} l{size * 0.24 * flip:.1f},{size * 1.6:.1f} '
+              f'l{-size * 0.6 * flip:.1f},{-size * 0.42:.1f} Z" fill="url(#body2{uid})" stroke="{ink}" stroke-width="1.6"/>')
+    elif kind == "frond":
+        g += (f'<path d="M{x:.1f},{y:.1f} q{size * 1.0 * flip:.1f},{-size * 0.5:.1f} {size * 1.15 * flip:.1f},{-size * 1.4:.1f}" '
+              f'fill="none" stroke="{sty.get("bark", pal[2])}" stroke-width="{size * 0.18:.1f}" stroke-linecap="round"/>')
+        for i in range(4):
+            t = 0.25 + i * 0.24
+            g += tuft(el, x + size * 1.15 * flip * t, y - size * 1.4 * t * t - size * 0.1, size * 0.3, e, flip * (70 - i * 24))
+    elif kind == "prong":
+        shaft = {1: sty["crust"], 2: pal[1], 3: f"url(#wood{uid})", 4: f"url(#metal{uid})", 5: "#3d1d70"}[s]
+        tipc = {1: sty["ember"], 2: sty["ice"], 3: sty["leaf"], 4: sty["copper"], 5: sty["rift"]}[s]
+        g += (f'<path d="M{x:.1f},{y:.1f} l{size * 0.9 * flip:.1f},{-size * 0.5:.1f}" stroke="{shaft}" '
+              f'stroke-width="{size * 0.26:.1f}" stroke-linecap="round"/>')
+        for i in (-1, 1):
+            g += (f'<line x1="{x + size * 0.85 * flip:.1f}" y1="{y - size * 0.46:.1f}" x2="{x + size * (1.35 + 0.1 * i) * flip:.1f}" '
+                  f'y2="{y - size * (0.9 + 0.3 * i):.1f}" stroke="{tipc}" stroke-width="{size * 0.16:.1f}" stroke-linecap="round"/>')
+        if s == 5:
+            g += star(x + size * 1.35 * flip, y - size * 0.9, size * 0.24, sty["star"], .95)
+    elif kind == "comet":
+        g += (f'<path d="M{x:.1f},{y:.1f} Q{x + size * 1.4 * flip:.1f},{y - size * 0.2:.1f} {x + size * 2.2 * flip:.1f},{y - size * 1.1:.1f}" '
+              f'fill="none" stroke="{ctx.glow}" stroke-width="{size * 0.3:.1f}" stroke-linecap="round" opacity=".6"/>')
+        for i in range(4):
+            g += star(x + size * (0.5 + i * 0.55) * flip, y - size * (0.05 + i * 0.3), size * (0.3 - i * 0.05), sty["star"], .95 - i * 0.15)
+    elif kind == "whip":
+        stroke = {1: sty["crust"], 2: pal[1], 3: f"url(#wood{uid})", 4: f"url(#metal{uid})", 5: f"url(#void{uid})"}[s]
+        g += (f'<path d="M{x:.1f},{y:.1f} q{size * 1.1 * flip:.1f},{size * 0.1:.1f} {size * 1.2 * flip:.1f},{-size * 1.3:.1f}" '
+              f'fill="none" stroke="{stroke}" stroke-width="{size * 0.2:.1f}" stroke-linecap="round"/>')
+        g += tuft(el, x + size * 1.24 * flip, y - size * 1.5, size * 0.36, e, flip * 16)
+    elif kind == "fan":
+        for i in range(5):
+            a = math.pi * (0.06 + 0.42 * i / 4)
+            ex, ey = x + math.cos(a) * size * 1.5 * flip, y - math.sin(a) * size * 1.5
+            spar = "#3d1d70" if s == 5 else f"url(#body{uid})"
+            g += f'<path d="M{x:.1f},{y:.1f} L{ex:.1f},{ey:.1f}" stroke="{spar}" stroke-width="{size * 0.24:.1f}" stroke-linecap="round"/>'
+            if s == 5:
+                g += (f'<path d="M{x:.1f},{y:.1f} L{ex:.1f},{ey:.1f}" stroke="url(#rim{uid})" '
+                      f'stroke-width="1" opacity=".8"/>')
+            if s == 5:
+                g += star(ex, ey, size * 0.2, sty["star"], .9)
+            else:
+                g += tuft(el, ex, ey, size * 0.26, e, math.degrees(a) * flip)
+    return g
+
+
+def sh_wing(ctx, cx, cy, span, kind="spread", stage=1, sgn=-1):
+    """A single wing, rooted at (cx,cy), sweeping toward sgn."""
+    s, uid, pal, sty, ink, el, e = ctx.s, ctx.uid, ctx.pal, ctx.sty, ctx.ink, ctx.el, ctx.e
+    if kind == "none":
+        return ""
+    g = ""
+    L = span
+    if s == 1:
+        d = (f"M{cx:.1f},{cy:.1f} Q{cx + sgn * L * 0.7:.1f},{cy - L * 0.78:.1f} {cx + sgn * L:.1f},{cy - L * 0.15:.1f} "
+             f"L{cx + sgn * L * 0.82:.1f},{cy + L * 0.05:.1f} L{cx + sgn * L * 0.86:.1f},{cy + L * 0.25:.1f} "
+             f"L{cx + sgn * L * 0.6:.1f},{cy + L * 0.14:.1f} L{cx + sgn * L * 0.58:.1f},{cy + L * 0.34:.1f} "
+             f"L{cx + sgn * L * 0.3:.1f},{cy + L * 0.16:.1f} Z")
+        g += P(ctx, d, f"url(#body2{uid})", 1.8)
+        for i in range(3):
+            g += (f'<path d="M{cx + sgn * L * 0.1:.1f},{cy:.1f} L{cx + sgn * L * (0.5 + i * 0.16):.1f},'
+                  f'{cy - L * (0.36 - i * 0.16):.1f}" stroke="{sty["seam"]}" stroke-width="1.2" opacity=".8"/>')
+    elif s == 2:
+        d = (f"M{cx:.1f},{cy:.1f} Q{cx + sgn * L * 0.55:.1f},{cy - L * 0.85:.1f} {cx + sgn * L * 1.05:.1f},{cy - L * 0.3:.1f} "
+             f"Q{cx + sgn * L * 0.7:.1f},{cy + L * 0.36:.1f} {cx:.1f},{cy + L * 0.2:.1f} Z")
+        g += P(ctx, d, f"url(#body{uid})", 1.8, ' opacity=".95"')
+        for i in range(4):
+            t = 0.2 + i * 0.22
+            g += (f'<path d="M{cx:.1f},{cy + L * 0.05:.1f} Q{cx + sgn * L * t * 0.7:.1f},{cy - L * 0.4 * t:.1f} '
+                  f'{cx + sgn * L * (0.45 + t * 0.5):.1f},{cy - L * (0.28 - i * 0.12):.1f}" fill="none" '
+                  f'stroke="{sty["ice"]}" stroke-width="1.2" opacity=".8"/>')
+    elif s == 3:
+        for i in range(3):
+            t = 0.55 + i * 0.24
+            ex, ey = cx + sgn * L * t, cy - L * (0.55 - i * 0.3)
+            g += (f'<path d="M{cx:.1f},{cy:.1f} Q{(cx + ex) / 2:.1f},{ey - L * 0.3:.1f} {ex:.1f},{ey:.1f} '
+                  f'Q{(cx + ex) / 2:.1f},{ey + L * 0.24:.1f} {cx:.1f},{cy:.1f} Z" fill="{sty["leaf"]}" '
+                  f'stroke="{ink}" stroke-width="1.4"/>')
+            g += f'<path d="M{cx:.1f},{cy:.1f} L{ex:.1f},{ey:.1f}" stroke="{ink}" stroke-width="0.9" opacity=".5"/>'
+    elif s == 4:
+        d = (f"M{cx:.1f},{cy:.1f} L{cx + sgn * L * 0.55:.1f},{cy - L * 0.66:.1f} L{cx + sgn * L * 1.02:.1f},{cy - L * 0.5:.1f} "
+             f"L{cx + sgn * L * 0.86:.1f},{cy - L * 0.08:.1f} L{cx + sgn * L * 1.1:.1f},{cy + L * 0.2:.1f} "
+             f"L{cx + sgn * L * 0.36:.1f},{cy + L * 0.24:.1f} Z")
+        g += P(ctx, d, f"url(#metal{uid})", 1.7)
+        g += (f'<polyline points="{cx + sgn * L * 0.4:.1f},{cy - L * 0.3:.1f} {cx + sgn * L * 0.66:.1f},{cy - L * 0.1:.1f} '
+              f'{cx + sgn * L * 0.56:.1f},{cy + L * 0.02:.1f} {cx + sgn * L * 0.9:.1f},{cy + L * 0.1:.1f}" fill="none" '
+              f'stroke="{sty["arc"]}" stroke-width="1.5" opacity=".95"/>')
+    else:
+        d = (f"M{cx:.1f},{cy:.1f} Q{cx + sgn * L * 0.5:.1f},{cy - L * 0.9:.1f} {cx + sgn * L * 1.08:.1f},{cy - L * 0.34:.1f} "
+             f"Q{cx + sgn * L * 0.66:.1f},{cy + L * 0.4:.1f} {cx:.1f},{cy + L * 0.18:.1f} Z")
+        cid = ctx.nid("cl")
+        ctx.defs.append(f'<clipPath id="{cid}"><path d="{d}"/></clipPath>')
+        g += f'<path d="{d}" fill="url(#void{uid})" opacity=".9"/>'
+        g += (f'<g clip-path="url(#{cid})"><path d="{d}" fill="{sty["neb"]}" opacity=".45"/>'
+              + starfield(cx - L * 1.1, cy - L, L * 2.2, L * 1.6, ctx.var["seed"] + 91 + int(sgn), count=14, tint=sty["star"]) + "</g>")
+        g += f'<path d="{d}" fill="none" stroke="url(#rim{uid})" stroke-width="1.3" opacity=".9"/>'
+        nodes = [(cx + sgn * L * 0.25, cy - L * 0.12), (cx + sgn * L * 0.6, cy - L * 0.42),
+                 (cx + sgn * L * 0.95, cy - L * 0.28), (cx + sgn * L * 0.7, cy + L * 0.08)]
+        g += f'<g stroke="{ctx.glow}" stroke-width="0.9" opacity=".8">'
+        for i in range(len(nodes) - 1):
+            g += f'<line x1="{nodes[i][0]:.1f}" y1="{nodes[i][1]:.1f}" x2="{nodes[i + 1][0]:.1f}" y2="{nodes[i + 1][1]:.1f}"/>'
+        g += "</g>"
+        for nx, ny in nodes:
+            g += star(nx, ny, 1.9, sty["star"], .95)
+    return g
+
+
+def sh_motes(ctx, cx, cy, r, n=5, seed=0):
+    """Ambient particles that follow the creature: embers, bubbles, spores, sparks, shards."""
+    s, sty, rr = ctx.s, ctx.sty, ctx.rng(17 + seed)
+    g = ""
+    for i in range(n):
+        a = rr.f(0, 2 * math.pi)
+        d = rr.f(0.85, 1.35)
+        px, py = cx + math.cos(a) * r * d, cy + math.sin(a) * r * d * 0.8
+        if s == 1:
+            g += f'<circle cx="{px:.1f}" cy="{py:.1f}" r="{rr.f(0.8, 1.9):.1f}" fill="{sty["ember"]}" opacity="{rr.f(.5, .95):.2f}"/>'
+        elif s == 2:
+            g += (f'<circle cx="{px:.1f}" cy="{py:.1f}" r="{rr.f(1.2, 2.6):.1f}" fill="none" stroke="{sty["ice"]}" '
+                  f'stroke-width="1" opacity="{rr.f(.4, .85):.2f}"/>')
+        elif s == 3:
+            g += f'<circle cx="{px:.1f}" cy="{py:.1f}" r="{rr.f(0.9, 1.8):.1f}" fill="{sty["spore"]}" opacity="{rr.f(.5, .9):.2f}"/>'
+        elif s == 4:
+            g += star(px, py, rr.f(1.2, 2.4), sty["arc"], rr.f(.5, .95))
+        else:
+            sz = rr.f(1.6, 3.4)
+            g += (f'<path d="M{px:.1f},{py - sz:.1f} L{px + sz * 0.7:.1f},{py:.1f} L{px:.1f},{py + sz:.1f} '
+                  f'L{px - sz * 0.7:.1f},{py:.1f} Z" fill="url(#void{ctx.uid})" stroke="{ctx.glow}" '
+                  f'stroke-width="0.9" opacity=".95"/>')
+            g += star(px, py, sz * 0.36, sty["star"], .9)
+    return g
+
+
+def sh_aura(ctx, cx, cy, r, level=1):
+    """Rare/ultra flourish behind the creature."""
+    s, sty, uid = ctx.s, ctx.sty, ctx.uid
+    if level <= 0:
+        return ""
+    g = ""
+    if s == 1:
+        g += f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="{r:.1f}" fill="none" stroke="{sty["seam"]}" stroke-width="2" opacity=".3"/>'
+        for k in range(10):
+            a = k * math.pi / 5
+            g += (f'<line x1="{cx + math.cos(a) * r * 0.98:.1f}" y1="{cy + math.sin(a) * r * 0.98:.1f}" '
+                  f'x2="{cx + math.cos(a) * r * 1.24:.1f}" y2="{cy + math.sin(a) * r * 1.24:.1f}" '
+                  f'stroke="{ctx.glow}" stroke-width="1.4" opacity=".25"/>')
+    elif s == 2:
+        for i in range(3):
+            g += (f'<ellipse cx="{cx:.1f}" cy="{cy:.1f}" rx="{r * (0.75 + i * 0.2):.1f}" ry="{r * (0.6 + i * 0.16):.1f}" '
+                  f'fill="none" stroke="{sty["ice"]}" stroke-width="1.1" opacity="{0.34 - i * 0.09:.2f}"/>')
+    elif s == 3:
+        for k in range(9):
+            a = k * 2 * math.pi / 9
+            g += tuft("grass", cx + math.cos(a) * r, cy + math.sin(a) * r * 0.86, r * 0.13, ELE["grass"], math.degrees(a) + 90)
+    elif s == 4:
+        g += (f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="{r:.1f}" fill="none" stroke="{sty["arc"]}" stroke-width="1.6" '
+              f'stroke-dasharray="6 5" opacity=".45"/>')
+        g += (f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="{r * 1.2:.1f}" fill="none" stroke="{ctx.glow}" stroke-width="1" '
+              f'stroke-dasharray="2 6" opacity=".35"/>')
+    else:
+        if level >= 2:
+            g += f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="{r * 1.15:.1f}" fill="url(#halo{uid})" opacity=".3"/>'
+        for i, rot in enumerate((-22, 14)):
+            g += (f'<ellipse cx="{cx:.1f}" cy="{cy:.1f}" rx="{r * (1.05 + i * 0.22):.1f}" ry="{r * (0.3 + i * 0.1):.1f}" '
+                  f'fill="none" stroke="{sty["rift"] if i else ctx.glow}" stroke-width="{1.6 - i * 0.5:.1f}" '
+                  f'opacity="{0.7 - i * 0.25:.2f}" transform="rotate({rot} {cx:.1f} {cy:.1f})"/>')
+        g += starfield(cx - r, cy - r * 0.8, r * 2, r * 1.6, ctx.var["seed"] + 5, count=8, tint=sty["star"])
+    return g
+
+
+def sh_orbitals(ctx, cx, cy, r, n=3, seed=0):
+    """Umbral Reach signature: pieces of the creature that broke off and stayed in orbit."""
+    if ctx.s != 5:
+        return sh_motes(ctx, cx, cy, r, n, seed)
+    rr, sty, uid = ctx.rng(23 + seed), ctx.sty, ctx.uid
+    n = min(n, 5)
+    g = ""
+    for i in range(n):
+        a = (2 * math.pi * i / max(n, 1)) + rr.f(-0.35, 0.35)
+        px = cx + math.cos(a) * r * rr.f(1.1, 1.4)
+        py = cy + math.sin(a) * r * rr.f(0.66, 0.95)
+        sz, rot = rr.f(2.6, 4.4), rr.f(0, 360)
+        d = (f"M{px:.1f},{py - sz:.1f} L{px + sz * 0.62:.1f},{py - sz * 0.1:.1f} "
+             f"L{px:.1f},{py + sz * 1.15:.1f} L{px - sz * 0.62:.1f},{py - sz * 0.1:.1f} Z")
+        g += (f'<g transform="rotate({rot:.0f} {px:.1f} {py:.1f})">'
+              f'<path d="{d}" fill="#150a2c" stroke="{sty["rift"]}" stroke-width="1"/>'
+              f'<path d="M{px:.1f},{py - sz:.1f} L{px + sz * 0.62:.1f},{py - sz * 0.1:.1f} L{px:.1f},{py + sz * 1.15:.1f} Z" '
+              f'fill="{ctx.glow}" opacity=".22"/></g>')
+    for i in range(max(1, n // 2)):
+        a = rr.f(0, 2 * math.pi)
+        g += star(cx + math.cos(a) * r * rr.f(1.2, 1.5), cy + math.sin(a) * r * rr.f(0.7, 1.0),
+                  rr.f(1.4, 2.4), sty["star"], .9)
+    return g
+
+
+def sh_face(ctx, hx, hy, r, mood="calm", mouth="smile", look=-0.8, pair=True, gap=None):
+    g = sh_eyes(ctx, hx - r * 0.38, hy - r * 0.04, r * 0.26, look=look, mood=mood, pair=pair,
+                gap=gap if gap is not None else r * 0.6)
+    g += sh_mouth(ctx, hx - r * 0.92, hy + r * 0.52, r * 0.66, mouth)
+    return g
+
+
+def sh_mane(ctx, cx, cy, r, n=4, up=1.0):
+    """Ruff / collar at the shoulders."""
+    s, uid, sty, e, el, pal = ctx.s, ctx.uid, ctx.sty, ctx.e, ctx.el, ctx.pal
+    g = ""
+    for i in range(n):
+        a = math.pi * (0.08 + 0.84 * i / max(1, n - 1))
+        px, py = cx - math.cos(a) * r * 1.05, cy - math.sin(a) * r * 1.05 * up
+        if s == 1:
+            g += tuft("fire", px, py, r * 0.44, e, math.degrees(a) - 90)
+        elif s == 2:
+            g += P(ctx, f"M{px - r * 0.26:.1f},{py + r * 0.18:.1f} L{px:.1f},{py - r * 0.55:.1f} L{px + r * 0.26:.1f},{py + r * 0.18:.1f} Z", pal[1], 1.3, ' opacity=".92"')
+        elif s == 3:
+            g += tuft("grass", px, py, r * 0.42, ELE["grass"], math.degrees(a) - 90)
+        elif s == 4:
+            g += P(ctx, f"M{px - r * 0.2:.1f},{py + r * 0.2:.1f} L{px - r * 0.06:.1f},{py - r * 0.5:.1f} L{px + r * 0.24:.1f},{py - r * 0.1:.1f} Z", f"url(#metal{uid})", 1.2)
+        else:
+            g += f'<circle cx="{px:.1f}" cy="{py:.1f}" r="{r * 0.26:.1f}" fill="url(#void{uid})" stroke="url(#rim{uid})" stroke-width="1.1"/>'
+            g += star(px, py, r * 0.16, sty["star"], .95)
+    return g
+
+
+# ==================================================================================
+# BODY PLANS — how a creature is put together. Concepts pick a plan and dress it.
+# ==================================================================================
+def bp_quad(ctx, p):
+    """Four-legged beast, side profile, facing left."""
+    cx, cy, bw, bh, hr = p["cx"], p["cy"], p["bw"], p["bh"], p["hr"]
+    legh, lw = p.get("legh", bh * 1.0), p.get("lw", p["bw"] * 0.28)
+    neck = min(p.get("neck", 0.0), 1.0)  # quads take a 0..1 neck lift, not pixels
+    hx = cx - bw * (0.8 + p.get("dhx", 0.0)) - hr * 0.12
+    hy = cy - bh * (0.66 + neck * 1.05) - hr * neck * 0.3
+    gy = cy + bh + legh * 0.95
+    g = sh_ground(ctx, cx, gy, bw * 1.05)
+    if p.get("aura"):
+        g += sh_aura(ctx, cx, cy - bh * 0.3, bw * 1.28, p["aura"])
+    g += sh_tail(ctx, cx + bw * 0.86, cy - bh * 0.06, p.get("tsize", bh * 0.95), p.get("tail", "plume"))
+    for i, wsgn in enumerate(p.get("wingsides", ())):
+        g += sh_wing(ctx, cx + bw * 0.1, cy - bh * 0.7, p.get("wspan", bw * 0.8), p.get("wing", "spread"), p.get("stage", 1), wsgn)
+    nl = p.get("legs", 4)
+    if nl >= 4:
+        for lx in (cx - bw * 0.3, cx + bw * 0.36):
+            g += sh_leg(ctx, lx, cy + bh * 0.2, lw, legh, back=True)
+    g += sh_torso(ctx, cx, cy, bw, bh)
+    g += sh_spine(ctx, cx, cy, bw, bh, p.get("spine", "none"), p.get("spinen", 4))
+    if nl:
+        for lx in (cx - bw * 0.56, cx + bw * 0.6):
+            g += sh_leg(ctx, lx, cy + bh * 0.26, lw, legh)
+    if neck > 0.05:
+        g += P(ctx, f"M{cx - bw * 0.82:.1f},{cy - bh * 0.2:.1f} L{hx - hr * 0.3:.1f},{hy + hr * 0.4:.1f} "
+                    f"L{hx + hr * 0.55:.1f},{hy + hr * 0.7:.1f} L{cx - bw * 0.34:.1f},{cy - bh * 0.62:.1f} Z",
+               f"url(#body{ctx.uid})", 2.0)
+    if p.get("mane"):
+        g += sh_mane(ctx, hx + hr * 0.5, hy + hr * 0.3, hr * 1.25, p.get("manen", 4))
+    g += sh_head(ctx, hx, hy, hr, p.get("hkind", "muzzle"))
+    g += sh_ears(ctx, hx, hy, hr, p.get("ears", "point"), p.get("espread", 1.0))
+    g += sh_crest(ctx, hx, hy, hr, p.get("crest", "none"), p.get("stage", 1))
+    g += sh_face(ctx, hx, hy, hr, p.get("mood", "calm"), p.get("mouth", "smile"), p.get("look", -0.8))
+    if p.get("motes"):
+        g += sh_orbitals(ctx, cx, cy - bh * 0.2, bw * 1.2, p["motes"])
+    return g
+
+
+def bp_biped(ctx, p):
+    """Upright figure: robe or torso over two legs, with arms."""
+    cx, cy, bw, bh, hr = p["cx"], p["cy"], p["bw"], p["bh"], p["hr"]
+    legh = p.get("legh", bh * 0.85)
+    gy = cy + bh + legh
+    hy = cy - bh - hr * 0.85
+    g = sh_ground(ctx, cx, gy, bw * 1.15)
+    if p.get("aura"):
+        g += sh_aura(ctx, cx, cy - bh * 0.4, bw * 1.55, p["aura"])
+    for wsgn in p.get("wingsides", ()):
+        g += sh_wing(ctx, cx, cy - bh * 0.5, p.get("wspan", bw * 1.05), p.get("wing", "spread"), p.get("stage", 1), wsgn)
+    if p.get("robe"):
+        d = (f"M{cx - bw * 0.5:.1f},{cy - bh:.1f} L{cx + bw * 0.5:.1f},{cy - bh:.1f} L{cx + bw * 1.15:.1f},{gy:.1f} "
+             f"Q{cx:.1f},{gy + bh * 0.28:.1f} {cx - bw * 1.15:.1f},{gy:.1f} Z")
+        g += P(ctx, d, f"url(#body{ctx.uid})" if ctx.s != 5 else f"url(#void{ctx.uid})")
+        if ctx.s == 5:
+            cid = ctx.nid("cl")
+            ctx.defs.append(f'<clipPath id="{cid}"><path d="{d}"/></clipPath>')
+            g += (f'<g clip-path="url(#{cid})">' + starfield(cx - bw * 1.2, cy - bh, bw * 2.4, bh + legh + 10,
+                                                             ctx.var["seed"] + 3, count=22, tint=ctx.sty["star"]) + "</g>")
+            g += f'<path d="{d}" fill="none" stroke="url(#rim{ctx.uid})" stroke-width="1.5" opacity=".9"/>'
+        else:
+            g += sh_marks(ctx, cx, cy + bh * 0.2, bw * 0.9, bh * 0.8)
+    else:
+        for lx in (cx - bw * 0.46, cx + bw * 0.46):
+            g += sh_leg(ctx, lx, cy + bh * 0.5, p.get("lw", bw * 0.42), legh)
+        g += sh_torso(ctx, cx, cy, bw, bh)
+    aw = p.get("aw", bw * 0.34)
+    for sgn in (-1, 1):
+        g += sh_arm(ctx, cx + sgn * bw * 0.62, cy - bh * 0.42, cx + sgn * bw * (1.05 + p.get("reach", 0.0)),
+                    cy + bh * (0.35 + p.get("armdrop", 0.0)), aw)
+    if p.get("hands"):
+        for sgn in (-1, 1):
+            hxx = cx + sgn * bw * (1.05 + p.get("reach", 0.0))
+            hyy = cy + bh * (0.35 + p.get("armdrop", 0.0))
+            g += f'<circle cx="{hxx:.1f}" cy="{hyy:.1f}" r="{aw * 0.62:.1f}" fill="url(#{"void" if ctx.s == 5 else "body"}{ctx.uid})" stroke="{ctx.ink}" stroke-width="1.5"/>'
+    if p.get("core"):
+        g += f'<circle cx="{cx:.1f}" cy="{cy + bh * 0.1:.1f}" r="{bw * 0.22:.1f}" fill="url(#orb{ctx.uid})" stroke="{ctx.ink}" stroke-width="1.4"/>'
+    if p.get("mane"):
+        g += sh_mane(ctx, cx, cy - bh * 0.86, hr * 1.5, p.get("manen", 5))
+    g += sh_head(ctx, cx, hy, hr, p.get("hkind", "blunt"))
+    g += sh_ears(ctx, cx, hy, hr, p.get("ears", "none"), p.get("espread", 1.0))
+    g += sh_crest(ctx, cx, hy, hr, p.get("crest", "crown"), p.get("stage", 1))
+    g += sh_face(ctx, cx + hr * 0.34, hy, hr, p.get("mood", "calm"), p.get("mouth", "smile"), p.get("look", 0.0))
+    if p.get("motes"):
+        g += sh_orbitals(ctx, cx, cy - bh * 0.3, bw * 1.5, p["motes"])
+    return g
+
+
+def bp_serpent(ctx, p):
+    """Sinuous coil rising to a raised head — drakes, wyrms and eels."""
+    cx, cy, k, hr = p["cx"], p["cy"], p.get("k", 1.0), p["hr"]
+    coils = p.get("coils", 3)
+    amp = p.get("amp", 26) * k
+    span = p.get("span", 40) * k
+    w = p.get("w", 13) * k
+    g = sh_ground(ctx, cx + 6 * k, cy + 44 * k, span * 0.9)
+    if p.get("aura"):
+        g += sh_aura(ctx, cx, cy - 4, span * 1.25, p["aura"])
+    pts = []
+    for i in range(coils * 2 + 3):
+        t = i / (coils * 2 + 2)
+        px = cx + span * 0.75 - t * span * 1.5 + math.sin(t * math.pi * coils) * amp * 0.5
+        py = cy + 40 * k - t * (78 * k)
+        pts.append((px, py))
+    d = "M" + " L".join(f"{x:.1f},{y:.1f}" for x, y in pts)
+    stroke = {1: f"url(#body{ctx.uid})", 2: f"url(#body{ctx.uid})", 3: f"url(#wood{ctx.uid})",
+              4: f"url(#metal{ctx.uid})", 5: "#3d1d70"}[ctx.s]
+    g += f'<path d="{d}" fill="none" stroke="{ctx.ink}" stroke-width="{w + 4:.1f}" stroke-linejoin="round" stroke-linecap="round"/>'
+    g += f'<path d="{d}" fill="none" stroke="{stroke}" stroke-width="{w:.1f}" stroke-linejoin="round" stroke-linecap="round"/>'
+    if ctx.s == 5:
+        g += f'<path d="{d}" fill="none" stroke="url(#rim{ctx.uid})" stroke-width="1.4" opacity=".85"/>'
+        for (px, py) in pts[::2]:
+            g += star(px, py, 2.0, ctx.sty["star"], .9)
+    elif ctx.s == 4:
+        for (px, py) in pts[1::2]:
+            g += f'<circle cx="{px:.1f}" cy="{py:.1f}" r="{w * 0.32:.1f}" fill="{ctx.sty["copper"]}" stroke="{ctx.ink}" stroke-width="1"/>'
+    elif ctx.s == 1:
+        for (px, py) in pts[1::2]:
+            g += tuft("fire", px, py - w * 0.6, w * 0.5, ctx.e, 0)
+    elif ctx.s == 3:
+        for (px, py) in pts[1::2]:
+            g += tuft("grass", px, py - w * 0.5, w * 0.5, ELE["grass"], -20)
+    else:
+        for (px, py) in pts[1::2]:
+            g += P(ctx, f"M{px - w * 0.4:.1f},{py:.1f} L{px:.1f},{py - w * 0.8:.1f} L{px + w * 0.4:.1f},{py:.1f} Z", ctx.sty["ice"], 1.2)
+    hx, hy = pts[-1]
+    hx -= hr * 0.2
+    hy -= hr * 0.5
+    for wsgn in p.get("wingsides", ()):
+        g += sh_wing(ctx, cx + 6 * k, cy - 6 * k, p.get("wspan", 30 * k), p.get("wing", "spread"), p.get("stage", 1), wsgn)
+    g += sh_head(ctx, hx, hy, hr, p.get("hkind", "jaw"))
+    g += sh_ears(ctx, hx, hy, hr, p.get("ears", "none"), p.get("espread", 1.0))
+    g += sh_crest(ctx, hx, hy, hr, p.get("crest", "horn"), p.get("stage", 1))
+    g += sh_face(ctx, hx, hy, hr, p.get("mood", "fierce"), p.get("mouth", "fang"), p.get("look", -0.9))
+    if p.get("motes"):
+        g += sh_orbitals(ctx, cx, cy, span * 1.1, p["motes"])
+    return g
+
+
+def bp_swimmer(ctx, p):
+    """Finned body suspended mid-frame."""
+    cx, cy, L, Hh = p["cx"], p["cy"], p["L"], p["H"]
+    g = sh_ground(ctx, cx, cy + Hh + 26, L * 0.66)
+    if p.get("aura"):
+        g += sh_aura(ctx, cx, cy, L * 1.15, p["aura"])
+    g += sh_tail(ctx, cx + L * 0.78, cy, p.get("tsize", Hh * 0.9), p.get("tail", "fluke"))
+    g += sh_torso(ctx, cx, cy, L * 0.8, Hh, belly=True)
+    g += sh_spine(ctx, cx, cy, L * 0.7, Hh, p.get("spine", "spikes"), p.get("spinen", 3))
+    pf = p.get("pecfin", 1)
+    if pf:
+        g += (f'<path d="M{cx - L * 0.2:.1f},{cy + Hh * 0.35:.1f} q{-L * 0.28:.1f},{Hh * 0.6:.1f} '
+              f'{-L * 0.04:.1f},{Hh * 0.85:.1f} q{L * 0.16:.1f},{-Hh * 0.36:.1f} {L * 0.1:.1f},{-Hh * 0.72:.1f} Z" '
+              f'fill="url(#body2{ctx.uid})" stroke="{ctx.ink}" stroke-width="1.5"/>')
+    hx, hy = cx - L * 0.56, cy - Hh * 0.12
+    g += sh_crest(ctx, hx, hy - Hh * 0.3, Hh * 0.5, p.get("crest", "none"), p.get("stage", 1))
+    g += sh_face(ctx, hx + Hh * 0.28, hy, Hh * 0.62, p.get("mood", "calm"), p.get("mouth", "grin"),
+                 p.get("look", -0.9), pair=p.get("pair", False))
+    if p.get("lure"):
+        g += (f'<path d="M{cx - L * 0.55:.1f},{cy - Hh * 0.8:.1f} q{-Hh * 0.4:.1f},{-Hh * 1.1:.1f} {Hh * 0.5:.1f},{-Hh * 1.5:.1f}" '
+              f'fill="none" stroke="{ctx.pal[2]}" stroke-width="2"/>')
+        g += f'<circle cx="{cx - L * 0.42:.1f}" cy="{cy - Hh * 2.3:.1f}" r="{Hh * 0.3:.1f}" fill="url(#orb{ctx.uid})" stroke="{ctx.ink}" stroke-width="1.2"/>'
+    if p.get("motes"):
+        g += sh_orbitals(ctx, cx, cy, L * 0.95, p["motes"])
+    return g
+
+
+def bp_flyer(ctx, p):
+    """Upright winged body on two legs — birds and cranes."""
+    cx, cy, bw, bh, hr = p["cx"], p["cy"], p["bw"], p["bh"], p["hr"]
+    legh = p.get("legh", 26)
+    gy = cy + bh + legh
+    g = sh_ground(ctx, cx, gy, bw * 1.9)
+    if p.get("aura"):
+        g += sh_aura(ctx, cx, cy - bh * 0.2, bh * 1.5, p["aura"])
+    for lx in (cx - bw * 0.42, cx + bw * 0.42):
+        if ctx.s == 4:
+            g += (f'<polyline points="{lx:.1f},{cy + bh * 0.7:.1f} {lx + 4:.1f},{gy - legh * 0.4:.1f} {lx - 2:.1f},{gy:.1f}" '
+                  f'fill="none" stroke="url(#metal{ctx.uid})" stroke-width="3" stroke-linejoin="round"/>')
+        else:
+            g += (f'<line x1="{lx:.1f}" y1="{cy + bh * 0.66:.1f}" x2="{lx:.1f}" y2="{gy:.1f}" '
+                  f'stroke="{ctx.ink}" stroke-width="4.6" stroke-linecap="round"/>')
+            g += (f'<line x1="{lx:.1f}" y1="{cy + bh * 0.66:.1f}" x2="{lx:.1f}" y2="{gy:.1f}" '
+                  f'stroke="{ctx.pal[1] if ctx.s != 5 else ctx.sty["neb"]}" stroke-width="2.6" stroke-linecap="round"/>')
+        g += (f'<path d="M{lx - 5:.1f},{gy + 1:.1f} h10 M{lx:.1f},{gy:.1f} v4" stroke="{ctx.ink}" '
+              f'stroke-width="2.6" fill="none" stroke-linecap="round"/>')
+    g += sh_tail(ctx, cx + bw * 0.3, cy + bh * 0.8, p.get("tsize", bh * 0.44), p.get("tail", "fan"))
+    for wsgn in p.get("wingsides", (-1, 1)):
+        g += sh_wing(ctx, cx + wsgn * bw * 0.5, cy - bh * 0.25, p.get("wspan", 30), p.get("wing", "spread"), p.get("stage", 1), wsgn)
+    g += sh_torso(ctx, cx, cy, bw, bh)
+    hy = cy - bh - hr * 0.72
+    if p.get("neck", 0) > 0:
+        nk = p["neck"]
+        hy -= nk
+        g += (f'<path d="M{cx - bw * 0.3:.1f},{cy - bh * 0.6:.1f} Q{cx - bw * 0.5:.1f},{hy + hr:.1f} {cx - hr * 0.5:.1f},{hy + hr * 0.7:.1f} '
+              f'L{cx + hr * 0.5:.1f},{hy + hr * 0.9:.1f} Q{cx + bw * 0.2:.1f},{hy + hr * 1.4:.1f} {cx + bw * 0.34:.1f},{cy - bh * 0.5:.1f} Z" '
+              f'fill="url(#{"void" if ctx.s == 5 else "body"}{ctx.uid})" stroke="{ctx.ink}" stroke-width="1.9"/>')
+    g += sh_head(ctx, cx, hy, hr, p.get("hkind", "beak"))
+    g += sh_crest(ctx, cx, hy, hr, p.get("crest", "plume"), p.get("stage", 1))
+    g += sh_face(ctx, cx + hr * 0.3, hy, hr, p.get("mood", "calm"), "none", p.get("look", -1.0))
+    if p.get("motes"):
+        g += sh_orbitals(ctx, cx, cy - bh * 0.4, bw * 2.2, p["motes"])
+    return g
+
+
+def bp_insect(ctx, p):
+    """Carapace, six legs, a working head — beetles, mites and grubs."""
+    cx, cy, rw, rh = p["cx"], p["cy"], p["rw"], p["rh"]
+    g = sh_ground(ctx, cx, cy + rh + 5, rw)
+    if p.get("aura"):
+        g += sh_aura(ctx, cx, cy, rw * 1.3, p["aura"])
+    legc = p.get("legpairs", 3)
+    for sgn in (-1, 1):
+        for j in range(legc):
+            ly = cy - rh * 0.25 + j * rh * (0.5 / max(1, legc - 1) * 2)
+            if ctx.s == 4:
+                g += (f'<polyline points="{cx + sgn * rw * 0.66:.1f},{ly:.1f} {cx + sgn * rw * 1.0:.1f},{ly - 3:.1f} '
+                      f'{cx + sgn * rw * 1.12:.1f},{ly + 8:.1f}" fill="none" stroke="url(#metal{ctx.uid})" stroke-width="2.4" stroke-linejoin="round"/>')
+            elif ctx.s == 5:
+                g += (f'<path d="M{cx + sgn * rw * 0.7:.1f},{ly:.1f} q{sgn * rw * 0.36:.1f},-3 {sgn * rw * 0.5:.1f},7" fill="none" '
+                      f'stroke="url(#void{ctx.uid})" stroke-width="2.6" stroke-linecap="round"/>')
+                g += star(cx + sgn * rw * 1.2, ly + 7, 1.5, ctx.sty["star"], .85)
+            else:
+                g += (f'<path d="M{cx + sgn * rw * 0.7:.1f},{ly:.1f} q{sgn * rw * 0.36:.1f},-4 {sgn * rw * 0.5:.1f},6" fill="none" '
+                      f'stroke="{ctx.pal[2]}" stroke-width="2.4" stroke-linecap="round"/>')
+    hy = cy - rh * 0.8
+    g += sh_head(ctx, cx, hy, rh * 0.44, p.get("hkind", "blunt"))
+    g += sh_crest(ctx, cx, hy, rh * 0.5, p.get("crest", "horn"), p.get("stage", 1))
+    d = sh_shape(ctx, cx, cy + rh * 0.1, rw, rh * 0.92, ctx.var["seed"] + 17)
+    g += P(ctx, d, f"url(#void{ctx.uid})" if ctx.s == 5 else f"url(#body{ctx.uid})")
+    if ctx.s == 5:
+        cid = ctx.nid("cl")
+        ctx.defs.append(f'<clipPath id="{cid}"><path d="{d}"/></clipPath>')
+        g += (f'<g clip-path="url(#{cid})">' + starfield(cx - rw, cy - rh, rw * 2, rh * 2, ctx.var["seed"] + 4,
+                                                         count=14, tint=ctx.sty["star"]) + "</g>")
+        g += f'<path d="{d}" fill="none" stroke="url(#rim{ctx.uid})" stroke-width="1.4" opacity=".9"/>'
+    else:
+        g += sh_marks(ctx, cx, cy + rh * 0.1, rw * 0.86, rh * 0.8)
+    g += f'<line x1="{cx:.1f}" y1="{cy - rh * 0.72:.1f}" x2="{cx:.1f}" y2="{cy + rh * 0.86:.1f}" stroke="{ctx.ink}" stroke-width="1.6" opacity=".8"/>'
+    if p.get("antennae"):
+        for sgn in (-1, 1):
+            g += (f'<path d="M{cx + sgn * rh * 0.22:.1f},{hy - rh * 0.3:.1f} q{sgn * 8:.1f},-9 {sgn * 14:.1f},-7" fill="none" '
+                  f'stroke="{ctx.ink}" stroke-width="1.4" stroke-linecap="round"/>')
+            g += tuft(ctx.el, cx + sgn * rh * 0.22 + sgn * 14, hy - rh * 0.3 - 7, 3.2, ctx.e, sgn * 30)
+    g += sh_face(ctx, cx + rh * 0.36, hy, rh * 0.5, p.get("mood", "calm"), p.get("mouth", "none"), 0.0)
+    if p.get("motes"):
+        g += sh_orbitals(ctx, cx, cy, rw * 1.25, p["motes"])
+    return g
+
+
+def bp_wingbug(ctx, p):
+    """Four wings, fuzzy thorax, antennae — moths, flies and their kin."""
+    cx, cy, ws = p["cx"], p["cy"], p["ws"]
+    g = sh_ground(ctx, cx, cy + 42, ws * 0.62)
+    if p.get("aura"):
+        g += sh_aura(ctx, cx, cy, ws * 1.05, p["aura"])
+    for sgn in (-1, 1):
+        if ctx.s == 5:
+            for (dx, dy, rx, ry, rot) in [(0.52, -0.18, 0.5, 0.24, -16), (0.4, 0.2, 0.36, 0.17, 18)]:
+                px, py = cx + sgn * ws * dx, cy + ws * dy
+                d = smooth_poly(ring(px, py, ws * rx, ws * ry, 8, ctx.var["seed"] + int(dx * 100) + sgn, 0.16))
+                cid = ctx.nid("cl")
+                ctx.defs.append(f'<clipPath id="{cid}"><path d="{d}"/></clipPath>')
+                g += f'<path d="{d}" fill="url(#void{ctx.uid})" opacity=".95" transform="rotate({rot * sgn} {px:.1f} {py:.1f})"/>'
+                g += (f'<g clip-path="url(#{cid})"><path d="{d}" fill="{ctx.sty["neb"]}" opacity=".4"/>'
+                      + starfield(px - ws * rx, py - ws * ry, ws * rx * 2, ws * ry * 2, ctx.var["seed"] + int(rx * 90),
+                                  count=9, tint=ctx.sty["star"]) + "</g>")
+                g += f'<path d="{d}" fill="none" stroke="url(#rim{ctx.uid})" stroke-width="1.2" opacity=".9"/>'
+        else:
+            g += (f'<path d="M{cx:.1f},{cy - ws * 0.1:.1f} Q{cx + sgn * ws * 0.62:.1f},{cy - ws * 0.42:.1f} '
+                  f'{cx + sgn * ws * 0.58:.1f},{cy - ws * 0.02:.1f} Q{cx + sgn * ws * 0.4:.1f},{cy + ws * 0.06:.1f} '
+                  f'{cx:.1f},{cy:.1f} Z" fill="url(#body{ctx.uid})" stroke="{ctx.ink}" stroke-width="1.9"/>')
+            g += (f'<path d="M{cx:.1f},{cy + ws * 0.03:.1f} Q{cx + sgn * ws * 0.44:.1f},{cy + ws * 0.16:.1f} '
+                  f'{cx + sgn * ws * 0.38:.1f},{cy + ws * 0.36:.1f} Q{cx + sgn * ws * 0.2:.1f},{cy + ws * 0.3:.1f} '
+                  f'{cx:.1f},{cy + ws * 0.1:.1f} Z" fill="url(#body2{ctx.uid})" stroke="{ctx.ink}" stroke-width="1.7"/>')
+            g += spots(ctx.el, [(cx + sgn * ws * 0.34, cy - ws * 0.16, 3.2), (cx + sgn * ws * 0.28, cy + ws * 0.2, 2.6)], ctx.e)
+    g += (f'<ellipse cx="{cx:.1f}" cy="{cy + ws * 0.06:.1f}" rx="{ws * 0.09:.1f}" ry="{ws * 0.22:.1f}" '
+          f'fill="url(#{"void" if ctx.s == 5 else "belly"}{ctx.uid})" stroke="{ctx.ink}" stroke-width="1.6"/>')
+    hy = cy - ws * 0.2
+    g += sh_head(ctx, cx, hy, ws * 0.11, "blunt")
+    for sgn in (-1, 1):
+        g += (f'<path d="M{cx + sgn * 3:.1f},{hy - ws * 0.08:.1f} q{sgn * 9:.1f},-10 {sgn * 15:.1f},-8" fill="none" '
+              f'stroke="{ctx.ink}" stroke-width="1.5" stroke-linecap="round"/>')
+        if ctx.s == 5:
+            g += star(cx + sgn * 15, hy - ws * 0.08 - 8, 2.2, ctx.sty["star"], .95)
+        else:
+            g += tuft(ctx.el, cx + sgn * 15, hy - ws * 0.08 - 8, 3.4, ctx.e, sgn * 30)
+    g += sh_face(ctx, cx + ws * 0.08, hy, ws * 0.14, p.get("mood", "calm"), "none", 0.0)
+    if p.get("motes"):
+        g += sh_orbitals(ctx, cx, cy, ws * 0.72, p["motes"])
+    return g
+
+
+def bp_float(ctx, p):
+    """Hovering core with trailing tendrils — wisps, jellies and lanterns."""
+    cx, cy, r = p["cx"], p["cy"], p["r"]
+    g = sh_ground(ctx, cx, cy + r * 2.6, r * 0.9)
+    if p.get("aura"):
+        g += sh_aura(ctx, cx, cy, r * 1.9, p["aura"])
+    n = p.get("tendrils", 5)
+    for i in range(n):
+        tx = cx - r * 0.7 + i * (r * 1.4 / max(1, n - 1))
+        sway = -5 if i % 2 else 5
+        if ctx.s == 5:
+            g += (f'<path d="M{tx:.1f},{cy + r * 0.6:.1f} q{sway:.0f},{r * 0.9:.1f} {sway * 0.3:.0f},{r * 1.8:.1f}" fill="none" '
+                  f'stroke="{ctx.sty["neb"]}" stroke-width="2.2" opacity=".85" stroke-linecap="round"/>')
+            g += star(tx + sway * 0.3, cy + r * 2.4, 1.8, ctx.sty["star"], .9)
+        else:
+            g += (f'<path d="M{tx:.1f},{cy + r * 0.6:.1f} q{sway:.0f},{r * 0.9:.1f} {sway * 0.3:.0f},{r * 1.8:.1f}" fill="none" '
+                  f'stroke="{ctx.pal[1]}" stroke-width="2.4" opacity=".9" stroke-linecap="round"/>')
+    if p.get("bell", 1):
+        d = (f"M{cx - r:.1f},{cy + r * 0.55:.1f} a{r:.1f},{r * 0.92:.1f} 0 0 1 {r * 2:.1f},0 "
+             f"Q{cx:.1f},{cy + r * 0.9:.1f} {cx - r:.1f},{cy + r * 0.55:.1f} Z")
+        g += P(ctx, d, f"url(#orb{ctx.uid})" if ctx.s != 5 else f"url(#void{ctx.uid})")
+        if ctx.s == 5:
+            cid = ctx.nid("cl")
+            ctx.defs.append(f'<clipPath id="{cid}"><path d="{d}"/></clipPath>')
+            g += (f'<g clip-path="url(#{cid})">' + starfield(cx - r, cy - r, r * 2, r * 1.8, ctx.var["seed"] + 8,
+                                                             count=12, tint=ctx.sty["star"]) + "</g>")
+            g += f'<path d="{d}" fill="none" stroke="url(#rim{ctx.uid})" stroke-width="1.4" opacity=".9"/>'
+    else:
+        g += f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="{r:.1f}" fill="url(#orb{ctx.uid})" stroke="{ctx.ink}" stroke-width="2"/>'
+    g += sh_crest(ctx, cx, cy - r * 0.2, r * 0.7, p.get("crest", "plume"), p.get("stage", 1))
+    g += sh_face(ctx, cx + r * 0.28, cy + r * 0.05, r * 0.72, p.get("mood", "calm"), p.get("mouth", "smile"), 0.0)
+    if p.get("motes"):
+        g += sh_orbitals(ctx, cx, cy, r * 1.6, p["motes"])
+    return g
+
+
+def bp_plant(ctx, p):
+    """Rooted body with a crown — sprouts, buds and thickets."""
+    cx, cy, bw, bh = p["cx"], p["cy"], p["bw"], p["bh"]
+    g = sh_ground(ctx, cx, cy + bh + 4, bw * 1.35)
+    if p.get("aura"):
+        g += sh_aura(ctx, cx, cy - bh * 0.3, bw * 1.9, p["aura"])
+    for sgn in (-1, 1):
+        g += sh_arm(ctx, cx + sgn * bw * 0.8, cy - bh * 0.1, cx + sgn * bw * 1.7, cy - bh * (0.6 + p.get("armlift", 0.0)), bw * 0.24)
+        if ctx.s == 5:
+            g += star(cx + sgn * bw * 1.7, cy - bh * (0.6 + p.get("armlift", 0.0)), 2.6, ctx.sty["star"], .95)
+        else:
+            g += tuft(ctx.el, cx + sgn * bw * 1.78, cy - bh * (0.68 + p.get("armlift", 0.0)), bw * 0.38, ctx.e, sgn * 52)
+    g += sh_torso(ctx, cx, cy, bw, bh)
+    fy = cy - bh - bw * 0.16
+    petals = p.get("petals", 5)
+    pr = p.get("pr", bw * 0.9)
+    for i in range(petals):
+        a = math.pi * (0.1 + 0.8 * i / max(1, petals - 1))
+        px, py = cx - math.cos(a) * pr, fy - math.sin(a) * pr * 0.74
+        if ctx.s == 5:
+            g += f'<circle cx="{px:.1f}" cy="{py:.1f}" r="{pr * 0.2:.1f}" fill="url(#void{ctx.uid})" stroke="url(#rim{ctx.uid})" stroke-width="1.1"/>'
+            g += star(px, py, pr * 0.13, ctx.sty["star"], .95)
+        else:
+            g += tuft(ctx.el, px, py, pr * 0.42, ctx.e, math.degrees(a) - 90)
+    g += (f'<circle cx="{cx:.1f}" cy="{fy + bw * 0.16:.1f}" r="{bw * 0.3:.1f}" fill="url(#orb{ctx.uid})" '
+          f'stroke="{ctx.ink}" stroke-width="1.6"/>')
+    g += sh_face(ctx, cx + bw * 0.3, cy - bh * 0.06, bw * 0.8, p.get("mood", "calm"), p.get("mouth", "smile"), 0.0)
+    if p.get("motes"):
+        g += sh_orbitals(ctx, cx, cy - bh * 0.2, bw * 1.7, p["motes"])
+    return g
+
+
+def bp_shell(ctx, p):
+    """A hard home plus whatever pokes out of it — crabs and snails."""
+    cx, cy, rw, rh = p["cx"], p["cy"], p["rw"], p["rh"]
+    kind = p.get("shell", "dome")
+    g = sh_ground(ctx, cx, cy + rh + 8, rw * 1.15)
+    if p.get("aura"):
+        g += sh_aura(ctx, cx, cy, rw * 1.25, p["aura"])
+    if kind == "dome":
+        for sgn in (-1, 1):
+            for j in range(3):
+                g += (f'<path d="M{cx + sgn * rw * 0.7:.1f},{cy + 4 + j * 4:.1f} q{sgn * rw * 0.4:.1f},4 {sgn * rw * 0.48:.1f},14" '
+                      f'fill="none" stroke="{ctx.pal[2] if ctx.s != 5 else ctx.sty["neb"]}" stroke-width="2.4" stroke-linecap="round"/>')
+            g += sh_arm(ctx, cx + sgn * rw * 0.66, cy - 2, cx + sgn * rw * 1.36, cy - rh * 0.6, 5)
+            cxx, cyy = cx + sgn * rw * 1.44, cy - rh * 0.7
+            g += P(ctx, f"M{cxx:.1f},{cyy:.1f} q{sgn * 10:.1f},-6 {sgn * 2:.1f},-12 q{-sgn * 6:.1f},2 {-sgn * 2:.1f},8 "
+                        f"q{-sgn * 8:.1f},-2 {-sgn * 8:.1f},6 Z",
+                   f"url(#void{ctx.uid})" if ctx.s == 5 else f"url(#body{ctx.uid})", 1.6)
+        d = sh_shape(ctx, cx, cy - rh * 0.1, rw, rh, ctx.var["seed"] + 19)
+        g += P(ctx, d, f"url(#void{ctx.uid})" if ctx.s == 5 else f"url(#body{ctx.uid})")
+        if ctx.s == 5:
+            cid = ctx.nid("cl")
+            ctx.defs.append(f'<clipPath id="{cid}"><path d="{d}"/></clipPath>')
+            g += (f'<g clip-path="url(#{cid})">' + starfield(cx - rw, cy - rh, rw * 2, rh * 2, ctx.var["seed"] + 6,
+                                                             count=14, tint=ctx.sty["star"]) + "</g>")
+            g += f'<path d="{d}" fill="none" stroke="url(#rim{ctx.uid})" stroke-width="1.4" opacity=".9"/>'
+        else:
+            g += sh_marks(ctx, cx, cy - rh * 0.1, rw * 0.8, rh * 0.8)
+        for sgn in (-1, 1):
+            g += (f'<line x1="{cx + sgn * rw * 0.24:.1f}" y1="{cy - rh * 0.6:.1f}" x2="{cx + sgn * rw * 0.26:.1f}" '
+                  f'y2="{cy - rh * 1.15:.1f}" stroke="{ctx.pal[2] if ctx.s != 5 else ctx.sty["neb"]}" stroke-width="2.4"/>')
+        g += sh_eyes(ctx, cx - rw * 0.26, cy - rh * 1.24, 3.0, look=0, mood=p.get("mood", "calm"), gap=rw * 0.52)
+        g += sh_mouth(ctx, cx - rw * 0.22, cy + rh * 0.28, rw * 0.44, p.get("mouth", "grin"))
+    else:  # coiled shell on a soft body
+        g += (f'<path d="M{cx - rw * 1.2:.1f},{cy + rh * 0.6:.1f} q-2,-14 {rw * 0.5:.1f},-14 l{rw * 0.62:.1f},0 '
+              f'q{rw * 0.2:.1f},10 {-rw * 0.14:.1f},14 Z" fill="url(#{"void" if ctx.s == 5 else "belly"}{ctx.uid})" '
+              f'stroke="{ctx.ink}" stroke-width="2"/>')
+        hx, hy = cx - rw * 1.12, cy - rh * 0.12
+        g += sh_head(ctx, hx, hy, rw * 0.3, "blunt")
+        for sgn in (-1, 1):
+            g += (f'<line x1="{hx - rw * 0.06:.1f}" y1="{hy - rw * 0.26:.1f}" x2="{hx - rw * 0.2:.1f}" '
+                  f'y2="{hy - rw * 0.26 + sgn * rw * 0.3:.1f}" stroke="{ctx.pal[2] if ctx.s != 5 else ctx.sty["neb"]}" stroke-width="2"/>')
+        g += sh_face(ctx, hx + rw * 0.12, hy, rw * 0.34, p.get("mood", "calm"), "none", -0.9, pair=False)
+        d = sh_shape(ctx, cx, cy - rh * 0.2, rw * 0.78, rh * 0.86, ctx.var["seed"] + 23)
+        g += P(ctx, d, f"url(#void{ctx.uid})" if ctx.s == 5 else f"url(#body{ctx.uid})")
+        spiral = (f'M{cx:.1f},{cy - rh * 0.2:.1f} m0,0 a4,4 0 1 1 6,-2 a9,9 0 1 1 -13,3 a15,15 0 1 1 22,-4')
+        g += f'<path d="{spiral}" fill="none" stroke="{ctx.sty["star"] if ctx.s == 5 else ctx.pal[3]}" stroke-width="1.8" opacity=".9"/>'
+        g += sh_crest(ctx, cx, cy - rh * 0.9, rw * 0.4, p.get("crest", "plume"), p.get("stage", 1))
+    if p.get("motes"):
+        g += sh_orbitals(ctx, cx, cy, rw * 1.3, p["motes"])
+    return g
+
+
+def bp_construct(ctx, p):
+    """Built, not born: stacked masses with a glowing face."""
+    cx, cy, bw, bh = p["cx"], p["cy"], p["bw"], p["bh"]
+    g = sh_ground(ctx, cx, cy + bh * 1.9, bw * 1.1)
+    if p.get("aura"):
+        g += sh_aura(ctx, cx, cy - bh * 0.2, bw * 1.5, p["aura"])
+    float_parts = ctx.s == 5 or p.get("float")
+    gap = bh * (0.34 if float_parts else 0.0)
+    for lx in (cx - bw * 0.5, cx + bw * 0.5):
+        if float_parts:
+            d = sh_shape(ctx, lx, cy + bh * 1.4, bw * 0.36, bh * 0.5, ctx.var["seed"] + int(lx))
+            g += P(ctx, d, f"url(#void{ctx.uid})" if ctx.s == 5 else f"url(#body2{ctx.uid})", 1.8)
+        else:
+            g += sh_leg(ctx, lx, cy + bh * 0.62, bw * 0.44, bh * 0.8)
+    for sgn in (-1, 1):
+        ax = cx + sgn * (bw + bw * 0.02)
+        d = sh_shape(ctx, ax, cy + bh * 0.28 + gap, bw * 0.3, bh * 0.66, ctx.var["seed"] + 40 + sgn)
+        g += P(ctx, d, f"url(#void{ctx.uid})" if ctx.s == 5 else f"url(#body2{ctx.uid})", 2.0)
+    g += sh_torso(ctx, cx, cy, bw, bh, belly=False)
+    g += (f'<rect x="{cx - bw * 0.62:.1f}" y="{cy - bh * 0.55:.1f}" width="{bw * 1.24:.1f}" height="{bh * 0.9:.1f}" '
+          f'rx="{bw * 0.2:.1f}" fill="{ctx.pal[3]}" opacity=".55"/>')
+    g += sh_eyes(ctx, cx - bw * 0.28, cy - bh * 0.1, bw * 0.15, look=0, mood=p.get("mood", "calm"), gap=bw * 0.56)
+    g += sh_mouth(ctx, cx - bw * 0.3, cy + bh * 0.34, bw * 0.6, p.get("mouth", "grin"))
+    g += sh_crest(ctx, cx, cy - bh * 0.95, bw * 0.44, p.get("crest", "crown"), p.get("stage", 1))
+    if p.get("motes"):
+        g += sh_orbitals(ctx, cx, cy, bw * 1.4, p["motes"])
+    return g
+
+
+PLANS = {
+    "quad": bp_quad, "biped": bp_biped, "serpent": bp_serpent, "swimmer": bp_swimmer,
+    "flyer": bp_flyer, "insect": bp_insect, "wingbug": bp_wingbug, "float": bp_float,
+    "plant": bp_plant, "shell": bp_shell, "construct": bp_construct,
+}
+
+
+# --------------------------------------------------------------- card -> role
 SETS = [
-  {"element":"fire",
-   "lines3":[["Emberpup","Cinderhound","Pyrewolf"],["Pebblit","Boulderkin","Magmalith"],
-             ["Wickling","Candloth","Infernaya"],["Emberchick","Blazecrow","Cindraven"],
-             ["Flintling","Scorchmaw","Vulcanine"],["Emberling","Scaldrake","Pyrothraxx"]],
-   "lines2":[["Ashling","Cendrake"],["Flicktail","Emberdon"],["Sootcub","Charbruin"],
-             ["Smoldfin","Searpike"],["Kindlebug","Flarebeetle"],["Emberkit","Flarelynx"],["Torchbud","Bloomfire"]],
-   "singles_common":["Sootmoth","Coalcrab","Wispfox","Flarebud","Torchfin","Ashhare",
-                     "Cindermite","Smokewisp","Charsnail","Emberfly","Warmtoad","Glowmoth"],
-   "singles_uncommon":["Magmaw","Blazehorn"],"singles_rare":["Obsidra"],
-   "singles_ultra":["Ignarok","Solmyr","Emberyx"],
-   "rock_names":{"Pebblit","Boulderkin","Magmalith","Coalcrab","Charsnail","Obsidra"}},
-  {"element":"water",
-   "lines3":[["Dripling","Splashound","Tidalwolf"],["Frostnib","Glacikin","Glacialith"],
-             ["Bubblet","Coralad","Reeflord"],["Mistchick","Fogcrane","Vaporegal"],
-             ["Snowpup","Frostmaw","Blizzardine"],["Rilling","Streamsnout","Torrentyx"]],
-   "lines2":[["Puddlit","Marshark"],["Icktail","Frostdon"],["Sleetcub","Chillbruin"],
-             ["Minnowisp","Anglerfright"],["Krillbug","Nautibeetle"],["Frostkit","Rimelynx"],["Kelpbud","Bloomtide"]],
-   "singles_common":["Dewmoth","Icecrab","Mistfox","Foambud","Coldfin","Snowhare",
-                     "Frostmite","Vaporwisp","Shellsnail","Brinefly","Chilltoad","Glowjelly"],
-   "singles_uncommon":["Maelmaw","Frosthorn"],"singles_rare":["Nacreon"],
-   "singles_ultra":["Abyssos","Glaciera","Maelstros"],"rock_names":set()},
-  {"element":"grass",
-   "lines3":[["Seedling","Sprouthound","Thornwolf"],["Budnib","Bloomkin","Bloomalith"],
-             ["Vinelet","Bramblad","Canopylord"],["Sporechick","Mosscrane","Verduregal"],
-             ["Leafpup","Thornmaw","Sylvandine"],["Rootling","Barksnout","Titanyx"]],
-   "lines2":[["Spriglit","Bramblark"],["Ivytail","Petaldon"],["Ferncub","Timberbruin"],
-             ["Tadseed","Lilypike"],["Aphidbug","Beetlebloom"],["Sporekit","Mosslynx"],["Seedbud","Bloomthicket"]],
-   "singles_common":["Pollmoth","Barkcrab","Fernfox","Petalbud","Reedfin","Cloverhare",
-                     "Sporemite","Pollenwisp","Vinesnail","Dewfly","Mosstoad","Glowspore"],
-   "singles_uncommon":["Bramblehorn","Saproot"],"singles_rare":["Verdanox"],
-   "singles_ultra":["Sylvareth","Floreon","Eldwyrm"],"rock_names":set()},
-  {"element":"electric",
-   "lines3":[["Sparkpup","Volthound","Thunderwolf"],["Zapnib","Boltkin","Fulgralith"],
-             ["Statlet","Arclad","Stormlord"],["Fizzchick","Wattcrane","Voltregal"],
-             ["Joltpup","Surgemaw","Galvandine"],["Currentling","Coilsnout","Teslyx"]],
-   "lines2":[["Buzzlit","Sparkshark"],["Ziptail","Voltdon"],["Staticub","Thunderbruin"],
-             ["Sparkfin","Zappike"],["Mothbolt","Beetlesurge"],["Joltkit","Arclynx"],["Sparkbud","Boltthicket"]],
-   "singles_common":["Zapmoth","Voltcrab","Sparkfox","Fizzbud","Wattfin","Bolthare",
-                     "Staticmite","Ozonewisp","Coilsnail","Amperefly","Buzztoad","Glowvolt"],
-   "singles_uncommon":["Surgehorn","Dynamaw"],"singles_rare":["Voltanox"],
-   "singles_ultra":["Fulguros","Tempesta","Voltaeon"],"rock_names":set()},
-  {"element":"shadow",
-   "lines3":[["Duskpup","Shadowhound","Nightwolf"],["Voidnib","Umbrakin","Voidalith"],
-             ["Gloamlet","Shadelad","Eclipselord"],["Wispchick","Nebulacrane","Astregal"],
-             ["Shadepup","Diremaw","Umbrandine"],["Riftling","Starsnout","Cosmyx"]],
-   "lines2":[["Murklit","Voidshark"],["Shadetail","Umbradon"],["Gloomcub","Nightbruin"],
-             ["Inkfin","Voidpike"],["Mothshade","Beetlevoid"],["Duskkit","Shadelynx"],["Starbud","Voidthicket"]],
-   "singles_common":["Duskmoth","Voidcrab","Shadefox","Gloombud","Darkfin","Umbrahare",
-                     "Shademite","Netherwisp","Voidsnail","Cometfly","Murktoad","Glowshade"],
-   "singles_uncommon":["Nebulahorn","Riftmaw"],"singles_rare":["Umbranox"],
-   "singles_ultra":["Nyxaros","Astralon","Eclipsar"],"rock_names":set()},
+  {"element": "fire",
+   "lines3": [["Emberpup", "Cinderhound", "Pyrewolf"], ["Pebblit", "Boulderkin", "Magmalith"],
+              ["Wickling", "Candloth", "Infernaya"], ["Emberchick", "Blazecrow", "Cindraven"],
+              ["Flintling", "Scorchmaw", "Vulcanine"], ["Emberling", "Scaldrake", "Pyrothraxx"]],
+   "lines2": [["Ashling", "Cendrake"], ["Flicktail", "Emberdon"], ["Sootcub", "Charbruin"],
+              ["Smoldfin", "Searpike"], ["Kindlebug", "Flarebeetle"], ["Emberkit", "Flarelynx"],
+              ["Torchbud", "Bloomfire"]],
+   "singles_common": ["Sootmoth", "Coalcrab", "Wispfox", "Flarebud", "Torchfin", "Ashhare",
+                      "Cindermite", "Smokewisp", "Charsnail", "Emberfly", "Warmtoad", "Glowmoth"],
+   "singles_uncommon": ["Magmaw", "Blazehorn"], "singles_rare": ["Obsidra"],
+   "singles_ultra": ["Ignarok", "Solmyr", "Emberyx"]},
+  {"element": "water",
+   "lines3": [["Dripling", "Splashound", "Tidalwolf"], ["Frostnib", "Glacikin", "Glacialith"],
+              ["Bubblet", "Coralad", "Reeflord"], ["Mistchick", "Fogcrane", "Vaporegal"],
+              ["Snowpup", "Frostmaw", "Blizzardine"], ["Rilling", "Streamsnout", "Torrentyx"]],
+   "lines2": [["Puddlit", "Marshark"], ["Icktail", "Frostdon"], ["Sleetcub", "Chillbruin"],
+              ["Minnowisp", "Anglerfright"], ["Krillbug", "Nautibeetle"], ["Frostkit", "Rimelynx"],
+              ["Kelpbud", "Bloomtide"]],
+   "singles_common": ["Dewmoth", "Icecrab", "Mistfox", "Foambud", "Coldfin", "Snowhare",
+                      "Frostmite", "Vaporwisp", "Shellsnail", "Brinefly", "Chilltoad", "Glowjelly"],
+   "singles_uncommon": ["Maelmaw", "Frosthorn"], "singles_rare": ["Nacreon"],
+   "singles_ultra": ["Abyssos", "Glaciera", "Maelstros"]},
+  {"element": "grass",
+   "lines3": [["Seedling", "Sprouthound", "Thornwolf"], ["Budnib", "Bloomkin", "Bloomalith"],
+              ["Vinelet", "Bramblad", "Canopylord"], ["Sporechick", "Mosscrane", "Verduregal"],
+              ["Leafpup", "Thornmaw", "Sylvandine"], ["Rootling", "Barksnout", "Titanyx"]],
+   "lines2": [["Spriglit", "Bramblark"], ["Ivytail", "Petaldon"], ["Ferncub", "Timberbruin"],
+              ["Tadseed", "Lilypike"], ["Aphidbug", "Beetlebloom"], ["Sporekit", "Mosslynx"],
+              ["Seedbud", "Bloomthicket"]],
+   "singles_common": ["Pollmoth", "Barkcrab", "Fernfox", "Petalbud", "Reedfin", "Cloverhare",
+                      "Sporemite", "Pollenwisp", "Vinesnail", "Dewfly", "Mosstoad", "Glowspore"],
+   "singles_uncommon": ["Bramblehorn", "Saproot"], "singles_rare": ["Verdanox"],
+   "singles_ultra": ["Sylvareth", "Floreon", "Eldwyrm"]},
+  {"element": "electric",
+   "lines3": [["Sparkpup", "Volthound", "Thunderwolf"], ["Zapnib", "Boltkin", "Fulgralith"],
+              ["Statlet", "Arclad", "Stormlord"], ["Fizzchick", "Wattcrane", "Voltregal"],
+              ["Joltpup", "Surgemaw", "Galvandine"], ["Currentling", "Coilsnout", "Teslyx"]],
+   "lines2": [["Buzzlit", "Sparkshark"], ["Ziptail", "Voltdon"], ["Staticub", "Thunderbruin"],
+              ["Sparkfin", "Zappike"], ["Mothbolt", "Beetlesurge"], ["Joltkit", "Arclynx"],
+              ["Sparkbud", "Boltthicket"]],
+   "singles_common": ["Zapmoth", "Voltcrab", "Sparkfox", "Fizzbud", "Wattfin", "Bolthare",
+                      "Staticmite", "Ozonewisp", "Coilsnail", "Amperefly", "Buzztoad", "Glowvolt"],
+   "singles_uncommon": ["Surgehorn", "Dynamaw"], "singles_rare": ["Voltanox"],
+   "singles_ultra": ["Fulguros", "Tempesta", "Voltaeon"]},
+  {"element": "shadow",
+   "lines3": [["Duskpup", "Shadowhound", "Nightwolf"], ["Voidnib", "Umbrakin", "Voidalith"],
+              ["Gloamlet", "Shadelad", "Eclipselord"], ["Wispchick", "Nebulacrane", "Astregal"],
+              ["Shadepup", "Diremaw", "Umbrandine"], ["Riftling", "Starsnout", "Cosmyx"]],
+   "lines2": [["Murklit", "Voidshark"], ["Shadetail", "Umbradon"], ["Gloomcub", "Nightbruin"],
+              ["Inkfin", "Voidpike"], ["Mothshade", "Beetlevoid"], ["Duskkit", "Shadelynx"],
+              ["Starbud", "Voidthicket"]],
+   "singles_common": ["Duskmoth", "Voidcrab", "Shadefox", "Gloombud", "Darkfin", "Umbrahare",
+                      "Shademite", "Netherwisp", "Voidsnail", "Cometfly", "Murktoad", "Glowshade"],
+   "singles_uncommon": ["Nebulahorn", "Riftmaw"], "singles_rare": ["Umbranox"],
+   "singles_ultra": ["Nyxaros", "Astralon", "Eclipsar"]},
 ]
 
-LINE3_SLOTS = ["canine","golem","lord","bird","saber","dragon"]
-LINE2_SLOTS = ["shark","don","bear","fish","beetle","lynx","plant"]
-SINGLE_COMMON_SLOTS = ["moth","crab","fox","sprout","fish","hare","mite","wisp","snail","fly","toad","glow"]
-SINGLE_UNCOMMON_SLOTS = ["maw","horn"]
+LINE3_SLOTS = ["canine", "golem", "lord", "bird", "saber", "dragon"]
+LINE2_SLOTS = ["shark", "don", "bear", "fish", "beetle", "lynx", "plant"]
+SINGLE_COMMON_SLOTS = ["moth", "crab", "fox", "sprout", "finling", "hare",
+                       "mite", "wisp", "snail", "fly", "toad", "glow"]
+
 
 def build_roles():
-    """name -> dict(slot, stage, stage_count, legendary)"""
+    """name -> dict(set, slot, stage, sc, leg). One (set, slot, stage) per card."""
     roles = {}
-    for s in SETS:
+    for si, s in enumerate(SETS):
+        n = si + 1
         for li, line in enumerate(s["lines3"]):
             for st, nm in enumerate(line):
-                roles[nm] = dict(slot=LINE3_SLOTS[li], stage=st+1, sc=3, leg=None)
+                roles[nm] = dict(set=n, slot=LINE3_SLOTS[li], stage=st + 1, sc=3, leg=None)
         for li, line in enumerate(s["lines2"]):
             for st, nm in enumerate(line):
-                roles[nm] = dict(slot=LINE2_SLOTS[li], stage=st+1, sc=2, leg=None)
+                roles[nm] = dict(set=n, slot=LINE2_SLOTS[li], stage=st + 1, sc=2, leg=None)
         for i, nm in enumerate(s["singles_common"]):
-            roles[nm] = dict(slot=SINGLE_COMMON_SLOTS[i], stage=1, sc=1, leg=None)
-        for i, nm in enumerate(s["singles_uncommon"]):
-            roles[nm] = dict(slot=SINGLE_UNCOMMON_SLOTS[i], stage=1, sc=1, leg=None)
+            roles[nm] = dict(set=n, slot=SINGLE_COMMON_SLOTS[i], stage=1, sc=1, leg=None)
+        for nm in s["singles_uncommon"]:
+            # The name decides the body, not the list order: "-horn" cards get horns.
+            roles[nm] = dict(set=n, slot="horn" if nm.endswith("horn") else "maw",
+                             stage=1, sc=1, leg=None)
         for nm in s["singles_rare"]:
-            roles[nm] = dict(slot="majestic", stage=1, sc=1, leg=None)
+            roles[nm] = dict(set=n, slot="majestic", stage=1, sc=1, leg=None)
         for nm in s["singles_ultra"]:
-            roles[nm] = dict(slot="legendary", stage=1, sc=1, leg=nm)
+            roles[nm] = dict(set=n, slot="legendary", stage=1, sc=1, leg=nm)
     return roles
+
 
 ROLES = build_roles()
 
-# ============================================================ archetype builders
-# All creatures are drawn in the 216x150 window, standing on the ground band.
-# Base pose faces left. Returns an SVG fragment (defs are added by card()).
 
-def _spikes(uid, e, pts):
-    st = e["pal"][3]
-    out = f'<g fill="url(#body2{uid})" stroke="{st}" stroke-width="1.6" stroke-linejoin="round">'
-    for (x, y, w, h) in pts:
-        out += f'<path d="M{x-w},{y} L{x},{y-h} L{x+w},{y} Z"/>'
-    return out + "</g>"
+# ------------------------------------------------------------- concept tables
+# SLOT_BASE gives the family silhouette and how it grows across a line.
+# SET_OVR then re-imagines that family for one set, so (set, slot) is a
+# different creature everywhere, not a palette swap.
+SLOT_BASE = {
+    "canine": dict(plan="quad", base=dict(cx=108, cy=80, bw=34, bh=23, hr=18, legh=22,
+                                          hkind="muzzle", ears="point", tail="plume", mouth="smile"),
+                   st=[dict(bw=25, bh=17, hr=14, legh=15, tsize=15),
+                       dict(bw=32, bh=22, hr=17, legh=21, spine="spikes", spinen=4, tsize=22),
+                       dict(bw=37, bh=24, hr=19, legh=27, spine="spikes", spinen=6, tsize=28,
+                            mouth="fang", mood="fierce", crest="horn")]),
+    "golem": dict(plan="construct", base=dict(cx=108, cy=74, bw=26, bh=24, mouth="grin"),
+                  st=[dict(bw=18, bh=16, crest="none", cy=84),
+                      dict(bw=25, bh=23, crest="cap", cy=78),
+                      dict(bw=33, bh=30, crest="crown", aura=1, float=1, mood="fierce", mouth="fang")]),
+    "lord": dict(plan="biped", base=dict(cx=108, cy=76, bw=21, bh=23, hr=15, legh=20,
+                                         crest="crown", hands=1, core=1),
+                 st=[dict(bw=14, bh=15, hr=11, legh=14, crest="cap", core=0, hands=0),
+                     dict(bw=19, bh=21, hr=14, robe=1),
+                     dict(bw=24, bh=27, hr=17, robe=1, wingsides=(-1, 1), wspan=30, aura=2,
+                          mane=1, mood="fierce")]),
+    "bird": dict(plan="flyer", base=dict(cx=108, cy=76, bw=19, bh=21, hr=12, legh=24,
+                                         tail="fan", crest="plume"),
+                 st=[dict(bw=13, bh=14, hr=9, legh=15, wspan=17, tsize=9),
+                     dict(bw=18, bh=20, hr=11, legh=25, wspan=27, neck=10, tsize=13),
+                     dict(bw=22, bh=24, hr=13, legh=30, wspan=38, neck=20, tsize=19, aura=1,
+                          mood="fierce")]),
+    "saber": dict(plan="quad", base=dict(cx=108, cy=82, bw=38, bh=27, hr=20, legh=14,
+                                         hkind="feline", ears="small", tail="brush",
+                                         mouth="fang", mood="fierce", espread=0.75, lw=13),
+                  st=[dict(bw=27, bh=20, hr=15, legh=10, mouth="smile", mood="calm", tsize=15),
+                      dict(bw=35, bh=26, hr=19, legh=13, mane=1, manen=4, tsize=20),
+                      dict(bw=43, bh=32, hr=23, legh=16, mane=1, manen=7, spine="spikes",
+                           spinen=6, tsize=25, dhx=0.04)]),
+    "dragon": dict(plan="serpent", base=dict(cx=104, cy=74, hr=16, coils=3, hkind="jaw",
+                                             crest="horn", mouth="fang", mood="fierce"),
+                   st=[dict(k=0.66, hr=11, coils=2, crest="none", mouth="smile", mood="calm"),
+                       dict(k=0.86, hr=14, coils=3),
+                       dict(k=1.08, hr=18, coils=4, wingsides=(-1, 1), wspan=42, aura=2, ears="point")]),
+    "shark": dict(plan="swimmer", base=dict(cx=108, cy=76, L=44, H=20, tail="fluke",
+                                            spine="sail", mouth="fang", mood="fierce"),
+                  st=[dict(L=34, H=15, spinen=2, tsize=14),
+                      dict(L=50, H=23, spinen=4, tsize=22, crest="horn", aura=1)]),
+    "don": dict(plan="quad", base=dict(cx=108, cy=80, bw=32, bh=22, hr=17, legh=22,
+                                       hkind="muzzle", ears="round", tail="brush", neck=0.35),
+                st=[dict(bw=25, bh=17, hr=14, legh=16, neck=0.0, tsize=17),
+                    dict(bw=35, bh=24, hr=19, legh=25, neck=0.55, crest="crown", aura=1,
+                         tsize=26, spine="rings", spinen=5)]),
+    "bear": dict(plan="biped", base=dict(cx=108, cy=80, bw=25, bh=22, hr=17, legh=16,
+                                         ears="round", hands=1, mouth="grin", lw=16),
+                 st=[dict(bw=19, bh=17, hr=14, legh=12),
+                     dict(bw=29, bh=26, hr=20, legh=19, mane=1, manen=5, mood="fierce",
+                          mouth="fang", crest="horn", armdrop=0.15)]),
+    "fish": dict(plan="swimmer", base=dict(cx=108, cy=78, L=38, H=17, tail="fan",
+                                           spine="spikes", mouth="grin"),
+                 st=[dict(L=28, H=13, spinen=2, tsize=11),
+                     dict(L=44, H=20, spinen=4, tsize=18, lure=1, mouth="fang", mood="fierce")]),
+    "beetle": dict(plan="insect", base=dict(cx=108, cy=84, rw=27, rh=22, crest="horn",
+                                            antennae=1, mouth="none"),
+                   st=[dict(rw=20, rh=16, crest="none"),
+                       dict(rw=31, rh=26, crest="horn", aura=1, legpairs=3, mood="fierce")]),
+    "lynx": dict(plan="quad", base=dict(cx=108, cy=74, bw=28, bh=16, hr=15, legh=32,
+                                        hkind="feline", ears="tuft", tail="whip", espread=1.2, lw=6),
+                 st=[dict(bw=23, bh=13, hr=12, legh=25, tsize=18),
+                     dict(bw=31, bh=18, hr=17, legh=36, tsize=27, spine="spikes",
+                          spinen=3, mood="fierce")]),
+    "plant": dict(plan="plant", base=dict(cx=108, cy=96, bw=17, bh=26, petals=5, pr=26),
+                  st=[dict(bw=12, bh=18, petals=4, pr=18),
+                      dict(bw=21, bh=32, petals=7, pr=33, aura=1, armlift=0.25)]),
+    "moth": dict(plan="wingbug", base=dict(cx=108, cy=72, ws=62, mood="calm")),
+    "crab": dict(plan="shell", base=dict(cx=108, cy=84, rw=28, rh=20, shell="dome", mouth="grin")),
+    "fox": dict(plan="quad", base=dict(cx=110, cy=84, bw=24, bh=16, hr=17, legh=17, lw=6,
+                                       hkind="feline", ears="point", espread=1.5,
+                                       tail="brush", tsize=30)),
+    "sprout": dict(plan="plant", base=dict(cx=108, cy=100, bw=13, bh=17, petals=3, pr=17, armlift=0.3)),
+    "finling": dict(plan="swimmer", base=dict(cx=108, cy=80, L=30, H=14, tail="frond",
+                                              spine="none", pecfin=1, tsize=12, mouth="smile")),
+    "hare": dict(plan="biped", base=dict(cx=108, cy=86, bw=17, bh=16, hr=14, legh=18,
+                                         ears="long", espread=0.7, hands=1, mouth="smile")),
+    "mite": dict(plan="insect", base=dict(cx=108, cy=92, rw=17, rh=14, legpairs=2,
+                                          crest="none", antennae=1, mouth="grin")),
+    "wisp": dict(plan="float", base=dict(cx=108, cy=68, r=17, bell=0, tendrils=4,
+                                         crest="plume", mouth="smile", aura=1)),
+    "snail": dict(plan="shell", base=dict(cx=112, cy=84, rw=24, rh=20, shell="coil", crest="plume")),
+    "fly": dict(plan="wingbug", base=dict(cx=108, cy=74, ws=44, mood="fierce")),
+    "toad": dict(plan="quad", base=dict(cx=108, cy=92, bw=30, bh=17, hr=17, legh=8, lw=12,
+                                        hkind="toad", ears="none", tail="none", mouth="grin",
+                                        look=-0.2, dhx=-0.12)),
+    "glow": dict(plan="float", base=dict(cx=108, cy=66, r=20, bell=1, tendrils=6,
+                                         crest="none", mouth="smile", aura=2)),
+    "maw": dict(plan="quad", base=dict(cx=108, cy=84, bw=31, bh=22, hr=22, legh=13, lw=12,
+                                       hkind="jaw", ears="none", tail="whip", spine="sail",
+                                       spinen=5, mouth="fang", mood="fierce", dhx=0.1, tsize=24)),
+    "horn": dict(plan="quad", base=dict(cx=108, cy=80, bw=33, bh=24, hr=18, legh=22,
+                                        hkind="blunt", ears="small", tail="prong", crest="horn",
+                                        stage=3, spine="rings", spinen=4, tsize=20)),
+    "majestic": dict(plan="flyer", base=dict(cx=108, cy=74, bw=21, bh=23, hr=13, legh=28,
+                                             wspan=36, neck=14, tail="fan", tsize=18,
+                                             crest="crown", aura=2, motes=4, stage=3)),
+}
 
-def quad(uid, e, var, cx, cy, bw, bh, headr, ear="elem", tail="elem",
-         mane=0, mouth="smile", look=-0.7, angry=False, earsize=None, snout=1):
-    """Shared side-profile quadruped. Mammal archetypes are configs of this."""
-    pal, glow, el, st = e["pal"], e["glow"], e["acc"], e["pal"][3]
-    earsize = earsize or headr*0.7
-    hx, hy = cx - bw*0.66, cy - bh*0.52
-    legh = bh*0.9
-    lw = bw*0.30
-    g = f'<ellipse cx="{cx}" cy="{cy+bh+legh*0.9:.1f}" rx="{bw*1.02:.1f}" ry="{bh*0.26:.1f}" fill="#000" opacity=".22"/>'
-    g += f'<g stroke="{st}" stroke-width="2.3" stroke-linejoin="round" stroke-linecap="round">'
-    # far legs (darker)
-    for lx in (cx-bw*0.30, cx+bw*0.34):
-        g += f'<rect x="{lx-lw/2:.1f}" y="{cy+bh*0.2:.1f}" width="{lw:.1f}" height="{legh+bh*0.55:.1f}" rx="{lw/2:.1f}" fill="url(#body2{uid})"/>'
-    # tail
-    if tail == "elem":
-        g += tuft(el, cx+bw*0.98, cy-bh*0.28, bh*0.92, e, 35)
-    elif tail == "fluff":
-        for i, (dx, dy, r) in enumerate([(0.9,-0.1,0.5),(1.15,-0.35,0.42),(1.32,-0.62,0.32)]):
-            g += f'<circle cx="{cx+bw*dx:.1f}" cy="{cy+bh*dy:.1f}" r="{bh*r:.1f}" fill="url(#body{uid})"/>'
-    elif tail == "plain":
-        g += f'<path d="M{cx+bw*0.8:.1f},{cy:.1f} q{bw*0.5},{-bh*0.2} {bw*0.55},{-bh*0.9}" fill="none" stroke="{st}" stroke-width="{bw*0.16:.1f}"/>'
-    elif tail == "long":
-        g += f'<path d="M{cx+bw*0.85:.1f},{cy-bh*0.1:.1f} q{bw*0.7},{-bh*0.1} {bw*0.7},{-bh*1.1}" fill="none" stroke="url(#body2{uid})" stroke-width="{bw*0.2:.1f}"/>'
-        g += tuft(el, cx+bw*1.55, cy-bh*1.2, bh*0.5, e, 20)
-    # body
-    g += f'<ellipse cx="{cx}" cy="{cy}" rx="{bw}" ry="{bh}" fill="url(#body{uid})"/>'
-    g += f'<ellipse cx="{cx-bw*0.05}" cy="{cy+bh*0.34}" rx="{bw*0.55}" ry="{bh*0.52}" fill="url(#belly{uid})" stroke="none"/>'
-    if var["spots"]:
-        pts = [(cx+bw*0.2, cy-bh*0.1, 2.2), (cx+bw*0.5, cy+bh*0.1, 2.0), (cx-bw*0.1, cy-bh*0.3, 1.8)][:var["spots"]]
-        g += spots(el, pts, e)
-    if mane:
-        g += _spikes(uid, e, [(cx-bw*0.5, cy-bh*0.75, 5, 12), (cx-bw*0.2, cy-bh*0.95, 6, 15),
-                              (cx+bw*0.12, cy-bh*0.9, 6, 14), (cx+bw*0.42, cy-bh*0.7, 5, 11)])
-    # near legs
-    for lx in (cx-bw*0.52, cx+bw*0.56):
-        g += f'<rect x="{lx-lw/2:.1f}" y="{cy+bh*0.25:.1f}" width="{lw:.1f}" height="{legh+bh*0.6:.1f}" rx="{lw/2:.1f}" fill="url(#body{uid})"/>'
-        g += f'<ellipse cx="{lx}" cy="{cy+bh+legh*0.85:.1f}" rx="{lw*0.62:.1f}" ry="{lw*0.4:.1f}" fill="{pal[2]}"/>'
-    # head
-    g += f'<circle cx="{hx:.1f}" cy="{hy:.1f}" r="{headr:.1f}" fill="url(#body{uid})"/>'
-    # ears
-    e1x, e1y = hx-headr*0.1, hy-headr*0.78
-    e2x, e2y = hx+headr*0.55, hy-headr*0.72
-    if ear == "elem":
-        g += tuft(el, e1x, e1y, earsize, e, -14) + tuft(el, e2x, e2y, earsize, e, 16)
-    elif ear == "round":
-        g += f'<circle cx="{e1x:.1f}" cy="{e1y+earsize*0.3:.1f}" r="{earsize*0.62:.1f}" fill="url(#body{uid})"/>'
-        g += f'<circle cx="{e2x:.1f}" cy="{e2y+earsize*0.3:.1f}" r="{earsize*0.62:.1f}" fill="url(#body{uid})"/>'
-    elif ear in ("pointed", "long", "tuft"):
-        hlen = {"pointed":1.1, "long":2.1, "tuft":1.3}[ear]
-        for (ex, r) in [(e1x,-8),(e2x,10)]:
-            g += f'<path d="M{ex-earsize*0.4:.1f},{hy-headr*0.3:.1f} L{ex:.1f},{hy-headr*0.3-earsize*hlen:.1f} L{ex+earsize*0.4:.1f},{hy-headr*0.3:.1f} Z" fill="url(#body{uid})" transform="rotate({r} {ex} {hy})"/>'
-        if ear == "tuft":
-            g += tuft(el, e1x, e1y-earsize*0.6, earsize*0.5, e, -10) + tuft(el, e2x, e2y-earsize*0.6, earsize*0.5, e, 10)
-    # snout
-    if snout:
-        g += f'<ellipse cx="{hx-headr*0.72:.1f}" cy="{hy+headr*0.34:.1f}" rx="{headr*0.42:.1f}" ry="{headr*0.32:.1f}" fill="url(#body{uid})"/>'
-        g += f'<circle cx="{hx-headr*1.02:.1f}" cy="{hy+headr*0.24:.1f}" r="{headr*0.13:.1f}" fill="{st}"/>'
-    # eyes
-    er = headr*0.24
-    g += eye(hx-headr*0.34, hy-headr*0.04, er, glow=glow, look=look*er, angry=angry, glowy=(el in ("shadow","electric")))
-    g += eye(hx+headr*0.16, hy-headr*0.02, er*0.92, glow=glow, look=look*er, angry=angry, glowy=(el in ("shadow","electric")))
-    # mouth
-    if mouth == "smile":
-        g += f'<path d="M{hx-headr*0.95:.1f},{hy+headr*0.52:.1f} q{headr*0.35},{headr*0.3} {headr*0.7},0" fill="none" stroke="{st}" stroke-width="1.5"/>'
-    elif mouth == "fang":
-        g += f'<path d="M{hx-headr*1.0:.1f},{hy+headr*0.45:.1f} q{headr*0.5},{headr*0.5} {headr*0.95},0.05" fill="{st}" stroke="none"/>'
-        g += f'<path d="M{hx-headr*0.8:.1f},{hy+headr*0.5:.1f} l2,6 l3,-6 Z" fill="#fff"/>'
-    return g + "</g>"
 
-def stage_k(stage, sc):
-    if sc == 3: return [0.82, 0.97, 1.14][stage-1]
-    if sc == 2: return [0.86, 1.06][stage-1]
-    return 0.95
+# Emberfall — cooling crust over a living furnace. Heavy, plated, ember-crowned.
+_S1 = {
+    "canine": dict(tail="plume", ears="point", espread=1.1,
+                   st=[dict(), dict(crest="horn"), dict(crest="horn", motes=4)]),
+    "golem": dict(mouth="grin", st=[dict(), dict(crest="horn"), dict(crest="crown", motes=5)]),
+    "lord": dict(crest="plume", st=[dict(crest="plume"), dict(crest="plume", core=1),
+                                    dict(crest="crown", motes=4, wing="spread")]),
+    "bird": dict(tail="plume", crest="plume", st=[dict(), dict(crest="horn"),
+                                                  dict(crest="crown", motes=5, wspan=42)]),
+    "saber": dict(crest="none", tail="brush",
+                  st=[dict(), dict(manen=5), dict(manen=8, motes=4)]),
+    "dragon": dict(crest="horn", st=[dict(), dict(spine="spikes"), dict(motes=6, aura=2)]),
+    "shark": dict(tail="fluke", spine="sail", st=[dict(), dict(crest="horn", motes=4)]),
+    "don": dict(ears="round", tail="brush", st=[dict(), dict(crest="crown", motes=3)]),
+    "bear": dict(ears="round", st=[dict(), dict(crest="horn", motes=3)]),
+    "fish": dict(tail="fan", st=[dict(), dict(lure=1, motes=3)]),
+    "beetle": dict(crest="horn", st=[dict(), dict(crest="antler", motes=4)]),
+    "lynx": dict(ears="tuft", tail="whip", st=[dict(), dict(motes=3, mane=1, manen=3)]),
+    "plant": dict(petals=5, st=[dict(), dict(petals=8, pr=35, motes=4)]),
+    "moth": dict(ws=60, motes=4),
+    "crab": dict(rw=29, rh=19, crest="horn", mood="fierce"),
+    "fox": dict(tail="plume", tsize=29, ears="point", espread=1.4, crest="none"),
+    "sprout": dict(petals=3, pr=18, bh=16),
+    "finling": dict(tail="fan", spine="spikes", spinen=2),
+    "hare": dict(ears="long", espread=0.65, crest="none", mouth="smile"),
+    "mite": dict(rw=16, rh=13, crest="horn", legpairs=2),
+    "wisp": dict(bell=0, tendrils=3, crest="plume", r=16, motes=4),
+    "snail": dict(crest="plume", rw=25),
+    "fly": dict(ws=42, mood="fierce", motes=3),
+    "toad": dict(bw=29, bh=18, mouth="grin", crest="none"),
+    "glow": dict(bell=1, tendrils=5, crest="plume", r=19, motes=5),
+    "maw": dict(hkind="jaw", spine="sail", tail="whip", crest="none", motes=4),
+    "horn": dict(crest="horn", tail="prong", spine="rings", motes=3),
+    "majestic": dict(plan="quad", cx=108, cy=78, bw=38, bh=26, hr=20, legh=24, hkind="jaw",
+                     ears="small", crest="antler", tail="plume", tsize=30, spine="spikes",
+                     spinen=6, mane=1, manen=5, mouth="fang", mood="fierce",
+                     wingsides=(-1, 1), wspan=34, aura=2, motes=6, stage=3),
+}
 
-# ----- mammal-family archetypes (configs of quad) -----
-def a_canine(uid, e, stage, sc, var):
-    k = stage_k(stage, sc)
-    fierce = stage == sc and sc >= 2
-    return quad(uid, e, var, 108, 88, 40*k, 27*k, 20*k, ear="elem",
-                tail="elem", mane=1 if fierce else 0, mouth="fang" if fierce else "smile",
-                angry=fierce, look=-0.8)
+# Tidecaller — pressure, current and freeze. Streamlined, finned, buoyant.
+_S2 = {
+    "canine": dict(tail="fluke", ears="round", hkind="muzzle",
+                   st=[dict(), dict(spine="sail", spinen=3), dict(crest="frill", spine="sail",
+                                                                  spinen=5, motes=4)]),
+    "golem": dict(st=[dict(), dict(crest="cap"), dict(crest="frill", motes=5, float=1)]),
+    "lord": dict(crest="crown", st=[dict(crest="cap"), dict(crest="frill"),
+                                    dict(crest="crown", motes=4, wspan=28)]),
+    "bird": dict(tail="frond", crest="plume", legh=30,
+                 st=[dict(), dict(neck=16), dict(neck=26, crest="frill", motes=4)]),
+    "saber": dict(crest="none", tail="fluke", ears="round",
+                  st=[dict(), dict(manen=5), dict(manen=8, motes=4)]),
+    "dragon": dict(crest="frill", hkind="jaw",
+                   st=[dict(), dict(ears="point"), dict(motes=5, aura=2, spine="sail")]),
+    "shark": dict(tail="fluke", spine="sail", L=46, st=[dict(), dict(crest="frill", motes=4)]),
+    "don": dict(ears="round", tail="fluke", st=[dict(), dict(crest="frill", motes=3)]),
+    "bear": dict(ears="round", st=[dict(), dict(crest="frill", motes=3)]),
+    "fish": dict(tail="fluke", st=[dict(), dict(lure=1, crest="horn", motes=3)]),
+    "beetle": dict(crest="frill", rw=29, st=[dict(), dict(crest="horn", motes=4)]),
+    "lynx": dict(ears="tuft", tail="frond", st=[dict(), dict(motes=3, mane=1, manen=3)]),
+    "plant": dict(petals=6, pr=28, st=[dict(), dict(petals=9, pr=35, motes=4)]),
+    "moth": dict(ws=58, motes=3),
+    "crab": dict(rw=30, rh=21, crest="none", mouth="grin"),
+    "fox": dict(tail="plume", tsize=26, ears="point", espread=1.25),
+    "sprout": dict(petals=4, pr=19, bh=15),
+    "finling": dict(tail="fluke", spine="none", L=31),
+    "hare": dict(ears="long", espread=0.8, crest="cap"),
+    "mite": dict(rw=17, rh=13, crest="none", legpairs=3),
+    "wisp": dict(bell=0, tendrils=5, crest="frill", r=17, motes=3),
+    "snail": dict(crest="frill", rw=26, rh=22),
+    "fly": dict(ws=46, mood="calm", motes=3),
+    "toad": dict(bw=30, bh=19, crest="frill", mouth="grin"),
+    "glow": dict(bell=1, tendrils=8, crest="none", r=22, motes=6),
+    "maw": dict(hkind="jaw", spine="sail", tail="fluke", crest="frill", motes=4),
+    "horn": dict(crest="horn", tail="fluke", spine="sail", motes=3),
+    "majestic": dict(plan="serpent", cx=104, cy=72, k=1.05, hr=17, coils=4, hkind="jaw",
+                     crest="frill", ears="point", mouth="fang", mood="fierce",
+                     wingsides=(-1, 1), wspan=30, aura=2, motes=6, stage=3),
+}
 
-def a_bear(uid, e, stage, sc, var):
-    k = stage_k(stage, sc)
-    return quad(uid, e, var, 108, 86, 44*k, 33*k, 22*k, ear="round",
-                tail="fluff", mane=0, mouth="smile", earsize=16*k, look=-0.5)
 
-def a_fox(uid, e, stage, sc, var):
-    k = stage_k(stage, sc)*0.96
-    return quad(uid, e, var, 108, 90, 36*k, 24*k, 18*k, ear="pointed",
-                tail="fluff", mouth="smile", earsize=15*k, look=-0.8)
+# Verdspire — everything is overgrown. Antlers, fronds, blossoms, bark rings.
+_S3 = {
+    "canine": dict(tail="frond", ears="tuft", hkind="muzzle",
+                   st=[dict(), dict(crest="antler"), dict(crest="antler", spine="spikes",
+                                                          spinen=6, motes=5)]),
+    "golem": dict(st=[dict(), dict(crest="cap"), dict(crest="antler", motes=6, aura=1)]),
+    "lord": dict(crest="cap", st=[dict(crest="cap"), dict(crest="crown"),
+                                  dict(crest="antler", motes=5, wspan=32)]),
+    "bird": dict(tail="frond", crest="cap", legh=30,
+                 st=[dict(), dict(neck=14), dict(neck=24, crest="antler", motes=5)]),
+    "saber": dict(crest="none", tail="frond", ears="tuft",
+                  st=[dict(), dict(manen=5), dict(manen=9, motes=5)]),
+    "dragon": dict(crest="antler", hkind="jaw",
+                   st=[dict(), dict(spine="spikes"), dict(motes=6, aura=2, spine="sail")]),
+    "shark": dict(tail="frond", spine="spikes", st=[dict(), dict(crest="antler", motes=4)]),
+    "don": dict(ears="tuft", tail="frond", st=[dict(), dict(crest="cap", motes=4, aura=1)]),
+    "bear": dict(ears="round", st=[dict(), dict(crest="antler", motes=4)]),
+    "fish": dict(tail="frond", st=[dict(), dict(crest="cap", lure=1, motes=3)]),
+    "beetle": dict(crest="antler", st=[dict(), dict(crest="antler", rw=32, motes=5, aura=1)]),
+    "lynx": dict(ears="tuft", tail="frond", st=[dict(), dict(motes=4, mane=1, manen=4)]),
+    "plant": dict(petals=7, pr=30, armlift=0.15, st=[dict(), dict(petals=11, pr=38, motes=6, aura=1)]),
+    "moth": dict(ws=64, motes=5),
+    "crab": dict(rw=28, rh=21, crest="cap", mouth="grin"),
+    "fox": dict(tail="frond", tsize=28, ears="tuft", espread=1.2),
+    "sprout": dict(petals=5, pr=21, bh=19, armlift=0.4),
+    "finling": dict(tail="frond", spine="spikes", spinen=3, L=32),
+    "hare": dict(ears="long", espread=0.75, crest="cap"),
+    "mite": dict(rw=18, rh=14, crest="cap", legpairs=3),
+    "wisp": dict(bell=0, tendrils=6, crest="cap", r=18, motes=5),
+    "snail": dict(crest="cap", rw=25, rh=21),
+    "fly": dict(ws=44, mood="calm", motes=4),
+    "toad": dict(bw=29, bh=19, crest="cap", mouth="grin"),
+    "glow": dict(bell=1, tendrils=6, crest="cap", r=20, motes=6),
+    "maw": dict(hkind="jaw", spine="spikes", tail="frond", crest="antler", legh=10, motes=5),
+    "horn": dict(crest="antler", tail="frond", spine="spikes", motes=4),
+    "majestic": dict(plan="plant", cx=108, cy=104, bw=24, bh=40, petals=13, pr=44, armlift=0.5,
+                     aura=2, motes=7, mood="fierce", mouth="fang"),
+}
 
-def a_hare(uid, e, stage, sc, var):
-    k = stage_k(stage, sc)*0.92
-    return quad(uid, e, var, 108, 92, 32*k, 24*k, 17*k, ear="long",
-                tail="fluff", mouth="smile", earsize=12*k, snout=1, look=-0.6)
+# Voltcrest — charge routed through machined plate. Prongs, coils, visors, rivets.
+_S4 = {
+    "canine": dict(tail="prong", ears="point", espread=1.2, hkind="muzzle",
+                   st=[dict(), dict(spine="coil"), dict(crest="horn", spine="coil", motes=5)]),
+    "golem": dict(st=[dict(), dict(crest="cap"), dict(crest="crown", motes=6, float=1, aura=1)]),
+    "lord": dict(crest="crown", st=[dict(crest="cap"), dict(crest="horn"),
+                                    dict(crest="crown", motes=6, wspan=32, aura=2)]),
+    "bird": dict(tail="prong", crest="horn", legh=28,
+                 st=[dict(), dict(neck=13), dict(neck=22, crest="crown", motes=5)]),
+    "saber": dict(crest="none", tail="prong", ears="point", espread=0.9,
+                  st=[dict(), dict(manen=5), dict(manen=8, spine="coil", motes=5)]),
+    "dragon": dict(crest="horn", hkind="jaw",
+                   st=[dict(), dict(spine="coil"), dict(motes=6, aura=2, spine="coil")]),
+    "shark": dict(tail="prong", spine="coil", st=[dict(), dict(crest="horn", motes=4)]),
+    "don": dict(ears="point", tail="prong", st=[dict(), dict(crest="crown", motes=4)]),
+    "bear": dict(ears="round", st=[dict(), dict(crest="horn", motes=4)]),
+    "fish": dict(tail="prong", st=[dict(), dict(lure=1, crest="horn", motes=4)]),
+    "beetle": dict(crest="horn", st=[dict(), dict(crest="horn", rw=32, motes=5, aura=1)]),
+    "lynx": dict(ears="point", espread=1.3, tail="prong", st=[dict(), dict(motes=4, mane=1, manen=4)]),
+    "plant": dict(petals=6, pr=29, st=[dict(), dict(petals=9, pr=36, motes=5, aura=1)]),
+    "moth": dict(ws=56, motes=5),
+    "crab": dict(rw=29, rh=20, crest="horn", mouth="grin"),
+    "fox": dict(tail="prong", tsize=26, ears="point", espread=1.5),
+    "sprout": dict(petals=4, pr=20, bh=17),
+    "finling": dict(tail="prong", spine="coil", spinen=3, L=31),
+    "hare": dict(ears="long", espread=0.9, crest="horn"),
+    "mite": dict(rw=17, rh=13, crest="horn", legpairs=3),
+    "wisp": dict(bell=0, tendrils=4, crest="horn", r=17, motes=5),
+    "snail": dict(crest="horn", rw=26, rh=20),
+    "fly": dict(ws=48, mood="fierce", motes=5),
+    "toad": dict(bw=30, bh=18, crest="horn", mouth="grin"),
+    "glow": dict(bell=1, tendrils=5, crest="horn", r=21, motes=6),
+    "maw": dict(hkind="jaw", spine="coil", tail="prong", crest="horn", motes=5),
+    "horn": dict(crest="horn", tail="prong", spine="coil", motes=4),
+    "majestic": dict(plan="construct", cx=108, cy=76, bw=30, bh=28, crest="crown", float=1,
+                     mouth="fang", mood="fierce", aura=2, motes=7, stage=3),
+}
 
-def a_lynx(uid, e, stage, sc, var):
-    k = stage_k(stage, sc)
-    return quad(uid, e, var, 108, 88, 38*k, 26*k, 19*k, ear="tuft",
-                tail="plain", mouth="smile", earsize=13*k, look=-0.7)
 
-def a_saber(uid, e, stage, sc, var):
-    k = stage_k(stage, sc)
-    fierce = stage == sc
-    return quad(uid, e, var, 108, 88, 42*k, 28*k, 21*k, ear="pointed",
-                tail="long", mane=1 if fierce else 0, mouth="fang" if fierce else "smile",
-                angry=fierce, earsize=14*k, look=-0.85)
+# Umbral Reach — every body is a hole cut in the sky. Haloes, comet trails,
+# constellation stitching and pieces that broke off and never fell.
+_S5 = {
+    "canine": dict(tail="comet", ears="point", espread=1.2, hkind="muzzle", aura=1,
+                   st=[dict(motes=3), dict(crest="horn", spine="rings", motes=5),
+                       dict(crest="horn", spine="rings", spinen=6, motes=8, aura=2,
+                            wingsides=(-1,), wspan=30)]),
+    "golem": dict(float=1, aura=1,
+                  st=[dict(motes=4), dict(crest="halo", motes=6),
+                      dict(crest="halo", motes=9, aura=2)]),
+    "lord": dict(crest="halo", aura=1,
+                 st=[dict(crest="halo", motes=4), dict(crest="halo", motes=6, robe=1),
+                     dict(crest="halo", motes=10, wspan=34, aura=2, mood="fierce")]),
+    "bird": dict(tail="fan", crest="plume", legh=28, aura=1,
+                 st=[dict(motes=4), dict(neck=15, motes=6),
+                     dict(neck=26, motes=9, wspan=44, aura=2)]),
+    "saber": dict(crest="none", tail="plume", tsize=17, aura=1, ears="round", mane=1,
+                  st=[dict(manen=4, motes=3), dict(manen=6, motes=5),
+                      dict(manen=10, motes=9, spine="spikes", spinen=5, aura=2)]),
+    "dragon": dict(crest="halo", hkind="jaw", aura=1,
+                   st=[dict(motes=4), dict(spine="rings", motes=6),
+                       dict(motes=10, aura=2, spine="rings")]),
+    "shark": dict(tail="fluke", spine="spikes", spinen=4, aura=1, st=[dict(motes=4), dict(crest="frill", motes=7, aura=2)]),
+    "don": dict(ears="round", tail="brush", tsize=18, aura=1, st=[dict(motes=4), dict(crest="crown", motes=7, aura=2)]),
+    "bear": dict(ears="round", aura=1, st=[dict(motes=4), dict(crest="halo", motes=7, aura=2)]),
+    "fish": dict(tail="fan", aura=1, st=[dict(motes=4), dict(lure=1, crest="frill", motes=7)]),
+    "beetle": dict(crest="halo", aura=1, st=[dict(motes=4), dict(rw=32, motes=8, aura=2)]),
+    "lynx": dict(ears="tuft", tail="whip", tsize=20, aura=1, st=[dict(motes=4), dict(motes=7, crest="antler")]),
+    "plant": dict(petals=6, pr=30, aura=1, st=[dict(motes=5), dict(petals=10, pr=38, motes=9, aura=2)]),
+    "moth": dict(ws=66, motes=7, aura=1),
+    "crab": dict(rw=29, rh=21, crest="horn", mouth="void", motes=5, aura=1),
+    "fox": dict(tail="fan", tsize=30, ears="long", espread=1.3, motes=5, aura=1),
+    "sprout": dict(petals=4, pr=21, bh=17, motes=4, aura=1),
+    "finling": dict(tail="fluke", spine="rings", spinen=3, L=32, motes=4, aura=1),
+    "hare": dict(ears="long", espread=0.85, crest="none", tail="comet", motes=5, aura=1),
+    "mite": dict(rw=18, rh=14, crest="plume", legpairs=3, motes=4, aura=1),
+    "wisp": dict(bell=0, tendrils=5, crest="halo", r=18, motes=7, aura=2),
+    "snail": dict(crest="plume", rw=26, rh=21, motes=5, aura=1),
+    "fly": dict(ws=50, mood="fierce", motes=6, aura=1),
+    "toad": dict(bw=30, bh=19, crest="antler", mouth="void", motes=5, aura=1),
+    "glow": dict(bell=1, tendrils=7, crest="halo", r=22, motes=8, aura=2),
+    "maw": dict(hkind="jaw", spine="spikes", spinen=6, tail="prong", crest="none", motes=7, aura=2),
+    "horn": dict(crest="horn", tail="whip", spine="rings", motes=6, aura=2),
+    "majestic": dict(plan="float", cx=108, cy=68, r=26, bell=0, tendrils=7, crest="halo",
+                     mouth="void", mood="fierce", aura=2, motes=10, stage=3),
+}
 
-def a_don(uid, e, stage, sc, var):
-    """horned saurian quadruped (tail -> don)."""
-    k = stage_k(stage, sc)
-    pal, st = e["pal"], e["pal"][3]
-    hx, hy = 108 - 40*k*0.66, 88 - 27*k*0.52
-    base = quad(uid, e, var, 108, 88, 40*k, 28*k, 20*k, ear="round",
-                tail="plain", mouth="smile", earsize=9*k, look=-0.6)
-    # horns forward
-    horn = f'<g stroke="{st}" stroke-width="1.8" stroke-linejoin="round" fill="{pal[0]}">'
-    horn += f'<path d="M{hx-16*k:.1f},{hy-8*k:.1f} q-12,-2 -18,-9 q10,-1 16,4 Z"/>'
-    horn += f'<path d="M{hx-6*k:.1f},{hy-16*k:.1f} q-2,-12 -8,-17 q0,10 3,17 Z"/></g>'
-    # back plates
-    plates = _spikes(uid, e, [(108-16*k, 88-26*k, 5, 10), (108+2*k, 88-30*k, 6, 13), (108+20*k, 88-24*k, 5, 10)])
-    return base + horn + plates
+SET_OVR = {}
+for _n, _t in ((1, _S1), (2, _S2), (3, _S3), (4, _S4), (5, _S5)):
+    for _slot, _o in _t.items():
+        SET_OVR[(_n, _slot)] = _o
 
-def a_maw(uid, e, stage, sc, var):
-    """big-mouthed beast (uncommon single)."""
-    k = 1.0
-    pal, st, glow = e["pal"], e["pal"][3], e["glow"]
-    g = quad(uid, e, var, 108, 88, 42, 28, 22, ear="pointed", tail="long",
-             mane=1, mouth="fang", angry=1, earsize=13, look=-0.85)
-    hx, hy = 108-42*0.66, 88-28*0.52
-    jaw = f'<path d="M{hx-20:.1f},{hy+6:.1f} q-6,14 6,18 q14,3 18,-6 q-10,2 -16,-4 q-4,-4 -8,-8 Z" fill="{pal[3]}" stroke="{st}" stroke-width="1.6"/>'
-    teeth = f'<g fill="#fff">'
-    for i in range(3):
-        teeth += f'<path d="M{hx-16+i*8:.1f},{hy+9:.1f} l2,6 l3,-6 Z"/>'
-    teeth += "</g>"
-    return g + jaw + teeth
 
-def a_horn(uid, e, stage, sc, var):
-    """ram-horned beast (uncommon single)."""
-    pal, st = e["pal"], e["pal"][3]
-    g = quad(uid, e, var, 108, 88, 40, 28, 21, ear="round", tail="fluff",
-             mouth="smile", earsize=9, look=-0.6)
-    hx, hy = 108-40*0.66, 88-28*0.52
-    ram = f'<g fill="url(#body2{uid})" stroke="{st}" stroke-width="1.8" stroke-linejoin="round">'
-    ram += f'<path d="M{hx-14:.1f},{hy-12:.1f} q-16,-6 -18,6 q-2,12 10,12 q-6,-8 0,-14 q6,-6 8,-4 Z"/>'
-    ram += f'<path d="M{hx+12:.1f},{hy-13:.1f} q16,-6 18,6 q2,12 -10,12 q6,-8 0,-14 q-6,-6 -8,-4 Z"/></g>'
-    return g + ram
+def resolve(setno, slot, stage, sc):
+    """Merge slot family -> stage growth -> set re-imagining -> set stage growth."""
+    fam = SLOT_BASE[slot]
+    plan = fam["plan"]
+    p = dict(fam["base"])
+    fst = fam.get("st")
+    if fst:
+        p.update(fst[min(stage - 1, len(fst) - 1)])
+    o = SET_OVR.get((setno, slot))
+    if o:
+        plan = o.get("plan", plan)
+        p.update({k: v for k, v in o.items() if k not in ("plan", "st")})
+        ost = o.get("st")
+        if ost:
+            p.update(ost[min(stage - 1, len(ost) - 1)])
+    p.setdefault("stage", stage)
+    p["sc"] = sc
+    return plan, p
 
-def a_majestic(uid, e, stage, sc, var):
-    """antlered regal beast (rare single)."""
-    pal, st, glow = e["pal"], e["pal"][3], e["glow"]
-    g = f'<circle cx="108" cy="66" r="46" fill="none" stroke="{glow}" stroke-width="2" opacity=".28"/>'
-    body = quad(uid, e, var, 108, 90, 40, 26, 19, ear="pointed", tail="long",
-                mouth="smile", earsize=10, look=-0.7)
-    hx, hy = 108-40*0.66, 90-26*0.52
-    ant = f'<g fill="none" stroke="url(#body2{uid})" stroke-width="3" stroke-linecap="round">'
-    for sgn in (-1, 1):
-        bx = hx + sgn*6
-        ant += f'<path d="M{bx:.1f},{hy-16:.1f} q{sgn*4},-14 {sgn*2},-24"/>'
-        ant += f'<path d="M{bx+sgn*2:.1f},{hy-26:.1f} q{sgn*10},-3 {sgn*14},-10"/>'
-        ant += f'<path d="M{bx+sgn*1:.1f},{hy-32:.1f} q{sgn*8},-4 {sgn*10},-12"/>'
-    ant += "</g>"
-    return g + body + ant
 
-def a_golem(uid, e, stage, sc, var):
-    k = stage_k(stage, sc)
-    pal, st, glow, el = e["pal"], e["pal"][3], e["glow"], e["acc"]
-    cx, cy, bw, bh = 108, 84, 40*k, 32*k
-    g = f'<ellipse cx="{cx}" cy="{cy+bh+bh*0.7:.1f}" rx="{bw*1.05:.1f}" ry="{bh*0.24:.1f}" fill="#000" opacity=".22"/>'
-    g += f'<g stroke="{st}" stroke-width="2.3" stroke-linejoin="round">'
-    for lx in (cx-bw*0.5, cx+bw*0.5):
-        g += f'<rect x="{lx-bw*0.22:.1f}" y="{cy+bh*0.55:.1f}" width="{bw*0.44:.1f}" height="{bh*0.75:.1f}" rx="7" fill="url(#body2{uid})"/>'
-    for ax in (cx-bw-bw*0.16, cx+bw-bw*0.18):
-        g += f'<rect x="{ax:.1f}" y="{cy-bh*0.2:.1f}" width="{bw*0.34:.1f}" height="{bh*0.95:.1f}" rx="8" fill="url(#body2{uid})"/>'
-    g += f'<rect x="{cx-bw:.1f}" y="{cy-bh:.1f}" width="{bw*2:.1f}" height="{bh*1.9:.1f}" rx="{bw*0.45:.1f}" fill="url(#body{uid})"/>'
-    # cracks
-    g += f'<g stroke="{pal[3]}" stroke-width="1.4" fill="none" opacity=".5"><path d="M{cx-bw*0.4:.1f},{cy-bh*0.7:.1f} l8,10 l-5,8"/><path d="M{cx+bw*0.5:.1f},{cy+bh*0.2:.1f} l-7,8"/></g>'
-    if var["spots"]:
-        g += spots(el, [(cx-bw*0.5, cy-bh*0.2, 2.4), (cx+bw*0.45, cy-bh*0.55, 2.2)][:max(1, var["spots"]-1) or 1], e)
-    # face panel
-    g += f'<rect x="{cx-bw*0.62:.1f}" y="{cy-bh*0.55:.1f}" width="{bw*1.24:.1f}" height="{bh*0.9:.1f}" rx="{bw*0.2:.1f}" fill="{pal[3]}" opacity=".55" stroke="none"/>'
-    er = bw*0.16
-    g += eye(cx-bw*0.28, cy-bh*0.1, er, glow=glow, look=0, glowy=True) + eye(cx+bw*0.28, cy-bh*0.1, er, glow=glow, look=0, glowy=True)
-    g += f'<path d="M{cx-bw*0.3:.1f},{cy+bh*0.35:.1f} q{bw*0.3:.1f},{bh*0.18:.1f} {bw*0.6:.1f},0" fill="none" stroke="{glow}" stroke-width="1.6" opacity=".8"/>'
-    g += "</g>"
-    # crown tufts
-    g += tuft(el, cx-bw*0.4, cy-bh-6, 10*k, e, -12) + tuft(el, cx, cy-bh-10, 13*k, e, 0) + tuft(el, cx+bw*0.4, cy-bh-6, 10*k, e, 12)
-    return g
+# =================================================================================
+# LEGENDARIES — one bespoke drawing each.
+# =================================================================================
 
-def a_lord(uid, e, stage, sc, var):
-    k = stage_k(stage, sc)
-    pal, st, glow, el = e["pal"], e["pal"][3], e["glow"], e["acc"]
-    cx = 108
-    top = 60 - (stage-1)*4
-    baseW = 30*k
-    g = f'<ellipse cx="{cx}" cy="132" rx="{baseW*1.2:.1f}" ry="7" fill="#000" opacity=".22"/>'
-    g += f'<circle cx="{cx}" cy="{top+6:.1f}" r="{34*k:.1f}" fill="none" stroke="{glow}" stroke-width="2" opacity=".3"/>'
-    g += f'<g stroke="{st}" stroke-width="2.3" stroke-linejoin="round">'
-    # robe (tapered)
-    g += f'<path d="M{cx-14*k:.1f},{top+16:.1f} L{cx+14*k:.1f},{top+16:.1f} L{cx+baseW:.1f},132 Q{cx},142 {cx-baseW:.1f},132 Z" fill="url(#body{uid})"/>'
-    # sleeves
-    g += f'<path d="M{cx-12*k:.1f},{top+22:.1f} Q{cx-baseW-6:.1f},{top+40:.1f} {cx-baseW*0.7:.1f},{top+62:.1f} L{cx-baseW*0.4:.1f},{top+56:.1f} Q{cx-16*k:.1f},{top+38:.1f} {cx-10*k:.1f},{top+34:.1f} Z" fill="url(#body2{uid})"/>'
-    g += f'<path d="M{cx+12*k:.1f},{top+22:.1f} Q{cx+baseW+6:.1f},{top+40:.1f} {cx+baseW*0.7:.1f},{top+62:.1f} L{cx+baseW*0.4:.1f},{top+56:.1f} Q{cx+16*k:.1f},{top+38:.1f} {cx+10*k:.1f},{top+34:.1f} Z" fill="url(#body2{uid})"/>'
-    # belly glow rune
-    g += f'<circle cx="{cx}" cy="{top+52:.1f}" r="{6*k:.1f}" fill="url(#orb{uid})"/>'
-    # hood/head
-    g += f'<path d="M{cx-15*k:.1f},{top+10:.1f} Q{cx}, {top-18*k:.1f} {cx+15*k:.1f},{top+10:.1f} Q{cx},{top+22:.1f} {cx-15*k:.1f},{top+10:.1f} Z" fill="url(#body{uid})"/>'
-    g += f'<ellipse cx="{cx}" cy="{top+8:.1f}" rx="{10*k:.1f}" ry="{9*k:.1f}" fill="{pal[3]}" stroke="none"/>'
-    g += eye(cx-4*k, top+7, 2.6*k, glow=glow, look=0, glowy=True) + eye(cx+4*k, top+7, 2.6*k, glow=glow, look=0, glowy=True)
-    g += "</g>"
-    # crown
-    g += tuft(el, cx-9*k, top-10*k, 8*k, e, -20) + tuft(el, cx, top-15*k, 11*k, e, 0) + tuft(el, cx+9*k, top-10*k, 8*k, e, 20)
-    return g
 
-def a_bird(uid, e, stage, sc, var):
-    k = stage_k(stage, sc)
-    pal, st, glow, el = e["pal"], e["pal"][3], e["glow"], e["acc"]
-    cx, cy = 108, 92
-    bw, bh = 15*k, 24*k
-    span = 34*k + (stage-1)*8
-    g = f'<ellipse cx="{cx}" cy="132" rx="{22*k:.1f}" ry="6" fill="#000" opacity=".2"/>'
-    g += f'<g stroke="{st}" stroke-width="2.2" stroke-linejoin="round">'
-    # legs
-    for lx in (cx-5*k, cx+5*k):
-        g += f'<line x1="{lx:.1f}" y1="{cy+bh*0.7:.1f}" x2="{lx:.1f}" y2="128" stroke="{pal[2]}" stroke-width="{2.2*k:.1f}"/>'
-        g += f'<path d="M{lx-4:.1f},128 h8 M{lx:.1f},128 v3" stroke="{pal[2]}" stroke-width="1.6"/>'
-    # wings (spread), feather tips element-tinted
-    for sgn in (-1, 1):
-        g += f'<path d="M{cx+sgn*bw*0.6:.1f},{cy-bh*0.3:.1f} Q{cx+sgn*span:.1f},{cy-bh*0.6:.1f} {cx+sgn*(span+6):.1f},{cy+bh*0.2:.1f} Q{cx+sgn*span*0.6:.1f},{cy+bh*0.5:.1f} {cx+sgn*bw*0.6:.1f},{cy+bh*0.4:.1f} Z" fill="url(#body{uid})"/>'
-        for i in range(3):
-            fx = cx + sgn*(span*0.5 + i*span*0.16)
-            g += tuft(el, fx, cy+bh*0.3, 6*k, e, sgn*40)
-    # body
-    g += f'<ellipse cx="{cx}" cy="{cy}" rx="{bw}" ry="{bh}" fill="url(#body{uid})"/>'
-    g += f'<ellipse cx="{cx}" cy="{cy+bh*0.2}" rx="{bw*0.6}" ry="{bh*0.6}" fill="url(#belly{uid})" stroke="none"/>'
-    # head
-    hy = cy - bh - 6*k
-    g += f'<circle cx="{cx}" cy="{hy:.1f}" r="{11*k:.1f}" fill="url(#body{uid})"/>'
-    g += f'<path d="M{cx-11*k:.1f},{hy:.1f} l-8,-2 l6,6 Z" fill="{glow}"/>'  # beak
-    g += eye(cx-3*k, hy-1, 2.6*k, glow=glow, look=-1, glowy=(el in ("shadow","electric")))
-    g += eye(cx+5*k, hy-1, 2.3*k, glow=glow, look=-1, glowy=(el in ("shadow","electric")))
-    # crest
-    g += tuft(el, cx, hy-10*k, 8*k, e, 0)
-    if stage == sc and sc == 3:
-        g += tuft(el, cx-5*k, hy-8*k, 6*k, e, -22) + tuft(el, cx+5*k, hy-8*k, 6*k, e, 22)
-        # tail plumes
-        g += tuft(el, cx, cy+bh+4, 10*k, e, 180)
-    return g + "</g>"
-
-def a_dragon(uid, e, stage, sc, var):
-    k = stage_k(stage, sc)
-    pal, st, glow, el = e["pal"], e["pal"][3], e["glow"], e["acc"]
-    g = f'<ellipse cx="112" cy="130" rx="{42*k:.1f}" ry="6" fill="#000" opacity=".2"/>'
-    if stage == sc and sc == 3:
-        g += f'<circle cx="108" cy="72" r="46" fill="none" stroke="{glow}" stroke-width="2" opacity=".26"/>'
-    g += f'<g stroke="{st}" stroke-width="2.3" stroke-linejoin="round">'
-    # coiled serpent body
-    b = (f'M150,128 C120,136 96,126 98,108 C100,94 118,92 120,104 C132,106 136,92 124,86 '
-         f'C104,76 78,88 76,110 C74,92 86,68 116,60 C100,58 86,70 84,82 C76,70 88,50 112,46 '
-         f'C118,56 116,64 108,70 Z')
-    g += f'<path d="{b}" fill="url(#body{uid})" transform="translate(108 90) scale({k:.2f}) translate(-108 -90)"/>'
-    # element mane spikes along back
-    for i, (mx, my) in enumerate([(104,64),(112,74),(118,88),(120,102)]):
-        px = 108 + (mx-108)*k
-        py = 90 + (my-90)*k
-        g += tuft(el, px, py-6, 7*k, e, (i%2)*10-5)
-    # head + horns
-    hx, hy = 108 + (96-108)*k, 90 + (48-90)*k
-    g += f'<path d="M{hx-10*k:.1f},{hy-6*k:.1f} Q{hx+6*k:.1f},{hy-14*k:.1f} {hx+12*k:.1f},{hy:.1f} Q{hx+6*k:.1f},{hy+10*k:.1f} {hx-8*k:.1f},{hy+8*k:.1f} Q{hx-16*k:.1f},{hy:.1f} {hx-10*k:.1f},{hy-6*k:.1f} Z" fill="url(#body{uid})"/>'
-    g += tuft(el, hx-2*k, hy-12*k, 7*k, e, -18) + tuft(el, hx+8*k, hy-11*k, 7*k, e, 14)
-    g += eye(hx-4*k, hy-1, 3.0*k, glow=glow, look=-1, angry=(stage==sc), glowy=(el in ("shadow","electric","fire")))
-    g += f'<path d="M{hx-14*k:.1f},{hy+4*k:.1f} q6,4 12,2" fill="none" stroke="{st}" stroke-width="1.4"/>'
-    if stage == sc and sc == 3:
-        for sgn in (1,):
-            g += f'<path d="M118,86 Q150,60 168,78 Q150,84 140,100 Z" fill="url(#body2{uid})" transform="translate(108 90) scale({k:.2f}) translate(-108 -90)"/>'
-    return g + "</g>"
-
-def _fish(uid, e, var, cx, cy, L, Hh, sharky):
-    pal, st, glow, el = e["pal"], e["pal"][3], e["glow"], e["acc"]
-    g = f'<ellipse cx="{cx}" cy="{cy+Hh+8:.1f}" rx="{L*0.7:.1f}" ry="{Hh*0.22:.1f}" fill="#000" opacity=".16"/>'
-    g += f'<g stroke="{st}" stroke-width="2.2" stroke-linejoin="round">'
-    # tail fin (right)
-    g += f'<path d="M{cx+L*0.82:.1f},{cy:.1f} l{L*0.3:.1f},{-Hh*0.9:.1f} l0,{Hh*1.8:.1f} Z" fill="url(#body2{uid})"/>'
-    # body teardrop (head left)
-    g += f'<path d="M{cx-L:.1f},{cy:.1f} C{cx-L:.1f},{cy-Hh*1.3:.1f} {cx+L*0.7:.1f},{cy-Hh:.1f} {cx+L*0.85:.1f},{cy:.1f} C{cx+L*0.7:.1f},{cy+Hh:.1f} {cx-L:.1f},{cy+Hh*1.3:.1f} {cx-L:.1f},{cy:.1f} Z" fill="url(#body{uid})"/>'
-    g += f'<path d="M{cx-L*0.9:.1f},{cy:.1f} C{cx-L*0.8:.1f},{cy+Hh*0.6:.1f} {cx+L*0.4:.1f},{cy+Hh*0.7:.1f} {cx+L*0.7:.1f},{cy+Hh*0.2:.1f}" fill="none" stroke="{pal[0]}" stroke-width="{Hh*0.28:.1f}" opacity=".7"/>'
-    # dorsal fin = element tuft
-    g += tuft(el, cx, cy-Hh*0.95, Hh*0.8, e, 0)
-    # pectoral fin
-    g += f'<path d="M{cx-L*0.2:.1f},{cy+Hh*0.3:.1f} q{-L*0.3:.1f},{Hh*0.5:.1f} {-L*0.05:.1f},{Hh*0.7:.1f} q{L*0.15:.1f},{-Hh*0.3:.1f} {L*0.1:.1f},{-Hh*0.6:.1f} Z" fill="url(#body2{uid})"/>'
-    if var["spots"]:
-        g += spots(el, [(cx, cy-Hh*0.2, 2.2), (cx+L*0.3, cy, 2.0)][:var["spots"]], e)
-    # eye + mouth
-    g += eye(cx-L*0.62, cy-Hh*0.18, Hh*0.22, glow=glow, look=-1, glowy=(el in ("shadow","electric")))
-    if sharky:
-        g += f'<path d="M{cx-L*0.98:.1f},{cy+Hh*0.28:.1f} q{L*0.3:.1f},{Hh*0.28:.1f} {L*0.55:.1f},{-Hh*0.05:.1f} l-2,6 l-6,-3 l-4,5 l-5,-4 l-5,4 Z" fill="#fff" stroke="{st}" stroke-width="1.2"/>'
-    else:
-        g += f'<path d="M{cx-L*0.95:.1f},{cy+Hh*0.28:.1f} q{L*0.22:.1f},{Hh*0.2:.1f} {L*0.4:.1f},0" fill="none" stroke="{st}" stroke-width="1.5"/>'
-    return g + "</g>"
-
-def a_shark(uid, e, stage, sc, var):
-    k = stage_k(stage, sc)
-    return _fish(uid, e, var, 104, 90, 50*k, 22*k, sharky=True)
-
-def a_fish(uid, e, stage, sc, var):
-    k = stage_k(stage, sc) if sc > 1 else 0.9
-    sharky = (sc == 2 and stage == 2)  # pike stage = toothy
-    return _fish(uid, e, var, 104, 92, 40*k, 22*k, sharky=sharky)
-
-def a_beetle(uid, e, stage, sc, var):
-    k = stage_k(stage, sc)
-    pal, st, glow, el = e["pal"], e["pal"][3], e["glow"], e["acc"]
-    cx, cy, rw, rh = 108, 90, 34*k, 28*k
-    g = f'<ellipse cx="{cx}" cy="{cy+rh+4:.1f}" rx="{rw:.1f}" ry="6" fill="#000" opacity=".2"/>'
-    g += f'<g stroke="{st}" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round">'
-    for i, sgn in enumerate((-1, 1)):
-        for j in range(3):
-            ly = cy - rh*0.2 + j*rh*0.5
-            g += f'<path d="M{cx+sgn*rw*0.7:.1f},{ly:.1f} q{sgn*rw*0.4:.1f},{-4:.1f} {sgn*rw*0.5:.1f},{6:.1f}" fill="none" stroke="{pal[2]}" stroke-width="{2.4*k:.1f}"/>'
-    # head + horn (element)
-    g += f'<circle cx="{cx}" cy="{cy-rh*0.75:.1f}" r="{rh*0.42:.1f}" fill="url(#body2{uid})"/>'
-    g += tuft(el, cx, cy-rh*1.25, 12*k, e, 0)
-    # carapace dome
-    g += f'<path d="M{cx-rw:.1f},{cy+rh*0.2:.1f} a{rw:.1f},{rh:.1f} 0 0 1 {rw*2:.1f},0 Z" fill="url(#body{uid})"/>'
-    g += f'<line x1="{cx}" y1="{cy-rh*0.78:.1f}" x2="{cx}" y2="{cy+rh*0.2:.1f}" stroke="{pal[3]}" stroke-width="1.6"/>'
-    if var["spots"]:
-        g += spots(el, [(cx-rw*0.4, cy-rh*0.1, 2.6), (cx+rw*0.4, cy-rh*0.1, 2.6), (cx-rw*0.2, cy-rh*0.4, 2.0)][:var["spots"]], e)
-    g += eye(cx-rh*0.18, cy-rh*0.78, 2.4*k, glow=glow, look=0, glowy=(el in ("shadow","electric"))) + eye(cx+rh*0.18, cy-rh*0.78, 2.4*k, glow=glow, look=0, glowy=(el in ("shadow","electric")))
-    return g + "</g>"
-
-def a_plant(uid, e, stage, sc, var):
-    k = stage_k(stage, sc)
-    pal, st, glow, el = e["pal"], e["pal"][3], e["glow"], e["acc"]
-    cx, cy = 108, 96
-    bw, bh = 20*k, 22*k
-    petals = 6 if stage == sc else 5
-    pr = 16*k + (stage-1)*4
-    g = f'<ellipse cx="{cx}" cy="{cy+bh+2:.1f}" rx="{bw*1.3:.1f}" ry="6" fill="#000" opacity=".2"/>'
-    g += f'<g stroke="{st}" stroke-width="2.2" stroke-linejoin="round">'
-    # leaf arms
-    g += tuft("grass", cx-bw*1.2, cy-bh*0.2, 12*k, ELE["grass"], -60) + tuft("grass", cx+bw*1.2, cy-bh*0.2, 12*k, ELE["grass"], 60)
-    # bulb body
-    g += f'<ellipse cx="{cx}" cy="{cy}" rx="{bw}" ry="{bh}" fill="url(#body{uid})"/>'
-    g += f'<ellipse cx="{cx}" cy="{cy+bh*0.2}" rx="{bw*0.6}" ry="{bh*0.6}" fill="url(#belly{uid})" stroke="none"/>'
-    # flower crown of element petals
-    fy = cy - bh - 2
-    for i in range(petals):
-        a = math.pi * (0.15 + 0.7*i/(petals-1))
-        px = cx - math.cos(a)*pr
-        py = fy - math.sin(a)*pr*0.7
-        g += tuft(el, px, py, 9*k, e, math.degrees(a)-90)
-    g += f'<circle cx="{cx}" cy="{fy+4:.1f}" r="{6*k:.1f}" fill="url(#orb{uid})"/>'
-    # face
-    g += eye(cx-bw*0.35, cy-bh*0.1, 2.8*k, glow=glow, look=0, glowy=(el in ("shadow","electric"))) + eye(cx+bw*0.35, cy-bh*0.1, 2.8*k, glow=glow, look=0, glowy=(el in ("shadow","electric")))
-    g += f'<path d="M{cx-bw*0.28:.1f},{cy+bh*0.25:.1f} q{bw*0.28:.1f},{bh*0.2:.1f} {bw*0.56:.1f},0" fill="none" stroke="{st}" stroke-width="1.5"/>'
-    return g + "</g>"
-
-def a_sprout(uid, e, stage, sc, var):
-    pal, st, glow, el = e["pal"], e["pal"][3], e["glow"], e["acc"]
-    cx, cy = 108, 100
-    g = f'<ellipse cx="{cx}" cy="{cy+16:.1f}" rx="20" ry="5" fill="#000" opacity=".2"/>'
-    g += f'<g stroke="{st}" stroke-width="2.2" stroke-linejoin="round">'
-    # seed body
-    g += f'<ellipse cx="{cx}" cy="{cy}" rx="16" ry="17" fill="url(#body{uid})"/>'
-    g += f'<ellipse cx="{cx}" cy="{cy+3}" rx="9" ry="10" fill="url(#belly{uid})" stroke="none"/>'
-    # sprout stem + leaves (element)
-    g += f'<line x1="{cx}" y1="{cy-16:.1f}" x2="{cx}" y2="{cy-30:.1f}" stroke="{pal[2]}" stroke-width="3"/>'
-    g += tuft(el, cx-6, cy-30, 9, e, -55) + tuft(el, cx+6, cy-30, 9, e, 55) + tuft(el, cx, cy-36, 8, e, 0)
-    g += eye(cx-6, cy-1, 3.0, glow=glow, look=0, glowy=(el in ("shadow","electric"))) + eye(cx+6, cy-1, 3.0, glow=glow, look=0, glowy=(el in ("shadow","electric")))
-    g += f'<path d="M{cx-4:.1f},{cy+8:.1f} q4,4 8,0" fill="none" stroke="{st}" stroke-width="1.4"/>'
-    return g + "</g>"
-
-def a_moth(uid, e, stage, sc, var):
-    pal, st, glow, el = e["pal"], e["pal"][3], e["glow"], e["acc"]
-    cx, cy = 108, 86
-    g = f'<ellipse cx="{cx}" cy="128" rx="30" ry="6" fill="#000" opacity=".16"/>'
-    g += f'<g stroke="{st}" stroke-width="2.1" stroke-linejoin="round">'
-    for sgn in (-1, 1):
-        g += f'<path d="M{cx:.1f},{cy-8:.1f} Q{cx+sgn*46:.1f},{cy-30:.1f} {cx+sgn*44:.1f},{cy-2:.1f} Q{cx+sgn*30:.1f},{cy+4:.1f} {cx:.1f},{cy:.1f} Z" fill="url(#body{uid})"/>'
-        g += f'<path d="M{cx:.1f},{cy+2:.1f} Q{cx+sgn*34:.1f},{cy+10:.1f} {cx+sgn*30:.1f},{cy+26:.1f} Q{cx+sgn*16:.1f},{cy+22:.1f} {cx:.1f},{cy+8:.1f} Z" fill="url(#body2{uid})"/>'
-        g += spots(el, [(cx+sgn*26, cy-12, 3.2), (cx+sgn*22, cy+14, 2.6)], e)
-    # fuzzy body
-    g += f'<ellipse cx="{cx}" cy="{cy+4}" rx="7" ry="16" fill="url(#belly{uid})"/>'
-    g += f'<circle cx="{cx}" cy="{cy-14:.1f}" r="7" fill="url(#body{uid})"/>'
-    # antennae
-    g += f'<path d="M{cx-3:.1f},{cy-20:.1f} q-8,-10 -14,-8 M{cx+3:.1f},{cy-20:.1f} q8,-10 14,-8" fill="none" stroke="{st}" stroke-width="1.5"/>'
-    g += eye(cx-3, cy-14, 2.4, glow=glow, look=0, glowy=True) + eye(cx+3, cy-14, 2.4, glow=glow, look=0, glowy=True)
-    return g + "</g>"
-
-def a_crab(uid, e, stage, sc, var):
-    pal, st, glow, el = e["pal"], e["pal"][3], e["glow"], e["acc"]
-    cx, cy = 108, 96
-    g = f'<ellipse cx="{cx}" cy="{cy+18:.1f}" rx="34" ry="6" fill="#000" opacity=".2"/>'
-    g += f'<g stroke="{st}" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round">'
-    for sgn in (-1, 1):
-        for j in range(3):
-            g += f'<path d="M{cx+sgn*24:.1f},{cy+4+j*4:.1f} q{sgn*14:.1f},4 {sgn*16:.1f},14" fill="none" stroke="{pal[2]}" stroke-width="2.4"/>'
-        # claw arms
-        g += f'<path d="M{cx+sgn*22:.1f},{cy-2:.1f} q{sgn*20:.1f},-6 {sgn*26:.1f},-16" fill="none" stroke="url(#body2{uid})" stroke-width="5"/>'
-        g += f'<path d="M{cx+sgn*46:.1f},{cy-22:.1f} q{sgn*10:.1f},-6 {sgn*2:.1f},-12 q{-sgn*6:.1f},2 {-sgn*2:.1f},8 q{-sgn*8:.1f},-2 {-sgn*8:.1f},6 Z" fill="url(#body{uid})"/>'
-    # shell
-    g += f'<path d="M{cx-30:.1f},{cy+2:.1f} a30,22 0 0 1 60,0 Z" fill="url(#body{uid})"/>'
-    g += spots(el, [(cx-12, cy-6, 2.6), (cx+12, cy-6, 2.6), (cx, cy-2, 2.4)][:2+var["spots"]//2], e)
-    # eyestalks
-    for sgn in (-1, 1):
-        g += f'<line x1="{cx+sgn*8:.1f}" y1="{cy-14:.1f}" x2="{cx+sgn*8:.1f}" y2="{cy-24:.1f}" stroke="{pal[2]}" stroke-width="2.4"/>'
-        g += eye(cx+sgn*8, cy-26, 3.0, glow=glow, look=0, glowy=(el in ("shadow","electric")))
-    g += f'<path d="M{cx-8:.1f},{cy+6:.1f} q8,5 16,0" fill="none" stroke="{st}" stroke-width="1.4"/>'
-    return g + "</g>"
-
-def a_mite(uid, e, stage, sc, var):
-    pal, st, glow, el = e["pal"], e["pal"][3], e["glow"], e["acc"]
-    cx, cy = 108, 96
-    g = f'<ellipse cx="{cx}" cy="{cy+16:.1f}" rx="22" ry="5" fill="#000" opacity=".2"/>'
-    g += f'<g stroke="{st}" stroke-width="2.0" stroke-linejoin="round" stroke-linecap="round">'
-    for sgn in (-1, 1):
-        for j in range(3):
-            g += f'<path d="M{cx+sgn*14:.1f},{cy+j*5:.1f} l{sgn*10:.1f},6" fill="none" stroke="{pal[2]}" stroke-width="2.2"/>'
-    g += f'<ellipse cx="{cx}" cy="{cy}" rx="18" ry="15" fill="url(#body{uid})"/>'
-    g += tuft(el, cx, cy-18, 9, e, 0)
-    g += spots(el, [(cx-6, cy-2, 2.2), (cx+6, cy-4, 2.0)][:max(1, var["spots"])], e)
-    g += eye(cx-6, cy-1, 3.6, glow=glow, look=0, glowy=True) + eye(cx+6, cy-1, 3.6, glow=glow, look=0, glowy=True)
-    return g + "</g>"
-
-def a_wisp(uid, e, stage, sc, var):
-    pal, st, glow, el = e["pal"], e["pal"][3], e["glow"], e["acc"]
-    cx, cy = 108, 84
-    g = f'<ellipse cx="{cx}" cy="124" rx="16" ry="5" fill="#000" opacity=".14"/>'
-    g += f'<g stroke="{st}" stroke-width="2.1" stroke-linejoin="round">'
-    # wispy tail
-    g += f'<path d="M{cx-10:.1f},{cy+6:.1f} Q{cx-14:.1f},{cy+30:.1f} {cx:.1f},{cy+40:.1f} Q{cx+14:.1f},{cy+30:.1f} {cx+10:.1f},{cy+6:.1f} Z" fill="url(#body{uid})"/>'
-    # orb core
-    g += f'<circle cx="{cx}" cy="{cy}" r="18" fill="url(#orb{uid})"/>'
-    g += tuft(el, cx, cy-22, 11, e, 0)
-    g += eye(cx-6, cy, 3.0, glow="#1a1020", look=0) + eye(cx+6, cy, 3.0, glow="#1a1020", look=0)
-    g += f'<path d="M{cx-4:.1f},{cy+8:.1f} q4,4 8,0" fill="none" stroke="{st}" stroke-width="1.4"/>'
-    return g + "</g>"
-
-def a_snail(uid, e, stage, sc, var):
-    pal, st, glow, el = e["pal"], e["pal"][3], e["glow"], e["acc"]
-    cx, cy = 112, 96
-    g = f'<ellipse cx="{cx-6:.1f}" cy="{cy+14:.1f}" rx="30" ry="5" fill="#000" opacity=".2"/>'
-    g += f'<g stroke="{st}" stroke-width="2.2" stroke-linejoin="round">'
-    # foot/body
-    g += f'<path d="M{cx-34:.1f},{cy+10:.1f} q-2,-14 14,-14 l18,0 q6,10 -4,14 Z" fill="url(#belly{uid})"/>'
-    # head
-    g += f'<circle cx="{cx-32:.1f}" cy="{cy-2:.1f}" r="9" fill="url(#body2{uid})"/>'
-    for sgn in (-1, 1):
-        g += f'<line x1="{cx-34:.1f}" y1="{cy-8:.1f}" x2="{cx-38:.1f}" y2="{cy-8+sgn*8:.1f}" stroke="{pal[2]}" stroke-width="2"/>'
-    g += eye(cx-34, cy-3, 2.6, glow=glow, look=-1, glowy=(el in ("shadow","electric")))
-    # spiral shell
-    g += f'<circle cx="{cx+4:.1f}" cy="{cy-6:.1f}" r="20" fill="url(#body{uid})"/>'
-    g += f'<path d="M{cx+4:.1f},{cy-6:.1f} m0,0 a4,4 0 1 1 6,-2 a9,9 0 1 1 -13,3 a15,15 0 1 1 22,-4" fill="none" stroke="{pal[3]}" stroke-width="1.8"/>'
-    g += tuft(el, cx+4, cy-28, 7, e, 0)
-    return g + "</g>"
-
-def a_fly(uid, e, stage, sc, var):
-    pal, st, glow, el = e["pal"], e["pal"][3], e["glow"], e["acc"]
-    cx, cy = 108, 88
-    g = f'<ellipse cx="{cx}" cy="126" rx="18" ry="5" fill="#000" opacity=".14"/>'
-    g += f'<g stroke="{st}" stroke-width="1.9" stroke-linejoin="round">'
-    for sgn in (-1, 1):
-        g += f'<ellipse cx="{cx+sgn*20:.1f}" cy="{cy-8:.1f}" rx="18" ry="8" fill="url(#body{uid})" opacity=".92" transform="rotate({sgn*-18} {cx+sgn*20:.1f} {cy-8:.1f})"/>'
-        g += f'<ellipse cx="{cx+sgn*18:.1f}" cy="{cy+6:.1f}" rx="13" ry="6" fill="url(#body2{uid})" opacity=".9" transform="rotate({sgn*16} {cx+sgn*18:.1f} {cy+6:.1f})"/>'
-    # segmented body (glowing tail for firefly vibe)
-    g += f'<ellipse cx="{cx}" cy="{cy+2}" rx="6" ry="18" fill="url(#body2{uid})"/>'
-    g += f'<circle cx="{cx}" cy="{cy+16:.1f}" r="5" fill="url(#orb{uid})"/>'
-    g += f'<circle cx="{cx}" cy="{cy-16:.1f}" r="7" fill="url(#body{uid})"/>'
-    g += f'<path d="M{cx-2:.1f},{cy-22:.1f} q-6,-8 -12,-7 M{cx+2:.1f},{cy-22:.1f} q6,-8 12,-7" fill="none" stroke="{st}" stroke-width="1.4"/>'
-    g += eye(cx-3, cy-16, 2.4, glow=glow, look=0, glowy=True) + eye(cx+3, cy-16, 2.4, glow=glow, look=0, glowy=True)
-    return g + "</g>"
-
-def a_toad(uid, e, stage, sc, var):
-    pal, st, glow, el = e["pal"], e["pal"][3], e["glow"], e["acc"]
-    cx, cy = 108, 96
-    g = f'<ellipse cx="{cx}" cy="{cy+18:.1f}" rx="36" ry="6" fill="#000" opacity=".2"/>'
-    g += f'<g stroke="{st}" stroke-width="2.3" stroke-linejoin="round">'
-    for sgn in (-1, 1):
-        g += f'<path d="M{cx+sgn*26:.1f},{cy+4:.1f} q{sgn*12:.1f},6 {sgn*10:.1f},16 q{-sgn*8:.1f},2 {-sgn*12:.1f},-4 Z" fill="url(#body2{uid})"/>'
-    g += f'<ellipse cx="{cx}" cy="{cy}" rx="34" ry="24" fill="url(#body{uid})"/>'
-    g += f'<ellipse cx="{cx}" cy="{cy+8}" rx="20" ry="14" fill="url(#belly{uid})" stroke="none"/>'
-    g += spots(el, [(cx-16, cy-8, 2.6), (cx+16, cy-8, 2.6), (cx-6, cy-12, 2.0), (cx+8, cy-2, 2.2)][:1+var["spots"]], e)
-    # wide mouth
-    g += f'<path d="M{cx-24:.1f},{cy+4:.1f} q{24:.1f},{16:.1f} {48:.1f},0" fill="none" stroke="{st}" stroke-width="1.8"/>'
-    # eyes on top
-    for sgn in (-1, 1):
-        g += f'<circle cx="{cx+sgn*14:.1f}" cy="{cy-20:.1f}" r="9" fill="url(#body{uid})"/>'
-        g += eye(cx+sgn*14, cy-21, 3.4, glow=glow, look=0, glowy=(el in ("shadow","electric")))
-    return g + "</g>"
-
-def a_glow(uid, e, stage, sc, var):
-    pal, st, glow, el = e["pal"], e["pal"][3], e["glow"], e["acc"]
-    cx, cy = 108, 78
-    g = f'<circle cx="{cx}" cy="{cy+6:.1f}" r="42" fill="url(#stage{uid})"/>'
-    g += f'<g stroke="{st}" stroke-width="2.1" stroke-linejoin="round">'
-    # tentacles
-    for i in range(6):
-        tx = cx - 24 + i*10
-        g += f'<path d="M{tx:.1f},{cy+16:.1f} q{-4 if i%2 else 4},20 {2 if i%2 else -2},40" fill="none" stroke="{pal[1]}" stroke-width="2.4" opacity=".9"/>'
-    # bell
-    g += f'<path d="M{cx-30:.1f},{cy+16:.1f} a30,26 0 0 1 60,0 Q{cx},{cy+26:.1f} {cx-30:.1f},{cy+16:.1f} Z" fill="url(#orb{uid})"/>'
-    g += spots(el, [(cx-12, cy, 2.4), (cx+12, cy, 2.4), (cx, cy-6, 2.2)][:1+var["spots"]], e)
-    g += eye(cx-9, cy+2, 3.2, glow="#1a1020", look=0) + eye(cx+9, cy+2, 3.2, glow="#1a1020", look=0)
-    g += f'<path d="M{cx-6:.1f},{cy+9:.1f} q6,4 12,0" fill="none" stroke="{st}" stroke-width="1.4"/>'
-    return g + "</g>"
-
-# ==================================================================== legendaries
-def l_emberyx(uid, e, var):
+def l_emberyx(ctx):
+    uid, e, var = ctx.uid, ctx.e, ctx.var
     pal = e["pal"]; g = '<g>'
     g += f'<circle cx="108" cy="70" r="50" fill="none" stroke="{e["glow"]}" stroke-width="2.5" opacity=".4"/>'
     for k in range(16):
@@ -880,7 +2243,9 @@ def l_emberyx(uid, e, var):
     g += f'<circle cx="108" cy="86" r="5" fill="{e["glow"]}" stroke="#fff" stroke-width="1"/>'
     return g+'</g></g>'
 
-def l_glaciera(uid, e, var):
+
+def l_glaciera(ctx):
+    uid, e, var = ctx.uid, ctx.e, ctx.var
     pal = e["pal"]; g = '<g>'
     g += f'<circle cx="108" cy="72" r="50" fill="none" stroke="#dff6ff" stroke-width="2" opacity=".35"/>'
     for k in range(12):
@@ -898,7 +2263,9 @@ def l_glaciera(uid, e, var):
     g += f'<path d="M108,98 l6,6 -6,6 -6,-6 Z" fill="#eafaff" stroke="#fff" stroke-width="1"/>'
     return g+'</g></g>'
 
-def l_eldwyrm(uid, e, var):
+
+def l_eldwyrm(ctx):
+    uid, e, var = ctx.uid, ctx.e, ctx.var
     pal = e["pal"]; g = '<g>'
     g += f'<circle cx="108" cy="72" r="50" fill="none" stroke="{e["glow"]}" stroke-width="2" opacity=".3"/>'
     g += f'<g stroke="{pal[3]}" stroke-width="2.2" stroke-linejoin="round">'
@@ -916,7 +2283,9 @@ def l_eldwyrm(uid, e, var):
     g += f'<path d="M100,60 q6,3 12,0" fill="none" stroke="{pal[3]}" stroke-width="1.5" stroke-linecap="round"/>'
     return g+'</g></g>'
 
-def l_voltaeon(uid, e, var):
+
+def l_voltaeon(ctx):
+    uid, e, var = ctx.uid, ctx.e, ctx.var
     pal = e["pal"]; glow = e["glow"]; g = '<g>'
     g += f'<circle cx="108" cy="70" r="50" fill="none" stroke="{glow}" stroke-width="2" opacity=".38"/>'
     for k in range(12):
@@ -941,28 +2310,9 @@ def l_voltaeon(uid, e, var):
     g += f'<path d="M104,69 q4,3 8,0" fill="none" stroke="{pal[3]}" stroke-width="1.5" stroke-linecap="round"/>'
     return g+'</g></g>'
 
-def l_nyxaros(uid, e, var):
-    pal = e["pal"]; g = '<g>'
-    g += f'<circle cx="108" cy="74" r="52" fill="none" stroke="{e["glow"]}" stroke-width="2" opacity=".35"/>'
-    g += f'<ellipse cx="108" cy="74" rx="70" ry="46" fill="#7a3fd0" opacity=".12"/>'
-    g += f'<g stroke="{pal[3]}" stroke-width="2.4" stroke-linejoin="round">'
-    g += f'<ellipse cx="108" cy="136" rx="50" ry="7" fill="#000" opacity=".3" stroke="none"/>'
-    g += f'<path d="M58,116 C56,96 76,84 104,84 C134,84 154,94 150,114 C146,128 120,130 108,126 C96,130 70,130 58,116 Z" fill="url(#body{uid})"/>'
-    g += f'<path d="M150,108 C172,104 182,84 176,64 C190,84 188,116 156,120 Z" fill="url(#body{uid})"/>'
-    g += star(180,58,4,"#fff",0.95)
-    for lx in (78,132):
-        g += f'<rect x="{lx-6}" y="116" width="13" height="26" rx="6.5" fill="url(#body{uid})"/>'
-    g += f'<rect x="98" y="118" width="12" height="24" rx="6" fill="{pal[2]}"/>'
-    g += f'<path d="M58,92 C46,84 42,70 48,60 C56,52 72,54 78,64 C84,74 78,88 68,92 Z" fill="url(#body{uid})"/>'
-    g += f'<path d="M52,58 L46,42 L62,54 Z M70,56 L78,42 L82,58 Z" fill="url(#body{uid})"/>'
-    g += f'<path d="M46,66 q7,-5 15,-1 q-6,6 -15,3 Z" fill="{e["glow"]}" stroke="none"/><circle cx="53" cy="66" r="2.4" fill="#1a1020" stroke="none"/>'
-    g += f'<ellipse cx="40" cy="72" rx="3.4" ry="2.6" fill="#20141f" stroke="none"/>'
-    g += f'<path d="M45,70 q6,4 12,2" fill="none" stroke="{pal[3]}" stroke-width="1.5" stroke-linecap="round"/>'
-    for x, y, r in [(92,100,1.6),(112,96,1.5),(128,104,1.5),(104,112,1.3),(74,104,1.3),(140,100,1.3)]:
-        g += star(x, y, r, "#fff", 0.85)
-    return g+'</g></g>'
 
-def l_ignarok(uid, e, var):
+def l_ignarok(ctx):
+    uid, e, var = ctx.uid, ctx.e, ctx.var
     pal, glow, st = e["pal"], e["glow"], e["pal"][3]; g = '<g>'
     g += f'<circle cx="108" cy="66" r="52" fill="none" stroke="{glow}" stroke-width="2" opacity=".3"/>'
     g += f'<g stroke="{st}" stroke-width="2.4" stroke-linejoin="round">'
@@ -981,7 +2331,9 @@ def l_ignarok(uid, e, var):
     g += f'<path d="M99,56 q9,7 18,0 l-3,7 -6,-4 -6,4 Z" fill="#fff" stroke="{st}" stroke-width="1"/>'
     return g+'</g></g>'
 
-def l_solmyr(uid, e, var):
+
+def l_solmyr(ctx):
+    uid, e, var = ctx.uid, ctx.e, ctx.var
     pal, glow, st = e["pal"], e["glow"], e["pal"][3]; g = '<g>'
     g += f'<circle cx="108" cy="70" r="42" fill="url(#orb{uid})" opacity=".45"/>'
     for k in range(20):
@@ -996,7 +2348,9 @@ def l_solmyr(uid, e, var):
     g += f'<circle cx="108" cy="98" r="6" fill="url(#orb{uid})"/>'
     return g+'</g></g>'
 
-def l_abyssos(uid, e, var):
+
+def l_abyssos(ctx):
+    uid, e, var = ctx.uid, ctx.e, ctx.var
     pal, glow, st = e["pal"], e["glow"], e["pal"][3]; g = '<g>'
     g += f'<ellipse cx="108" cy="84" rx="82" ry="54" fill="#04122e" opacity=".5"/>'
     g += f'<g stroke="{st}" stroke-width="2.3" stroke-linejoin="round">'
@@ -1015,7 +2369,9 @@ def l_abyssos(uid, e, var):
     g += eye(86,80,4,glow=glow,glowy=True,look=-0.6)
     return g+'</g></g>'
 
-def l_maelstros(uid, e, var):
+
+def l_maelstros(ctx):
+    uid, e, var = ctx.uid, ctx.e, ctx.var
     pal, glow, st = e["pal"], e["glow"], e["pal"][3]; g = '<g>'
     g += '<g fill="none" stroke="'+pal[1]+'" stroke-width="3" opacity=".5">'
     for r in (40, 30, 20):
@@ -1030,7 +2386,9 @@ def l_maelstros(uid, e, var):
     g += f'<path d="M108,90 l6,6 -6,6 -6,-6 Z" fill="#eaf6ff"/>'
     return g+'</g></g>'
 
-def l_sylvareth(uid, e, var):
+
+def l_sylvareth(ctx):
+    uid, e, var = ctx.uid, ctx.e, ctx.var
     pal, glow, st = e["pal"], e["glow"], e["pal"][3]; g = '<g>'
     g += f'<circle cx="80" cy="52" r="46" fill="none" stroke="{glow}" stroke-width="2" opacity=".28"/>'
     g += f'<g stroke="{st}" stroke-width="2.3" stroke-linejoin="round">'
@@ -1050,7 +2408,9 @@ def l_sylvareth(uid, e, var):
     g += f'<circle cx="114" cy="96" r="7" fill="url(#orb{uid})"/>'
     return g+'</g></g>'
 
-def l_floreon(uid, e, var):
+
+def l_floreon(ctx):
+    uid, e, var = ctx.uid, ctx.e, ctx.var
     pal, glow, st = e["pal"], e["glow"], e["pal"][3]; g = '<g>'
     g += f'<circle cx="108" cy="66" r="48" fill="none" stroke="{glow}" stroke-width="2" opacity=".28"/>'
     g += f'<g stroke="{st}" stroke-width="2.3" stroke-linejoin="round">'
@@ -1067,7 +2427,9 @@ def l_floreon(uid, e, var):
     g += f'<circle cx="108" cy="66" r="3" fill="{st}"/>'
     return g+'</g></g>'
 
-def l_fulguros(uid, e, var):
+
+def l_fulguros(ctx):
+    uid, e, var = ctx.uid, ctx.e, ctx.var
     pal, glow, st = e["pal"], e["glow"], e["pal"][3]; g = '<g>'
     g += f'<circle cx="108" cy="70" r="50" fill="none" stroke="{glow}" stroke-width="2" opacity=".35"/>'
     g += f'<g stroke="{st}" stroke-width="2.3" stroke-linejoin="round">'
@@ -1083,7 +2445,9 @@ def l_fulguros(uid, e, var):
     g += eye(103,54,3,glow=glow,glowy=True,look=-0.6)+eye(114,54,3,glow=glow,glowy=True,look=-0.6)
     return g+'</g></g>'
 
-def l_tempesta(uid, e, var):
+
+def l_tempesta(ctx):
+    uid, e, var = ctx.uid, ctx.e, ctx.var
     pal, glow, st = e["pal"], e["glow"], e["pal"][3]; g = '<g>'
     g += f'<g stroke="{st}" stroke-width="2.3" stroke-linejoin="round">'
     g += f'<path d="M96,138 L84,96 Q108,104 132,96 L120,138 Z" fill="url(#body2{uid})" opacity=".85"/>'
@@ -1095,51 +2459,172 @@ def l_tempesta(uid, e, var):
     g += f'<path d="M100,78 q9,6 18,0" fill="none" stroke="{st}" stroke-width="1.8"/>'
     return g+'</g></g>'
 
-def l_astralon(uid, e, var):
-    pal, glow, st = e["pal"], e["glow"], e["pal"][3]; g = '<g>'
-    g += f'<g stroke="{st}" stroke-width="2.2" stroke-linejoin="round">'
-    body = ('M150,128 C120,136 96,126 98,108 C100,94 118,92 120,104 C132,106 136,92 124,86 '
-            'C104,76 78,88 76,110 C74,92 86,68 112,60 C96,58 84,70 82,82 C74,70 86,50 110,46 Z')
-    g += f'<path d="{body}" fill="url(#body{uid})" opacity=".85"/>'
-    g += f'<path d="M96,54 C90,46 94,34 104,32 C114,32 120,42 118,52 C116,62 106,64 96,54 Z" fill="url(#body{uid})"/>'
-    g += '</g>'
-    nodes = [(150,128),(112,112),(120,104),(100,96),(112,78),(96,70),(110,52)]
-    g += '<g stroke="'+glow+'" stroke-width="1.2" opacity=".85">'
-    for i in range(len(nodes)-1):
-        g += f'<line x1="{nodes[i][0]}" y1="{nodes[i][1]}" x2="{nodes[i+1][0]}" y2="{nodes[i+1][1]}"/>'
-    g += '</g>'
-    for (x, y) in nodes:
-        g += star(x, y, 3, glow, 1)
-    g += star(108, 24, 4, glow, 1)
-    g += eye(100,48,3,glow=glow,glowy=True,look=0.4)+eye(112,48,3,glow=glow,glowy=True,look=0.4)
-    return g+'</g>'
 
-def l_eclipsar(uid, e, var):
-    pal, glow, st = e["pal"], e["glow"], e["pal"][3]; g = '<g>'
-    g += f'<circle cx="108" cy="64" r="26" fill="{glow}" opacity=".3"/>'
-    for k in range(16):
-        a = k*math.pi/8; x1 = 108+math.cos(a)*24; y1 = 64+math.sin(a)*24; x2 = 108+math.cos(a)*38; y2 = 64+math.sin(a)*38
-        g += f'<line x1="{x1:.1f}" y1="{y1:.1f}" x2="{x2:.1f}" y2="{y2:.1f}" stroke="{glow}" stroke-width="1.4" opacity=".5"/>'
-    g += f'<g stroke="{st}" stroke-width="2.3" stroke-linejoin="round">'
+
+# --- Umbral Reach ultras: the payoff cards. Built from scratch, not from a plan.
+def voidfill(ctx, d, bx, by, bw, bh, count=26, seed=0, neb=".45", rimw=1.6):
+    """Turn a silhouette into a window onto deep space."""
+    cid = ctx.nid("cl")
+    ctx.defs.append(f'<clipPath id="{cid}"><path d="{d}"/></clipPath>')
+    g = f'<path d="{d}" fill="url(#void{ctx.uid})"/>'
+    g += (f'<g clip-path="url(#{cid})"><path d="{d}" fill="{ctx.sty["neb"]}" opacity="{neb}"/>'
+          + starfield(bx, by, bw, bh, ctx.var["seed"] + seed, count=count, tint=ctx.sty["star"]) + "</g>")
+    g += f'<path d="{d}" fill="none" stroke="url(#rim{ctx.uid})" stroke-width="{rimw}" opacity=".95"/>'
+    return g
+
+
+def _corona(cx, cy, r, glow, spokes=28, inner=1.0, outer=1.42, w=1.3, op=.5):
+    g = ""
+    for k in range(spokes):
+        a = k * 2 * math.pi / spokes
+        ln = outer if k % 2 == 0 else outer - 0.16
+        g += (f'<line x1="{cx + math.cos(a) * r * inner:.1f}" y1="{cy + math.sin(a) * r * inner:.1f}" '
+              f'x2="{cx + math.cos(a) * r * ln:.1f}" y2="{cy + math.sin(a) * r * ln:.1f}" '
+              f'stroke="{glow}" stroke-width="{w}" opacity="{op}" stroke-linecap="round"/>')
+    return g
+
+
+def l_nyxaros(ctx):
+    """Nyxaros, the Unlit Star — a void lion prowling out of a dead sun."""
+    uid, sty, glow = ctx.uid, ctx.sty, ctx.glow
+    g = '<g>'
+    g += f'<ellipse cx="112" cy="80" rx="102" ry="64" fill="url(#halo{uid})" opacity=".4"/>'
+    g += _corona(150, 54, 33, glow, 40, 1.02, 1.55, 1.3, .4)
+    g += f'<circle cx="150" cy="54" r="33" fill="#040110" stroke="{glow}" stroke-width="2.6"/>'
+    g += f'<circle cx="150" cy="54" r="33" fill="none" stroke="{sty["rift"]}" stroke-width="1" opacity=".75"/>'
+    g += star(176, 33, 5.4, "#ffffff", .98)
+    g += f'<ellipse cx="102" cy="137" rx="62" ry="7" fill="#000" opacity=".4"/>'
+    tail = ("M132,98 C164,96 188,80 200,52 C200,86 178,110 142,116 Z")
+    g += voidfill(ctx, tail, 130, 50, 74, 68, 14, 3)
+    g += star(198, 50, 4.4, "#ffffff", .95)
+    for (lx, ly, sw, lean) in ((118, 106, 11, 5), (68, 104, 10, -4)):
+        d = (f"M{lx - sw:.1f},{ly:.1f} L{lx + sw:.1f},{ly:.1f} L{lx + sw * 0.5 + lean:.1f},134 "
+             f"L{lx - sw * 0.5 + lean:.1f},134 Z")
+        g += voidfill(ctx, d, lx - sw, ly, sw * 2, 34, 5, int(lx))
+    body = ("M44,102 C40,80 60,66 88,66 C116,66 136,78 138,98 C140,118 118,130 90,130 "
+            "C62,130 48,120 44,102 Z")
+    g += voidfill(ctx, body, 42, 64, 98, 68, 30, 7)
+    for (lx, ly, sw, lean) in ((104, 108, 10, 4), (56, 106, 9, -5),):
+        d = (f"M{lx - sw:.1f},{ly:.1f} L{lx + sw:.1f},{ly:.1f} L{lx + sw * 0.55 + lean:.1f},135 "
+             f"L{lx - sw * 0.55 + lean:.1f},135 Z")
+        g += voidfill(ctx, d, lx - sw, ly, sw * 2, 34, 5, int(lx) + 40)
+        g += star(lx + lean, 137, 2.4, sty["star"], .9)
+    hx, hy, hr = 52, 68, 23
+    for i in range(13):
+        a = math.pi * (0.42 + 1.22 * i / 12)
+        px, py = hx - math.cos(a - 1.57) * hr * 1.5, hy - math.sin(a - 1.57) * hr * 1.5
+        sz = 9 - abs(i - 6) * 0.5
+        d = (f"M{px:.1f},{py - sz:.1f} L{px + sz * 0.5:.1f},{py:.1f} L{px:.1f},{py + sz:.1f} "
+             f"L{px - sz * 0.5:.1f},{py:.1f} Z")
+        rot = math.degrees(a) + 90
+        g += (f'<g transform="rotate({rot:.0f} {px:.1f} {py:.1f})"><path d="{d}" fill="#1b0c38" '
+              f'stroke="url(#rim{uid})" stroke-width="1.2"/></g>')
+        if i % 2 == 0:
+            g += star(px, py, 2.2, sty["star"], .95)
+    head = ("M30,72 C28,56 42,45 58,45 C74,45 84,56 83,70 C82,86 68,95 54,93 "
+            "C40,91 31,84 30,72 Z")
+    g += voidfill(ctx, head, 28, 44, 58, 52, 16, 11)
+    g += (f'<path d="M36,50 L27,26 L52,42 Z M70,44 L84,23 L84,50 Z" fill="#1b0c38" '
+          f'stroke="url(#rim{uid})" stroke-width="1.5"/>')
+    g += star(31, 30, 2.6, sty["star"], .95) + star(82, 28, 2.4, sty["star"], .95)
+    g += f'<path d="M34,80 q16,12 34,5 q-12,13 -27,6 Z" fill="#050214" stroke="{glow}" stroke-width="1.2"/>'
+    g += f'<path d="M40,82 l3,7 4,-6 M53,86 l2,7 5,-6" stroke="#fff" stroke-width="1.3" fill="none"/>'
+    for (ex, ey) in ((44, 66), (66, 62)):
+        g += f'<circle cx="{ex}" cy="{ey}" r="7.5" fill="url(#halo{uid})"/>'
+        g += f'<circle cx="{ex}" cy="{ey}" r="4" fill="{sty["star"]}"/>'
+        g += star(ex, ey, 5.4, "#ffffff", 1)
+    for (ox, oy, sz) in [(20, 120, 5), (186, 122, 5.6), (204, 92, 4), (16, 46, 4.2), (104, 22, 3.6)]:
+        d = sharp_poly(ring(ox, oy, sz, sz * 0.8, 5, int(ox * 7 + oy), 0.3))
+        g += f'<path d="{d}" fill="#1b0c38" stroke="url(#rim{uid})" stroke-width="1.2"/>'
+        g += star(ox, oy, sz * 0.45, sty["star"], .9)
+    return g + '</g>'
+
+
+def l_astralon(ctx):
+    """Astralon, the Constellation Leviathan — a whale-shaped hole full of stars."""
+    uid, sty, glow = ctx.uid, ctx.sty, ctx.glow
+    g = '<g>'
+    g += f'<ellipse cx="104" cy="72" rx="104" ry="60" fill="url(#halo{uid})" opacity=".5"/>'
+    for i, (rx, ry, rot, op) in enumerate([(96, 30, -16, .5), (80, 22, 22, .35), (104, 42, 6, .22)]):
+        g += (f'<ellipse cx="104" cy="74" rx="{rx}" ry="{ry}" fill="none" stroke="{sty["rift"] if i else glow}" '
+              f'stroke-width="{1.6 - i * 0.35:.1f}" opacity="{op}" transform="rotate({rot} 104 74)"/>')
+    fin_up = "M112,46 C118,16 140,2 168,4 C146,18 136,34 132,52 Z"
+    fin_dn = "M96,102 C86,124 66,138 42,140 C62,124 72,110 76,94 Z"
+    g += voidfill(ctx, fin_up, 110, 2, 60, 52, 12, 21, neb=".55")
+    g += voidfill(ctx, fin_dn, 40, 92, 58, 50, 12, 27, neb=".55")
+    body = ("M16,84 C22,60 50,44 84,46 C120,48 150,62 176,84 C158,96 140,102 118,104 "
+            "C96,106 70,104 48,98 C34,94 22,90 16,84 Z")
+    g += voidfill(ctx, body, 12, 42, 168, 66, 54, 33, neb=".4", rimw=1.9)
+    fluke = "M176,84 C192,66 206,58 214,58 C206,72 204,84 208,98 C198,96 186,92 176,84 Z"
+    g += voidfill(ctx, fluke, 174, 56, 44, 46, 10, 39)
+    nodes = [(40, 84), (62, 70), (88, 62), (116, 64), (142, 74), (164, 84)]
+    g += f'<g stroke="{glow}" stroke-width="1.1" opacity=".85">'
+    for i in range(len(nodes) - 1):
+        g += f'<line x1="{nodes[i][0]}" y1="{nodes[i][1]}" x2="{nodes[i + 1][0]}" y2="{nodes[i + 1][1]}"/>'
+    g += f'<line x1="88" y1="62" x2="96" y2="40"/><line x1="116" y1="64" x2="126" y2="90"/></g>'
+    for (nx, ny) in nodes + [(96, 40), (126, 90)]:
+        g += star(nx, ny, 2.8, sty["star"], .95)
+    g += (f'<path d="M18,86 C34,96 62,102 92,102" fill="none" stroke="{sty["rift"]}" stroke-width="2" opacity=".7"/>')
+    for i in range(7):
+        px = 26 + i * 11
+        g += f'<line x1="{px}" y1="{92 + i * 0.6:.0f}" x2="{px + 3}" y2="{100 + i * 0.4:.0f}" stroke="{glow}" stroke-width="1" opacity=".55"/>'
+    g += f'<circle cx="40" cy="72" r="9" fill="url(#halo{uid})"/>'
+    g += star(40, 72, 5.4, "#ffffff", 1)
+    g += f'<circle cx="40" cy="72" r="10" fill="none" stroke="{glow}" stroke-width="1.2" opacity=".9"/>'
+    for (ox, oy, s) in [(196, 30, 5), (14, 34, 4.4), (190, 122, 5), (60, 130, 4), (108, 14, 3.6)]:
+        d = sharp_poly(ring(ox, oy, s, s * 0.76, 5, int(ox * 5 + oy), 0.3))
+        g += f'<path d="{d}" fill="url(#void{uid})" stroke="url(#rim{uid})" stroke-width="1.2"/>'
+        g += star(ox, oy, s * 0.4, sty["star"], .9)
+    return g + '</g>'
+
+
+def l_eclipsar(ctx):
+    """Eclipsar, the Eclipse Made Flesh — wings of night around a ring of fire."""
+    uid, sty, glow = ctx.uid, ctx.sty, ctx.glow
+    g = '<g>'
+    g += _corona(108, 60, 36, glow, 40, 1.0, 1.62, 1.5, .42)
+    g += f'<circle cx="108" cy="60" r="37" fill="none" stroke="#fff2c8" stroke-width="3.4" opacity=".95"/>'
+    g += f'<circle cx="108" cy="60" r="36" fill="#05020f"/>'
+    g += f'<circle cx="132" cy="38" r="6.5" fill="#ffffff" opacity=".95"/>'
+    g += star(132, 38, 11, "#ffffff", .9)
     for sgn in (-1, 1):
-        g += f'<path d="M108,92 C{108+sgn*30},72 {108+sgn*66},72 {108+sgn*88},84 C{108+sgn*64},84 {108+sgn*54},90 {108+sgn*60},98 C{108+sgn*40},90 {108+sgn*24},98 108,108 Z" fill="url(#body{uid})"/>'
-        g += star(108+sgn*50,86,2.4,glow,1)+star(108+sgn*32,94,2,glow,.9)
-    g += f'<path d="M108,96 C118,96 122,110 117,126 C113,134 103,134 99,126 C94,110 98,96 108,96 Z" fill="url(#body{uid})"/>'
-    g += f'<path d="M108,128 l-8,16 8,-6 8,6 Z" fill="url(#body2{uid})"/>'
-    g += f'<circle cx="108" cy="64" r="20" fill="#0b0620"/><circle cx="108" cy="64" r="21" fill="none" stroke="{glow}" stroke-width="2"/>'
-    g += eye(103,62,3,glow=glow,glowy=True,look=0)+eye(114,62,3,glow=glow,glowy=True,look=0)
-    return g+'</g></g>'
+        w = (f"M108,66 C{108 + sgn * 34},18 {108 + sgn * 84},12 {108 + sgn * 108},34 "
+             f"C{108 + sgn * 92},36 {108 + sgn * 80},44 {108 + sgn * 74},54 "
+             f"C{108 + sgn * 96},52 {108 + sgn * 106},60 {108 + sgn * 104},74 "
+             f"C{108 + sgn * 80},62 {108 + sgn * 52},68 {108 + sgn * 30},88 Z")
+        g += voidfill(ctx, w, 108 - 110 if sgn < 0 else 108, 10, 112, 84, 26, 51 + sgn, neb=".5")
+        nodes = [(108 + sgn * 30, 56), (108 + sgn * 58, 38), (108 + sgn * 86, 30), (108 + sgn * 78, 54)]
+        g += f'<g stroke="{glow}" stroke-width="1" opacity=".8">'
+        for i in range(len(nodes) - 1):
+            g += f'<line x1="{nodes[i][0]}" y1="{nodes[i][1]}" x2="{nodes[i + 1][0]}" y2="{nodes[i + 1][1]}"/>'
+        g += "</g>"
+        for (nx, ny) in nodes:
+            g += star(nx, ny, 2.4, sty["star"], .95)
+    body = ("M108,52 C122,52 130,70 126,96 C124,114 116,128 108,140 C100,128 92,114 90,96 "
+            "C86,70 94,52 108,52 Z")
+    g += voidfill(ctx, body, 86, 48, 44, 94, 22, 63, neb=".35", rimw=1.8)
+    g += f'<circle cx="108" cy="92" r="9" fill="url(#halo{uid})"/>'
+    g += star(108, 92, 6.5, "#ffffff", 1)
+    for sgn in (-1, 1):
+        g += (f'<path d="M108,64 C{108 + sgn * 22},70 {108 + sgn * 30},86 {108 + sgn * 26},104" fill="none" '
+              f'stroke="{sty["rift"]}" stroke-width="1.6" opacity=".75"/>')
+    head = "M108,26 C120,26 127,36 125,48 C123,58 116,63 108,63 C100,63 93,58 91,48 C89,36 96,26 108,26 Z"
+    g += voidfill(ctx, head, 89, 24, 38, 42, 12, 71, neb=".3")
+    g += f'<path d="M92,34 L84,10 L102,28 Z M124,34 L132,10 L114,28 Z M108,24 L108,4 L114,22 Z" fill="url(#void{uid})" stroke="url(#rim{uid})" stroke-width="1.4"/>'
+    for (sx, sy) in ((85, 12), (133, 12), (109, 6)):
+        g += star(sx, sy, 2.6, sty["star"], .95)
+    for ex, dx in ((101, -1), (115, 1)):
+        g += f'<circle cx="{ex}" cy="46" r="5.5" fill="url(#halo{uid})"/>'
+        g += star(ex, 46, 3.8, "#ffffff", 1)
+    g += f'<ellipse cx="108" cy="58" rx="46" ry="12" fill="none" stroke="{glow}" stroke-width="1.6" opacity=".65" transform="rotate(-14 108 58)"/>'
+    g += f'<ellipse cx="108" cy="64" rx="58" ry="16" fill="none" stroke="{sty["rift"]}" stroke-width="1.1" opacity=".45" transform="rotate(12 108 64)"/>'
+    for (ox, oy, s) in [(28, 108, 5.5), (188, 104, 5), (14, 66, 4), (200, 62, 4.4), (60, 132, 4), (156, 130, 4.6)]:
+        d = sharp_poly(ring(ox, oy, s, s * 0.78, 5, int(ox * 3 + oy), 0.3))
+        g += f'<path d="{d}" fill="url(#void{uid})" stroke="url(#rim{uid})" stroke-width="1.2"/>'
+        g += star(ox, oy, s * 0.42, sty["star"], .92)
+    return g + '</g>'
 
-# ------------------------------------------------------------------- registries
-ARCH = {
-    "canine": a_canine, "golem": a_golem, "lord": a_lord, "bird": a_bird,
-    "saber": a_saber, "dragon": a_dragon, "shark": a_shark, "don": a_don,
-    "bear": a_bear, "fish": a_fish, "beetle": a_beetle, "lynx": a_lynx,
-    "plant": a_plant, "moth": a_moth, "crab": a_crab, "fox": a_fox,
-    "sprout": a_sprout, "hare": a_hare, "mite": a_mite, "wisp": a_wisp,
-    "snail": a_snail, "fly": a_fly, "toad": a_toad, "glow": a_glow,
-    "maw": a_maw, "horn": a_horn, "majestic": a_majestic,
-}
+
 LEG = {
     "Emberyx": l_emberyx, "Ignarok": l_ignarok, "Solmyr": l_solmyr,
     "Glaciera": l_glaciera, "Abyssos": l_abyssos, "Maelstros": l_maelstros,
@@ -1148,28 +2633,78 @@ LEG = {
     "Nyxaros": l_nyxaros, "Astralon": l_astralon, "Eclipsar": l_eclipsar,
 }
 
-# ------------------------------------------------------------------- composition
+
+# =================================================================================
+# COMPOSITION
+# =================================================================================
 with open(os.path.join(ROOT, "data", "cards.json")) as f:
     CARDS = json.load(f)
 
-def art_inner(card):
-    el = card["element"]; e = ELE[el]; uid = card["id"].replace("-", "_")
-    role = ROLES[card["name"]]; var = vary(card["name"])
-    s = defs(uid, e) + SCENES[card["set"]](uid)
+
+def creature(ctx, role):
     if role["leg"]:
-        s += LEG[role["leg"]](uid, e, var)
-    else:
-        s += ARCH[role["slot"]](uid, e, role["stage"], role["sc"], var)
-    return s
+        return LEG[role["leg"]](ctx)
+    plan, p = resolve(role["set"], role["slot"], role["stage"], role["sc"])
+    return PLANS[plan](ctx, p)
+
+
+def art_inner(card):
+    e = ELE[card["element"]]
+    uid = card["id"].replace("-", "_")
+    role = ROLES[card["name"]]
+    ctx = Ctx(uid, e, card["set"], vary(card["name"]), card["name"])
+    body = creature(ctx, role)
+    return defs(ctx) + SCENES[card["set"]](uid) + body
+
 
 def art_svg(card):
     return f'<svg viewBox="0 0 {VB_W} {VB_H}" xmlns="http://www.w3.org/2000/svg">{art_inner(card)}</svg>'
 
+
 def _xml(s):
     return s.replace("&", "&amp;").replace("<", "&lt;")
 
+
+# ------------------------------------------------------------------ duplicate check
+def design_key(card):
+    """Geometry fingerprint with palette and elemental accents neutralised, so two
+    cards only collide when they are genuinely the same character design."""
+    import re
+    global tuft, spots, star
+    real = (tuft, spots, star)
+    tuft = lambda *a, **k: "<TUFT/>"
+    spots = lambda *a, **k: "<SPOTS/>"
+    star = lambda *a, **k: "<STAR/>"
+    try:
+        e = ELE[card["element"]]
+        uid = card["id"].replace("-", "_")
+        role = ROLES[card["name"]]
+        ctx = Ctx(uid, e, card["set"], vary(card["name"]), card["name"])
+        s = creature(ctx, role) + "".join(ctx.defs)
+    finally:
+        tuft, spots, star = real
+    s = s.replace(uid, "U")
+    s = re.sub(r'(fill|stroke|stop-color)="[^"]*"', r'\1="X"', s)
+    s = re.sub(r'\s(opacity|fill-opacity|stroke-opacity|stop-opacity)="[^"]*"', "", s)
+    return hashlib.md5(s.encode()).hexdigest()
+
+
+def dupes():
+    seen = {}
+    for c in CARDS:
+        seen.setdefault(design_key(c), []).append(c)
+    clashes = {k: v for k, v in seen.items() if len(v) > 1}
+    print(f"{len(seen)} unique designs across {len(CARDS)} cards")
+    for v in clashes.values():
+        print("  DUPLICATE:", ", ".join(f'{c["name"]} (set {c["set"]})' for c in v))
+    if clashes:
+        raise SystemExit(f"{sum(len(v) for v in clashes.values())} cards share a design")
+    print("OK: every card has its own character design")
+
+
+# ------------------------------------------------------------------------- outputs
 def qa_sheet(setno, out_dir="/tmp"):
-    """Contact sheet of all 50 cards in a set (Chrome-free, via rsvg)."""
+    """Contact sheet of all 50 cards in a set."""
     import subprocess
     cards = sorted([c for c in CARDS if c["set"] == setno], key=lambda c: c["number"])
     cols, cw, pad, gap, ch = 5, 216, 16, 12, 186
@@ -1180,9 +2715,10 @@ def qa_sheet(setno, out_dir="/tmp"):
     for i, c in enumerate(cards):
         cx = pad + (i % cols) * (cw + gap)
         cy = pad + (i // cols) * (ch + gap)
-        role = ROLES[c["name"]]; tag = role["leg"] or f'{role["slot"]}{role["stage"]}'
+        role = ROLES[c["name"]]
+        tag = role["leg"] or f'{role["slot"]} {role["stage"]}/{role["sc"]}'
         body += f'<g transform="translate({cx},{cy})">'
-        body += f'<rect x="-5" y="-5" width="{cw+10}" height="{ch+6}" rx="9" fill="#171a22"/>'
+        body += f'<rect x="-5" y="-5" width="{cw + 10}" height="{ch + 6}" rx="9" fill="#171a22"/>'
         body += f'<svg x="0" y="0" width="{cw}" height="150" viewBox="0 0 {VB_W} {VB_H}">{art_inner(c)}</svg>'
         body += (f'<text x="2" y="169" font-family="Helvetica,Arial,sans-serif" font-size="12" '
                  f'font-weight="600" fill="#e8ecf4">{c["number"]:03d} {_xml(c["name"])}</text>')
@@ -1196,14 +2732,17 @@ def qa_sheet(setno, out_dir="/tmp"):
     subprocess.run(["rsvg-convert", sp, "-o", out], check=True)
     print("wrote", out)
 
+
 CARDART = os.path.join(ROOT, "TradingUp", "Assets.xcassets", "CardArt")
 MOCKART = os.path.join(ROOT, "docs", "mockups", "art")
+
 
 def _contents_json(fid):
     return json.dumps({
         "images": [{"filename": f"{fid}.png", "idiom": "universal"}],
         "info": {"author": "xcode", "version": 1},
     }, indent=2)
+
 
 def build_assets():
     import subprocess, concurrent.futures
@@ -1235,6 +2774,7 @@ def build_assets():
     if missing:
         print("MISSING:", missing[:10])
 
+
 if __name__ == "__main__":
     import sys
     cmd = sys.argv[1] if len(sys.argv) >= 2 else ""
@@ -1244,5 +2784,7 @@ if __name__ == "__main__":
             qa_sheet(n)
     elif cmd == "assets":
         build_assets()
+    elif cmd == "dupes":
+        dupes()
     else:
-        print("usage: generate_art.py [assets | qa [setno]]")
+        print("usage: generate_art.py [assets | qa [setno] | dupes]")

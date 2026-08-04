@@ -1,0 +1,22 @@
+version: 2
+
+# The workflows pin actions to commit SHAs, which are immutable and so never
+# pick up upstream fixes on their own. Dependabot rewrites both the SHA and the
+# trailing "# vX.Y.Z" comment, so the pins stay current without going back to
+# mutable tags. github-actions is the only ecosystem here — the Xcode project
+# vendors no third-party packages.
+
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: America/New_York
+    commit-message:
+      prefix: ci
+    groups:
+      github-actions:
+        patterns:
+          - "*"
