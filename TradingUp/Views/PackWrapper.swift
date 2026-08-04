@@ -250,7 +250,7 @@ struct PackWrapper: View {
 
             Spacer(minLength: 0)
 
-            SigilView(seed: CardDatabase.setName(set) + element.rawValue, element: element)
+            SetEmblem(set: set)
                 .frame(width: emblemWidth, height: emblemWidth)
                 .shadow(color: .black.opacity(0.5), radius: width * 0.02, y: width * 0.01)
 
@@ -449,7 +449,7 @@ struct BoosterBoxArt: View {
                     .font(.system(size: width * 0.05, weight: .black, design: .rounded))
                     .tracking(width * 0.018)
                     .foregroundStyle(.white.opacity(0.9))
-                SigilView(seed: CardDatabase.setName(set) + element.rawValue, element: element)
+                SetEmblem(set: set)
                     .frame(width: frontWidth * 0.4, height: frontWidth * 0.4)
                 Text(CardDatabase.setName(set))
                     .font(.system(size: width * 0.115, weight: .black, design: .rounded))
