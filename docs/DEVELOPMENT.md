@@ -138,7 +138,7 @@ The app shows these via `UIImage(named: card.id)` in `CardView`; the procedural
 
 Booster packs and booster boxes do *not* use card art. `TradingUp/Views/SetArt.swift`
 draws a themed miniature landscape per set with a SwiftUI `Canvas` — volcano
-(Emberfall), curling swell over islands (Tidecaller), jungle canopy (Verdspire),
+(Emberfall), curling swell over islands (Tidecaller), a stand of jungle trees (Verdspire),
 thunderhead and bolt (Voltcrest), eclipse and spirits (Umbral Reach). Use it as
 `SetEmblem(set: 1)`; it fills whatever frame you give it, drawing in a fixed
 100×100 design space, and skips fine particle detail below 64 pt so shop

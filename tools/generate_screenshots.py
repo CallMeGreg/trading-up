@@ -381,6 +381,75 @@ SCREEN_W, SCREEN_H = 393, 852
 PACK_PRICES = {1: 10.0, 2: 30.0, 3: 75.0, 4: 160.0, 5: 400.0}
 
 
+def _blend(a, b, t):
+    """Interpolate two hex colours, mirroring blend() in SetArt.swift."""
+    ai = [int(a[i:i + 2], 16) for i in (0, 2, 4)]
+    bi = [int(b[i:i + 2], 16) for i in (0, 2, 4)]
+    return "#%02x%02x%02x" % tuple(int(round(ai[i] + (bi[i] - ai[i]) * t)) for i in range(3))
+
+
+# Crown lobes: angle, distance, size. Deliberately uneven, so the silhouette
+# breaks into leaf clusters instead of settling into a smooth cloud.
+_LOBES = [(-2.35, 0.78, 0.46), (-1.62, 0.66, 0.50), (-1.05, 0.80, 0.44), (-0.42, 0.80, 0.42),
+          (0.24, 0.70, 0.44), (0.95, 0.58, 0.36), (1.75, 0.55, 0.34), (2.35, 0.74, 0.42),
+          (2.95, 0.80, 0.44)]
+
+
+def _tree(defs, x, base, crown_y, r, depth, op=1.0, detail=True):
+    """One tree, mirroring SetScene.tree in SetArt.swift: tapered trunk, forked
+    branches, lobed crown. depth runs 0 (far, hazed back) to 1 (front, lit)."""
+    shell = _blend("06240e", "093315", depth)
+    body = _blend("11421d", "3fbb52", depth)
+    lit = _blend("1e6129", "96f57e", depth)
+    bark = _blend("0a2711", "48331a", depth)
+    bark_dark = _blend("051b0a", "171007", depth)
+    out = []
+
+    w = r * 0.15 + 0.55
+    ctrl = base - (base - crown_y) * 0.55
+    trunk = defs.linear([("0%", bark, "1"), ("100%", bark_dark, "1")], x1=0, y1=0, x2=1, y2=0.6)
+    out.append(path("M%.2f %.2f Q%.2f %.2f %.2f %.2f L%.2f %.2f Q%.2f %.2f %.2f %.2f Z" % (
+        x - w * 1.7, base, x - w * 0.85, ctrl, x - w * 0.45, crown_y,
+        x + w * 0.45, crown_y, x + w * 0.85, ctrl, x + w * 1.7, base),
+        grad=trunk, opacity=op))
+    for side in (-1, 1):
+        out.append(path("M%.2f %.2f Q%.2f %.2f %.2f %.2f" % (
+            x, crown_y + r * 0.85, x + side * r * 0.16, crown_y + r * 0.55,
+            x + side * r * 0.6, crown_y + r * 0.1),
+            stroke=bark, sw=max(0.7, w * 0.55), opacity=op))
+
+    def crown(scale, dx, dy, fill, opacity):
+        # Opaque lobes inside one group: the union reads as a single mass, and
+        # the group opacity keeps overlaps from seaming.
+        parts = [ell(x + dx, crown_y + dy, r * 0.62 * scale, r * 0.66 * scale, fill=fill)]
+        for a, d, sz in _LOBES:
+            parts.append(ell(x + dx + math.cos(a) * r * d * 0.9 * scale,
+                             crown_y + dy + math.sin(a) * r * d * scale,
+                             r * sz * scale, r * sz * 0.92 * scale, fill=fill))
+        return '<g opacity="%.3f">%s</g>' % (opacity, "".join(parts))
+
+    out.append(crown(1, 0, 0, shell, op))
+    out.append(crown(0.84, -r * 0.05, -r * 0.09, body, op))
+    out.append(crown(0.46, -r * 0.16, -r * 0.26, lit, 0.5 * op))
+    if depth > 0.25:
+        for a, d in ((-2.45, 0.82), (-1.72, 0.74), (-1.1, 0.84), (-0.55, 0.86)):
+            out.append(ell(x + math.cos(a) * r * d * 0.9, crown_y + math.sin(a) * r * d,
+                           r * 0.26, r * 0.2, fill=lit, opacity=0.55 * op))
+    if not detail:
+        return "".join(out)
+
+    for a, d in ((-2.5, 1.0), (-1.75, 0.96), (-0.95, 1.02), (-0.18, 0.98), (2.55, 0.98)):
+        bx, by = x + math.cos(a) * r * d * 0.9, crown_y + math.sin(a) * r * d
+        tx, ty = x + math.cos(a) * r * (d + 0.2) * 0.9, crown_y + math.sin(a) * r * (d + 0.2)
+        nx, ny = -math.sin(a) * r * 0.18, math.cos(a) * r * 0.18
+        out.append(poly([(bx + nx, by + ny), (tx, ty), (bx - nx, by - ny)], fill=body, opacity=op))
+
+    out.append(path("M%.2f %.2f Q%.2f %.2f %.2f %.2f" % (
+        x - w * 1.35, base - 2, x - w * 1.1, base - (base - crown_y) * 0.5,
+        x - w * 0.5, crown_y + 4), stroke="#4faf4f", sw=w * 0.55, opacity=0.35 * op))
+    return "".join(out)
+
+
 def _wisp(x, y, s, op):
     w, h = 5.2 * s, 6.4 * s
     d = ("M%.2f %.2f L%.2f %.2f A%.2f %.2f 0 0 1 %.2f %.2f L%.2f %.2f "
@@ -480,28 +549,39 @@ def set_emblem(defs, cx, cy, size, set_no, op=1.0):
             o.append(ell(wx, wy, ww, 2.4, fill=hi, opacity=0.3 * op))
 
     elif set_no == 3:  # Verdspire - mossy jungle
-        o.append(wash(50, 54, "#08240f"))
-        o.append(ell(50, 82, 38, 10, fill="#123d1c", opacity=0.95 * op))
-        shaft = defs.linear([("0%", hi, "0.22"), ("100%", hi, "0")])
-        o.append(poly([(44, 26), (58, 26), (66, 82), (36, 82)], grad=shaft, opacity=op))
-        for tx, tw in ((30, 3.4), (50, 4.0), (70, 3.2)):
-            o.append(poly([(tx - tw, 82), (tx - tw * 0.55, 30), (tx + tw * 0.55, 30), (tx + tw, 82)],
-                          fill="#2c5a2a", opacity=op))
-            o.append(path("M%.2f 78 L%.2f 32" % (tx - tw * 0.45, tx - tw * 0.2),
-                          stroke="#4f8c46", sw=1.0, opacity=0.55 * op))
-        for bx, by, br in ((26, 26, 12), (40, 20, 13), (56, 19, 13), (72, 26, 12), (50, 28, 12)):
-            o.append(ell(bx, by, br, br * 0.72, fill="#2f9e44", opacity=op))
-        for bx, by, br in ((32, 20, 6), (50, 15, 7), (66, 21, 6)):
-            o.append(ell(bx, by, br, br * 0.62, fill=hi, opacity=0.32 * op))
-        for mx, my in ((26, 44), (33, 56), (68, 40), (74, 54), (44, 66), (61, 62)):
-            o.append(ell(mx, my, 2.0, 3.0, fill=hi, opacity=0.5 * op))
-        for fx, a in ((16, 1), (84, -1)):
+        o.append(wash(50, 48, "#051d0b"))
+        day = defs.radial([("0%", "#b6e88a", "0.22"), ("50%", "#2f9e44", "0.07"),
+                           ("100%", "#07240f", "0")], cy=0.35)
+        o.append(circle(50, 40, 40, grad=day, opacity=op))
+        for fx, fbase, fcy, fr in ((16, 78, 56, 6.5), (37, 77, 53, 5.4),
+                                   (63, 77, 54, 5.8), (85, 78, 57, 6.2)):
+            o.append(_tree(defs, fx, fbase, fcy, fr, 0, op, detail=False))
+        beam = defs.linear([("0%", "#eaffb0", "0"), ("50%", "#eaffb0", "0.13"),
+                            ("100%", "#eaffb0", "0")])
+        for bx, bw, spread in ((37, 5, 22), (68, 4, 18)):
+            o.append(poly([(bx, 16), (bx + bw, 16), (bx + bw + spread, 90), (bx - spread * 0.3, 90)],
+                          grad=beam, opacity=op))
+        o.append(_tree(defs, 23, 85, 34, 12.5, 0.5, op))
+        o.append(_tree(defs, 79, 85, 37, 11.5, 0.45, op))
+        o.append(_tree(defs, 51, 88, 22, 15.0, 1.0, op))
+        for vx, vy0, vy1, sway in ((36, 31, 60, 4), (65, 30, 64, -4),
+                                   (12, 42, 62, 3.5), (90, 46, 66, -3)):
+            o.append(path("M%.2f %.2f Q%.2f %.2f %.2f %.2f" % (
+                vx, vy0, vx + sway * 1.9, (vy0 + vy1) / 2, vx + sway, vy1),
+                stroke="#1f6b30", sw=1.1, opacity=op))
+        floor = defs.linear([("0%", "#0c3417", "0"), ("20%", "#0c3417", "1"),
+                             ("50%", "#1c5f2b", "1"), ("80%", "#0c3417", "1"),
+                             ("100%", "#0c3417", "0")], x1=0, y1=0, x2=1, y2=0)
+        o.append(ell(50, 89, 42, 9, grad=floor, opacity=0.95 * op))
+        for mx, my, mr in ((30, 85, 11), (60, 86, 10), (80, 88, 8), (17, 88, 8)):
+            o.append(ell(mx, my, mr, mr * 0.22, fill="#3fae52", opacity=0.35 * op))
+        for fx, a in ((11, 1), (89, -1)):
             for i in range(4):
-                o.append(path("M%.2f 80 Q%.2f %.2f %.2f %.2f" % (
-                    fx, fx + a * (3 + i * 2), 72 - i * 2, fx + a * (5 + i * 4), 66 - i * 4),
+                o.append(path("M%.2f 91 Q%.2f %.2f %.2f %.2f" % (
+                    fx, fx + a * (3 + i * 2), 83 - i * 2, fx + a * (5 + i * 4), 77 - i * 4),
                     stroke="#3fbf5f", sw=1.4, opacity=0.85 * op))
-        for gx, gy in ((22, 36), (38, 48), (62, 34), (78, 46), (50, 58), (30, 66)):
-            o.append(circle(gx, gy, 1.1, fill="#d6ff9c", opacity=0.8 * op))
+        for gx, gy in ((33, 50), (66, 42), (44, 62), (74, 64), (18, 64), (40, 38), (85, 52)):
+            o.append(circle(gx, gy, 1.1, fill="#f6ffcf", opacity=0.7 * op))
 
     elif set_no == 4:  # Voltcrest - static, thunderstorms
         o.append(wash(50, 50, "#231a05"))

@@ -38,7 +38,7 @@ missing.
 gets its own hand-built miniature scene in `SetArt.swift` (`SetEmblem`), so a
 booster is recognisable by silhouette alone before you read the name —
 **Emberfall** an erupting volcano over a magma pool, **Tidecaller** small islands
-under a curling swell, **Verdspire** a mossy jungle canopy, **Voltcrest** a bolt
+under a curling swell, **Verdspire** a stand of mossy jungle trees, **Voltcrest** a bolt
 splitting a thunderhead above a ridge, **Umbral Reach** an eclipse over drifting
 spirits. Every scene is drawn in a 100×100 design space and scaled to the pack,
 the booster box and the 58 pt shop shelf; fine detail (embers, spray, rain,

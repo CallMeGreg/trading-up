@@ -60,8 +60,22 @@ private func band(_ edge: Color, _ centre: Color) -> GraphicsContext.Shading {
     )
 }
 
-private func stroked(_ ctx: inout GraphicsContext, _ path: Path, _ color: Color, _ width: Double) {
-    ctx.stroke(path, with: .color(color),
+/// Interpolates two hex colours. Used to haze a scene's elements back by depth.
+/// `Color.mixed` can't do this job here: it is UIKit-only, and these scenes also
+/// have to render the same way in the macOS preview harness.
+private func blend(_ from: String, _ to: String, _ t: Double) -> Color {
+    func rgb(_ hex: String) -> (Double, Double, Double) {
+        var v: UInt64 = 0
+        Scanner(string: hex).scanHexInt64(&v)
+        return (Double((v >> 16) & 0xFF) / 255, Double((v >> 8) & 0xFF) / 255, Double(v & 0xFF) / 255)
+    }
+    let a = rgb(from), b = rgb(to), k = max(0, min(1, t))
+    return Color(red: a.0 + (b.0 - a.0) * k,
+                 green: a.1 + (b.1 - a.1) * k,
+                 blue: a.2 + (b.2 - a.2) * k)
+}
+
+private func stroked(_ ctx: inout GraphicsContext, _ path: Path, _ color: Color, _ width: Double) {    ctx.stroke(path, with: .color(color),
                style: StrokeStyle(lineWidth: width, lineCap: .round, lineJoin: .round))
 }
 
@@ -90,7 +104,7 @@ private func softFill(_ ctx: inout GraphicsContext, _ path: Path,
 ///
 /// - **Emberfall** — an erupting cone over a lava lake, ringed by dead peaks.
 /// - **Tidecaller** — two small islands under a breaking wave and heavy swell.
-/// - **Verdspire** — layered jungle canopy over mossy, vine-hung trunks.
+/// - **Verdspire** — a stand of mossy jungle trees with light coming through.
 /// - **Voltcrest** — a thunderhead forking lightning into a ridge line.
 /// - **Umbral Reach** — an eclipse over dead trees, with spirits drifting up.
 ///
@@ -448,39 +462,40 @@ enum SetScene {
     // MARK: Verdspire — mossy jungle
 
     private static func verdspire(_ ctx: inout GraphicsContext, _ fine: Bool) {
-        nightWash(&ctx, Color(hex: "07240f"), P(50, 46))
+        nightWash(&ctx, Color(hex: "051d0b"), P(50, 48))
 
-        // Daylight filtering down through the canopy.
-        ctx.fill(ell(50, 48, 44, 44),
-                 with: rShade([Color(hex: "b9f28a").opacity(0.3), Color(hex: "2f9e44").opacity(0.1),
-                               Color(hex: "0a2c13").opacity(0)], P(50, 28), 2, 44))
-        for (x, w) in [(26.0, 8.0), (48.0, 11.0), (68.0, 7.0)] {
-            ctx.fill(poly([(x, 14), (x + w, 14), (x + w + 10, 88), (x + 4, 88)]),
-                     with: .color(Color(hex: "eaffb0").opacity(0.08)))
+        // A patch of daylight up behind the crowns. Kept high and narrow: the
+        // floor has to stay dark or the trunks stop reading as silhouettes.
+        ctx.fill(ell(50, 40, 40, 40),
+                 with: rShade([Color(hex: "b6e88a").opacity(0.22), Color(hex: "2f9e44").opacity(0.07),
+                               Color(hex: "07240f").opacity(0)], P(50, 26), 2, 40))
+
+        // Back of the wood: a few hazed crowns, no detail, purely depth.
+        let far: [(Double, Double, Double, Double)] = [
+            (16, 78, 56, 6.5), (37, 77, 53, 5.4), (63, 77, 54, 5.8), (85, 78, 57, 6.2)]
+        for (x, base, crownY, r) in far {
+            tree(&ctx, x: x, base: base, crownY: crownY, r: r, depth: 0, fine: false)
         }
 
-        // Trunks — back pair first, so the canopy can settle on top of them.
-        trunk(&ctx, x: 76, top: 22, base: 84, w: 3.4, dark: true, fine: fine)
-        trunk(&ctx, x: 22, top: 24, base: 84, w: 3.0, dark: true, fine: fine)
-        trunk(&ctx, x: 46, top: 18, base: 87, w: 6.4, dark: false, fine: fine)
-
-        // Canopy: three layers, back to front, each one lighter than the last.
-        ctx.fill(blob([(20, 14, 18, 10), (46, 8, 24, 11), (76, 14, 20, 10), (60, 18, 14, 8), (32, 19, 12, 7)]),
-                 with: .color(Color(hex: "0d3a1a")))
-        ctx.fill(blob([(15, 11, 14, 8), (38, 15, 18, 8), (64, 11, 16, 8), (85, 17, 12, 7), (52, 6, 15, 7)]),
-                 with: .color(Color(hex: "1a5f2c")))
-        ctx.fill(blob([(27, 8, 12, 6), (57, 13, 13, 6), (80, 8, 11, 6), (44, 4, 12, 5.5)]),
-                 with: .color(Color(hex: "2f9e44").opacity(0.9)))
-        if fine {
-            // A few lit leaves catching the light on the top edge.
-            for (x, y) in [(24.0, 4.0), (46.0, 1.5), (70.0, 5.0), (58.0, 9.0), (34.0, 11.0)] {
-                ctx.fill(ell(x, y, 4.5, 2.4), with: .color(Color(hex: "5fd35f").opacity(0.55)))
-            }
+        // Light coming down through the gaps between the crowns.
+        let beams: [(Double, Double, Double)] = [(37, 5, 22), (68, 4, 18)]
+        for (x, w, spread) in beams {
+            ctx.fill(poly([(x, 16), (x + w, 16), (x + w + spread, 90), (x - spread * 0.3, 90)]),
+                     with: vShade([Color(hex: "eaffb0").opacity(0),
+                                   Color(hex: "eaffb0").opacity(0.13),
+                                   Color(hex: "eaffb0").opacity(0)], 16, 92))
         }
 
-        // Vines hanging out of it.
+        // The stand itself: two mid trees, then the tall one in front of them.
+        // Crown centres sit at three different heights, so the skyline stays
+        // scalloped instead of flattening into a single band of leaves.
+        tree(&ctx, x: 23, base: 85, crownY: 34, r: 12.5, depth: 0.5, fine: fine)
+        tree(&ctx, x: 79, base: 85, crownY: 37, r: 11.5, depth: 0.45, fine: fine)
+        tree(&ctx, x: 51, base: 88, crownY: 22, r: 15.0, depth: 1, fine: fine)
+
+        // Vines hanging out of the crowns.
         let vines: [(Double, Double, Double, Double)] = [
-            (13, 18, 54, 5), (34, 22, 46, -4), (63, 20, 60, 4.5), (87, 22, 42, -3.5)]
+            (36, 31, 60, 4), (65, 30, 64, -4), (12, 42, 62, 3.5), (90, 46, 66, -3)]
         for (x, y0, y1, sway) in vines {
             var vine = Path()
             vine.move(to: P(x, y0))
@@ -495,24 +510,25 @@ enum SetScene {
         }
 
         // Mossy forest floor.
-        softFill(&ctx, ell(50, 88, 42, 9),
+        softFill(&ctx, ell(50, 89, 42, 9),
                  band(Color(hex: "0c3417"), Color(hex: "1c5f2b")),
                  halo: Color(hex: "0d3a1a").opacity(0.7), radius: 4)
-        ctx.fill(blob([(30, 84, 11, 2.4), (60, 85, 10, 2.2), (80, 87, 8, 2), (17, 87, 8, 2)]),
+        ctx.fill(blob([(30, 85, 11, 2.4), (60, 86, 10, 2.2), (80, 88, 8, 2), (17, 88, 8, 2)]),
                  with: .color(Color(hex: "3fae52").opacity(0.35)))
 
-        // Ferns in the near corners, and a log across the floor.
-        fern(&ctx, x: 12, y: 90, s: 11, flip: false, fine: fine)
-        fern(&ctx, x: 88, y: 91, s: 10, flip: true, fine: fine)
-        ctx.fill(ell(62, 91, 9, 2.4), with: .color(Color(hex: "24401d")))
-        ctx.fill(ell(62, 90, 9, 1.2), with: .color(Color(hex: "3c6b2a").opacity(0.8)))
+        // Undergrowth: ferns in the near corners, a mossy log, roots.
+        fern(&ctx, x: 11, y: 91, s: 11, flip: false, fine: fine)
+        fern(&ctx, x: 89, y: 92, s: 10, flip: true, fine: fine)
+        fern(&ctx, x: 63, y: 88, s: 7, flip: true, fine: fine)
+        ctx.fill(ell(35, 92, 9, 2.4), with: .color(Color(hex: "24401d")))
+        ctx.fill(ell(35, 91, 9, 1.2), with: .color(Color(hex: "3c6b2a").opacity(0.8)))
 
         guard fine else { return }
 
-        // Pollen drifting through the shafts.
+        // Pollen drifting through the beams.
         let motes: [(Double, Double, Double, Double)] = [
-            (33, 46, 1.3, 0.7), (66, 38, 1.1, 0.6), (52, 58, 1.0, 0.55), (78, 62, 1.2, 0.5),
-            (18, 62, 0.9, 0.45), (40, 32, 0.9, 0.5), (85, 46, 1.0, 0.45), (28, 74, 0.9, 0.4)]
+            (33, 50, 1.3, 0.7), (66, 42, 1.1, 0.6), (44, 62, 1.0, 0.55), (74, 64, 1.2, 0.5),
+            (18, 64, 0.9, 0.45), (40, 38, 0.9, 0.5), (85, 52, 1.0, 0.45), (28, 76, 0.9, 0.4)]
         for (x, y, r, o) in motes {
             glow(&ctx, 1.4) { g in
                 g.fill(dot(x, y, r * 2), with: .color(Color(hex: "d9ff9a").opacity(o * 0.5)))
@@ -521,26 +537,90 @@ enum SetScene {
         }
     }
 
-    private static func trunk(_ ctx: inout GraphicsContext, x: Double, top: Double, base: Double,
-                              w: Double, dark: Bool, fine: Bool) {
+    /// One tree: a tapered trunk, a fork of branches and a lobed crown. Crowns
+    /// are built as a ring of unequal lobes with frond tips on the rim, and each
+    /// one has its own trunk running down to the floor — which is what makes a
+    /// stand of these read as a wood instead of a single green cloud.
+    /// `depth` runs 0 (far back, hazed into the undergrowth) to 1 (front, lit).
+    private static func tree(_ ctx: inout GraphicsContext, x: Double, base: Double,
+                             crownY: Double, r: Double, depth: Double, fine: Bool) {
+        let shell = blend("06240e", "093315", depth)
+        let body = blend("11421d", "3fbb52", depth)
+        let lit = blend("1e6129", "96f57e", depth)
+        let bark = blend("0a2711", "48331a", depth)
+        let barkDark = blend("051b0a", "171007", depth)
+
+        // Trunk, flaring a little where it meets the floor.
+        let w = r * 0.15 + 0.55
         var t = Path()
-        t.move(to: P(x - w * 2.1, base))
-        t.addQuadCurve(to: P(x - w * 0.6, top), control: P(x - w * 0.95, base - (base - top) * 0.5))
-        t.addLine(to: P(x + w * 0.6, top))
-        t.addQuadCurve(to: P(x + w * 2.1, base), control: P(x + w * 0.95, base - (base - top) * 0.5))
+        t.move(to: P(x - w * 1.7, base))
+        t.addQuadCurve(to: P(x - w * 0.45, crownY),
+                       control: P(x - w * 0.85, base - (base - crownY) * 0.55))
+        t.addLine(to: P(x + w * 0.45, crownY))
+        t.addQuadCurve(to: P(x + w * 1.7, base),
+                       control: P(x + w * 0.85, base - (base - crownY) * 0.55))
         t.closeSubpath()
-        ctx.fill(t, with: aShade(dark ? [Color(hex: "16401f"), Color(hex: "081c0c")]
-                                      : [Color(hex: "4a361c"), Color(hex: "1a2711")],
-                                 P(x - w, top), P(x + w * 1.8, base)))
+        ctx.fill(t, with: aShade([bark, barkDark], P(x - w, crownY), P(x + w * 1.7, base)))
+
+        // Branches forking up into the leaves.
+        for side in [-1.0, 1.0] {
+            var b = Path()
+            b.move(to: P(x, crownY + r * 0.85))
+            b.addQuadCurve(to: P(x + side * r * 0.6, crownY + r * 0.1),
+                           control: P(x + side * r * 0.16, crownY + r * 0.55))
+            stroked(&ctx, b, bark, max(0.7, w * 0.55))
+        }
+
+        // Crown: a core mass plus a ring of lobes of deliberately uneven size.
+        let lobes: [(Double, Double, Double)] = [
+            (-2.35, 0.78, 0.46), (-1.62, 0.66, 0.50), (-1.05, 0.80, 0.44), (-0.42, 0.80, 0.42),
+            (0.24, 0.70, 0.44), (0.95, 0.58, 0.36), (1.75, 0.55, 0.34), (2.35, 0.74, 0.42),
+            (2.95, 0.80, 0.44)]
+        func crown(_ scale: Double, _ dx: Double, _ dy: Double) -> Path {
+            var p = Path()
+            p.addEllipse(in: CGRect(x: x + dx - r * 0.62 * scale, y: crownY + dy - r * 0.66 * scale,
+                                    width: r * 1.24 * scale, height: r * 1.32 * scale))
+            for (a, d, s) in lobes {
+                let lx = x + dx + cos(a) * r * d * 0.9 * scale
+                let ly = crownY + dy + sin(a) * r * d * scale
+                p.addEllipse(in: CGRect(x: lx - r * s * scale, y: ly - r * s * 0.92 * scale,
+                                        width: r * s * 2 * scale, height: r * s * 1.84 * scale))
+            }
+            return p
+        }
+        ctx.fill(crown(1, 0, 0), with: .color(shell))
+        ctx.fill(crown(0.84, -r * 0.05, -r * 0.09), with: .color(body))
+        ctx.fill(crown(0.46, -r * 0.16, -r * 0.26), with: .color(lit.opacity(0.5)))
+
+        // Sun on the top-left leaves, which is what lifts a crown off a bright
+        // wrapper — without it the tree sinks into the foil behind it.
+        if depth > 0.25 {
+            for (a, d) in [(-2.45, 0.82), (-1.72, 0.74), (-1.1, 0.84), (-0.55, 0.86)] {
+                ctx.fill(ell(x + cos(a) * r * d * 0.9, crownY + sin(a) * r * d,
+                             r * 0.26, r * 0.2),
+                         with: .color(lit.opacity(0.55)))
+            }
+        }
+
         guard fine else { return }
-        // Moss creeping up the shaded side, hugging the edge of the trunk.
+
+        // Frond tips breaking the silhouette, so the edge reads as leaves.
+        for (a, d) in [(-2.5, 1.0), (-1.75, 0.96), (-0.95, 1.02), (-0.18, 0.98), (2.55, 0.98)] {
+            let bx = x + cos(a) * r * d * 0.9, by = crownY + sin(a) * r * d
+            let tx = x + cos(a) * r * (d + 0.2) * 0.9, ty = crownY + sin(a) * r * (d + 0.2)
+            let nx = -sin(a) * r * 0.18, ny = cos(a) * r * 0.18
+            ctx.fill(poly([(bx + nx, by + ny), (tx, ty), (bx - nx, by - ny)]), with: .color(body))
+        }
+
+        // Moss creeping up the shaded side of the trunk.
         var moss = Path()
-        moss.move(to: P(x - w * 1.6, base - 2))
-        moss.addQuadCurve(to: P(x - w * 0.66, top + 6), control: P(x - w * 1.35, base - (base - top) * 0.5))
-        stroked(&ctx, moss, Color(hex: "4faf4f").opacity(0.35), w * 0.5)
-        for t0 in [0.22, 0.44, 0.66, 0.84] {
-            let y = base - (base - top) * t0
-            ctx.fill(ell(x - w * (1.35 - t0 * 0.55), y, w * 0.32, 0.9),
+        moss.move(to: P(x - w * 1.35, base - 2))
+        moss.addQuadCurve(to: P(x - w * 0.5, crownY + 4),
+                          control: P(x - w * 1.1, base - (base - crownY) * 0.5))
+        stroked(&ctx, moss, Color(hex: "4faf4f").opacity(0.35), w * 0.55)
+        for t0 in [0.24, 0.48, 0.7, 0.86] {
+            let y = base - (base - crownY) * t0
+            ctx.fill(ell(x - w * (1.15 - t0 * 0.5), y, w * 0.34, 0.9),
                      with: .color(Color(hex: "6ee06e").opacity(0.35)))
         }
     }
