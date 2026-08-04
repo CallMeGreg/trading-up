@@ -46,8 +46,9 @@ CENTRE = (0.500, 0.495)
 def creature_svg():
     e = art.ELE[ELEMENT]
     role = art.ROLES[STAR]
-    return art.defs(UID, e) + art.ARCH[role["slot"]](UID, e, role["stage"], role["sc"],
-                                                     art.vary(STAR))
+    ctx = art.Ctx(UID, e, role["set"], art.vary(STAR), STAR)
+    body = art.creature(ctx, role)
+    return art.defs(ctx) + body
 
 
 def measure(inner, supersample=4):
