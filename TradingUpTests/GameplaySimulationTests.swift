@@ -393,6 +393,15 @@ final class WideAndShortLayoutRenderTests: XCTestCase {
         XCTAssertEqual(rendersWithoutFailure(LoseView(), size: ipadSize), ipadSize)
     }
 
+    /// The game-over screen now builds a horizontal card carousel for every set
+    /// the player pulled from. Seed a run with a few packs so the shelves — not
+    /// just the empty state — render without failing at the widest shipped layout.
+    func testLoseViewWithCollectionRendersAtIPadWidth() {
+        for _ in 0..<5 { _ = game.buyPack(set: 1) }
+        XCTAssertGreaterThan(game.uniqueCount, 0, "expected packs to populate the collection")
+        XCTAssertEqual(rendersWithoutFailure(LoseView(), size: ipadSize), ipadSize)
+    }
+
     func testWelcomeViewRendersAtLandscapePhoneSize() {
         XCTAssertEqual(rendersWithoutFailure(WelcomeView(), size: landscapePhoneSize), landscapePhoneSize)
     }
