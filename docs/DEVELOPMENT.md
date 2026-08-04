@@ -58,7 +58,7 @@ TradingUp/
   Views/                     SwiftUI screens (Shop, Collection, pack opening, etc.)
   Audio/
     SoundManager.swift       AVAudioPlayer pool + mute preference; Sound.play(.x) API
-    SFX/                     3 generated sound effects (auto-generated .wav files)
+    SFX/                     7 generated sound effects (auto-generated .wav files)
   Assets.xcassets/           App icon + accent color + CardArt/ (250 card illustrations)
   PrivacyInfo.xcprivacy      Privacy manifest (no tracking, no data collection)
 TradingUpTests/              XCTest unit tests (fast, deterministic)
@@ -156,18 +156,23 @@ the rounded‑corner mask itself, so a baked‑in one shows up as dark wedges).
 
 ### Sound effects
 
-The app keeps a deliberately minimal set of three SFX (a purchase chime when you
-buy a pack, a sparkly shimmer for foil pulls, and a coin chime when cards are
-sold), each synthesized from scratch with the Python standard library only — no
-samples, no dependencies. To regenerate them after editing `tools/generate_sfx.py`:
+Every SFX is synthesized from scratch with the Python standard library only — no
+samples, no dependencies. The set is seven sounds: two for the shop (a purchase
+chime when you buy a pack, a coin chime when cards are sold) and five for the pack
+reveal — a paper‑rip **pack‑open**, a soft **card‑flip** as each card turns, an
+airy **foil** glisten, and “achievement unlocked” stings for **rare** and **ultra**
+pulls. To regenerate them after editing `tools/generate_sfx.py`:
 
 ```bash
-python3 tools/generate_sfx.py                # 3 .wav files -> TradingUp/Audio/SFX
+python3 tools/generate_sfx.py                # 7 .wav files -> TradingUp/Audio/SFX
 ```
 
 The file‑system‑synchronized Xcode target picks the `.wav` files up automatically.
 `SoundManager` preloads them at launch and honors the in‑app mute toggle (Stats →
-Settings), so no wiring is needed after regenerating.
+Settings). The reveal fires each sound at its moment in
+`TradingUp/Views/RevealAnimation.swift` (`RevealingCardView.run` for the flip/foil/
+rare/ultra stings, `SealedPackView.open` for the tear), so no extra wiring is
+needed after regenerating.
 
 ### Marketing renders
 

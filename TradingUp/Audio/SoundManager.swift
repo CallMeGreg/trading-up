@@ -9,6 +9,10 @@ enum Sound: String, CaseIterable {
     case purchase
     case foilShimmer   = "foil_shimmer"
     case coin
+    case packOpen      = "pack_open"
+    case cardFlip      = "card_flip"
+    case rare
+    case ultra
 
     /// Convenience mirroring `Haptics.play(_:)` so call sites read the same way.
     @MainActor
