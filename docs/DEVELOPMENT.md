@@ -176,7 +176,7 @@ than captured from a running app, so they regenerate anywhere:
 
 ```bash
 brew install librsvg                         # one-time: provides rsvg-convert
-python3 tools/generate_screenshots.py        # -> docs/screenshots (6.9" + 6.5")
+python3 tools/generate_screenshots.py        # -> docs/screenshots (iPhone 6.5" + iPad 13")
 ```
 
 These are *not* the ones you submit to Apple — see [APP_STORE.md](APP_STORE.md)

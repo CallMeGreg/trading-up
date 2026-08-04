@@ -59,7 +59,7 @@ submit.
 
 ```bash
 brew install librsvg                         # one-time: provides rsvg-convert
-python3 tools/generate_screenshots.py        # -> docs/screenshots (6.9" + 6.5")
+python3 tools/generate_screenshots.py        # -> docs/screenshots (iPhone 6.5" + iPad 13")
 ```
 
 ## App icon
