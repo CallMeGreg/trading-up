@@ -8,10 +8,11 @@ machine with just `python3`. Output is 16-bit mono PCM WAV at 44.1 kHz written t
 them automatically. The app plays them via `SoundManager` (see
 TradingUp/Audio/SoundManager.swift).
 
-Design goals: short, punchy, on-brand for a collectible-card game. The app keeps a
-deliberately minimal set — a purchase chime when you buy a pack, a sparkly shimmer
-for foil pulls, and a coin chime when cards are sold. Everything is peak-normalized
-and fenced with short fades so there are no clicks.
+Design goals: short, punchy, on-brand for a collectible-card game. The set covers
+the shop (a purchase chime when you buy a pack, a coin chime when cards are sold)
+and the pack reveal (a paper-rip pack-open, a soft card-flip, an airy foil glisten,
+and "achievement unlocked" stings for rare and ultra pulls). Everything is
+peak-normalized and fenced with short fades so there are no clicks.
 
 Usage:
   python3 tools/generate_sfx.py            # (re)generate every SFX into the app
@@ -219,6 +220,26 @@ def s_purchase():
     return finalize(b, gain=0.7)
 
 
+def s_pack_open():
+    # Gritty paper/foil rip — two quick tears into an airy "shhh", seated with a
+    # soft low settle. Mirrors the two-beat tear animation in SealedPackView.
+    b = buf(0.46)
+    add(b, noise_swept(0.14, 5000, 2200, decay=13, seed=8, hp=True), 0.00, 0.9)
+    add(b, noise_swept(0.12, 4200, 1800, decay=14, seed=12, hp=True), 0.09, 0.8)
+    add(b, noise_swept(0.26, 3200, 900, decay=6, seed=15, hp=True), 0.15, 0.7)
+    add(b, sine(78, 0.18, decay=9, attack=0.002), 0.26, 0.32)
+    return finalize(b, gain=0.72, fade_in=0.002, fade_out=0.06)
+
+
+def s_card_flip():
+    # Soft, dark "ffttt" as the next card slides up — two very quiet overlapping
+    # low-passed brushes, kept short so a fast reveal doesn't wash out.
+    b = buf(0.18)
+    add(b, noise_swept(0.13, 2000, 900, decay=12, seed=101), 0.0, 0.55)
+    add(b, noise_swept(0.10, 1500, 680, decay=16, seed=103), 0.03, 0.40)
+    return finalize(b, gain=0.36, fade_in=0.007, fade_out=0.04)
+
+
 def _shimmer(dur, base=3000, seed=21):
     """A tremolo cluster of high partials — the 'sparkle' bed for foils/ultras."""
     n = int(SR * dur)
@@ -238,9 +259,39 @@ def _shimmer(dur, base=3000, seed=21):
 
 
 def s_foil_shimmer():
-    b = _shimmer(0.55, base=2600, seed=17)
-    add(b, noise_swept(0.2, 9000, 6000, decay=10, seed=19, hp=True), 0.0, 0.2)
-    return finalize(b, gain=0.6, fade_in=0.008, fade_out=0.07)
+    # Airy "glisten": a wide shimmer bed with a rising sparkle of high bells.
+    b = _shimmer(0.8, base=2500, seed=52)
+    for i, note in enumerate(("B5", "E6", "G#6", "B6", "D#7")):
+        add(b, bell(hz(note), 0.18, decay=7), 0.04 + i * 0.07, 0.26)
+    add(b, noise_swept(0.22, 10000, 7000, decay=9, seed=57, hp=True), 0.0, 0.16)
+    return finalize(b, gain=0.58, fade_in=0.008, fade_out=0.1)
+
+
+def s_rare():
+    # "Achievement unlocked": an ascending C-E-G arpeggio resolving on a ringing
+    # top note, with a faint sparkle tail.
+    b = buf(0.7)
+    add(b, bell(hz("C5"), 0.18, decay=7), 0.00, 0.70)
+    add(b, bell(hz("E5"), 0.18, decay=7), 0.08, 0.75)
+    add(b, bell(hz("G5"), 0.40, decay=5), 0.16, 0.92)
+    add(b, _shimmer(0.30, base=3800, seed=211), 0.16, 0.13)
+    return finalize(b, gain=0.72, fade_in=0.003, fade_out=0.06)
+
+
+def s_ultra():
+    # The rare motif made triumphant: a quick rising run into a big major chord
+    # stab over a brass swell, a low boom and a shimmer tail.
+    b = buf(1.25)
+    add(b, sine(hz("A2"), 0.22, decay=6, attack=0.004), 0.0, 0.45)   # boom
+    add(b, bell(hz("E5"), 0.16, decay=8), 0.05, 0.60)
+    add(b, bell(hz("A5"), 0.16, decay=8), 0.12, 0.65)
+    add(b, bell(hz("C#6"), 0.18, decay=8), 0.19, 0.68)
+    for note, gn in (("A5", 0.80), ("C#6", 0.70), ("E6", 0.65)):     # chord stab
+        add(b, bell(hz(note), 0.42, decay=5), 0.30, gn)
+    add(b, brass(hz("A4"), 0.50, decay=2.9), 0.30, 0.40)
+    add(b, brass(hz("E5"), 0.50, decay=2.9), 0.30, 0.30)
+    add(b, _shimmer(0.55, base=3100, seed=241), 0.30, 0.38)
+    return finalize(b, gain=0.72, fade_in=0.004, fade_out=0.13)
 
 
 def s_coin():
@@ -254,7 +305,11 @@ def s_coin():
 
 SOUNDS = {
     "purchase": s_purchase,
+    "pack_open": s_pack_open,
+    "card_flip": s_card_flip,
     "foil_shimmer": s_foil_shimmer,
+    "rare": s_rare,
+    "ultra": s_ultra,
     "coin": s_coin,
 }
 

@@ -261,13 +261,20 @@ struct RevealingCardView: View {
     }
 
     private func run() {
+        // The soft flip "ffttt" rides the card's motion; every card gets it.
+        Sound.play(.cardFlip, volume: 0.7)
+
         let response = isBig ? 0.75 : 0.5
         withAnimation(.spring(response: response, dampingFraction: 0.72)) { rotation = 0 }
 
         // Land the sting + effects right as the card crosses to face-up.
         let mid = response * 0.42
         DispatchQueue.main.asyncAfter(deadline: .now() + mid) {
+            // Foil is a shimmer overlay on any rarity; the rarity sting layers
+            // under it, so a foil rare/ultra gets both.
             if inst.foil { Sound.play(.foilShimmer, volume: 0.8) }
+            if rarity == .ultra { Sound.play(.ultra) }
+            else if rarity == .rare { Sound.play(.rare) }
 
             if isSpecial {
                 showParticles = true
@@ -353,6 +360,7 @@ struct SealedPackView: View {
     private func open() {
         guard !tearing else { return }
         Haptics.play(isBox ? .heavy : .medium)
+        Sound.play(.packOpen)
         tearing = true
         withAnimation(.easeIn(duration: 0.34)) { tearTop = 1 }
         withAnimation(.easeIn(duration: 0.42).delay(0.1)) { dropBody = 1 }
