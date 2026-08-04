@@ -121,16 +121,23 @@ prints an economy report. Re‑run the [test harness](TESTING.md) afterward.
 
 ### Card art
 
-Each of the 250 cards has a deterministic, name‑aligned creature illustration (a
-flat‑vector creature on a per‑set scene, tinted to the card's element and scaled
-up through its evolution line). To (re)generate the art after editing
+Each of the 250 cards has its **own** deterministic, name‑aligned creature
+illustration — no card is a recolour of another. Every set has a design language
+that changes real geometry (silhouette, limbs, head, eyes, crest, tail, surface),
+every slot gets a different concept in each set, and every evolution stage adds
+structure rather than scale. To (re)generate the art after editing
 `tools/generate_art.py`:
 
 ```bash
 brew install librsvg                        # one-time: provides rsvg-convert
 python3 tools/generate_art.py assets        # 250 PNGs -> Assets.xcassets/CardArt + mockup SVGs
 python3 tools/generate_art.py qa            # optional: QA contact sheets to /tmp/qa_set{n}.png
+python3 tools/generate_art.py dupes         # fails if any two cards share a character design
 ```
+
+`dupes` hashes each creature's geometry with the palette and elemental accents
+stripped out, so "same shape, different colour" counts as a duplicate. Keep it at
+250 unique designs.
 
 The app shows these via `UIImage(named: card.id)` in `CardView`; the procedural
 `SigilView` stays as an automatic fallback if an image is ever missing.
