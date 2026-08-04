@@ -19,16 +19,16 @@ The screenshots you actually upload are captured by *playing the game*.
 packs with the $100 the game gives you, rips them card by card, sells the
 duplicates, grades a rare and browses the collection it built — taking
 full‑resolution device screenshots along the way. A second short pass seeds a
-completed collection (`tools/seed_save.py`) so the win screen and a finished set
-are covered too.
+completed collection (`tools/seed_save.py`) so the win screen, a finished set and
+the PSA 10 grading jackpot are covered too.
 
 ```bash
 tools/capture_screenshots.sh                      # all required sizes, ~15 minutes
 tools/capture_screenshots.sh "iPhone 17 Pro Max"  # just one device
-tools/capture_screenshots.sh --only endgame       # refresh shots 25-29 only
+tools/capture_screenshots.sh --only endgame       # refresh shots 25-28 only
 ```
 
-Output lands in `docs/screenshots/appstore/<device>/` — 29 numbered PNGs per
+Output lands in `docs/screenshots/appstore/<device>/` — 28 numbered PNGs per
 device at **1320×2868** (iPhone 6.9"), **1242×2688** (iPhone 6.5") and
 **2064×2752** (iPad 13"). All three are required: the target ships
 `TARGETED_DEVICE_FAMILY = "1,2"`, so App Store Connect asks for an iPad set as
@@ -50,12 +50,28 @@ the `TradingUp` scheme so CI's unit‑test run stays fast.
 See [app-store-listing.md §4](app-store-listing.md#4-screenshots) for which ten
 to upload and in what order.
 
+### Publishing five to the README and the website
+
+The README and [the landing page](https://callmegreg.github.io/trading-up/) show
+real screenshots too, so they can't drift from the app. Five frames from the
+6.5" capture get shrunk and checked in:
+
+```bash
+brew install webp                            # one-time: provides cwebp
+tools/publish_screenshots.sh                 # defaults to the 6.5" capture
+```
+
+That writes `docs/screenshots/app/*.png` (621×1344, embedded by `README.md`) and
+`site/screenshots/*.webp` (480 px wide, embedded by `site/index.html`) from the
+same capture, in the game's own order: shop, rip, keep‑or‑sell, grade, collect.
+Re‑run it after any capture that changes how those five screens look.
+
 ### Marketing renders (different thing)
 
 `docs/screenshots/*.png` are captioned, device‑framed scenes composited as SVG
-rather than captured from a running app. They're small enough to check in, they
-regenerate anywhere, and the README uses them — but they are **not** what you
-submit.
+rather than captured from a running app. They're small enough to check in and
+they regenerate anywhere — but they are **not** what you submit, and they're not
+what the README shows.
 
 ```bash
 brew install librsvg                         # one-time: provides rsvg-convert

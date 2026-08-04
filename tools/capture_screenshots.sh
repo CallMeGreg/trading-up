@@ -10,9 +10,9 @@
 #
 #   tools/capture_screenshots.sh                       # both passes, both sizes
 #   tools/capture_screenshots.sh "iPhone 17 Pro Max"   # just one device
-#   tools/capture_screenshots.sh --only endgame        # refresh shots 25-29 only
+#   tools/capture_screenshots.sh --only endgame        # refresh shots 25-28 only
 #
-# --only takes `playthrough` (shots 01-24), `endgame` (25-29) or `all`. Use it
+# --only takes `playthrough` (shots 01-24), `endgame` (25-28) or `all`. Use it
 # when a change only touches part of the game so the rest of the set — and its
 # place in git history — is left alone.
 #

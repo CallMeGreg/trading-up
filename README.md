@@ -42,20 +42,23 @@ in‑app purchases, no internet connection.
 
 <table>
 <tr>
-<td width="20%"><img src="docs/screenshots/03_home_progress_1242x2688.png" alt="The shop showing pack-buying progress across five sets"></td>
-<td width="20%"><img src="docs/screenshots/02_rare_hit_1242x2688.png" alt="A rare flipping over during a pack reveal"></td>
-<td width="20%"><img src="docs/screenshots/05_collection_1242x2688.png" alt="The collection grid filling in"></td>
-<td width="20%"><img src="docs/screenshots/06_grade_1242x2688.png" alt="A card coming back from grading as a PSA 10"></td>
-<td width="20%"><img src="docs/screenshots/08_set_complete_1242x2688.png" alt="A completed set paying out its bonus"></td>
+<td width="20%"><img src="docs/screenshots/app/01-shop.png" alt="The shop: cash, binder progress, and five sets of packs with the later ones still locked"></td>
+<td width="20%"><img src="docs/screenshots/app/02-rip-packs.png" alt="A new rare flipping over during a pack reveal"></td>
+<td width="20%"><img src="docs/screenshots/app/03-keep-or-sell.png" alt="The pack summary paying out evolution bonuses, with the duplicate ready to sell"></td>
+<td width="20%"><img src="docs/screenshots/app/04-grade.png" alt="A card coming back from grading as a PSA 10, worth five times what it was"></td>
+<td width="20%"><img src="docs/screenshots/app/05-collect.png" alt="The collection grid filling in, unowned cards still locked"></td>
 </tr>
 <tr>
 <td align="center"><b>Shop</b></td>
 <td align="center"><b>Rip packs</b></td>
-<td align="center"><b>Collect</b></td>
+<td align="center"><b>Keep or sell</b></td>
 <td align="center"><b>Grade</b></td>
-<td align="center"><b>Set bonus</b></td>
+<td align="center"><b>Collect</b></td>
 </tr>
 </table>
+
+<sub>Real screenshots from the current build, captured on an iPhone by
+<a href="docs/APP_STORE.md#screenshots"><code>tools/capture_screenshots.sh</code></a>.</sub>
 
 ## How to play
 

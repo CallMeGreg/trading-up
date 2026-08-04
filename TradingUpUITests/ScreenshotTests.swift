@@ -46,10 +46,11 @@ final class ScreenshotTests: XCTestCase {
                                     "expected a full marketing set, captured \(shotIndex)")
     }
 
-    /// Late-game showcase: the win celebration and a finished set — the parts of
-    /// the game a $100 starting bankroll can't reach in a three-minute run.
-    /// `tools/capture_screenshots.sh` seeds a completed save before running this,
-    /// so everything on screen is still the real app rendering real state.
+    /// Late-game showcase: the win celebration, a finished set, and the PSA 10
+    /// grading jackpot — the parts of the game a $100 starting bankroll can't
+    /// reach in a three-minute run. `tools/capture_screenshots.sh` seeds a
+    /// completed save before running this, so everything on screen is still the
+    /// real app rendering real state.
     ///
     /// The booster-box pass at the end is dormant: boxes are off the shelf behind
     /// `FeatureFlags.removeBoosterBoxes`, so `buyBox` never appears and the pass
@@ -72,6 +73,8 @@ final class ScreenshotTests: XCTestCase {
         openTab("Shop")
         XCTAssertTrue(buyPack.waitForExistence(timeout: 15))
         shot("shop-all-sets-unlocked", settle: 1.0)
+
+        captureGemMintGrade()
 
         // No-op while boxes are off the shelf; the shop never renders this button.
         let box = buyBox
@@ -220,6 +223,54 @@ final class ScreenshotTests: XCTestCase {
         }
         if doneButton.exists { doneButton.tap() }
         tapFilter("Rare+")   // clear the filter again
+    }
+
+    /// The grading jackpot, played for rather than staged. PSA 10 is a 10% roll,
+    /// so the one card the playthrough grades almost never lands on it — but the
+    /// ×5 payoff is the reason grading exists, and the marketing strip wants to
+    /// show it. From the seeded collection (every card owned, $4,200 banked)
+    /// this grades ungraded rares one after another and shoots the reveal the
+    /// first time a 10 comes up. It is bounded on both ends — attempts and cards
+    /// tried — so a cold streak costs a minute, not the pass: if no 10 turns up,
+    /// the shot is simply skipped rather than faked.
+    private func captureGemMintGrade(maxAttempts: Int = 30) {
+        openTab("Collection")
+        guard gridCards.firstMatch.waitForExistence(timeout: 15) else { return }
+        tapFilter("Rare+")
+
+        var attempts = 0
+        // The set picker is the app's own source of truth for how many sets
+        // there are, so this doesn't need updating if a sixth ever ships.
+        let setCount = max(app.segmentedControls.firstMatch.buttons.count, 1)
+        for set in 1...setCount where attempts < maxAttempts {
+            selectSet(set)
+            guard gridCards.firstMatch.waitForExistence(timeout: 10) else { continue }
+
+            for index in 0..<gridCards.count where attempts < maxAttempts {
+                let card = gridCards.element(boundBy: index)
+                guard card.exists, card.isHittable else { continue }
+                card.tap()
+                guard doneButton.waitForExistence(timeout: 10) else { continue }
+
+                let grade = button(labelStartingWith: "Grade")
+                if grade.waitForExistence(timeout: 2), grade.isEnabled {
+                    attempts += 1
+                    grade.tap()
+                    let cont = button(labeled: "Continue")
+                    if cont.waitForExistence(timeout: 10) {
+                        if staticText("PSA 10").exists {
+                            shot("grading-gem-mint", settle: 1.0)
+                            cont.tap()
+                            if doneButton.exists { doneButton.tap() }
+                            return
+                        }
+                        cont.tap()
+                    }
+                }
+                if doneButton.exists { doneButton.tap() }
+                _ = gridCards.firstMatch.waitForExistence(timeout: 5)
+            }
+        }
     }
 
     /// The stats tab — run totals, per-set progress and the all-time record.
@@ -381,6 +432,17 @@ final class ScreenshotTests: XCTestCase {
     private func tapFilter(_ title: String) {
         let chip = button(labeled: title)
         if chip.waitForExistence(timeout: 5) { chip.tap() }
+    }
+
+    /// Switches the collection's set picker. It's a segmented `Picker`, which
+    /// reads as buttons "1"-"5" inside a segmented control on iPhone but can
+    /// surface as loose buttons elsewhere, so try both.
+    private func selectSet(_ set: Int) {
+        let label = "\(set)"
+        let segment = app.segmentedControls.buttons[label]
+        if segment.waitForExistence(timeout: 3), segment.isHittable { segment.tap(); return }
+        let loose = button(labeled: label)
+        if loose.exists, loose.isHittable { loose.tap() }
     }
 
     /// The tab bar is a floating pill on iPad and a classic bar on iPhone, so
