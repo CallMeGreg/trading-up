@@ -37,6 +37,9 @@ final class GameState {
     var netWorth: Double { core.netWorth }
     var hasWon: Bool { core.hasWon }
     var shouldShowWin: Bool { core.shouldShowWin }
+    /// A personalized, shareable fingerprint of the (winning) run, driving the
+    /// one-of-a-kind collector card on the win screen.
+    var runSignature: RunSignature { RunSignature.make(from: core) }
     var isGameOver: Bool { core.isGameOver }
     var shouldShowWelcome: Bool { core.shouldShowWelcome }
     var cheapestPackPrice: Double { Economy.cheapestPackPrice }
