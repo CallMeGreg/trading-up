@@ -67,8 +67,8 @@ struct LoseView: View {
     /// the player has scrolled through their haul. The fade lets cards slide
     /// under it without a hard seam.
     private var resetBar: some View {
-        BigButton(title: "Try Again",
-                  subtitle: "Erases this collection and starts a new run",
+        BigButton(title: "New Run",
+                  subtitle: "Dust off and start again",
                   systemImage: "arrow.counterclockwise",
                   tint: [Color(hex: "e0663b"), Color(hex: "c0442b")]) {
             confirmNew = true
