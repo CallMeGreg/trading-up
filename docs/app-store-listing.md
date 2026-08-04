@@ -213,7 +213,7 @@ The 6.5" slot also accepts 1284 × 2778 (and either size rotated to landscape),
 but the capture uses 1242 × 2688 because that's what the simulator shoots
 natively — don't resize a 6.9" image to fill it, the aspect ratios differ.
 
-29 numbered screenshots are available per device; App Store Connect accepts a
+28 numbered screenshots are available per device; App Store Connect accepts a
 maximum of **10** per size. Recommended ten, in upload order — the first three
 are what most people ever see, so they lead with the hook:
 
@@ -221,12 +221,18 @@ are what most people ever see, so they lead with the hook:
 2. `pack-reveal-rare-hit` — the rare flipping over
 3. `pack-summary-all-new` — the six-card haul
 4. `collection-grid` — the binder filling in
-5. `grading-psa-reveal` — the PSA grade landing
+5. `grading-gem-mint` — the PSA 10 jackpot, at ×5 the card's value
 6. `card-detail-evolution-line` — a card's detail + evolution chain
 7. `shop-fresh-start` — the shop and the $100 you start with
 8. `duplicate-keep-or-sell` — the keep-or-sell decision
 9. `stats-run-summary` — the run stats
 10. `win-master-collector` — the win screen
+
+`grading-gem-mint` comes from the endgame pass, which grades rares out of the
+seeded collection until a 10 rolls, so the jackpot is always in the set. The
+playthrough's own `grading-psa-reveal` is whatever the run actually rolled —
+usually a PSA 8 — and is the honest fallback if you'd rather not lead with the
+best case.
 
 Filenames carry a numeric prefix recording the order they were hit in that run,
 and because each device plays its own randomised run those prefixes differ

@@ -66,14 +66,15 @@ TradingUpUITests/            The screenshot playthrough (TradingUpScreenshots sc
 data/cards.json              The 250 cards as JSON (source for tooling/other targets)
 docs/                        Everything in this folder — design, dev, testing, App Store
   mockups/                   Interactive HTML card-style mockups (open index.html)
-  screenshots/               Rendered marketing shots used by the README
+  screenshots/               Rendered marketing scenes (App Store); app/ = real shots the README uses
 tools/
   generate_cards.py          Regenerates data/cards.json AND Generated/CardData.swift
   generate_art.py            Regenerates the 250 card illustrations (needs rsvg-convert)
-  generate_icon.py           Regenerates the app icon (needs Pillow)
+  generate_icon.py           Regenerates the app icon (needs rsvg-convert)
   generate_sfx.py            Regenerates the 3 sound effects (stdlib only)
   generate_screenshots.py    Renders framed marketing scenes (needs rsvg-convert)
   capture_screenshots.sh     Plays the game in a Simulator and captures real screenshots
+  publish_screenshots.sh     Curates 5 of those captures for the README and the website
   seed_save.py               Writes a completed-collection save (late-game screenshots)
   check_icon.py              Checks the 1024² icon against App Store rules
   check_screenshots.py       Checks captured screenshots against App Store sizes
@@ -176,16 +177,17 @@ needed after regenerating.
 
 ### Marketing renders
 
-The captioned, device‑framed images the README uses are composited as SVG rather
-than captured from a running app, so they regenerate anywhere:
+The captioned, device‑framed images the App Store listing uses are composited as
+SVG rather than captured from a running app, so they regenerate anywhere:
 
 ```bash
 brew install librsvg                         # one-time: provides rsvg-convert
 python3 tools/generate_screenshots.py        # -> docs/screenshots (iPhone 6.5" + iPad 13")
 ```
 
-These are *not* the ones you submit to Apple — see [APP_STORE.md](APP_STORE.md)
-for the real device captures.
+These are *not* the ones you submit to Apple, and they're not what the README
+shows either — see [APP_STORE.md](APP_STORE.md) for the real device captures and
+for how five of them get published to the README and the website.
 
 ## Mockups
 
