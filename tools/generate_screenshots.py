@@ -873,8 +873,8 @@ def screen_challenge(defs):
     out.append(rrect(0, 556, SCREEN_W, SCREEN_H - 556, 0, grad=fade))
 
     out.append(text(cx, 120, "THE CHALLENGE", 14, "#c6a3ff", weight=900, anchor="middle", tracking=5))
-    out.append(text(cx, 640, "Complete", 35, "#ffffff", weight=900, anchor="middle"))
-    out.append(text(cx, 680, "the set.", 35, "#ffffff", weight=900, anchor="middle"))
+    out.append(text(cx, 640, "Acquire", 35, "#ffffff", weight=900, anchor="middle"))
+    out.append(text(cx, 680, "them all.", 35, "#ffffff", weight=900, anchor="middle"))
     out.append(text(cx, 714, "All 250 Sprytes. All five sets. One binder.", 14, "#d9b3ff",
                     weight=600, anchor="middle"))
 
