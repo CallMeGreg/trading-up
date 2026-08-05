@@ -35,6 +35,7 @@ Or just press `⌘U` in Xcode.
 | `SaveFormatTests.swift` | Old saves decode, schema changes stay additive, retired cards are stripped |
 | `SaveStoreTests.swift` | Unreadable saves are quarantined on disk, never deleted |
 | `WinAndUnlockTests.swift` | Winning shows once, doesn't erase the collection; set unlocks |
+| `RevealFlowTests.swift` | The win/Game Over overlay waits for a pack reveal to finish; the DEBUG fast‑travel seed |
 
 ## The simulation harness (no Xcode needed)
 
@@ -98,3 +99,33 @@ request, on `macos-15` with Xcode 16.4:
 The UI screenshot pass is deliberately **not** in CI — it takes ~10 minutes and
 lives on its own `TradingUpScreenshots` scheme so the unit‑test run stays fast.
 See [APP_STORE.md](APP_STORE.md#screenshots).
+
+## Fast‑travel launch hooks (DEBUG only)
+
+Finishing a collection by hand takes ~300 packs, far too slow to exercise the
+*ending* in a test. A DEBUG‑only launch hook (`DebugLaunchState`) fast‑travels
+straight into a late‑game state from three launch‑environment variables:
+
+| Variable | Effect |
+| --- | --- |
+| `TU_TEST_STATE=almost-won` | Seed 249 of 250 cards, every other set already claimed, cash to spare |
+| `TU_TEST_MISSING=<card id>` | Which card to hold out (e.g. `S1-047`, a rare, so the pack's *hit* is the last card revealed) |
+| `TU_TEST_SEED=<n>` | Pin `AppRNG` to a fixed seed so the pull is reproducible |
+| `TU_TEST_CASH=<amount>` | Override the seeded bankroll |
+
+The whole mechanism is wrapped in `#if DEBUG`, so it is **compiled out of release
+builds entirely** — a shipped App Store build has no code path that can grant
+cash or cards. Seeds are found the same way the verify harness reproduces runs:
+SplitMix64 over the frozen `CardData`.
+
+`TradingUpUITests/EndingFlowTests` uses all four to play the exact bug scenario
+deterministically: launch at 49 of 50, rip the pack whose hit completes the set,
+and assert the win celebration only appears *after* the pack summary — never
+cutting in over the reveal — and that the finished set then reads 50 of 50. It
+runs on the `TradingUpScreenshots` scheme (Debug config) and doubles as the pass
+`tools/capture_ending.sh` screen‑records for a demo video:
+
+```bash
+tools/capture_ending.sh                 # iPhone 17 Pro -> build/ending.mov
+tools/capture_ending.sh "iPhone 17 Pro Max" build/ending.mov
+```

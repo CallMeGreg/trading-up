@@ -11,11 +11,33 @@ final class GameState {
     /// rather than silently presenting them with a fresh game.
     private(set) var loadIssue: SaveLoadIssue?
 
-    private var rng = SystemRandomNumberGenerator()
+    /// True while a pack or box reveal is on screen. The win celebration (and,
+    /// symmetrically, the Game Over screen) holds off until this clears, so a
+    /// collection-completing — or wallet-emptying — pull plays out in full,
+    /// every card then the keep/sell summary, before a full-screen overlay
+    /// slides in on top of it. Purely presentation state: never persisted, and
+    /// deliberately kept out of the pure `GameCore`.
+    private(set) var revealInFlight = false
+
+    private var rng = AppRNG()
     private let store: SaveStore
 
     init(store: SaveStore = SaveStore()) {
         self.store = store
+        #if DEBUG
+        // An automated test (or a developer) can launch straight into a scripted
+        // late-game state instead of loading the real save. Compiled out of
+        // release builds entirely, so a shipped App Store build has no way in.
+        if let seeded = DebugLaunchState.core() {
+            core = seeded
+            loadIssue = nil
+            // An optional seed pins the RNG so a scripted run (the recorded
+            // ending demo) pulls the exact same cards every time.
+            if let seed = DebugLaunchState.seed() { rng = AppRNG(seed: seed) }
+            store.save(core)
+            return
+        }
+        #endif
         let (loaded, issue) = store.load()
         core = loaded ?? GameCore()
         loadIssue = issue
@@ -23,6 +45,16 @@ final class GameState {
         // the cleaned state is what's on disk from here on.
         if issue != nil { store.save(core) }
     }
+
+    #if DEBUG
+    /// Test seam: build a state around an explicit core, bypassing disk. Only
+    /// compiled into DEBUG (test) builds, so it can't be reached in production.
+    init(core: GameCore, store: SaveStore) {
+        self.store = store
+        self.core = core
+        self.loadIssue = nil
+    }
+    #endif
 
     // MARK: Read-through conveniences
 
@@ -37,6 +69,14 @@ final class GameState {
     var netWorth: Double { core.netWorth }
     var hasWon: Bool { core.hasWon }
     var shouldShowWin: Bool { core.shouldShowWin }
+    /// Whether the win celebration should actually be on screen *right now*.
+    /// Distinct from the model's `shouldShowWin`: the overlay also waits for any
+    /// pack/box reveal to finish, so the collection-completing pull plays all
+    /// the way through — reveal, then pack summary — before the win takes over.
+    var presentsWin: Bool { core.shouldShowWin && !revealInFlight }
+    /// Game Over, gated the same way, so the final affordable pack still gets
+    /// revealed before the losing screen appears.
+    var presentsGameOver: Bool { core.isGameOver && !revealInFlight }
     /// A personalized, shareable fingerprint of the (winning) run, driving the
     /// one-of-a-kind collector card on the win screen.
     var runSignature: RunSignature { RunSignature.make(from: core) }
@@ -56,6 +96,16 @@ final class GameState {
     func isSellable(_ inst: CardInstance) -> Bool { core.isSellable(inst) }
 
     // MARK: Mutations (autosave)
+
+    /// Mark that a pack/box reveal has taken over the screen. Called the instant
+    /// a purchase commits, so any win/lose overlay defers until `endReveal()`.
+    func beginReveal() { revealInFlight = true }
+
+    /// Mark the reveal fully dismissed. Any pending win/lose overlay can now
+    /// present. Called from the reveal cover's `onDismiss`, i.e. after it has
+    /// finished animating away, so the two full-screen presentations never
+    /// overlap.
+    func endReveal() { revealInFlight = false }
 
     @discardableResult
     func buyPack(set: Int) -> OpenResult? {
