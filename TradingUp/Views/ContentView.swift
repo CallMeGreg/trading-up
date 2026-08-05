@@ -3,16 +3,30 @@ import SwiftUI
 struct ContentView: View {
     @Environment(GameState.self) var game: GameState
 
+    /// Which tab is on screen. Bound so the app can steer the player — e.g. onto
+    /// the Shop right after they start a run.
+    @State private var selectedTab: AppTab = .shop
+
     var body: some View {
-        TabView {
+        TabView(selection: $selectedTab) {
             ShopView()
                 .tabItem { Label("Shop", systemImage: "bag.fill") }
+                .tag(AppTab.shop)
             CollectionView()
                 .tabItem { Label("Collection", systemImage: "square.grid.3x3.fill") }
+                .tag(AppTab.collection)
             StatsView()
                 .tabItem { Label("Stats", systemImage: "chart.bar.fill") }
+                .tag(AppTab.stats)
         }
         .tint(Palette.money)
+        // "Start Collecting" is the only way out of the welcome intro, so its
+        // dismissal marks the start of a run — first launch, after a download,
+        // or a reset. Drop the player on the Shop, where a run begins, even if
+        // they kicked the reset off from another tab.
+        .onChange(of: game.shouldShowWelcome) { wasShowing, isShowing in
+            if wasShowing && !isShowing { selectedTab = .shop }
+        }
         .fullScreenCover(item: overlayBinding) { overlay in
             switch overlay {
             case .welcome: WelcomeView()
@@ -59,4 +73,9 @@ struct ContentView: View {
 enum AppOverlay: Int, Identifiable {
     case welcome, win, lose
     var id: Int { rawValue }
+}
+
+/// The three main tabs, so `ContentView` can drive selection programmatically.
+enum AppTab: Hashable {
+    case shop, collection, stats
 }
