@@ -95,7 +95,7 @@ struct RevealView: View {
 
                 Spacer()
 
-                RevealingCardView(inst: inst, isNew: isNew, width: cardWidth)
+                RevealingCardView(inst: inst, isNew: isNew, width: cardWidth, playFlipSound: i != 0)
                     .id(i)
                     .transition(.opacity)
 

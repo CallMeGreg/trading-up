@@ -97,15 +97,22 @@ struct ShopView: View {
     }
 }
 
-/// A snapshot of the collection counts the Shop displays, captured just before a
-/// pack/box is opened. Held while the reveal is on screen so the underlying shop
-/// doesn't reveal the pull's new-unique count during the cover transition.
+/// A snapshot of the wallet + collection counts the Shop displays, captured just
+/// before a pack/box is opened. Held while the reveal is on screen so the
+/// underlying shop doesn't reveal the pull's new-unique count — or, via the
+/// bankroll jumping on an evolution/set-completion bonus, that the pack completed
+/// something — during the cover transition. Cash and net worth resolve to their
+/// post-pack values only once the reveal is dismissed.
 struct ShopFreeze {
+    let cash: Double
+    let netWorth: Double
     let uniqueCount: Int
     let ownedInSet: [Int: Int]
 
     @MainActor
     init(_ game: GameState) {
+        cash = game.cash
+        netWorth = game.netWorth
         uniqueCount = game.uniqueCount
         var owned: [Int: Int] = [:]
         for set in 1...CardDatabase.setCount { owned[set] = game.ownedCount(inSet: set) }
@@ -121,6 +128,8 @@ struct WalletHeader: View {
     @Environment(GameState.self) var game: GameState
     var freeze: ShopFreeze? = nil
 
+    private var cash: Double { freeze?.cash ?? game.cash }
+    private var netWorth: Double { freeze?.netWorth ?? game.netWorth }
     private var uniqueCount: Int { freeze?.uniqueCount ?? game.uniqueCount }
 
     var body: some View {
@@ -138,14 +147,14 @@ struct WalletHeader: View {
                             )
                         )
                         .shadow(color: Palette.money.opacity(0.35), radius: 3, y: 2)
-                    Text(game.cash.money)
+                    Text(cash.money)
                         .font(.system(size: 26, weight: .black, design: .rounded))
                         .foregroundStyle(Palette.money)
                         .contentTransition(.numericText())
                         .lineLimit(1).minimumScaleFactor(0.6)
                 }
                 .accessibilityElement(children: .ignore)
-                .accessibilityLabel("Cash \(game.cash.money)")
+                .accessibilityLabel("Cash \(cash.money)")
 
                 Spacer(minLength: 0)
 
@@ -153,12 +162,12 @@ struct WalletHeader: View {
                     Text("NET WORTH")
                         .font(.system(size: 10, weight: .heavy)).tracking(0.8)
                         .foregroundStyle(Palette.subtle)
-                    Text(game.netWorth.moneyShort)
+                    Text(netWorth.moneyShort)
                         .font(.system(size: 15, weight: .bold, design: .rounded))
                         .foregroundStyle(Palette.text)
                 }
                 .accessibilityElement(children: .ignore)
-                .accessibilityLabel("Net worth \(game.netWorth.money)")
+                .accessibilityLabel("Net worth \(netWorth.money)")
             }
 
             HStack(spacing: 8) {
