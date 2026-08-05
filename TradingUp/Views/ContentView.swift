@@ -33,8 +33,13 @@ struct ContentView: View {
     /// two separate presentations.
     private var activeOverlay: AppOverlay? {
         if game.shouldShowWelcome { return .welcome }
-        if game.shouldShowWin { return .win }
-        if game.isGameOver { return .lose }
+        // A pack/box reveal owns the screen until the player finishes its
+        // summary. Win and Game Over both wait for it (`presentsWin` /
+        // `presentsGameOver`), so a collection-completing — or wallet-emptying —
+        // pull plays out fully instead of being cut off by the overlay sliding
+        // in on top of the reveal.
+        if game.presentsWin { return .win }
+        if game.presentsGameOver { return .lose }
         return nil
     }
 

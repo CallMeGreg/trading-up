@@ -27,8 +27,8 @@ struct ShopView: View {
             .background(Palette.screen.ignoresSafeArea())
             .toolbar(.hidden, for: .navigationBar)
         }
-        .fullScreenCover(item: $pending) { p in
-            RevealView(content: p.content, set: p.set) { pending = nil; freeze = nil }
+        .fullScreenCover(item: $pending, onDismiss: { freeze = nil; game.endReveal() }) { p in
+            RevealView(content: p.content, set: p.set) { pending = nil }
         }
     }
 
@@ -42,6 +42,7 @@ struct ShopView: View {
         )
         guard !wasBlocked else { return }   // reveal already in flight: silent no-op
         if started {
+            game.beginReveal()
             Haptics.play(.medium)
             Sound.play(.purchase)
         } else {
@@ -59,6 +60,7 @@ struct ShopView: View {
         )
         guard !wasBlocked else { return }   // reveal already in flight: silent no-op
         if started {
+            game.beginReveal()
             Haptics.play(.heavy)
             Sound.play(.purchase)
         } else {
