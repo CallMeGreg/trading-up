@@ -149,6 +149,12 @@ struct RevealingCardView: View {
     let inst: CardInstance
     var isNew: Bool = false
     var width: CGFloat = 280
+    /// Whether to play the soft card-flip "ffttt" as this card turns. The first
+    /// card of a pack is suppressed by the caller: it appears automatically as
+    /// the pack is ripped open (which has its own tear sound), so a flip there
+    /// would double up. For every later card the sound sells the motion of the
+    /// next card sliding off the top of the stack.
+    var playFlipSound: Bool = true
 
     @State private var rotation: Double = 180   // 180 = back showing, 0 = face-up
     @State private var flash: Double = 0
@@ -261,8 +267,9 @@ struct RevealingCardView: View {
     }
 
     private func run() {
-        // The soft flip "ffttt" rides the card's motion; every card gets it.
-        Sound.play(.cardFlip, volume: 0.7)
+        // The soft flip "ffttt" rides the card's motion — but not on the first
+        // card of a pack, which arrives on the pack-rip rather than off the stack.
+        if playFlipSound { Sound.play(.cardFlip, volume: 0.7) }
 
         let response = isBig ? 0.75 : 0.5
         withAnimation(.spring(response: response, dampingFraction: 0.72)) { rotation = 0 }

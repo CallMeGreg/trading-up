@@ -178,7 +178,8 @@ the rounded‑corner mask itself, so a baked‑in one shows up as dark wedges).
 Every SFX is synthesized from scratch with the Python standard library only — no
 samples, no dependencies. The set is seven sounds: two for the shop (a purchase
 chime when you buy a pack, a coin chime when cards are sold) and five for the pack
-reveal — a paper‑rip **pack‑open**, a soft **card‑flip** as each card turns, an
+reveal — a paper‑rip **pack‑open**, a soft **card‑flip** as each card *after the
+first* turns (the first card rides in on the pack‑rip, so it's left silent), an
 airy **foil** glisten, and “achievement unlocked” stings for **rare** and **ultra**
 pulls. To regenerate them after editing `tools/generate_sfx.py`:
 
