@@ -73,6 +73,12 @@ final class EndingFlowTests: XCTestCase {
         // The celebration only arrives once the reveal has fully dismissed.
         XCTAssertFalse(isRevealing, "reveal should be gone before the win takes the screen")
         shot("05-win-screen")
+
+        // Sit on the win screen the way a player would — the collector card
+        // springs in under fireworks and the run is theirs to share, keep, or
+        // restart — before choosing, so the recorded demo shows the ending at
+        // its real pace instead of dismissing it the instant it appears.
+        showcaseWin()
         keepCollection.tap()
 
         // The whole point of the fix: the finished set now reads complete instead
@@ -83,6 +89,7 @@ final class EndingFlowTests: XCTestCase {
         XCTAssertFalse(text(containing: "49 of 50").exists,
                        "no set should still be stuck one card short")
         shot("06-shop-complete")
+        sleep(2)   // linger on the completed shop before the demo ends
     }
 
     // MARK: - Actions
@@ -93,6 +100,30 @@ final class EndingFlowTests: XCTestCase {
         guard b.waitForExistence(timeout: 10), b.isEnabled else { return false }
         b.tap()
         return true
+    }
+
+    /// Sit on the win screen and scroll its options into view, so the recorded
+    /// demo shows the celebration at a player's pace — card entrance, fireworks,
+    /// and the share / keep / play-again choices — rather than dismissing it the
+    /// instant it appears. Non-essential to the assertions; it only paces the
+    /// recording.
+    private func showcaseWin() {
+        sleep(3)                       // let the card spring in and the fireworks settle
+        shot("05b-win-hero")
+        // Scroll the three choices — Share / Keep My Collection / Play Again —
+        // fully into view with gentle, momentum-free drags (the long initial
+        // press kills the fling), so the demo shows what the player is actually
+        // deciding between rather than snapping straight past it.
+        let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.72))
+        let end = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.42))
+        var tries = 0
+        while !playAgain.isHittable && tries < 6 {
+            start.press(forDuration: 0.5, thenDragTo: end)
+            usleep(500_000)
+            tries += 1
+        }
+        sleep(2)                       // hold on the options so they can be read
+        shot("05c-win-options")
     }
 
     private func keepEverything() {
@@ -138,6 +169,9 @@ final class EndingFlowTests: XCTestCase {
     private var buyPack: XCUIElement { app.buttons["buyPack"].firstMatch }
     private var keepCollection: XCUIElement { button(labeled: "Keep My Collection") }
     private var winScreen: XCUIElement { keepCollection }
+    private var playAgain: XCUIElement {
+        app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Play Again'")).firstMatch
+    }
     private var sellDuplicates: XCUIElement {
         app.buttons.matching(
             NSPredicate(format: "label BEGINSWITH 'Sell ' AND label CONTAINS 'Duplicate'")
