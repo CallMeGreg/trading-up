@@ -343,7 +343,13 @@ final class WideAndShortLayoutRenderTests: XCTestCase {
     }
 
     private func rendersWithoutFailure<V: View>(_ view: V, size: CGSize) -> CGSize? {
-        let sized = view.environment(game).frame(width: size.width, height: size.height)
+        // ShopView (and anything embedding it) reads a PurchaseStore from the
+        // environment for the full-version paywall, so provide one alongside the
+        // game. Harmless for the views that don't consult it.
+        let sized = view
+            .environment(game)
+            .environment(PurchaseStore(game: game))
+            .frame(width: size.width, height: size.height)
         let renderer = ImageRenderer(content: sized)
         renderer.proposedSize = ProposedViewSize(size)
         renderer.scale = 1

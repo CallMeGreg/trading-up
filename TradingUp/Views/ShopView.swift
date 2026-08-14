@@ -2,11 +2,14 @@ import SwiftUI
 
 struct ShopView: View {
     @Environment(GameState.self) var game: GameState
+    @Environment(PurchaseStore.self) private var purchases: PurchaseStore
     @State private var pending: PendingOpen?
     /// Collection counts captured at purchase time. While a reveal is on screen
     /// the shop shows these frozen values so the fullScreenCover sliding in/out
     /// never briefly spoilers how many new uniques the pack contained.
     @State private var freeze: ShopFreeze?
+    /// Drives the full-version unlock paywall, opened from a paid, locked set.
+    @State private var showPaywall = false
 
     var body: some View {
         NavigationStack {
@@ -15,7 +18,11 @@ struct ShopView: View {
                 ScrollView {
                     LazyVStack(spacing: 12) {
                         ForEach(1...CardDatabase.setCount, id: \.self) { set in
-                            SetShelfRow(set: set, freeze: freeze, revealInFlight: isRevealInFlight) { buyPack(set) } onBuyBox: { buyBox(set) }
+                            SetShelfRow(set: set, freeze: freeze, revealInFlight: isRevealInFlight,
+                                        unlockPriceText: purchases.fullUnlock?.displayPrice,
+                                        onBuyPack: { buyPack(set) },
+                                        onBuyBox: { buyBox(set) },
+                                        onUnlock: { showPaywall = true })
                         }
                     }
                     .padding(.horizontal, 16)
@@ -30,6 +37,7 @@ struct ShopView: View {
         .fullScreenCover(item: $pending, onDismiss: { freeze = nil; game.endReveal() }) { p in
             RevealView(content: p.content, set: p.set) { pending = nil }
         }
+        .sheet(isPresented: $showPaywall) { PaywallView() }
     }
 
     private func buyPack(_ set: Int) {
@@ -209,8 +217,13 @@ struct SetShelfRow: View {
     /// Disables both buys while a reveal is pending/on screen, so the
     /// affordance matches the behaviour instead of silently swallowing taps.
     var revealInFlight: Bool = false
+    /// Localized price of the full-version unlock, shown on the paywall callout
+    /// when the product has loaded. Passed in from the shop (which holds the
+    /// StoreKit layer) so this row needn't depend on `PurchaseStore` directly.
+    var unlockPriceText: String? = nil
     let onBuyPack: () -> Void
     let onBuyBox: () -> Void
+    let onUnlock: () -> Void
 
     private var element: Element { Element.theme(forSet: set) }
     private var displayUnique: Int { freeze?.uniqueCount ?? game.uniqueCount }
@@ -218,17 +231,29 @@ struct SetShelfRow: View {
     private var packPrice: Double { Economy.packPrice(set: set) }
     private var boxPrice: Double { Economy.boxPrice(set: set) }
     private var unlockThreshold: Int { game.uniquesToUnlock(set: set) }
+    /// Progression gate only: enough unique cards owned to unlock this set.
     private var unlocked: Bool { displayUnique >= unlockThreshold }
+    /// A paid set (2–5) still behind the one-time full-version purchase.
+    private var requiresPurchase: Bool { game.requiresFullUnlock(set: set) }
+    /// Fully playable: past the paywall *and* past the progression gate. Drives
+    /// the row's art dim, lock icon and title.
+    private var isOpen: Bool { !requiresPurchase && unlocked }
 
     var body: some View {
         HStack(alignment: .center, spacing: 14) {
             PackWrapper(set: set, width: 58, detail: .mini)
-                .opacity(unlocked ? 1 : 0.35)
-                .saturation(unlocked ? 1 : 0.4)
-                .brightness(unlocked ? 0 : -0.15)
+                .opacity(isOpen ? 1 : 0.35)
+                .saturation(isOpen ? 1 : 0.4)
+                .brightness(isOpen ? 0 : -0.15)
             VStack(alignment: .leading, spacing: 9) {
                 title
-                if unlocked { unlockedActions } else { lockedCallout }
+                if requiresPurchase {
+                    paywallCallout
+                } else if unlocked {
+                    unlockedActions
+                } else {
+                    lockedCallout
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -238,12 +263,12 @@ struct SetShelfRow: View {
         .background {
             ZStack(alignment: .leading) {
                 Palette.panel
-                RadialGradient(colors: [element.palette[2].opacity(unlocked ? 0.26 : 0.08), .clear],
+                RadialGradient(colors: [element.palette[2].opacity(isOpen ? 0.26 : 0.08), .clear],
                                center: .topLeading, startRadius: 0, endRadius: 260)
                 LinearGradient(colors: [element.palette[1], element.palette[2]],
                                startPoint: .top, endPoint: .bottom)
                     .frame(width: 4)
-                    .opacity(unlocked ? 1 : 0.4)
+                    .opacity(isOpen ? 1 : 0.4)
             }
         }
         .clipShape(RoundedRectangle(cornerRadius: 20))
@@ -257,12 +282,12 @@ struct SetShelfRow: View {
                     .font(.system(size: 19, weight: .bold, design: .rounded))
                     .foregroundStyle(Palette.text)
                     .lineLimit(1).minimumScaleFactor(0.7)
-                Text(unlocked ? "Set \(set) · \(owned) of 50 collected" : "Set \(set) · locked")
+                Text(isOpen ? "Set \(set) · \(owned) of 50 collected" : "Set \(set) · locked")
                     .font(.system(size: 11.5, weight: .semibold))
                     .foregroundStyle(Palette.subtle)
             }
             Spacer(minLength: 0)
-            if unlocked {
+            if isOpen {
                 if owned == 50 {
                     Image(systemName: "checkmark.seal.fill")
                         .font(.system(size: 22, weight: .bold))
@@ -330,6 +355,42 @@ struct SetShelfRow: View {
                 .accessibilityLabel("Buy Booster Box, \(CardDatabase.setName(set)), \(Economy.boxPacks) packs, \(boxPrice.money)")
             }
         }
+    }
+
+    /// Shown on paid sets (2–5) while the one-time full-version unlock is
+    /// inactive. Tapping opens the paywall; the actual gate is enforced in
+    /// `GameState.buyPack`, so this is purely the affordance.
+    private var paywallCallout: some View {
+        Button(action: onUnlock) {
+            HStack(spacing: 8) {
+                Image(systemName: "lock.open.fill").font(.system(size: 13, weight: .bold))
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Unlock the full game").font(.system(size: 14, weight: .bold))
+                    Text(unlockSubtitle).font(.system(size: 11, weight: .medium)).opacity(0.9)
+                        .lineLimit(1).minimumScaleFactor(0.8)
+                }
+                Spacer(minLength: 8)
+                Image(systemName: "chevron.right").font(.system(size: 12, weight: .bold)).opacity(0.85)
+            }
+            .foregroundStyle(.white)
+            .padding(.vertical, 10).padding(.horizontal, 14)
+            .frame(maxWidth: .infinity)
+            .background(
+                RoundedRectangle(cornerRadius: 13).fill(
+                    LinearGradient(colors: [Palette.money, Color(hex: "39b56a")],
+                                   startPoint: .leading, endPoint: .trailing)
+                )
+            )
+            .overlay(RoundedRectangle(cornerRadius: 13).strokeBorder(.white.opacity(0.2), lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("unlockFullGame")
+        .accessibilityLabel("Unlock the full game to play \(CardDatabase.setName(set)). \(unlockSubtitle)")
+    }
+
+    private var unlockSubtitle: String {
+        if let price = unlockPriceText { return "\(price) · sets 2–5 + the full 250" }
+        return "Sets 2–5 + the full 250-card collection"
     }
 
     private var lockedCallout: some View {

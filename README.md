@@ -36,7 +36,8 @@ cash with nothing left worth selling and you're tapped out.
 
 Every creature, name, illustration and line of flavor text is original to the
 game, generated from code and shipped inside the app. No accounts, no ads, no
-in‑app purchases, no internet connection.
+tracking — just the game. Set 1 is free to play in full; one optional one‑time
+purchase unlocks the other four sets.
 
 ## Screenshots
 
@@ -126,13 +127,17 @@ rarity spread, and unlocks as your collection grows.
 
 ## No catches
 
-- **No in‑app purchases and no real money, ever.** The only currency is the
-  fictional one inside the game.
-- **No ads.**
-- **No account, no sign‑in, no internet connection required.**
-- **No data collected.** Your collection lives in a single file on your device
-  and is never sent anywhere.
-- **Plays entirely offline**, on both iPhone and iPad.
+- **Set 1 is free to play in full** — the whole 50‑card loop: rip, sell, grade,
+  evolution‑line bonuses and the set‑completion payout. One optional **one‑time
+  purchase** unlocks the other four sets and the 250‑card Master Collector
+  finish. That's the only thing you can ever buy.
+- **No ads, no tracking, no subscriptions.**
+- **No real‑money packs and no gambling.** You never spend real money on a
+  random pull — the only currency inside the game is fictional.
+- **No account, no sign‑in.** Your collection lives in a single file on your
+  device and is never sent anywhere.
+- **Plays offline**, on both iPhone and iPad — a connection is only needed the
+  once to make or restore the purchase.
 
 ## Documentation
 

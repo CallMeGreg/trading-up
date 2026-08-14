@@ -35,6 +35,7 @@ Or just press `⌘U` in Xcode.
 | `SaveFormatTests.swift` | Old saves decode, schema changes stay additive, retired cards are stripped |
 | `SaveStoreTests.swift` | Unreadable saves are quarantined on disk, never deleted |
 | `WinAndUnlockTests.swift` | Winning shows once, doesn't erase the collection; set unlocks |
+| `FullUnlockGateTests.swift` | The free-tier/full-version IAP gate: Set 1 free, paid sets refuse a buy until unlocked, and the unlock never skips progression |
 | `RevealFlowTests.swift` | The win/Game Over overlay waits for a pack reveal to finish; the DEBUG fast‑travel seed |
 
 ## The simulation harness (no Xcode needed)

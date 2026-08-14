@@ -4,8 +4,9 @@ Everything App Store Connect asks for when publishing **Trading Up**, with a
 ready-to-paste recommendation for each field. Character limits are Apple's, and
 every suggested string below is already inside its limit.
 
-Copy is written for the app as it actually ships today: no in-app purchases, no
-ads, no accounts, no network access, 250 cards across 5 sets.
+Copy is written for the app as it actually ships today: free to download with a
+single optional one-time in-app purchase that unlocks sets 2–5, no ads, no
+accounts, no network access for gameplay, 250 cards across 5 sets.
 
 ---
 
@@ -57,7 +58,7 @@ grouped by topic so they map onto whichever wording you see on screen.
 
 | Question | Answer |
 | --- | --- |
-| In-App Purchases | **No** |
+| In-App Purchases | **Yes** — one non-consumable, "Unlock the full collection" (see §7) |
 | Advertising | **No** |
 | User-Generated Content | **No** |
 | Messaging / communication between users | **No** |
@@ -81,8 +82,10 @@ Trading Up has none of those:
   and cannot be converted to or from anything real.
 - The randomness is loot-box-shaped (randomised rewards) rather than
   casino-shaped. Apple governs that under **Guideline 3.1.1**, which requires
-  publishing odds *for loot boxes bought with real money*. Trading Up has no
-  IAP, so 3.1.1 does not bite either — and the odds are published on the
+  publishing odds *for loot boxes bought with real money*. Trading Up's only
+  in-app purchase is a one-time **content unlock** — it opens sets 2–5 and
+  grants no currency and no randomised pull — so nothing random is ever bought
+  with real money and 3.1.1 does not bite. The pack odds are published on the
   support page regardless.
 
 So **"None" is the honest and defensible answer**, and it matches how comparable
@@ -132,16 +135,16 @@ Collect all 250 cards and you're a Master Collector. Fall below the price of the
 
 NO CATCHES
 
-- No in-app purchases and no real money, ever. The only currency is the fictional one inside the game.
-- No ads.
-- No account, no sign-in, no internet connection required.
-- No data collected. Your collection lives on your device and nowhere else.
-- Plays entirely offline, on both iPhone and iPad.
+- Set 1 - Emberfall is free to play in full: rip, sell, grade and chase the set bonus across all 50 cards. One optional one-time purchase unlocks the other four sets and the 250-card finish - the only thing you can ever buy.
+- No ads, no tracking, no subscriptions.
+- No real-money packs and no gambling. You never spend real money on a random pull; the only currency inside the game is fictional.
+- No account, no sign-in, and no data collected. Your collection lives on your device and nowhere else.
+- Plays offline, on both iPhone and iPad.
 
 Every card, every price and every payout is already in the app the moment you download it. Rip the first pack and see where $100 gets you.
 ```
 
-*2,189/4,000.* Deliberately avoids naming any real trading-card brand — putting
+*2,297/4,000.* Deliberately avoids naming any real trading-card brand — putting
 a trademark in your metadata is itself a Guideline 5.2 rejection risk.
 
 ### Keywords (100)
@@ -264,8 +267,10 @@ there is no alpha channel.
 ## 5. App Privacy
 
 Answer the questionnaire as **"Data Not Collected"** — the app makes no network
-calls, has no analytics or crash SDK, no third-party frameworks, and the only
-persistence is `tradingup_save.json` inside the app's own container.
+calls of its own, has no analytics or crash SDK, no third-party frameworks, and
+the only persistence is `tradingup_save.json` inside the app's own container. The
+one-time in-app purchase doesn't change this: StoreKit and the App Store handle
+the transaction, so the app never sees or stores any payment data.
 
 | Question | Answer |
 | --- | --- |
@@ -281,10 +286,11 @@ without one and the upload is accepted but you get an automated
 **ITMS-91053 "Missing API declaration"** email, and the build can't go to review.
 
 The app trips exactly one of those categories — `UserDefaults`, for the sound
-on/off preference in `SoundManager` — declared with reason **`CA92.1`**
-("access info from the app itself"), which is all we do. The save file lives in
-Documents and uses no file-timestamp APIs, and there are no third-party SDKs, so
-nothing else needs declaring.
+on/off preference in `SoundManager` and the cached full-version entitlement hint
+in `PurchaseStore` — declared with reason **`CA92.1`** ("access info from the app
+itself"), which is all we do. The save file lives in Documents and uses no
+file-timestamp APIs, and there are no third-party SDKs, so nothing else needs
+declaring.
 
 The manifest also repeats "no tracking / no data collected" in machine-readable
 form, so **it has to stay in sync with the table above** — if the app ever gains
@@ -314,16 +320,21 @@ Trading Up is a single-player, fully offline collecting game. No account, no
 sign-in and no network connection are required; launch the app and tap "Start
 Collecting" to begin.
 
-There are no in-app purchases, no advertising, and no real-money transactions of
-any kind. The "$" figures in the app are a fictional in-game currency that is
-granted by the game, cannot be purchased, and cannot be exchanged for anything
-outside the app.
+There is one in-app purchase: a single non-consumable, "Unlock the full
+collection," that opens sets 2-5 and the 250-card completion. Set 1 is free to
+play in full without it. The purchase unlocks existing bundled content only - it
+grants no in-game currency and no randomised pull, and there is no advertising
+and no other real-money transaction. The "$" figures in the app are a fictional
+in-game currency that is granted by the game, cannot be purchased, and cannot be
+exchanged for anything outside the app.
 
 Regarding the age-rating gambling questions: the app has no wagering, betting,
 casino games or cash-out. Buying a pack always delivers six cards, so nothing is
 staked or lost on a roll. The randomised elements are the contents of a pack and
-a card's grade, both of which are randomised rewards rather than a bet. The
-pack odds are published at https://callmegreg.github.io/trading-up/support/.
+a card's grade, both of which are randomised rewards rather than a bet, and
+neither is ever bought with real money (the only real-money purchase is the
+fixed content unlock above). The pack odds are published at
+https://callmegreg.github.io/trading-up/support/.
 
 All 250 creatures, their names, artwork, flavour text and set names are original
 works created for this app. No third-party or licensed content is used.
@@ -338,12 +349,34 @@ to fund the next set, and the Collection and Stats tabs show progress at any tim
 
 | Field | Recommended value |
 | --- | --- |
-| **Price** | `Free` (Tier 0) |
+| **Price** | `Free` (Tier 0) — the app itself is free to download |
 | **Availability** | All countries and regions |
 | **Pre-Orders** | Off |
 | **Distribution on Apple Vision Pro** | Off (untested on visionOS) |
 | **Distribute on Mac (Designed for iPad)** | Optional; off for 1.0 unless you've tested it |
 | **Educational discount / Volume purchase** | N/A for a free app |
+
+### In-App Purchase — "Unlock the full collection"
+
+One product, created under **Features → In-App Purchases**:
+
+| Field | Recommended value |
+| --- | --- |
+| **Type** | Non-Consumable |
+| **Reference Name** | Full Collection Unlock |
+| **Product ID** | `com.callmegreg.tradingup.fullunlock` |
+| **Price** | **$2.99** (Tier 3) |
+| **Display Name** | Unlock the Full Collection |
+| **Description** | Unlocks sets 2–5 and the 250-card Master Collector finish. A one-time purchase, not a subscription. |
+| **Review screenshot** | A capture of the in-app paywall (the "Unlock the full game" sheet) |
+| **Cleared for Sale** | Yes |
+
+The Product ID must match `PurchaseStore.fullUnlockProductID` in the app and the
+`Products` entry in `TradingUp/TradingUp.storekit`. Because it's a
+**non-consumable**, the paywall's **Restore Purchase** control — which Apple
+requires for non-consumables — re-syncs it on a new device via `AppStore.sync()`.
+Set 1 stays free whether or not it's ever bought, so the app is fully functional
+before any purchase.
 
 ---
 
@@ -374,6 +407,9 @@ Connect reads it and stops asking.
       the upload draws an automated ITMS-91053 rejection email
 - [ ] App Review notes and contact filled in (§6)
 - [ ] Price set to Free, availability confirmed (§7)
+- [ ] Non-consumable `com.callmegreg.tradingup.fullunlock` created at **$2.99**,
+      "Cleared for Sale," with its review screenshot, and submitted with the
+      build (§7). Verify the Product ID matches `PurchaseStore.fullUnlockProductID`
 - [ ] `python3 tools/check_icon.py` passes — 1024×1024, opaque, square (§ issue #5 step 4)
 - [ ] `MARKETING_VERSION = 1.0`, `CURRENT_PROJECT_VERSION` bumped
 - [ ] Archive built with a Distribution signing identity and uploaded
