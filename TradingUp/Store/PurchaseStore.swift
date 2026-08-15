@@ -31,6 +31,23 @@ final class PurchaseStore {
     /// which case the paywall offers a retry rather than a hard-coded price.
     private(set) var fullUnlock: Product?
 
+    /// The localized price string the paywall shows, or `nil` before the product
+    /// loads. Normally just the loaded product's `displayPrice`. In DEBUG a
+    /// launch-environment override (`TU_FAKE_PRICE`) can stand in for it, so the
+    /// App Review screenshot capture can render the real price without a live
+    /// StoreKit product — a UI-test host can't load one. The whole override is
+    /// compiled out of release, so shipping builds only ever read the real
+    /// product price.
+    var displayPrice: String? {
+        #if DEBUG
+        if let override = ProcessInfo.processInfo.environment["TU_FAKE_PRICE"],
+           !override.isEmpty {
+            return override
+        }
+        #endif
+        return fullUnlock?.displayPrice
+    }
+
     /// The verified entitlement, mirrored here for the paywall's own UI.
     /// `GameState.isFullVersionUnlocked` is the game-facing copy and is kept in
     /// step through `apply(_:)`.

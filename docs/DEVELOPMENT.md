@@ -78,6 +78,7 @@ tools/
   generate_sfx.py            Regenerates the 3 sound effects (stdlib only)
   generate_screenshots.py    Renders framed marketing scenes (needs rsvg-convert)
   capture_screenshots.sh     Plays the game in a Simulator and captures real screenshots
+  capture_iap_review.sh      Captures the IAP paywall as the App Review screenshot
   publish_screenshots.sh     Curates 5 of those captures for the README and the website
   seed_save.py               Writes a completed-collection save (late-game screenshots)
   check_icon.py              Checks the 1024² icon against App Store rules
@@ -222,6 +223,25 @@ without any localizable text. It enforces Apple's rules before writing (1024²,
 72 dpi, RGB, flattened/no alpha, no rounded corners) and exits non‑zero if any
 fail. See [APP_STORE.md](APP_STORE.md#in-app-purchase-promo-image) for where the
 image is used.
+
+### In-app purchase App Review screenshot
+
+App Store Connect also requires a review‑only screenshot of the purchase itself.
+Rather than mock it, this captures the real paywall the same way the marketing
+screenshots are captured — by playing the app in a Simulator:
+
+```bash
+tools/capture_iap_review.sh                  # -> docs/app-store/iap-review-full-collection.png
+```
+
+`IAPReviewScreenshotTests` launches a fresh save, opens the paywall from a paid,
+locked set in the shop, and shoots one frame at **1320×2868** (a valid iPhone
+6.9" size, validated before the script exits). The live `$2.99` price comes from
+a **DEBUG‑only** `TU_FAKE_PRICE` launch override (a UI‑test host can't load a real
+StoreKit product); it's compiled out of release, so shipping builds only ever
+show StoreKit's own price. See
+[APP_STORE.md](APP_STORE.md#in-app-purchase-app-review-screenshot) for where the
+image is uploaded.
 
 ### Sound effects
 

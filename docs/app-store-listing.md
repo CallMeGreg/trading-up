@@ -368,7 +368,7 @@ One product, created under **Features → In-App Purchases**:
 | **Price** | **$2.99** (Tier 3) |
 | **Display Name** | Unlock the Full Collection |
 | **Description** | Unlocks sets 2–5 and the 250-card Master Collector finish. A one-time purchase, not a subscription. |
-| **Review screenshot** | A capture of the in-app paywall (the "Unlock the full game" sheet) |
+| **Review screenshot** | `docs/app-store/iap-review-full-collection.png` — a real capture of the paywall, from `tools/capture_iap_review.sh` (required) |
 | **Promotional Image** | `docs/app-store/iap-full-unlock-1024.png` (optional; needed only to promote the IAP or use offer codes / win-back offers) |
 | **Cleared for Sale** | Yes |
 
@@ -416,6 +416,8 @@ Connect reads it and stops asking.
 - [ ] Non-consumable `com.callmegreg.tradingup.fullunlock` created at **$2.99**,
       "Cleared for Sale," with its review screenshot, and submitted with the
       build (§7). Verify the Product ID matches `PurchaseStore.fullUnlockProductID`
+- [ ] IAP App Review screenshot uploaded — `tools/capture_iap_review.sh` writes
+      `docs/app-store/iap-review-full-collection.png` (1320×2868, required)
 - [ ] `python3 tools/check_icon.py` passes — 1024×1024, opaque, square (§ issue #5 step 4)
 - [ ] *(optional)* IAP promo image uploaded if promoting the purchase —
       `python3 tools/generate_iap_promo.py` writes `docs/app-store/iap-full-unlock-1024.png`

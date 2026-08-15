@@ -37,7 +37,7 @@ struct PaywallView: View {
         .overlay(alignment: .topTrailing) { closeButton }
     }
 
-    private var priceText: String { store.fullUnlock?.displayPrice ?? "" }
+    private var priceText: String { store.displayPrice ?? "" }
 
     private var header: some View {
         VStack(spacing: 10) {
