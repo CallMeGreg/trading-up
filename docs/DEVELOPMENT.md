@@ -74,6 +74,7 @@ tools/
   generate_cards.py          Regenerates data/cards.json AND Generated/CardData.swift
   generate_art.py            Regenerates the 250 card illustrations (needs rsvg-convert)
   generate_icon.py           Regenerates the app icon (needs rsvg-convert)
+  generate_iap_promo.py      Regenerates the IAP promo image (needs rsvg-convert)
   generate_sfx.py            Regenerates the 3 sound effects (stdlib only)
   generate_screenshots.py    Renders framed marketing scenes (needs rsvg-convert)
   capture_screenshots.sh     Plays the game in a Simulator and captures real screenshots
@@ -203,6 +204,24 @@ apart from `rsvg-convert`.
 `check_icon.py` is what proves the marketing icon is submittable: exactly
 1024×1024, 8‑bit, **no alpha channel**, and full‑bleed to the edges (iOS applies
 the rounded‑corner mask itself, so a baked‑in one shows up as dark wedges).
+
+### In-app purchase promo image
+
+The optional 1024×1024 image that represents the "Unlock the Full Collection"
+purchase on the App Store is generated the same way, reusing the card art engine
+so it can't drift from the game:
+
+```bash
+brew install librsvg                         # one-time: provides rsvg-convert
+python3 tools/generate_iap_promo.py          # -> docs/app-store/iap-full-unlock-1024.png
+```
+
+`generate_iap_promo.py` fans the five set signature legendaries — one per element,
+Emberfall fire → Umbral Reach shadow — so the art reads as "the whole collection"
+without any localizable text. It enforces Apple's rules before writing (1024²,
+72 dpi, RGB, flattened/no alpha, no rounded corners) and exits non‑zero if any
+fail. See [APP_STORE.md](APP_STORE.md#in-app-purchase-promo-image) for where the
+image is used.
 
 ### Sound effects
 

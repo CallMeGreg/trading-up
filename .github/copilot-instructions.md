@@ -39,6 +39,7 @@ These are written by tooling and will be overwritten. Never hand‑edit them:
 | `TradingUp/Generated/CardData.swift`, `data/cards.json` | `python3 tools/generate_cards.py` |
 | `TradingUp/Assets.xcassets/CardArt/` | `python3 tools/generate_art.py` (needs `rsvg-convert`) |
 | `TradingUp/Assets.xcassets/AppIcon.appiconset/` | `python3 tools/generate_icon.py` (needs `rsvg-convert`) |
+| `docs/app-store/iap-full-unlock-1024.png` | `python3 tools/generate_iap_promo.py` (needs `rsvg-convert`) |
 | `TradingUp/Audio/SFX/` | `python3 tools/generate_sfx.py` |
 | `docs/screenshots/app/`, `site/screenshots/` | `tools/capture_screenshots.sh` then `tools/publish_screenshots.sh` |
 

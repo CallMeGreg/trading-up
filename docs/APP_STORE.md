@@ -6,6 +6,7 @@ covers the artifacts you have to *produce* before you can paste that in.
 
 - [Screenshots](#screenshots)
 - [App icon](#app-icon)
+- [In-app purchase promo image](#in-app-purchase-promo-image)
 - [Privacy manifest](#privacy-manifest)
 - [Build upload](#build-upload)
 - [Pre-submission checklist](#pre-submission-checklist)
@@ -89,6 +90,28 @@ python3 tools/check_icon.py
 **no alpha channel**, and full‑bleed to the edges (iOS applies the rounded‑corner
 mask itself, so a baked‑in one shows up as dark wedges). Details in
 [DEVELOPMENT.md](DEVELOPMENT.md#app-icon).
+
+## In-app purchase promo image
+
+```bash
+python3 tools/generate_iap_promo.py     # -> docs/app-store/iap-full-unlock-1024.png
+```
+
+App Store Connect can show a single **1024×1024** image to represent the
+["Unlock the Full Collection" purchase](app-store-listing.md#7-pricing): it's the
+art used when you promote the IAP on the product page, when a customer redeems an
+offer code, and on win-back offers. It's shown in every region, so the art carries
+no localizable marketing sentence — it says *"unlock everything"* purely visually:
+a fan of the five set signature legendaries, one per element (Emberfall fire →
+Umbral Reach shadow), drawn with the **same art engine that draws the cards
+in-game** (`tools/generate_art.py`), the same way the app icon reuses it. So the
+promo can never drift from the real artwork.
+
+Apple's rules for this image — JPG or PNG, 1024×1024, 72 dpi, RGB, flattened (no
+alpha), **no rounded corners** — are all enforced by the generator before it
+writes the file; it exits non-zero if any would fail. Uploading it is optional
+(the IAP works without it), but it's required to *promote* the IAP or to use offer
+codes / win-back offers.
 
 ## Privacy manifest
 
