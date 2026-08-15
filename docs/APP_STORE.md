@@ -7,6 +7,7 @@ covers the artifacts you have to *produce* before you can paste that in.
 - [Screenshots](#screenshots)
 - [App icon](#app-icon)
 - [In-app purchase promo image](#in-app-purchase-promo-image)
+- [In-app purchase App Review screenshot](#in-app-purchase-app-review-screenshot)
 - [Privacy manifest](#privacy-manifest)
 - [Build upload](#build-upload)
 - [Pre-submission checklist](#pre-submission-checklist)
@@ -112,6 +113,33 @@ alpha), **no rounded corners** — are all enforced by the generator before it
 writes the file; it exits non-zero if any would fail. Uploading it is optional
 (the IAP works without it), but it's required to *promote* the IAP or to use offer
 codes / win-back offers.
+
+## In-app purchase App Review screenshot
+
+```bash
+tools/capture_iap_review.sh                 # -> docs/app-store/iap-review-full-collection.png
+tools/capture_iap_review.sh "iPhone 16 Pro Max"   # any other 6.9" device
+```
+
+Separate from the promo image, App Store Connect **requires** a review‑only
+screenshot for the purchase — "a screenshot of the In‑App Purchase that clearly
+shows the item or service being offered." It's shown to App Review, never on the
+store. So this is one real frame of the shipping [`PaywallView`](../TradingUp/Views/PaywallView.swift),
+reached exactly the way a player reaches it: the UI test opens the app on a fresh
+save and taps a paid, locked set in the shop to raise the paywall, then captures
+`XCUIScreen.main.screenshot()` — the same real‑device capture the marketing
+screenshots use, not an SVG mock.
+
+The only staged detail is the price string: a UI‑test host can't load a live
+StoreKit product, so a **DEBUG‑only** `TU_FAKE_PRICE` launch override renders the
+real `$2.99` the App Store Connect product (and `TradingUp.storekit`) is
+configured for. The override is compiled out of release builds, so shipping code
+only ever shows the price StoreKit returns.
+
+Output is **1320×2868** (a valid iPhone 6.9" screenshot spec size); the script
+validates the dimensions before it finishes. Upload it to the purchase's **App
+Review Screenshot** slot. Note Apple lets you *update* that screenshot later but
+not remove it once uploaded.
 
 ## Privacy manifest
 
