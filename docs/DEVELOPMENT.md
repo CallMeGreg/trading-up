@@ -51,16 +51,19 @@ TradingUp/
     Economy.swift            Prices, grading table, value math — all tuning lives here
     GameCore.swift           Deterministic game state: buy / open / sell / grade / bonuses
     Persistence.swift        Versioned save envelope, load hygiene, corrupt-save quarantine
-    GameState.swift          @Observable wrapper: randomness + autosave for SwiftUI
+    GameState.swift          @Observable wrapper: randomness + autosave; owns the full-version entitlement gate
     FeatureFlags.swift       Build-time switches (see "Feature flags" below)
   Generated/
     CardData.swift           The 250 cards (auto-generated — do not edit by hand)
-  Views/                     SwiftUI screens (Shop, Collection, pack opening, etc.)
+  Views/                     SwiftUI screens (Shop, Collection, pack opening, PaywallView, etc.)
+  Store/
+    PurchaseStore.swift      StoreKit 2 layer for the one-time full-version unlock (outside Models/)
   Audio/
     SoundManager.swift       AVAudioPlayer pool + mute preference; Sound.play(.x) API
     SFX/                     7 generated sound effects (auto-generated .wav files)
   Assets.xcassets/           App icon + accent color + CardArt/ (250 card illustrations)
   PrivacyInfo.xcprivacy      Privacy manifest (no tracking, no data collection)
+  TradingUp.storekit         StoreKit config for testing the IAP in the Simulator (dev only)
 TradingUpTests/              XCTest unit tests (fast, deterministic)
 TradingUpUITests/            The screenshot playthrough (TradingUpScreenshots scheme)
 data/cards.json              The 250 cards as JSON (source for tooling/other targets)
@@ -105,6 +108,34 @@ runtime toggle and nothing is persisted.
 
 Each flag is covered by `TradingUpTests/FeatureFlagTests.swift` in **both**
 states, so flipping one is a one-line change rather than a leap of faith.
+
+## In-app purchase (full-version unlock)
+
+The app is free with one non-consumable IAP that unlocks sets 2–5; Set 1 is free
+to play in full (design rationale in `docs/DESIGN.md` §11). The moving parts:
+
+- **`TradingUp/Store/PurchaseStore.swift`** — the StoreKit 2 layer. Verifies
+  `Transaction.currentEntitlements`, listens to `Transaction.updates`, and pushes
+  the verified entitlement into `GameState`. Product id
+  `com.callmegreg.tradingup.fullunlock` (`PurchaseStore.fullUnlockProductID`).
+- **`GameState.isFullVersionUnlocked`** — the single game-facing flag. Sets above
+  `GameState.freeSetCount` (the one knob for the size of the free slice, default
+  `1`) gate *buying* packs on it, so `buyPack` / `buyBox` / `buyBoxPacks` refuse a
+  still-locked paid set. Progression (`Economy.uniquesToUnlock`) is enforced
+  separately, so the unlock opens the paid sets but never skips their milestones.
+- **`TradingUp/Views/PaywallView.swift`** — the purchase sheet; `ShopView` opens
+  it from a paid, locked set and shows the live StoreKit price.
+
+The gate is unit-tested in both states by
+`TradingUpTests/FullUnlockGateTests.swift`, which never touches StoreKit — it
+sets the entitlement directly. **The economy is untouched**, so the
+[verify harness](TESTING.md#the-simulation-harness-no-xcode-needed) needs no
+re-run for this feature.
+
+To exercise the real purchase/restore flow in the Simulator, point the run action
+at the bundled StoreKit config: **Product ▸ Scheme ▸ Edit Scheme ▸ Run ▸ Options ▸
+StoreKit Configuration → `TradingUp.storekit`**. Then buy in-app, and use
+**Debug ▸ StoreKit ▸ Manage Transactions** to refund or reset between runs.
 
 ## Regenerating content
 

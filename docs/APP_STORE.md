@@ -94,7 +94,7 @@ mask itself, so a baked‑in one shows up as dark wedges). Details in
 
 `TradingUp/PrivacyInfo.xcprivacy` declares no tracking and no data collection,
 plus the one required‑reason API the app touches: `UserDefaults` (the mute
-preference), under reason `CA92.1`.
+preference and the cached full‑version entitlement hint), under reason `CA92.1`.
 
 Apple bounces uploads that use such an API without declaring it — you get an
 automated **ITMS-91053 "Missing API declaration"** email and the build can't go

@@ -22,6 +22,25 @@ final class GameState {
     private var rng = AppRNG()
     private let store: SaveStore
 
+    /// How many sets are playable for free. Set 1 (Emberfall) is the free tier;
+    /// sets above this need the one-time "Unlock the full collection" purchase.
+    /// A single tuning point should the free slice ever change.
+    static let freeSetCount = 1
+
+    /// Whether the one-time full-version unlock is active. Sets above
+    /// `freeSetCount` gate *buying packs* on this; Set 1 is always free, and
+    /// cards already owned in paid sets stay viewable regardless.
+    ///
+    /// StoreKit is the source of truth: the `Store` layer verifies
+    /// `Transaction.currentEntitlements` on launch and on every transaction
+    /// update, then pushes the result here. Nothing in the pure `GameCore`
+    /// reads it, so the model and the `tools/verify` harness are untouched. It's
+    /// plain instance state rather than a build-time `FeatureFlags` switch
+    /// because it turns on at runtime when the player buys — but, like those
+    /// flags, it's trivially settable in tests to exercise both the locked and
+    /// the unlocked game.
+    private(set) var isFullVersionUnlocked = false
+
     init(store: SaveStore = SaveStore()) {
         self.store = store
         #if DEBUG
@@ -89,6 +108,14 @@ final class GameState {
     func canAffordGrade(set: Int) -> Bool { core.cash >= Economy.gradeFee(set: set) }
     func isSetUnlocked(_ set: Int) -> Bool { core.isUnlocked(set: set) }
     func uniquesToUnlock(set: Int) -> Int { Economy.uniquesToUnlock(set: set) }
+
+    /// Whether buying into `set` needs the full-version unlock — true for the
+    /// paid sets while the purchase is inactive, false for the free tier and for
+    /// everything once unlocked. Drives the shop's "unlock" vs. progression
+    /// callout without leaking StoreKit into the view.
+    func requiresFullUnlock(set: Int) -> Bool {
+        set > Self.freeSetCount && !isFullVersionUnlocked
+    }
     func ownedCount(inSet set: Int) -> Int { core.ownedCount(inSet: set) }
     func instances(of cardId: String) -> [CardInstance] { core.instances(of: cardId) }
     func owns(_ id: String) -> Bool { core.owns(id) }
@@ -109,6 +136,12 @@ final class GameState {
 
     @discardableResult
     func buyPack(set: Int) -> OpenResult? {
+        // Paid sets are closed until the full-version unlock is bought, so no
+        // stale call site, deep link, or UI test can spend cash opening a pack
+        // behind the paywall. Set 1 is always free. (Progression — the unique
+        // count — is still enforced separately inside `core.buyPack`, so a
+        // purchase opens the paid sets but never *skips* their unlock.)
+        guard !requiresFullUnlock(set: set) else { return nil }
         let r = core.buyPack(set: set, using: &rng)
         if r != nil { save() }
         return r
@@ -117,6 +150,7 @@ final class GameState {
     @discardableResult
     func buyBox(set: Int) -> OpenResult? {
         guard FeatureFlags.boosterBoxesAvailable else { return nil }
+        guard !requiresFullUnlock(set: set) else { return nil }
         let r = core.buyBox(set: set, using: &rng)
         if r != nil { save() }
         return r
@@ -124,10 +158,12 @@ final class GameState {
 
     /// Open a box as a sequence of packs (all cards added immediately, revealed
     /// pack-by-pack). Returns one result per pack, or nil if unaffordable/locked
-    /// — or if booster boxes have been removed from the shop.
+    /// — or if booster boxes have been removed from the shop, or the set is
+    /// still behind the full-version paywall.
     @discardableResult
     func buyBoxPacks(set: Int) -> [OpenResult]? {
         guard FeatureFlags.boosterBoxesAvailable else { return nil }
+        guard !requiresFullUnlock(set: set) else { return nil }
         let r = core.buyBoxPacks(set: set, using: &rng)
         if r != nil { save() }
         return r
@@ -175,6 +211,12 @@ final class GameState {
     }
 
     func dismissLoadIssue() { loadIssue = nil }
+
+    /// Apply the verified full-version entitlement. Called by the `Store` layer
+    /// after it checks StoreKit (on launch and on transaction updates), and by
+    /// tests to exercise both states. Not persisted — StoreKit is the authority,
+    /// re-verified every launch — so it never touches the save file.
+    func setFullVersionUnlocked(_ unlocked: Bool) { isFullVersionUnlocked = unlocked }
 
     private func save() {
         store.save(core)

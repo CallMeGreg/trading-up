@@ -15,7 +15,8 @@
 
 	<!-- Required-reason APIs. Apple rejects uploads that use one of these
 	     without declaring it (ITMS-91053). We touch exactly one: UserDefaults,
-	     for the sound on/off preference in SoundManager. CA92.1 is "access
+	     for the sound on/off preference in SoundManager and the cached
+	     full-version entitlement hint in PurchaseStore. CA92.1 is "access
 	     info from the app itself", which is all we do — the save file lives in
 	     Documents and uses no timestamp APIs. -->
 	<key>NSPrivacyAccessedAPITypes</key>
