@@ -41,7 +41,7 @@ DPI = 72
 PPM = round(DPI / 0.0254)
 DARKEST = "#080a10"  # corner colour, and what the PNG is flattened onto
 
-# One signature ultra legendary per set, in set order. Their elements span the
+# One signature ultra per set, in set order. Their elements span the
 # whole spectrum, which is what reads as "every set is here".
 HEROES = ["Ignarok", "Abyssos", "Sylvareth", "Fulguros", "Nyxaros"]
 
@@ -124,7 +124,7 @@ def hero_card(card, idx, is_front):
                  f'font-size="14" letter-spacing="2" font-weight="600" fill="#8a94a6">'
                  f'SET {setno} \u00b7 {esc(setname).upper()}</text>')
 
-        # Legendary gem + label, bottom-left; collector number bottom-right.
+        # Ultra gem + label, bottom-left; collector number bottom-right.
         gy = CH - 30
         s.append(f'''<defs><linearGradient id="gem{uid}" x1="0" y1="0" x2="1" y2="1">
             <stop offset="0%" stop-color="#ffd54a"/>
@@ -135,7 +135,7 @@ def hero_card(card, idx, is_front):
         s.append(f'<path d="M {gx} {gy - 10} L {gx + 9} {gy} L {gx} {gy + 10} L {gx - 9} {gy} Z" '
                  f'fill="url(#gem{uid})" stroke="#00000055" stroke-width="1"/>')
         s.append(f'<text x="{gx + 18}" y="{gy + 5}" font-family="Helvetica,Arial,sans-serif" '
-                 f'font-size="15" letter-spacing="2.5" font-weight="700" fill="#ffd54a">LEGENDARY</text>')
+                 f'font-size="15" letter-spacing="2.5" font-weight="700" fill="#ffd54a">ULTRA</text>')
         s.append(f'<text x="{CW - PAD - 6}" y="{gy + 5}" text-anchor="end" '
                  f'font-family="Helvetica,Arial,sans-serif" font-size="15" font-weight="600" '
                  f'fill="#7a8497">No.{card["number"]:03d}</text>')
