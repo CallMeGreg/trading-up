@@ -1,0 +1,72 @@
+name: CodeQL
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "27 3 * * 1"
+
+concurrency:
+  group: codeql-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      security-events: write # upload code scanning results
+      packages: read # fetch internal/private CodeQL packs
+      actions: read # required for the "actions" language on private repos
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: actions
+            build-mode: none
+            runner: ubuntu-24.04
+          - language: python
+            build-mode: none
+            runner: ubuntu-24.04
+          - language: swift
+            build-mode: manual
+            runner: macos-15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Select Xcode
+        if: matrix.language == 'swift'
+        run: sudo xcode-select -s /Applications/Xcode_16.4.app
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@f3712979fa5f215279b101dd0a2e3bdfb4353324 # v3.37.7
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+
+      # Swift can't use autobuild: the Xcode project stores its sources in Xcode
+      # 16 synchronized folder groups (PBXFileSystemSynchronizedRootGroup), which
+      # leave every target's "Sources" build phase empty. CodeQL's autobuild
+      # inspects those phases to pick a target, finds no Swift there, and reports
+      # "No Swift compilation target found". Building manually makes CodeQL trace
+      # the real swiftc invocations instead. This mirrors the CI build job.
+      - name: Build Swift (manual)
+        if: matrix.language == 'swift'
+        run: |
+          xcodebuild clean build \
+            -project TradingUp.xcodeproj \
+            -scheme TradingUp \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@f3712979fa5f215279b101dd0a2e3bdfb4353324 # v3.37.7
+        with:
+          category: "/language:${{ matrix.language }}"
