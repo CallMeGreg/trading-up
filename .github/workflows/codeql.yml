@@ -56,7 +56,17 @@ jobs:
       # leave every target's "Sources" build phase empty. CodeQL's autobuild
       # inspects those phases to pick a target, finds no Swift there, and reports
       # "No Swift compilation target found". Building manually makes CodeQL trace
-      # the real swiftc invocations instead. This mirrors the CI build job.
+      # the real swiftc invocations instead, the same way the CI build job builds.
+      #
+      # ARCHS=arm64 builds a single architecture (the macos runner's native
+      # simulator slice) instead of arm64 + x86_64. CodeQL traces swiftc and
+      # extracts each compiled source file, so building both simulator arches
+      # extracts every file twice into an identical database. One arch produces
+      # the same analysis while roughly halving this (dominant) traced build.
+      #
+      # Note: don't cache DerivedData across runs to skip this build. CodeQL only
+      # extracts files the traced build actually recompiles, so a warm/incremental
+      # build would yield an empty or incomplete database.
       - name: Build Swift (manual)
         if: matrix.language == 'swift'
         run: |
@@ -64,6 +74,8 @@ jobs:
             -project TradingUp.xcodeproj \
             -scheme TradingUp \
             -destination 'generic/platform=iOS Simulator' \
+            ARCHS=arm64 \
+            ONLY_ACTIVE_ARCH=NO \
             CODE_SIGNING_ALLOWED=NO
 
       - name: Perform CodeQL Analysis

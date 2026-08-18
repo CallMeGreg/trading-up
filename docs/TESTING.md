@@ -109,15 +109,29 @@ See [APP_STORE.md](APP_STORE.md#screenshots).
 Xcode 16.4.
 
 Swift uses **`build-mode: manual`** and the same `xcodebuild build` as the CI
-build job, rather than CodeQL's autobuild. The Xcode project keeps its sources in
-Xcode 16 synchronized folder groups (`PBXFileSystemSynchronizedRootGroup`), so
-every target's `Sources` build phase is empty; autobuild inspects those phases to
-choose a target, finds no Swift in the app target, and fails with "No Swift
-compilation target found". Building manually makes CodeQL trace the real `swiftc`
-invocations instead. This is an **advanced setup**, so code scanning **default
-setup must stay disabled** — the two are mutually exclusive, which is why all
-three languages are analysed here rather than leaving `actions`/`python` on
-default setup.
+build job (restricted to a single architecture), rather than CodeQL's autobuild.
+The Xcode project keeps its sources in Xcode 16 synchronized folder groups
+(`PBXFileSystemSynchronizedRootGroup`), so every target's `Sources` build phase
+is empty; autobuild inspects those phases to choose a target, finds no Swift in
+the app target, and fails with "No Swift compilation target found". Building
+manually makes CodeQL trace the real `swiftc` invocations instead. This is an
+**advanced setup**, so code scanning **default setup must stay disabled** — the
+two are mutually exclusive, which is why all three languages are analysed here
+rather than leaving `actions`/`python` on default setup.
+
+The Swift build is the whole cost of the scan (~20 min; init and analysis are
+seconds). Two things keep it down, and one tempting thing does **not** work:
+
+- **Single architecture.** The build passes `ARCHS=arm64` (the runner's native
+  simulator slice) instead of the default arm64 + x86_64. CodeQL extracts each
+  source file the traced build compiles, so building both arches extracts every
+  file twice into an identical database. One arch roughly halves the build.
+- **No build‑output caching.** Caching DerivedData across runs to skip the
+  rebuild would break the scan: CodeQL only extracts files the traced build
+  actually recompiles, so a warm/incremental build produces an empty or
+  incomplete database. The CodeQL bundle itself is already cached by the runner
+  toolcache, and `dependency-caching` only caches package‑manager dependencies —
+  of which this project has none.
 
 ## Fast‑travel launch hooks (DEBUG only)
 
