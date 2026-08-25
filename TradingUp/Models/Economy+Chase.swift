@@ -124,7 +124,6 @@ extension Economy {
         case .gilder:         return 45
         case .appraiser:      return 70
         case .whale:          return 80
-        case .evolutionist:   return 55
         case .stipend:        return 50
         case .holoPress:      return 40
         case .fastTrackGrade: return 35

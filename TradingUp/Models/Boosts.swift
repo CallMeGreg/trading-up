@@ -58,7 +58,6 @@ enum ItemKind: String, Codable, CaseIterable, Hashable, Identifiable {
     case gilder         // +foil chance
     case appraiser      // every grade rolls one tier higher
     case whale          // +1 card in every pack
-    case evolutionist   // evolution-line bonuses doubled
     case stipend        // +cash per unique owned, paid when you run down a Lead
     // One-shot (burst)
     case holoPress      // turn a chosen card foil
@@ -72,7 +71,7 @@ enum ItemKind: String, Codable, CaseIterable, Hashable, Identifiable {
 
     var isPassive: Bool {
         switch self {
-        case .loupe, .bulkBuyer, .gilder, .appraiser, .whale, .evolutionist, .stipend:
+        case .loupe, .bulkBuyer, .gilder, .appraiser, .whale, .stipend:
             return true
         case .holoPress, .fastTrackGrade, .packSearch, .marketTip, .counterfeit, .polish:
             return false
@@ -94,7 +93,6 @@ enum ItemKind: String, Codable, CaseIterable, Hashable, Identifiable {
         case .gilder:         return "Gilder"
         case .appraiser:      return "Appraiser"
         case .whale:          return "Whale"
-        case .evolutionist:   return "Evolutionist"
         case .stipend:        return "Stipend"
         case .holoPress:      return "Holo Press"
         case .fastTrackGrade: return "Fast-Track Grade"
@@ -112,7 +110,6 @@ enum ItemKind: String, Codable, CaseIterable, Hashable, Identifiable {
         case .gilder:         return "+\(Int(Economy.gilderFoilBonus * 100))% foil chance."
         case .appraiser:      return "Every grade rolls one tier higher."
         case .whale:          return "+1 card in every pack (7-card packs)."
-        case .evolutionist:   return "Evolution-line bonuses are doubled."
         case .stipend:        return "+$\(Int(Economy.stipendPerUnique)) per unique card, paid when you run down a Lead."
         case .holoPress:      return "Turn a chosen card foil (×\(Int(Economy.foilMultiplier)) value)."
         case .fastTrackGrade: return "Grade a card free — guaranteed 8 or better."
@@ -125,7 +122,7 @@ enum ItemKind: String, Codable, CaseIterable, Hashable, Identifiable {
 
     /// Bazaar order: passives first (engine), then one-shots (burst).
     static let bazaarOrder: [ItemKind] = [
-        .loupe, .bulkBuyer, .gilder, .appraiser, .whale, .evolutionist, .stipend,
+        .loupe, .bulkBuyer, .gilder, .appraiser, .whale, .stipend,
         .holoPress, .fastTrackGrade, .packSearch, .marketTip, .counterfeit, .polish,
     ]
 }
