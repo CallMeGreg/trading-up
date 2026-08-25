@@ -30,19 +30,21 @@ struct StatsView: View {
                     }
                     .pickerStyle(.segmented)
 
-                    VStack(alignment: .leading, spacing: 12) {
-                        header("Collection")
-                        HStack {
-                            Text("Unique cards").font(.system(size: 13, weight: .semibold)).foregroundStyle(Palette.subtle)
-                            Spacer()
-                            Text("\(game.uniqueCount) / \(game.totalCards)")
-                                .font(.system(size: 13, weight: .bold, design: .monospaced)).foregroundStyle(Palette.text)
+                    if scope == .run {
+                        VStack(alignment: .leading, spacing: 12) {
+                            header("Collection")
+                            HStack {
+                                Text("Unique cards").font(.system(size: 13, weight: .semibold)).foregroundStyle(Palette.subtle)
+                                Spacer()
+                                Text("\(game.uniqueCount) / \(game.totalCards)")
+                                    .font(.system(size: 13, weight: .bold, design: .monospaced)).foregroundStyle(Palette.text)
+                            }
+                            ProgressBar(value: Double(game.uniqueCount), total: Double(game.totalCards), tint: .white)
+                            SetBreakdown()
                         }
-                        ProgressBar(value: Double(game.uniqueCount), total: Double(game.totalCards), tint: .white)
-                        SetBreakdown()
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .panel()
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .panel()
 
                     if scope == .allTime {
                         VStack(alignment: .leading, spacing: 12) {

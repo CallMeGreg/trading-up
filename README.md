@@ -88,7 +88,7 @@ collection is always safe.
 
 ### 🏅 Grade your best
 
-Send a rare or ultra to grading for a flat per‑set fee ($2–$10) and roll a PSA
+Send any card to grading for a flat per‑set fee ($2–$10) and roll a PSA
 grade. A **PSA 10** is ×5, a **PSA 9** is ×2, and a **PSA 1** is a freak ×10
 jackpot — but grades 2–7 are worth *less* than ungraded. Because the fee is cheap
 next to a pricey card, grading valuable duplicates **before** you sell them is a

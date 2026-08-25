@@ -7,14 +7,14 @@ final class RunSignatureTests: XCTestCase {
 
     func testRankBoundaries() {
         XCTAssertEqual(CollectorRank.forPacks(0), .s)
-        XCTAssertEqual(CollectorRank.forPacks(259), .s)
-        XCTAssertEqual(CollectorRank.forPacks(260), .a)
-        XCTAssertEqual(CollectorRank.forPacks(359), .a)
-        XCTAssertEqual(CollectorRank.forPacks(360), .b)
-        XCTAssertEqual(CollectorRank.forPacks(499), .b)
-        XCTAssertEqual(CollectorRank.forPacks(500), .c)
-        XCTAssertEqual(CollectorRank.forPacks(719), .c)
-        XCTAssertEqual(CollectorRank.forPacks(720), .d)
+        XCTAssertEqual(CollectorRank.forPacks(179), .s)
+        XCTAssertEqual(CollectorRank.forPacks(180), .a)
+        XCTAssertEqual(CollectorRank.forPacks(199), .a)
+        XCTAssertEqual(CollectorRank.forPacks(200), .b)
+        XCTAssertEqual(CollectorRank.forPacks(239), .b)
+        XCTAssertEqual(CollectorRank.forPacks(240), .c)
+        XCTAssertEqual(CollectorRank.forPacks(299), .c)
+        XCTAssertEqual(CollectorRank.forPacks(300), .d)
         XCTAssertEqual(CollectorRank.forPacks(5000), .d)
     }
 

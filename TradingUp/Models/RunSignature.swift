@@ -5,8 +5,8 @@ import Foundation
 /// A letter grade for how efficiently the collection was completed — fewer packs
 /// torn to reach all 250 is a better run. Mirrors the `bestRunPacks` record the
 /// game already keeps, and echoes the PSA-style grading the player has been doing
-/// all game. Thresholds are calibrated against a solid reference completion of
-/// ~322 packs (see `tools/seed_save.py`) and are safe to tune.
+/// all game. S rewards a tight run (under 180 packs) and the bands widen toward
+/// D for longer grinds; all thresholds are safe to tune.
 enum CollectorRank: String, CaseIterable {
     case s = "S", a = "A", b = "B", c = "C", d = "D"
 
@@ -25,10 +25,10 @@ enum CollectorRank: String, CaseIterable {
 
     static func forPacks(_ packs: Int) -> CollectorRank {
         switch packs {
-        case ..<260: return .s
-        case ..<360: return .a
-        case ..<500: return .b
-        case ..<720: return .c
+        case ..<180: return .s
+        case ..<200: return .a
+        case ..<240: return .b
+        case ..<300: return .c
         default:     return .d
         }
     }
