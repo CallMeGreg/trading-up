@@ -24,7 +24,8 @@ enum Rarity: String, Codable, CaseIterable, Hashable {
         }
     }
 
-    var canBeGraded: Bool { self == .rare || self == .ultra }
+    /// Any card can be graded, regardless of rarity.
+    var canBeGraded: Bool { true }
 }
 
 // MARK: - Element

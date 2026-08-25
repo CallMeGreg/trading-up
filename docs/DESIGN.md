@@ -222,9 +222,9 @@ winnability floor is **55%**, not 60%. Move the rate in single points and re‑r
 
 ---
 
-## 7. Grading (rares & ultra rares only)
+## 7. Grading (any card)
 
-Send a rare/ultra to be graded for a random PSA grade. The grade multiplies the
+Send any card to be graded for a random PSA grade. The grade multiplies the
 card's base value:
 
 | Grade | Multiplier | Odds |

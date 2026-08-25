@@ -111,7 +111,7 @@ do {
     core.cash += 50
     if let gradeable = core.instances.first(where: { $0.card.rarity.canBeGraded && $0.grade == nil }) {
         let res = core.grade(instanceId: gradeable.id, using: &rng)
-        check(res != nil && (1...10).contains(res!.grade), "graded a rare/ultra to a valid PSA grade")
+        check(res != nil && (1...10).contains(res!.grade), "graded a card to a valid PSA grade")
     }
 
     var broke = GameCore()
