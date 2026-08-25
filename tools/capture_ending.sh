@@ -3,14 +3,13 @@
 # Screen-record the game's ending for the PR demo.
 #
 # Boots a simulator, builds the UI-test bundle, then screen-records the
-# deterministic EndingFlowTests pass: launch one card short of a complete
-# collection, rip the pack whose hit is the final card, work through the
-# keep/sell summary, watch the win screen arrive *after* the pack (the whole
-# point of the fix), and land back in a shop that reads 50 of 50.
+# deterministic EndingFlowTests pass: launch a Season sitting at the Masters
+# Invitational (Show 8) with the Quota already cleared, tap "Make the Cut", watch
+# the Season Champion celebration take the screen, then drop back into the shop.
 #
-# The run is deterministic — the test pins the seeded state and the RNG via the
-# DEBUG-only launch hooks (TU_TEST_STATE / TU_TEST_MISSING / TU_TEST_SEED) — so
-# the recording is the same every time and takes well under a minute.
+# The run is deterministic — the test pins the seeded state via the DEBUG-only
+# launch hook (TU_TEST_STATE=almost-champion) — so the recording is the same every
+# time and takes well under a minute.
 #
 #   tools/capture_ending.sh                    # iPhone 17 Pro, default output
 #   tools/capture_ending.sh "iPhone 17 Pro Max"

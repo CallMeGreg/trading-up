@@ -114,36 +114,45 @@ do {
         check(res != nil && (1...10).contains(res!.grade), "graded a rare/ultra to a valid PSA grade")
     }
 
-    var broke = GameCore()
-    broke.cash = 0
-    broke.instances = [CardInstance(cardId: "S1-001")]
-    check(broke.isGameOver, "broke with only last-copies = game over")
-    broke.instances.append(CardInstance(cardId: "S1-001"))
-    check(broke.isGameOver, "broke with a dupe worth pennies = still game over")
-    broke.cash = Economy.cheapestPackPrice - 0.10
-    check(!broke.isGameOver, "a dupe that covers the shortfall = still in the game")
+    // A Season busts only when the current Show is genuinely stuck — below the
+    // bar with no rip, grade, or Power-Up left that could still lift holdings.
+    // A bare core has no active Season, so it's never "bust".
+    check(!GameCore().isBust, "a bare core with no active Season is never bust")
 
-    // Grading is the other escape hatch, so a gradeable dupe you can afford to
-    // send in has to count even when selling it raw wouldn't be enough.
-    var gamble = GameCore()
-    gamble.cash = 2
-    gamble.instances = [CardInstance(cardId: "S1-003"), CardInstance(cardId: "S1-003")]
-    check(gamble.cash + gamble.instances[0].sellValue < Economy.cheapestPackPrice,
-          "that rare sold raw wouldn't reach a pack")
-    check(!gamble.isGameOver, "a gradeable dupe you can afford to grade = a way out")
-    gamble.cash = Economy.gradeFee(set: 1) - 0.01
-    check(gamble.isGameOver, "gradeable dupe but no fee money = game over")
+    var stuck = GameCore(); stuck.ensureActiveRun()
+    stuck.run.ripsRemaining = 0
+    stuck.cash = 0
+    stuck.instances = [CardInstance(cardId: "S1-001")]   // one unsellable last copy
+    check(stuck.isBust, "active Show, no rips, no cash, nothing to sell or grade = bust")
 
-    // Loss threshold is the cheapest pack price ($10), NOT $0: you lose once you
-    // can no longer afford even the cheapest pack, and selling everything you
-    // could spare (grading the worthwhile ones first) still wouldn't get you one.
+    stuck.run.ripsRemaining = 5
+    stuck.cash = Economy.cheapestPackPrice
+    check(!stuck.isBust, "a rip in the budget and cash for a pack = still climbing")
+
+    // A gradeable dupe you can afford to send in is a way forward even with no rips.
+    stuck.run.ripsRemaining = 0
+    stuck.cash = Economy.gradeFee(set: 1)
+    stuck.instances = [CardInstance(cardId: "S1-003"), CardInstance(cardId: "S1-003")]
+    check(!stuck.isBust, "a gradeable dupe you can afford to grade = a way out")
+
+    // Energy plus a Power-Up in hand is also a move.
+    var pu = GameCore(); pu.ensureActiveRun()
+    pu.run.ripsRemaining = 0; pu.cash = 0
+    pu.instances = [CardInstance(cardId: "S1-001")]
+    pu.run.energy = 2; pu.run.powerUpIds = ["market-tip"]
+    check(!pu.isBust, "a Power-Up you have the Energy to play = not bust")
+
+    // Reaching the bar is never a loss — you can Make the Cut instead.
+    var atBar = GameCore(); atBar.ensureActiveRun()
+    atBar.run.ripsRemaining = 0
+    atBar.cash = atBar.currentQuota
+    check(!atBar.isBust && atBar.canMakeCut, "holdings at the Show bar = Make the Cut, not bust")
+
+    // The between-Show Bazaar is never bust (there's always the next Show).
+    atBar.cash = 0; atBar.run.atBazaar = true
+    check(!atBar.isBust, "the between-Show Bazaar is never flagged bust")
+
     check(Economy.cheapestPackPrice == 10, "cheapest pack price is $10")
-    var edge = GameCore()
-    edge.instances = [CardInstance(cardId: "S1-001")]   // only a last copy (unsellable)
-    edge.cash = Economy.cheapestPackPrice - 0.01        // $9.99 — can't afford any pack
-    check(edge.isGameOver, "cash just under cheapest pack with no sellables = game over")
-    edge.cash = Economy.cheapestPackPrice               // exactly $10 — can still buy a pack
-    check(!edge.isGameOver, "cash == cheapest pack price = still in the game")
 
     // Only genuine extras count: with three copies, two can go and one must stay.
     var extras = GameCore()
@@ -154,18 +163,19 @@ do {
           "raisable cash counts each extra exactly once")
 }
 
-print("\n== Win condition & bonuses ==")
+print("\n== Bonuses (evolution only; sets no longer pay cash) ==")
 do {
     var core = GameCore()
     for c in CardDatabase.all { core.instances.append(CardInstance(cardId: c.id)) }
     let events = core.checkBonuses()
-    check(core.hasWon, "owning all 250 triggers win")
-    check(core.claimedSets.count == 5, "all 5 sets marked complete")
+    check(!core.hasWon, "owning all 250 no longer 'wins' — that's the Championship's job now")
+    check(core.claimedSets.count == 5, "all 5 sets still recorded complete (for the Set Master milestone)")
     check(core.claimedEvoLines.count == 65, "all 65 evolution lines marked complete")
-    check(events.count == 70, "70 bonus events (65 evo + 5 set)")
-    // per set: 6 trios×2.0 + 7 duos×1.0 + 1 set×15 = 34.0 × pack price
-    let expected = 34.0 * (10 + 30 + 75 + 160 + 400)
-    check(abs(core.cash - (100 + expected)) < 0.01, "bonus payout exact: $\(expected)")
+    check(events.count == 65, "65 bonus events — evolution lines only, no set-completion payouts")
+    check(events.allSatisfy { $0.kind == .evolution }, "every bonus paid is an evolution bonus")
+    // per set: 6 trios×0.5 + 7 duos×0.25 = 4.75 × pack price (the +15× set bonus is gone)
+    let expected = 4.75 * (10.0 + 30 + 75 + 160 + 400)
+    check(abs(core.cash - (100 + expected)) < 0.01, "evolution payout exact: $\(expected)")
     let again = core.checkBonuses()
     check(again.isEmpty, "bonuses are not paid twice")
 }
@@ -479,16 +489,20 @@ do {
     }
 }
 
-print("\n== Win presentation ==")
+print("\n== Win presentation (Season Champion) ==")
 do {
     var core = GameCore()
-    for c in CardDatabase.all { core.instances.append(CardInstance(cardId: c.id)) }
-    _ = core.checkBonuses()
-    check(core.hasWon && core.shouldShowWin, "the win overlay shows once the collection is complete")
+    core.ensureActiveRun()
+    core.run.show = Economy.seasonShows        // the Championship
+    core.cash = core.currentQuota              // holdings meet the bar
+    check(core.canMakeCut, "at the Championship with holdings at the bar, you can Make the Cut")
+    let fired = core.makeCut()
+    check(core.hasWon && core.shouldShowWin, "clearing the Championship wins the Season and shows the overlay")
+    check(fired.contains { $0.milestone == .seasonChampion }, "winning fires the Season Champion milestone")
     core.acknowledgeWin()
     check(core.hasWon && !core.shouldShowWin,
-          "dismissing the win keeps the completed collection instead of forcing a reset")
-    check(!core.isGameOver, "a finished collection can't then be flagged game over")
+          "dismissing the win keeps the run instead of forcing a reset")
+    check(!core.isGameOver, "a won Season is never also flagged bust")
     check(GameCore().winAcknowledged == false, "a new game starts with the win un-acknowledged")
 }
 
@@ -524,13 +538,11 @@ do {
     check(Economy.packPrices == [10, 30, 75, 160, 400], "steeper pack prices [10,30,75,160,400]")
     check(Economy.gradeFees == [2, 4, 6, 8, 10], "flat grade-fee ramp [2,4,6,8,10]")
     check(abs(Economy.sellbackRate - 0.75) < 1e-9, "shop buys dupes at 75% of market")
-    var boxesOK = true, bonusOK = true
+    var boxesOK = true
     for s in 1...5 {
         if abs(Economy.boxPrice(set: s) - Economy.packPrice(set: s) * 11) > 1e-9 { boxesOK = false }
-        if abs(Economy.setCompletionBonus(set: s) - Economy.packPrice(set: s) * 15) > 1e-9 { bonusOK = false }
     }
     check(boxesOK, "booster box = 11× pack price (trimmed the free-pack ATM discount)")
-    check(bonusOK, "set-completion bonus = 15× pack price (was 30×)")
     // Cheap, flat grade fees make grading high sets attractive, but grading stays a
     // gamble: low PSA grades multiply value *down*, so a graded card can be worth less.
     check(Economy.gradeMultiplier(2) < 1 && Economy.gradeMultiplier(7) < 1,
@@ -564,89 +576,356 @@ do {
           String(format: "churn a pack into a full set = net loss (%+.2f)", churn.cash - cashBefore))
 }
 
-// Play a full game with a fixed strategy, always working the cheapest unlocked,
-// incomplete set. While booster boxes are on the shelf it buys one whenever
-// affordable (boxes complete sets fastest via their ultra/foil guarantees);
-// with `FeatureFlags.removeBoosterBoxes` on it buys packs only, so these runs
-// keep describing the game players can actually reach. `.reckless` dumps every
-// dupe raw; `.thoughtful` first grades the high-value dupes it's about to sell —
-// grading is +EV on pricey cards thanks to the cheap flat fee, so it squeezes
-// extra cash out of the same pulls. Crude proxies, but they bracket careless vs.
-// considered play.
+print("\n== The Circuit: run-structure knobs ==")
+do {
+    // The net-worth bar is a strictly rising ladder across all 8 Shows.
+    let quotas = (1...Economy.seasonShows).map { Economy.quota(show: $0) }
+    check(quotas.count == 8, "a Season is 8 Shows")
+    var rising = true
+    for i in 1..<quotas.count where !(quotas[i] > quotas[i - 1]) { rising = false }
+    check(rising, "the net-worth bar rises every Show (\(quotas.map { Int($0) }))")
+    check(quotas.first! >= Economy.startingCash * 0.8,
+          "Show 1's bar is within reach of the starting stake")
+    check(quotas.last! > quotas.first! * 1.5,
+          "the Championship bar is meaningfully higher than the opener")
+
+    // The rip budget is always a positive, finite clock; upgrades only add to it.
+    check(Economy.baseRipsPerShow >= 1, "every Show grants at least one rip")
+    check(Economy.ripsPerShow(bonus: 3) == Economy.baseRipsPerShow + 3, "rip bonuses add on top")
+
+    // Energy is a small, bounded pool.
+    check(Economy.startingEnergy >= 1 && Economy.startingEnergy <= Economy.baseMaxEnergy,
+          "starting Energy sits within the ceiling")
+
+    // Guild ladders are capped and cost strictly more each level.
+    for u in GuildUpgrade.allCases {
+        let maxLvl = Economy.guildMaxLevel(u)
+        check(maxLvl >= 1, "\(u.name) has at least one level")
+        let costs = (0..<maxLvl).map { Economy.guildCost(u, currentLevel: $0) }
+        var monotone = true
+        for i in 1..<costs.count where !(costs[i] > costs[i - 1]) { monotone = false }
+        check(monotone, "\(u.name) Renown cost rises each level (\(costs))")
+    }
+
+    // A bigger Stake means a bigger opening bankroll; an un-upgraded Season is classic.
+    check(Economy.startingStake(stakeLevel: 2) > Economy.startingStake(stakeLevel: 0),
+          "the Stake upgrade raises the starting bankroll")
+    check(Economy.startingStake(stakeLevel: 0) == Economy.startingCash,
+          "an un-upgraded Season starts at the classic bankroll")
+
+    // The Market Tip Power-Up's payout scales with the Show it's played in.
+    check(Economy.marketTipCash(show: 5) > Economy.marketTipCash(show: 1),
+          "Market Tip pays more in later Shows")
+}
+
+print("\n== BoostCatalog: content integrity ==")
+do {
+    let trainerIds = BoostCatalog.trainers.map { $0.id }
+    let powerUpIds = BoostCatalog.powerUps.map { $0.id }
+    let energyIds  = BoostCatalog.energyCards.map { $0.id }
+    let allIds = trainerIds + powerUpIds + energyIds
+    check(Set(allIds).count == allIds.count, "every boost id is unique across Trainers/Power-Ups/Energy")
+    check(allIds.allSatisfy { BoostCatalog.boost($0) != nil }, "every boost id round-trips through the catalog")
+
+    // Every `requires` gate points at a real milestone id.
+    let milestoneIds = Set(Milestone.allCases.map { $0.rawValue })
+    let gates = BoostCatalog.trainers.compactMap { $0.requires }
+        + BoostCatalog.powerUps.compactMap { $0.requires }
+        + BoostCatalog.energyCards.compactMap { $0.requires }
+    check(!gates.isEmpty, "some boosts are gated behind milestones (there's something to unlock)")
+    check(gates.allSatisfy { milestoneIds.contains($0) },
+          "every boost unlock gate references a real milestone")
+
+    // The opening pool (no milestones, no Trainers held) is non-empty and ungated,
+    // so a first-time player always has offers.
+    let starter = BoostCatalog.availablePool(unlocked: [], ownedTrainerIds: [])
+    check(!starter.isEmpty, "the opening pool is never empty")
+    check(starter.allSatisfy { $0.requires == nil }, "nothing gated leaks into the opening pool")
+
+    // Unlocking milestones widens the pool; a Trainer already held drops out.
+    let widened = BoostCatalog.availablePool(unlocked: milestoneIds, ownedTrainerIds: [])
+    check(widened.count > starter.count, "unlocking milestones adds gated boosts to the pool")
+    let heldOne = BoostCatalog.availablePool(unlocked: [], ownedTrainerIds: [trainerIds[0]])
+    check(!heldOne.contains { $0.id == trainerIds[0] }, "a Trainer already held stops being offered")
+
+    // Twists are well-formed and uniquely identified.
+    let twistIds = BoostCatalog.twists.map { $0.id }
+    check(Set(twistIds).count == twistIds.count, "every Twist id is unique")
+    check(BoostCatalog.twists.allSatisfy { $0.quotaMultiplier > 0 }, "no Twist zeroes the bar")
+
+    // Guild upgrades enumerate cleanly.
+    check(Set(GuildUpgrade.allCases.map { $0.id }).count == GuildUpgrade.allCases.count,
+          "every Guild upgrade id is unique")
+}
+
+print("\n== Milestones: unlock conditions ==")
+do {
+    func fresh() -> GameCore { var c = GameCore(); c.ensureActiveRun(); return c }
+    let cid = CardDatabase.all[0].id
+
+    // firstCut: satisfied once a Show has been cleared (Show advanced past 1).
+    var c = fresh()
+    check(!c.satisfies(.firstCut), "First Cut isn't met at Show 1")
+    c.run.show = 2
+    check(c.satisfies(.firstCut), "First Cut fires after clearing a Show")
+
+    // setMaster: any completed set recorded this run.
+    c = fresh()
+    check(!c.satisfies(.setMaster), "Set Master needs a completed set")
+    c.claimedSets = [1]
+    check(c.satisfies(.setMaster), "Set Master fires on a completed set")
+
+    // hoarder: 8 copies of a single card.
+    c = fresh()
+    for _ in 0..<7 { c.instances.append(CardInstance(cardId: cid)) }
+    check(!c.satisfies(.hoarder), "Hoarder needs 8 copies (7 isn't enough)")
+    c.instances.append(CardInstance(cardId: cid))
+    check(c.satisfies(.hoarder), "Hoarder fires at 8 copies")
+
+    // gemHolo: a foil graded PSA 10.
+    c = fresh()
+    c.instances.append(CardInstance(cardId: cid, foil: true, grade: 9))
+    check(!c.satisfies(.gemHolo), "Gem Holo needs a PSA 10 foil (PSA 9 doesn't count)")
+    c.instances.append(CardInstance(cardId: cid, foil: true, grade: 10))
+    check(c.satisfies(.gemHolo), "Gem Holo fires on a PSA 10 foil")
+
+    // aceGrader: three cards graded PSA 9+.
+    c = fresh()
+    c.instances.append(CardInstance(cardId: cid, grade: 9))
+    c.instances.append(CardInstance(cardId: cid, grade: 10))
+    check(!c.satisfies(.aceGrader), "Ace Grader needs three PSA 9+ (two isn't enough)")
+    c.instances.append(CardInstance(cardId: cid, grade: 9))
+    check(c.satisfies(.aceGrader), "Ace Grader fires on the third PSA 9+")
+
+    // deepRun: reach Show 5.
+    c = fresh(); c.run.show = 4
+    check(!c.satisfies(.deepRun), "Deep Run isn't met at Show 4")
+    c.run.show = 5
+    check(c.satisfies(.deepRun), "Deep Run fires at Show 5")
+
+    // seasonChampion: winning the Season.
+    c = fresh()
+    check(!c.satisfies(.seasonChampion), "Season Champion needs a win")
+    c.hasWon = true
+    check(c.satisfies(.seasonChampion), "Season Champion fires on a win")
+
+    // ultraHunter: 10 ultras pulled all-time (current run folded into lifetime).
+    c = fresh(); c.stats.ultrasPulled = 9
+    check(!c.satisfies(.ultraHunter), "Ultra Hunter needs 10 ultras (9 isn't enough)")
+    c.stats.ultrasPulled = 10
+    check(c.satisfies(.ultraHunter), "Ultra Hunter fires at 10 ultras")
+
+    // centurion / masterCollector: unique-count gates.
+    c = fresh()
+    for card in CardDatabase.all.prefix(99) { c.instances.append(CardInstance(cardId: card.id)) }
+    check(!c.satisfies(.centurion), "Centurion needs 100 uniques (99 isn't enough)")
+    c.instances.append(CardInstance(cardId: CardDatabase.all[99].id))
+    check(c.satisfies(.centurion), "Centurion fires at 100 uniques")
+    check(!c.satisfies(.masterCollector), "Master Collector needs all 250")
+    for card in CardDatabase.all where !c.owns(card.id) { c.instances.append(CardInstance(cardId: card.id)) }
+    check(c.satisfies(.masterCollector), "Master Collector fires at the full 250")
+
+    // refreshMilestones banks Renown once and never re-fires.
+    c = fresh(); c.run.show = 2
+    let before = c.meta.renown
+    let fired = c.refreshMilestones()
+    check(fired.contains { $0.milestone == .firstCut }, "refreshMilestones surfaces a newly-met milestone")
+    check(c.meta.renown == before + Milestone.firstCut.renown, "the milestone's Renown is banked")
+    let again = c.refreshMilestones()
+    check(!again.contains { $0.milestone == .firstCut }, "a milestone never fires twice")
+}
+
+print("\n== The Circuit: run-loop mechanics ==")
+do {
+    var rng = SeededRNG(0x0C1E)
+    var c = GameCore()
+    c.ensureActiveRun()
+    check(c.run.active, "ensureActiveRun activates a Season")
+    check(c.run.show == 1, "a fresh Season opens at Show 1")
+
+    // Entering a Show refills the rip clock and the Energy pool.
+    c.enterShow(twistId: nil)
+    check(c.run.ripsRemaining == Economy.ripsPerShow(), "entering a Show refills the rip clock")
+    check(c.run.energy == min(c.run.maxEnergy, Economy.startingEnergy), "entering a Show refills Energy")
+
+    // Ripping consumes exactly one rip and lands cards in the collection.
+    let ripsBefore = c.run.ripsRemaining
+    let ownedBefore = c.instances.count
+    let res = c.ripPack(set: 1, using: &rng)
+    check(res != nil, "ripping the base set succeeds")
+    check(c.run.ripsRemaining == ripsBefore - 1, "a rip is consumed")
+    check(c.instances.count > ownedBefore, "the pull lands in the collection")
+
+    // Making the Cut over the bar advances the Show and opens the Bazaar.
+    var winner = GameCore(); winner.ensureActiveRun(); winner.enterShow(twistId: nil)
+    winner.cash = Economy.quota(show: 1) + 1_000     // trivially over the bar
+    check(winner.canMakeCut, "over the bar, the Cut is available")
+    let fired = winner.makeCut()
+    check(winner.run.show == 2, "clearing a non-final Show advances to the next")
+    check(winner.run.atBazaar, "clearing a Show opens the Bazaar")
+    check(fired.contains { $0.milestone == .firstCut }, "the first Cut fires First Cut")
+    check(winner.meta.renown >= Economy.renownPerShowCleared, "clearing a Show banks Renown")
+
+    // Clearing the Championship wins the Season.
+    var champ = GameCore(); champ.ensureActiveRun()
+    champ.run.show = Economy.seasonShows
+    champ.enterShow(twistId: nil)
+    champ.cash = Economy.quota(show: Economy.seasonShows) + 10_000
+    check(champ.canMakeCut, "the Championship Cut is available over the bar")
+    _ = champ.makeCut()
+    check(champ.hasWon, "clearing the final Show wins the Season")
+    check(champ.satisfies(.seasonChampion), "winning satisfies Season Champion")
+
+    // Busting: no rips, no cash, under the bar, nothing to play → isBust.
+    var bust = GameCore(); bust.ensureActiveRun(); bust.enterShow(twistId: nil)
+    bust.run.ripsRemaining = 0
+    bust.cash = 0
+    check(bust.netWorth < bust.currentQuota, "under the bar with nothing to spend")
+    check(bust.isBust, "a stalled Show with no forward move is a bust")
+    check(bust.isGameOver, "isGameOver mirrors isBust")
+}
+
+// Play a full Season on the Circuit with a fixed strategy. Both styles climb the
+// same way — rip packs toward the Show's net-worth bar, Make the Cut when they
+// reach it, advance Show to Show until the Championship or a bust. The only
+// difference is how they treat what they pull:
+//   .thoughtful keeps its collection and *grades* what it can afford (grading is
+//     +EV on the flat fee, so it lifts net worth), selling only cheap commons for
+//     the liquidity to keep ripping.
+//   .reckless dumps every duplicate raw at the 75% buylist and never grades, so
+//     it bleeds net worth on the spread and stalls below the rising bar.
+// Net worth carries Show to Show (the collection persists), so a good climb
+// compounds. Crude proxies, but they bracket careless vs. considered play.
 enum Style { case reckless, thoughtful }
 
-func playStrategy(seed: UInt64, style: Style) -> (won: Bool, lost: Bool, capped: Bool) {
+func playSeason(seed: UInt64, style: Style) -> (showsCleared: Int, won: Bool, netAtEnd: Double) {
     var rng = SeededRNG(seed)
     var core = GameCore()
-    // Grade before selling only when the ~1.5× grade EV clears the fee:
-    // s·(1.5v) − fee > s·v  ⇔  v > fee/(0.5·s).
-    let gradeThreshold = { (fee: Double) in fee / (0.5 * Economy.sellbackRate) }
-    for _ in 0..<200_000 {
-        if core.hasWon { return (true, false, false) }
-        if core.isGameOver { return (false, true, false) }
+    core.ensureActiveRun()
 
-        // Liquidate duplicates (thoughtful grades the valuable ones first).
+    func highestAffordableSet() -> Int? {
+        (1...CardDatabase.setCount)
+            .filter { core.isUnlocked(set: $0) && core.cash >= Economy.packPrice(set: $0) }
+            .last
+    }
+
+    for _ in 0..<100_000 {
+        if core.hasWon { return (Economy.seasonShows, true, core.netWorth) }
+
+        if core.run.atBazaar {
+            // A free draft pick is pure upside; thoughtful grabs the first offer.
+            if style == .thoughtful, let pick = core.run.draftIds.first { _ = core.takeDraft(pick) }
+            core.enterShow(twistId: nil)
+            continue
+        }
+
+        if core.canMakeCut {
+            _ = core.makeCut()
+            if core.run.atBazaar {           // GameState does this in the app; the harness owns rng here
+                core.rollDraft(using: &rng)
+                core.rollBazaar(using: &rng)
+            }
+            continue
+        }
+
+        // Value actions for the style.
         if style == .thoughtful {
             for cardId in core.uniqueOwnedIds {
-                let copies = core.instances(of: cardId).sorted { $0.currentValue > $1.currentValue }
-                guard copies.count > 1 else { continue }
-                for extra in copies.dropFirst() {
-                    if extra.card.rarity.canBeGraded, extra.grade == nil,
-                       extra.currentValue > gradeThreshold(Economy.gradeFee(set: extra.card.set)),
-                       core.cash >= Economy.gradeFee(set: extra.card.set) {
-                        _ = core.grade(instanceId: extra.id, using: &rng)
-                    }
-                    _ = core.sell(instanceId: extra.id)
+                for inst in core.instances(of: cardId)
+                where inst.grade == nil && inst.card.rarity.canBeGraded
+                    && core.cash >= Economy.gradeFee(set: inst.card.set) {
+                    _ = core.grade(instanceId: inst.id, using: &rng)
                 }
             }
         } else {
-            _ = core.sellDuplicates(of: core.uniqueOwnedIds)
+            _ = core.sellDuplicates(of: core.uniqueOwnedIds)   // dump everything raw
         }
 
-        let incomplete = (1...CardDatabase.setCount)
-            .filter { core.isUnlocked(set: $0) && core.ownedCount(inSet: $0) < 50 }
-        guard let target = incomplete.first else { return (core.hasWon, core.isGameOver, false) }
-        if FeatureFlags.boosterBoxesAvailable, core.cash >= Economy.boxPrice(set: target) {
-            _ = core.buyBox(set: target, using: &rng)
-        } else if core.cash >= Economy.packPrice(set: target) {
-            _ = core.buyPack(set: target, using: &rng)
-        } else if let cheap = incomplete.first(where: { core.cash >= Economy.packPrice(set: $0) }) {
-            _ = core.buyPack(set: cheap, using: &rng)
-        } else {
-            return (false, true, false)             // stuck: can't afford to progress → lost
+        if core.canMakeCut { continue }
+
+        // Rip toward the bar: the priciest set affordable (bigger cards climb
+        // faster), falling back to the cheapest unlocked set.
+        let target = highestAffordableSet() ?? 1
+        if core.firstPackFreeAvailable
+            || (core.run.ripsRemaining > 0 && core.cash >= Economy.packPrice(set: target)) {
+            if core.ripPack(set: target, using: &rng) != nil { continue }
         }
+
+        // Can't afford the target but rips remain — thoughtful sells its cheapest
+        // *commons* for just enough liquidity to keep ripping the base set.
+        if style == .thoughtful, core.run.ripsRemaining > 0,
+           core.cash < Economy.packPrice(set: 1) {
+            let commons = core.sellableExtras
+                .filter { $0.card.rarity == .common }
+                .sorted { core.sellPrice(of: $0) < core.sellPrice(of: $1) }
+            var sold = false
+            for c in commons where core.cash < Economy.packPrice(set: 1) {
+                _ = core.sell(instanceId: c.id); sold = true
+            }
+            if sold, core.cash >= Economy.packPrice(set: 1) {
+                _ = core.ripPack(set: 1, using: &rng); continue
+            }
+        }
+
+        // No move left this Show: the climb stalls below the bar.
+        break
     }
-    return (core.hasWon, core.isGameOver, true)     // hit the safety cap (should not happen)
+    // Cleared everything up to (but not including) the current Show.
+    return (core.run.show - 1, core.hasWon, core.netWorth)
 }
 
-print("\n== Strategy simulations (risk & winnability) ==")
-print("  shop sells: packs" + (FeatureFlags.boosterBoxesAvailable ? " + booster boxes" : " only"))
+print("\n== Circuit: Season simulations (risk & skill) ==")
 do {
     let n = 200
-    var recklessBust = 0.0, recklessWin = 0.0, thoughtfulWin = 0.0
-    for (label, style) in [("Reckless (spam the cheapest set, dump raw)", Style.reckless),
-                           ("Thoughtful (reserve + grade dupes)", Style.thoughtful)] {
-        var wins = 0, losses = 0, capped = 0
+    var recklessCleared = 0, thoughtfulCleared = 0
+    var recklessWins = 0, thoughtfulWins = 0
+    var recklessBustShow1 = 0
+    for (style, isThoughtful) in [(Style.reckless, false), (Style.thoughtful, true)] {
+        var clearedTotal = 0, wins = 0, bustShow1 = 0
+        var hist = [Int: Int]()
         for s in 0..<n {
-            let r = playStrategy(seed: 0xA11CE &+ UInt64(s), style: style)
-            if r.capped { capped += 1 } else if r.won { wins += 1 } else if r.lost { losses += 1 }
+            let r = playSeason(seed: 0xA11CE &+ UInt64(s), style: style)
+            clearedTotal += r.showsCleared
+            hist[r.showsCleared, default: 0] += 1
+            if r.won { wins += 1 }
+            if r.showsCleared == 0 { bustShow1 += 1 }
         }
-        let winPct = Double(wins) / Double(n) * 100
-        let lossPct = Double(losses) / Double(n) * 100
-        let capNote = capped > 0 ? ", \(capped) capped" : ""
-        print("  \(label): win \(Int(winPct.rounded()))%  bust \(Int(lossPct.rounded()))%  (n=\(n)\(capNote))")
-        check(capped == 0, "\(label): all games resolve (no runaway)")
-        if style == .reckless { recklessBust = lossPct; recklessWin = winPct } else { thoughtfulWin = winPct }
+        let avg = Double(clearedTotal) / Double(n)
+        let label = isThoughtful ? "Thoughtful (keep + grade)" : "Reckless (dump raw)"
+        let dist = (0...Economy.seasonShows).map { "\($0):\(hist[$0] ?? 0)" }.joined(separator: " ")
+        print(String(format: "  %@: avg shows cleared %.2f, wins %d/%d", label, avg, wins, n))
+        print("    cleared-distribution [\(dist)]")
+        if isThoughtful { thoughtfulCleared = clearedTotal; thoughtfulWins = wins }
+        else { recklessCleared = clearedTotal; recklessWins = wins; recklessBustShow1 = bustShow1 }
     }
-    // "Moderate": careless spam-and-dump carries real bankruptcy risk (currently ~61%) …
-    check(recklessBust >= 25, "reckless spam-and-dump can bankrupt you (bust ≥ 25%)")
-    // … considered play (grade valuable dupes before selling) still usually wins (~59%).
-    // The floor is 55, not 60: at a 75% sell-back rate on a packs-only shop the model
-    // puts thoughtful play at 59%, which still clears "usually wins" with room for
-    // model drift. Raising it back to 60 means raising the sell-back rate to ~0.76.
-    check(thoughtfulWin >= 55, "thoughtful play still usually wins (win ≥ 55%)")
-    // … and skill is worth a lot: grading meaningfully lifts the win rate over reckless.
-    check(thoughtfulWin - recklessWin >= 10, "grading dupes is a real edge (win gap ≥ 10 pts)")
+    let recklessAvg = Double(recklessCleared) / Double(n)
+    let thoughtfulAvg = Double(thoughtfulCleared) / Double(n)
+    let thoughtfulWinRate = Double(thoughtfulWins) / Double(n)
+    let recklessBustRate = Double(recklessBustShow1) / Double(n)
+
+    // (1) Skill gap: considered play (keep + grade) climbs meaningfully further than
+    // careless play (dump everything raw). This is the invariant that makes the
+    // Circuit a game of decisions, not just a slot machine. Measured gap ≈ 1.4 Shows;
+    // assert ≥ 1.0 for slack against model drift.
+    check(thoughtfulAvg >= recklessAvg + 1.0,
+          String(format: "grading + keeping climbs further than dumping raw (%.2f vs %.2f shows)", thoughtfulAvg, recklessAvg))
+
+    // (2) Real bust risk: careless play stalls low and busts the opening Show often,
+    // so death actually happens — which is what makes Renown (death-is-progress)
+    // matter. Measured: reckless avg ≈ 1.2 Shows, busts Show 1 ≈ 44% of runs.
+    check(recklessAvg <= 3.0,
+          String(format: "reckless play stalls early (avg %.2f ≤ 3.0 shows)", recklessAvg))
+    check(recklessBustRate >= 0.10,
+          String(format: "careless play carries real bust risk (busts opening Show %.0f%% ≥ 10%%)", recklessBustRate * 100))
+
+    // (3) Winnable but not a lock: a no-upgrade season CAN be run to the Championship
+    // with good play, but only rarely — permanent Guild upgrades are what make deep
+    // runs reliable. Measured thoughtful win rate ≈ 12%.
+    check(thoughtfulWins >= 3,
+          String(format: "the Championship is reachable with skill alone (%d/%d thoughtful wins)", thoughtfulWins, n))
+    check(thoughtfulWinRate <= 0.50,
+          String(format: "but not guaranteed without upgrades (%.0f%% thoughtful win rate ≤ 50%%)", thoughtfulWinRate * 100))
+    _ = recklessWins
 }
 
 print("\n\(failures == 0 ? "ALL CHECKS PASSED ✅" : "\(failures) CHECK(S) FAILED ❌")")

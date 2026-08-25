@@ -43,6 +43,7 @@ struct WinView: View {
                     shareButton
                     keepButton
                     playAgainButton
+                    GuildPanel()
                     setsPanel
                 }
                 .padding(16)
@@ -56,11 +57,11 @@ struct WinView: View {
                 reveal = true
             }
         }
-        .alert("Start a new game?", isPresented: $confirmNew) {
+        .alert("Start a new Season?", isPresented: $confirmNew) {
             Button("Cancel", role: .cancel) {}
-            Button("Reset", role: .destructive) { Haptics.play(.success); game.newGame() }
+            Button("New Season", role: .destructive) { Haptics.play(.success); game.startNewSeason() }
         } message: {
-            Text("This erases your completed collection and starts over with \(Economy.startingCash.money). Choose \"Keep My Collection\" instead to go on browsing it.")
+            Text("This banks your Championship and starts a fresh Season with a new binder. Your Guild upgrades, Renown and milestones carry over. Choose \"Keep Browsing\" instead to go on admiring this run.")
         }
     }
 
@@ -78,10 +79,10 @@ struct WinView: View {
 
     private var header: some View {
         VStack(spacing: 6) {
-            Text("THE SET IS COMPLETE")
+            Text("SEASON CHAMPION")
                 .font(.system(size: 13, weight: .black)).tracking(3)
                 .foregroundStyle(Color(hex: "ffd54a"))
-            Text("All \(game.totalCards) Sprytes are yours")
+            Text("You cleared all \(game.seasonShows) Shows")
                 .font(.system(size: 24, weight: .black, design: .rounded))
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
@@ -150,7 +151,7 @@ struct WinView: View {
     }
 
     private var keepButton: some View {
-        BigButton(title: "Keep My Collection", systemImage: "square.grid.3x3.fill",
+        BigButton(title: "Keep Browsing", systemImage: "square.grid.3x3.fill",
                   tint: [Palette.money, Color(hex: "39b56a")]) {
             Haptics.play(.light)
             game.acknowledgeWin()
@@ -158,7 +159,7 @@ struct WinView: View {
     }
 
     private var playAgainButton: some View {
-        BigButton(title: "Play Again", subtitle: "Erases this collection and starts over",
+        BigButton(title: "New Season", subtitle: "Fresh binder — keeps your Guild, Renown & milestones",
                   systemImage: "arrow.counterclockwise",
                   tint: [Color(hex: "b06cf7"), Color(hex: "6d5cf7")]) {
             confirmNew = true
@@ -167,7 +168,7 @@ struct WinView: View {
 
     private var setsPanel: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("COMPLETE SETS")
+            Text("THIS SEASON'S BINDER")
                 .font(.system(size: 12, weight: .black)).foregroundStyle(Palette.subtle)
             SetBreakdown()
         }

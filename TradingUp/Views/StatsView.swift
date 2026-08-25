@@ -44,6 +44,27 @@ struct StatsView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .panel()
 
+                    VStack(alignment: .leading, spacing: 12) {
+                        header("The Circuit")
+                        grid([
+                            ("Renown", "\(game.renown)★"),
+                            ("This Show", "\(game.show)/\(game.seasonShows)"),
+                            ("Trainer Slots", "\(game.trainerSlots)"),
+                        ])
+                        Rectangle().fill(Palette.stroke).frame(height: 1)
+                        HStack {
+                            Text("Milestones").font(.system(size: 13, weight: .semibold)).foregroundStyle(Palette.subtle)
+                            Spacer()
+                            Text("\(game.unlockedMilestones.count) / \(Milestone.allCases.count)")
+                                .font(.system(size: 13, weight: .bold, design: .monospaced)).foregroundStyle(Palette.text)
+                        }
+                        ForEach(Milestone.allCases) { m in
+                            MilestoneRow(milestone: m, unlocked: game.unlockedMilestones.contains(m.id))
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .panel()
+
                     if scope == .allTime {
                         VStack(alignment: .leading, spacing: 12) {
                             header("Runs")
@@ -111,7 +132,7 @@ struct StatsView: View {
                     Button {
                         confirmNew = true
                     } label: {
-                        Label("New Game", systemImage: "arrow.counterclockwise")
+                        Label("New Season", systemImage: "arrow.counterclockwise")
                             .font(.system(size: 14, weight: .bold))
                             .foregroundStyle(Color(hex: "e0663b"))
                             .frame(maxWidth: .infinity)
@@ -125,11 +146,11 @@ struct StatsView: View {
             }
             .background(Palette.screen.ignoresSafeArea())
             .toolbar(.hidden, for: .navigationBar)
-            .alert("Start a new game?", isPresented: $confirmNew) {
+            .alert("Start a new Season?", isPresented: $confirmNew) {
                 Button("Cancel", role: .cancel) {}
-                Button("Reset", role: .destructive) { game.newGame() }
+                Button("New Season", role: .destructive) { game.startNewSeason() }
             } message: {
-                Text("This erases your current collection and cash, and starts over with \(Economy.startingCash.money). Your all-time record is kept.")
+                Text("This resets your binder and cash for a fresh Season. Your Renown, Guild upgrades, milestones and all-time record are kept.")
             }
         }
     }
@@ -160,6 +181,37 @@ struct StatsView: View {
                 StatTile(label: item.0, value: item.1)
             }
         }
+    }
+}
+
+/// One milestone row in the Circuit panel: locked or unlocked, its condition,
+/// and the Renown it banks. The permanent-unlock ladder, laid out in full so the
+/// player can see what to chase next.
+struct MilestoneRow: View {
+    let milestone: Milestone
+    let unlocked: Bool
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: unlocked ? "checkmark.seal.fill" : "lock.fill")
+                .font(.system(size: 14, weight: .bold))
+                .foregroundStyle(unlocked ? Palette.money : Palette.subtle)
+                .frame(width: 20)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(milestone.name)
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(unlocked ? Palette.text : Palette.subtle)
+                Text(milestone.detail)
+                    .font(.system(size: 10.5, weight: .medium))
+                    .foregroundStyle(Palette.subtle)
+                    .lineLimit(2).fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 6)
+            Text("+\(milestone.renown)★")
+                .font(.system(size: 12, weight: .black, design: .rounded))
+                .foregroundStyle(unlocked ? Color(hex: "b06cf7") : Palette.subtle.opacity(0.6))
+        }
+        .opacity(unlocked ? 1 : 0.7)
     }
 }
 

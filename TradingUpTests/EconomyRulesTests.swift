@@ -12,12 +12,17 @@ final class EconomyRulesTests: XCTestCase {
         XCTAssertEqual(Economy.sellbackRate, 0.75, accuracy: 1e-9, "shop buys dupes at 75% of market")
     }
 
-    func testBoxAndBonusMultipliers() {
+    func testBoxPriceAndEvolutionBonus() {
         for s in 1...5 {
             XCTAssertEqual(Economy.boxPrice(set: s), Economy.packPrice(set: s) * 11, accuracy: 1e-9,
                            "box price should be 11× pack price for set \(s)")
-            XCTAssertEqual(Economy.setCompletionBonus(set: s), Economy.packPrice(set: s) * 15, accuracy: 1e-9,
-                           "set-completion bonus should be 15× pack price for set \(s)")
+            // Set-completion no longer pays cash (that's the Set Master milestone now);
+            // evolution lines are the run's only non-sale faucet: ½× pack price for a
+            // three-stage line, ¼× for a two-stage one.
+            XCTAssertEqual(Economy.evolutionBonus(set: s, stageCount: 3), Economy.packPrice(set: s) * 0.5, accuracy: 1e-9,
+                           "a three-stage evolution line should pay ½× pack price for set \(s)")
+            XCTAssertEqual(Economy.evolutionBonus(set: s, stageCount: 2), Economy.packPrice(set: s) * 0.25, accuracy: 1e-9,
+                           "a two-stage evolution line should pay ¼× pack price for set \(s)")
         }
     }
 

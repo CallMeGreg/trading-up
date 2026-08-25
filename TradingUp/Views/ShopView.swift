@@ -10,13 +10,26 @@ struct ShopView: View {
     @State private var freeze: ShopFreeze?
     /// Drives the full-version unlock paywall, opened from a paid, locked set.
     @State private var showPaywall = false
+    /// A held power-up awaiting a target card, driving the picker sheet.
+    @State private var targeting: PowerUp?
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
                 WalletHeader(freeze: freeze)
+                CircuitHUD(freeze: freeze)
                 ScrollView {
                     LazyVStack(spacing: 12) {
+                        if game.canMakeCut {
+                            MakeCutBanner(isChampionship: game.isChampionshipShow,
+                                          nextShow: game.show + 1,
+                                          disabled: isRevealInFlight) { makeTheCut() }
+                        }
+                        if !game.heldPowerUps.isEmpty {
+                            PowerUpTray(powerUps: game.heldPowerUps,
+                                        energy: game.energy,
+                                        disabled: isRevealInFlight) { play($0) }
+                        }
                         ForEach(1...CardDatabase.setCount, id: \.self) { set in
                             SetShelfRow(set: set, freeze: freeze, revealInFlight: isRevealInFlight,
                                         unlockPriceText: purchases.fullUnlock?.displayPrice,
@@ -38,6 +51,35 @@ struct ShopView: View {
             RevealView(content: p.content, set: p.set) { pending = nil }
         }
         .sheet(isPresented: $showPaywall) { PaywallView() }
+        .sheet(item: $targeting) { pu in
+            PowerUpTargetPicker(powerUp: pu) { target in
+                targeting = nil
+                if game.playPowerUp(pu.id, target: target) { Haptics.play(.success); Sound.play(.purchase) }
+                else { Haptics.play(.error) }
+            } onCancel: { targeting = nil }
+        }
+    }
+
+    /// Advance the Circuit: clear the Show and slide into the Bazaar (or win the
+    /// Season at the Championship). ContentView presents whichever overlay results.
+    private func makeTheCut() {
+        guard !isRevealInFlight else { return }
+        _ = game.makeCut()
+        Haptics.play(.success)
+        Sound.play(.purchase)
+    }
+
+    /// Play a held power-up: fire immediately, or open the target picker first.
+    private func play(_ pu: PowerUp) {
+        guard !isRevealInFlight, game.energy >= pu.energyCost else { Haptics.play(.error); return }
+        if pu.needsTarget {
+            targeting = pu
+        } else if game.playPowerUp(pu.id) {
+            Haptics.play(.medium)
+            Sound.play(.purchase)
+        } else {
+            Haptics.play(.error)
+        }
     }
 
     private func buyPack(_ set: Int) {
@@ -45,7 +87,7 @@ struct ShopView: View {
         let started = Self.attemptPurchase(
             freeze: &freeze, pending: &pending,
             freezeSnapshot: ShopFreeze(game),
-            buy: { game.buyPack(set: set) },
+            buy: { game.ripPack(set: set) },
             makePending: { PendingOpen(content: .pack($0), set: set) }
         )
         guard !wasBlocked else { return }   // reveal already in flight: silent no-op
@@ -309,9 +351,13 @@ struct SetShelfRow: View {
         VStack(spacing: 8) {
             Button(action: onBuyPack) {
                 HStack {
-                    Text("Buy a pack").font(.system(size: 15, weight: .bold))
+                    Text(packIsFree ? "Free first rip" : "Rip a pack").font(.system(size: 15, weight: .bold))
                     Spacer(minLength: 8)
-                    Text(packPrice.money).font(.system(size: 15, weight: .black, design: .rounded))
+                    if packIsFree {
+                        Text("FREE").font(.system(size: 13, weight: .black, design: .rounded))
+                    } else {
+                        Text(packPrice.money).font(.system(size: 15, weight: .black, design: .rounded))
+                    }
                 }
                 .foregroundStyle(.white)
                 .padding(.vertical, 11).padding(.horizontal, 14)
@@ -329,7 +375,9 @@ struct SetShelfRow: View {
             .buttonStyle(.plain)
             .disabled(!canBuyPack)
             .accessibilityIdentifier("buyPack")
-            .accessibilityLabel("Buy a pack, \(CardDatabase.setName(set)), 6 cards, \(packPrice.money)")
+            .accessibilityLabel(packIsFree
+                ? "Free first rip, \(CardDatabase.setName(set)), 6 cards"
+                : "Rip a pack, \(CardDatabase.setName(set)), 6 cards, \(packPrice.money)")
 
             if FeatureFlags.boosterBoxesAvailable {
                 Button(action: onBuyBox) {
@@ -413,7 +461,9 @@ struct SetShelfRow: View {
         .accessibilityLabel("Locked. Collect \(remaining) more unique cards to unlock \(CardDatabase.setName(set)).")
     }
 
-    private var canBuyPack: Bool { game.canAffordPack(set: set) && !revealInFlight }
+    private var packIsFree: Bool { game.firstPackFreeAvailable }
+    private var hasRip: Bool { packIsFree || game.ripsRemaining > 0 }
+    private var canBuyPack: Bool { hasRip && (packIsFree || game.canAffordPack(set: set)) && !revealInFlight }
     private var canBuyBox: Bool { game.canAffordBox(set: set) && !revealInFlight }
 }
 
@@ -459,4 +509,277 @@ struct PendingOpen: Identifiable {
     let id = UUID()
     let content: RevealContent
     let set: Int
+}
+
+// MARK: - Circuit HUD
+
+/// The run-status strip under the wallet: which Show you're on, how close net
+/// worth is to the Quota, and the run resources (Rips, Energy, Renown). Net worth
+/// reads from `freeze` while a reveal is on screen so a pull's value jump doesn't
+/// spoiler through the bar.
+struct CircuitHUD: View {
+    @Environment(GameState.self) var game: GameState
+    var freeze: ShopFreeze? = nil
+
+    private var netWorth: Double { freeze?.netWorth ?? game.netWorth }
+    private var met: Bool { netWorth >= game.currentQuota }
+
+    var body: some View {
+        VStack(spacing: 8) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(game.isChampionshipShow ? "MASTERS INVITATIONAL" : "SHOW \(game.show) / \(game.seasonShows)")
+                    .font(.system(size: 12, weight: .black)).tracking(1.5)
+                    .foregroundStyle(game.isChampionshipShow ? Color(hex: "ffd54a") : Palette.subtle)
+                Spacer(minLength: 8)
+                if let twist = game.activeTwist {
+                    Label(twist.name, systemImage: "wand.and.stars")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(Color(hex: "e0663b"))
+                        .lineLimit(1)
+                }
+            }
+
+            ProgressBar(value: min(netWorth, game.currentQuota), total: game.currentQuota,
+                        tint: met ? Palette.money : Color(hex: "ffd54a"), height: 10)
+            HStack {
+                Text("Quota").font(.system(size: 11, weight: .semibold)).foregroundStyle(Palette.subtle)
+                Spacer()
+                Text("\(netWorth.moneyShort) / \(game.currentQuota.moneyShort)")
+                    .font(.system(size: 12, weight: .heavy, design: .rounded))
+                    .foregroundStyle(met ? Palette.money : Palette.text)
+            }
+
+            HStack(spacing: 8) {
+                HUDChip(icon: "ticket.fill", text: "\(game.ripsRemaining) rip\(game.ripsRemaining == 1 ? "" : "s")",
+                        tint: Color(hex: "5aa9ff"))
+                HUDChip(icon: "bolt.fill", text: "\(game.energy)/\(game.maxEnergy)", tint: Color(hex: "ffd54a"))
+                HUDChip(icon: "star.circle.fill", text: "\(game.renown)", tint: Color(hex: "b06cf7"))
+            }
+        }
+        .padding(.horizontal, 16).padding(.vertical, 12)
+        .background(Palette.bg1.opacity(0.96))
+        .overlay(alignment: .bottom) { Rectangle().fill(.white.opacity(0.07)).frame(height: 1) }
+    }
+}
+
+/// One compact resource pill in the `CircuitHUD`.
+struct HUDChip: View {
+    let icon: String
+    let text: String
+    var tint: Color = Palette.money
+
+    var body: some View {
+        HStack(spacing: 5) {
+            Image(systemName: icon).font(.system(size: 11, weight: .bold)).foregroundStyle(tint)
+            Text(text).font(.system(size: 12.5, weight: .bold, design: .rounded)).foregroundStyle(Palette.text)
+        }
+        .padding(.horizontal, 10).padding(.vertical, 6)
+        .background(Capsule().fill(Palette.bg0.opacity(0.6)))
+        .overlay(Capsule().strokeBorder(tint.opacity(0.3), lineWidth: 1))
+        .frame(maxWidth: .infinity)
+    }
+}
+
+// MARK: - Make the Cut
+
+/// The gold call-to-action shown at the top of the shelf the moment net worth
+/// clears the Quota. Advances the Circuit — a new Show via the Bazaar, or the
+/// Season win at the Championship.
+struct MakeCutBanner: View {
+    let isChampionship: Bool
+    let nextShow: Int
+    var disabled: Bool = false
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Image(systemName: "scissors").font(.system(size: 20, weight: .black))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(isChampionship ? "Win the Championship" : "Make the Cut")
+                        .font(.system(size: 17, weight: .black, design: .rounded))
+                    Text(isChampionship ? "Clear the Masters Invitational to win the Season"
+                                        : "Quota cleared — advance to Show \(nextShow)")
+                        .font(.system(size: 11.5, weight: .semibold)).opacity(0.9)
+                }
+                Spacer(minLength: 8)
+                Image(systemName: "chevron.right").font(.system(size: 14, weight: .black))
+            }
+            .foregroundStyle(Color(hex: "06301b"))
+            .padding(.vertical, 14).padding(.horizontal, 16)
+            .frame(maxWidth: .infinity)
+            .background(
+                RoundedRectangle(cornerRadius: 18).fill(
+                    LinearGradient(colors: [Color(hex: "ffe9a8"), Palette.money, Color(hex: "39b56a")],
+                                   startPoint: .topLeading, endPoint: .bottomTrailing)
+                )
+            )
+            .overlay(RoundedRectangle(cornerRadius: 18).strokeBorder(.white.opacity(0.5), lineWidth: 1))
+            .shadow(color: Palette.money.opacity(0.4), radius: 10, y: 4)
+        }
+        .buttonStyle(.plain)
+        .disabled(disabled)
+        .opacity(disabled ? 0.6 : 1)
+        .accessibilityIdentifier("makeCut")
+    }
+}
+
+// MARK: - Power-up tray
+
+/// A horizontal rail of the run's held Power-Ups. Each shows its Energy cost;
+/// tapping fires it (or opens the target picker for card-targeting ones).
+struct PowerUpTray: View {
+    let powerUps: [PowerUp]
+    let energy: Int
+    var disabled: Bool = false
+    let onPlay: (PowerUp) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("POWER-UPS")
+                .font(.system(size: 11, weight: .black)).tracking(1.5)
+                .foregroundStyle(Palette.subtle)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    ForEach(Array(powerUps.enumerated()), id: \.offset) { _, pu in
+                        PowerUpChip(powerUp: pu, affordable: energy >= pu.energyCost && !disabled) {
+                            onPlay(pu)
+                        }
+                    }
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .background(RoundedRectangle(cornerRadius: 18).fill(Palette.panel))
+        .overlay(RoundedRectangle(cornerRadius: 18).strokeBorder(Palette.stroke, lineWidth: 1))
+    }
+}
+
+struct PowerUpChip: View {
+    let powerUp: PowerUp
+    let affordable: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(alignment: .leading, spacing: 5) {
+                HStack(spacing: 5) {
+                    Image(systemName: "bolt.fill").font(.system(size: 10, weight: .bold))
+                    Text("\(powerUp.energyCost)").font(.system(size: 12, weight: .black, design: .rounded))
+                    Spacer(minLength: 6)
+                    if powerUp.needsTarget {
+                        Image(systemName: "target").font(.system(size: 9, weight: .bold)).opacity(0.7)
+                    }
+                }
+                .foregroundStyle(Color(hex: "ffd54a"))
+                Text(powerUp.name).font(.system(size: 13, weight: .bold)).foregroundStyle(Palette.text)
+                    .lineLimit(1)
+                Text(powerUp.blurb).font(.system(size: 10, weight: .medium)).foregroundStyle(Palette.subtle)
+                    .lineLimit(2).multilineTextAlignment(.leading)
+            }
+            .frame(width: 150, alignment: .leading)
+            .padding(10)
+            .background(RoundedRectangle(cornerRadius: 13).fill(Palette.bg0.opacity(0.6)))
+            .overlay(RoundedRectangle(cornerRadius: 13).strokeBorder(Color(hex: "ffd54a").opacity(0.3), lineWidth: 1))
+            .opacity(affordable ? 1 : 0.5)
+        }
+        .buttonStyle(.plain)
+        .disabled(!affordable)
+    }
+}
+
+// MARK: - Power-up target picker
+
+/// Sheet that lists the binder copies a card-targeting Power-Up can act on, so
+/// the player can point it at a specific card. Eligibility mirrors the model's
+/// effect rules; the model still validates on play.
+struct PowerUpTargetPicker: View {
+    @Environment(GameState.self) var game: GameState
+    let powerUp: PowerUp
+    let onPick: (UUID) -> Void
+    let onCancel: () -> Void
+
+    private var eligible: [CardInstance] {
+        game.binderInstances.filter { isEligible($0) }
+            .sorted { $0.currentValue > $1.currentValue }
+    }
+
+    private func isEligible(_ inst: CardInstance) -> Bool {
+        switch powerUp.effect {
+        case .holoPress:      return !inst.foil
+        case .fastTrackGrade: return inst.grade == nil && inst.card.rarity.canBeGraded
+        case .counterfeit:    return true
+        case .polish:         return inst.grade != nil
+        case .packSearch, .marketTip: return false
+        }
+    }
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if eligible.isEmpty {
+                    VStack(spacing: 10) {
+                        Image(systemName: "tray").font(.system(size: 40)).foregroundStyle(Palette.subtle)
+                        Text("No eligible cards").font(.system(size: 16, weight: .bold)).foregroundStyle(Palette.text)
+                        Text("You don't hold a card \(powerUp.name) can act on right now.")
+                            .font(.system(size: 13)).foregroundStyle(Palette.subtle)
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding(30).frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    ScrollView {
+                        LazyVStack(spacing: 8) {
+                            ForEach(eligible) { inst in
+                                Button { onPick(inst.id) } label: { TargetRow(inst: inst) }
+                                    .buttonStyle(.plain)
+                            }
+                        }
+                        .padding(16).readableWidth()
+                    }
+                }
+            }
+            .background(Palette.screen.ignoresSafeArea())
+            .navigationTitle(powerUp.name)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { onCancel() }
+                }
+            }
+        }
+    }
+}
+
+private struct TargetRow: View {
+    let inst: CardInstance
+
+    var body: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(inst.card.name).font(.system(size: 15, weight: .bold)).foregroundStyle(Palette.text)
+                    .lineLimit(1)
+                Text("Set \(inst.card.set) · \(inst.card.rarity.display)")
+                    .font(.system(size: 11, weight: .semibold)).foregroundStyle(Palette.subtle)
+            }
+            Spacer(minLength: 8)
+            if inst.foil {
+                Text("FOIL").font(.system(size: 9, weight: .black))
+                    .foregroundStyle(Color(hex: "5aa9ff"))
+                    .padding(.horizontal, 6).padding(.vertical, 3)
+                    .background(Capsule().fill(Color(hex: "5aa9ff").opacity(0.15)))
+            }
+            if let g = inst.grade {
+                Text("PSA \(g)").font(.system(size: 10, weight: .black))
+                    .foregroundStyle(Color(hex: "ffd54a"))
+                    .padding(.horizontal, 6).padding(.vertical, 3)
+                    .background(Capsule().fill(Color(hex: "ffd54a").opacity(0.15)))
+            }
+            Text(inst.currentValue.money).font(.system(size: 13, weight: .heavy, design: .rounded))
+                .foregroundStyle(Palette.money)
+        }
+        .padding(12)
+        .background(RoundedRectangle(cornerRadius: 13).fill(Palette.panel))
+        .overlay(RoundedRectangle(cornerRadius: 13).strokeBorder(Palette.stroke, lineWidth: 1))
+    }
 }

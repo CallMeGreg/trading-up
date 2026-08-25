@@ -48,11 +48,13 @@ TradingUp.xcodeproj/         Xcode project (open this)
 TradingUp/
   Models/                    Pure, testable game logic (Foundation only)
     Card.swift               Card, Rarity, Element, CardDatabase
-    Economy.swift            Prices, grading table, value math — all tuning lives here
-    GameCore.swift           Deterministic game state: buy / open / sell / grade / bonuses
-    Persistence.swift        Versioned save envelope, load hygiene, corrupt-save quarantine
+    Economy.swift            Prices, grading table, value math, the Circuit run-structure knobs — all tuning lives here
+    Boosts.swift             The roguelite card catalog: Trainers, Power-Ups, Energy, Twists, Milestones, Guild upgrades
+    GameCore.swift           Deterministic game state: the Season/Show/Quota/Rips loop, buy / open / sell / grade / boosts / milestones / Renown
+    Persistence.swift        Versioned save envelope (v3: run + meta), load hygiene, corrupt-save quarantine
     GameState.swift          @Observable wrapper: randomness + autosave; owns the full-version entitlement gate
     FeatureFlags.swift       Build-time switches (see "Feature flags" below)
+    DebugLaunchState.swift   DEBUG-only fast-travel seeds for UI tests / demo capture (TU_TEST_STATE)
   Generated/
     CardData.swift           The 250 cards (auto-generated — do not edit by hand)
   Views/                     SwiftUI screens (Shop, Collection, pack opening, PaywallView, etc.)
@@ -88,14 +90,22 @@ tools/
 
 ## Where to tweak the game
 
-Almost all balance knobs (starting cash, pack prices, pack composition, foil
-chance, grade odds/multipliers, box guarantees, bonuses) live in
-`TradingUp/Models/Economy.swift`. Card names and values live in
-`tools/generate_cards.py`.
+Almost all balance knobs live in **`TradingUp/Models/Economy.swift`**: starting
+cash, pack prices and composition, foil chance, grade odds/multipliers, box
+guarantees, evolution-line bonuses, and the **Circuit run structure** — the number
+of Shows, the Quota curve (`quotaBase`/`quotaGrowth`), Rips per Show, starting/max
+Energy, Renown payouts, Bazaar reroll costs, and the Collectors' Guild upgrade ladders.
+
+The **roguelite content catalog** — every Trainer, Power-Up, Energy card, Twist,
+Milestone (and its Renown award), and Guild upgrade — lives in
+**`TradingUp/Models/Boosts.swift`**. Add or retune a card there; it's referenced by
+id everywhere else, so entries slot in without touching the run/save machinery.
+
+Card names and values live in `tools/generate_cards.py`.
 
 Re‑run the [verify harness](TESTING.md#the-simulation-harness-no-xcode-needed)
-after any economy change — it enforces the target difficulty curve, not just
-correctness.
+after any change to `Economy.swift` **or** `Boosts.swift` — it enforces the target
+difficulty curve over Seasons, not just correctness.
 
 ## Feature flags
 

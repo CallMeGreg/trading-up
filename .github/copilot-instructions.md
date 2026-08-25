@@ -69,9 +69,10 @@ xcodebuild test -project TradingUp.xcodeproj -scheme TradingUp \
 
 # Simulation harness — no Xcode needed, runs in seconds
 swiftc TradingUp/Models/Card.swift TradingUp/Models/Economy.swift \
-  TradingUp/Models/FeatureFlags.swift TradingUp/Models/GameCore.swift \
-  TradingUp/Models/Persistence.swift TradingUp/Generated/CardData.swift \
-  tools/verify/main.swift -o /tmp/tu_verify && /tmp/tu_verify
+  TradingUp/Models/FeatureFlags.swift TradingUp/Models/Boosts.swift \
+  TradingUp/Models/GameCore.swift TradingUp/Models/Persistence.swift \
+  TradingUp/Generated/CardData.swift tools/verify/main.swift \
+  -o /tmp/tu_verify && /tmp/tu_verify
 ```
 
 **Any economy change must re‑run the verify harness.** It enforces the intended

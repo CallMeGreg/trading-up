@@ -71,7 +71,11 @@ final class GameplaySimulationTests: XCTestCase {
     }
 
     func testGameOverThresholds() {
-        var broke = GameCore()
+        // A bust is only evaluated inside an active Show, so each core joins the
+        // Circuit first (which sets a fresh rip clock). Net worth stays far below
+        // the Show-1 bar in every case here, so the bust turns purely on whether a
+        // forward move — an affordable rip or a gradeable card — remains.
+        var broke = GameCore(); broke.ensureActiveRun()
         broke.cash = 0
         broke.instances = [CardInstance(cardId: "S1-001")]
         XCTAssertTrue(broke.isGameOver, "broke with only last-copies should be game over")
@@ -80,15 +84,15 @@ final class GameplaySimulationTests: XCTestCase {
                       "a duplicate worth pennies can't buy a pack, so the run is still over")
 
         // A duplicate only keeps the run alive if it actually bridges the gap.
-        var bridged = GameCore()
+        var bridged = GameCore(); bridged.ensureActiveRun()
         bridged.cash = Economy.cheapestPackPrice - 0.10
         bridged.instances = [CardInstance(cardId: "S1-001"), CardInstance(cardId: "S1-001")]
         XCTAssertFalse(bridged.isGameOver,
                        "a duplicate that covers the shortfall should keep the run alive")
 
-        // Grading is the other way out: a raw rare sells for $2.21, but a lucky
+        // Grading is the other way out: a raw rare sells for $2.55, but a lucky
         // roll on a $2 grade makes it worth far more than the cheapest pack.
-        var gradeable = GameCore()
+        var gradeable = GameCore(); gradeable.ensureActiveRun()
         gradeable.cash = 2
         gradeable.instances = [CardInstance(cardId: "S1-003"), CardInstance(cardId: "S1-003")]
         XCTAssertLessThan(gradeable.cash + (gradeable.instances[0].sellValue), Economy.cheapestPackPrice,
@@ -98,7 +102,7 @@ final class GameplaySimulationTests: XCTestCase {
         XCTAssertTrue(gradeable.isGameOver, "no way out once the grading fee is out of reach too")
 
         XCTAssertEqual(Economy.cheapestPackPrice, 10, "cheapest pack price should be $10")
-        var edge = GameCore()
+        var edge = GameCore(); edge.ensureActiveRun()
         edge.instances = [CardInstance(cardId: "S1-001")]
         edge.cash = Economy.cheapestPackPrice - 0.01
         XCTAssertTrue(edge.isGameOver, "just under cheapest pack price with no sellables = game over")
@@ -122,17 +126,24 @@ final class GameplaySimulationTests: XCTestCase {
         XCTAssertEqual(core.maxRaisableCash, 5, accuracy: 0.001)
     }
 
-    func testWinConditionAndBonusPayout() {
+    func testEvolutionPayoutAndMasterCollectorMilestone() {
         var core = GameCore()
         for c in CardDatabase.all { core.instances.append(CardInstance(cardId: c.id)) }
         let events = core.checkBonuses()
-        XCTAssertTrue(core.hasWon, "owning all 250 cards should trigger a win")
-        XCTAssertEqual(core.claimedSets.count, 5)
+        XCTAssertFalse(core.hasWon, "owning all 250 no longer wins — that's the Championship's job")
+        XCTAssertEqual(core.claimedSets.count, 5, "all five sets recorded complete (for the Set Master milestone)")
         XCTAssertEqual(core.claimedEvoLines.count, 65)
-        XCTAssertEqual(events.count, 70, "65 evolution + 5 set bonuses")
-        let expected = 34.0 * (10 + 30 + 75 + 160 + 400)
+        XCTAssertEqual(events.count, 65, "65 evolution-line bonuses only — no set-completion payouts")
+        XCTAssertTrue(events.allSatisfy { $0.kind == .evolution }, "every bonus paid is an evolution bonus")
+        // per set: 6 trios×0.5 + 7 duos×0.25 = 4.75 × pack price
+        let expected = 4.75 * (10 + 30 + 75 + 160.0 + 400)
         XCTAssertEqual(core.cash, 100 + expected, accuracy: 0.01)
         XCTAssertTrue(core.checkBonuses().isEmpty, "bonuses should not be paid twice")
+
+        // Owning the whole binder is the Master Collector milestone now, not a win.
+        let fired = core.refreshMilestones()
+        XCTAssertTrue(fired.contains { $0.milestone == .masterCollector },
+                      "owning all 250 fires the Master Collector milestone")
     }
 
     func testSellDuplicatesKeepsOneOfEach() {

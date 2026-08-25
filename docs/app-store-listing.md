@@ -6,7 +6,8 @@ every suggested string below is already inside its limit.
 
 Copy is written for the app as it actually ships today: free to download with a
 single optional one-time in-app purchase that unlocks sets 2–5, no ads, no
-accounts, no network access for gameplay, 250 cards across 5 sets.
+accounts, no network access for gameplay, 250 cards across 5 sets, and a
+replayable roguelite Season loop.
 
 ---
 
@@ -26,7 +27,7 @@ accounts, no network access for gameplay, 250 cards across 5 sets.
 | **Secondary Category** | *(leave blank)* | Optional and low value; `Entertainment` if you want one. |
 | **Content Rights** | `No, it does not contain, show, or access third-party content` | True: all 250 creatures, names, art and flavour text are original to the Sprytes world. |
 | **License Agreement** | Apple's standard EULA | No reason to supply a custom one. |
-| **Custom Product Pages** | Not needed for 1.0 | |
+| **Custom Product Pages** | Not needed for 2.0.0 | |
 
 ---
 
@@ -78,8 +79,8 @@ Trading Up has none of those:
 - There is **no wagering**. You buy a product (a pack) and always receive six
   cards. Nothing is staked and nothing can be lost on a roll.
 - There is **no house, no payout table, no bet size, and no cash-out**.
-- The only currency is fictional, is granted by the game, cannot be purchased,
-  and cannot be converted to or from anything real.
+- Every currency or resource is fictional, is granted by the game, cannot be
+  purchased, and cannot be converted to or from anything real.
 - The randomness is loot-box-shaped (randomised rewards) rather than
   casino-shaped. Apple governs that under **Guideline 3.1.1**, which requires
   publishing odds *for loot boxes bought with real money*. Trading Up's only
@@ -104,56 +105,61 @@ in the App Review notes (§6) so the reviewer isn't surprised by it.
 ### Promotional Text (170) — editable without a new build
 
 ```
-Every pack is a fresh 1% shot at a foil. Grade your best pulls, eat the buylist spread, and see if you can finish all five sets before you go broke.
+Climb the Circuit one Show at a time: rip packs, beat rising Quotas, build a Trainer engine, and bank Renown for the next Season.
 ```
 
-*148/170.*
+*129/170.*
 
 ### Description (4000)
 
 ```
-Start with $100. Finish with all 250.
+Trade up from a folding table to the Masters Invitational.
 
-Trading Up is a collecting-and-economy game built around the best part of trading cards: tearing open a fresh pack and turning it over one card at a time.
+Trading Up is a card-collecting roguelite built around the best part of trading cards: tearing open a fresh pack and turning it over one card at a time.
 
-Buy a pack, rip it, and find out what you got. Six cards - three commons, two uncommons, and a rare or an ultra rare - with a 1% shot at a shimmering foil on any of them. New pulls go straight into your binder. Extras become cash, at the shop's price rather than yours.
+You're a card dealer climbing the Circuit. Each run is a Season of 8 Shows. Every Show sets a rising Quota - a net-worth bar made from your cash plus your collection's value - and gives you a limited number of Rips to get there. Beat the Quota to Make the Cut and advance. Clear Show 8, the Masters Invitational, to become Season Champion.
 
-THE LOOP
+RIP, SELL, GRADE
 
 - Rip packs. Every pack opens card by card, and the hit slot is always saved for last.
-- Sell your extras. The shop buys duplicates back at 75% of market value, and that spread is the thing that will bankrupt you.
-- Grade your best. Pay a fee, roll a PSA score. A 10 is a 5x payday and a 1 is a freak 10x jackpot, but anything from 2 to 7 is worth less than the card you put in.
-- Cash in bonuses. Complete an evolution line for a payout; complete a whole set for a much bigger one.
+- Chase foils and ultra rares. Every card has a 1% shot to shimmer, and foils are worth 3x.
+- Sell your extras. The shop buys duplicates back at 75% of market value, so every Rip is a real economy decision.
+- Grade your best pulls. A gem-mint grade is a 5x payday and a wild low-grade oddity can be worth 10x, but most low grades hurt.
+- Complete evolution lines for bonuses and build your net worth before your Rips run out.
+
+BUILD A SEASON ENGINE
+
+Between Shows, visit the Bazaar: draft 1 of 3 new cards for free, buy more with cash, or reroll the offers. Find Trainers for Season-long passive upgrades, Power-Ups for single-use plays, and Energy to fuel them. Turn one good pull into a whole engine.
+
+DEATH IS PROGRESS
+
+Busts end the Season, not your journey. Clear Shows and hit one-time Milestones to earn Renown, then spend it at the Collectors' Guild on permanent upgrades: more starting cash, more Trainer slots, more Rips and more Energy. Start stronger, climb further, and come back for another run.
 
 FIVE SETS, 250 CARDS
 
-Emberfall, Tidecaller, Verdspire, Voltcrest and Umbral Reach - the world of the Sprytes. Every creature is original, with its own art, flavor text, rarity and evolution line. Later sets cost steeply more and hold far more valuable cards, and each one unlocks as your collection grows.
-
-WIN OR GO BROKE
-
-Collect all 250 cards and you're a Master Collector. Fall below the price of the cheapest pack with no way left to raise it and you're tapped out. Between those two ends is a real economy - pack odds, a buylist spread, grading variance and set bonuses - that you can actually play against instead of just watching.
+Emberfall, Tidecaller, Verdspire, Voltcrest and Umbral Reach - the world of the Sprytes. Every creature is original, with its own art, flavor text, rarity and evolution line. Completing all 250 cards is the Master Collector milestone, a permanent achievement for the biggest collectors.
 
 NO CATCHES
 
-- Set 1 - Emberfall is free to play in full: rip, sell, grade and chase the set bonus across all 50 cards. One optional one-time purchase unlocks the other four sets and the 250-card finish - the only thing you can ever buy.
+- Set 1 - Emberfall is free to play in full, including Shows, Quotas, Rips, the Bazaar, Trainers, Power-Ups, Energy, Renown, the Guild, Milestones, ripping, selling and grading. One optional one-time purchase unlocks the other four sets - the only thing you can ever buy.
 - No ads, no tracking, no subscriptions.
-- No real-money packs and no gambling. You never spend real money on a random pull; the only currency inside the game is fictional.
+- No real-money packs and no gambling. You never spend real money on a random pull; every in-game currency is fictional, earned through play, and never cashes out.
 - No account, no sign-in, and no data collected. Your collection lives on your device and nowhere else.
 - Plays offline, on both iPhone and iPad.
 
-Every card, every price and every payout is already in the app the moment you download it. Rip the first pack and see where $100 gets you.
+Every card, every price and every payout is already in the app the moment you download it. Rip the first pack and see how far you can climb.
 ```
 
-*2,297/4,000.* Deliberately avoids naming any real trading-card brand — putting
+*2,757/4,000.* Deliberately avoids naming any real trading-card brand — putting
 a trademark in your metadata is itself a Guideline 5.2 rejection risk.
 
 ### Keywords (100)
 
 ```
-tcg,ccg,card,collector,binder,booster,grading,psa,foil,pull,set,completion,economy,sim,rip,chase
+tcg,ccg,card,collector,binder,booster,grading,foil,pull,roguelite,season,economy,sim
 ```
 
-*96/100.* Rules that this respects: comma-separated with **no spaces**, singular
+*84/100.* Rules that this respects: comma-separated with **no spaces**, singular
 forms only (Apple stems automatically), and **no repeats of words already in the
 app name or subtitle** — "trading", "up", "packs" and "rares" are already
 indexed from those fields, so spending keyword characters on them is wasted.
@@ -176,15 +182,15 @@ published.
 
 | Field | Recommended value |
 | --- | --- |
-| **Version** | `1.0` — must match `MARKETING_VERSION` in the project |
-| **Build** | `1` — `CURRENT_PROJECT_VERSION`; bump on every upload, it can never repeat |
+| **Version** | `2.0.0` — must match `MARKETING_VERSION` in the project |
+| **Build** | Bump `CURRENT_PROJECT_VERSION` on every upload; it can never repeat |
 | **Copyright** | `2026 Greg Mohler` — year then holder, no `©` symbol (Apple adds it) |
-| **What's New** | Not shown for a first release; leave blank |
+| **What's New** | `The Circuit is open. Version 2.0.0 turns Trading Up into a replayable roguelite: climb 8 Shows, beat rising Quotas, draft Bazaar rewards, build Trainer and Power-Up engines, earn Renown, and spend it at the Collectors' Guild for permanent upgrades.` |
 | **Routing App Coverage File** | N/A |
 | **Version Release** | `Manually release this version` — so you pick the launch moment after approval |
-| **Phased Release for automatic updates** | Off for 1.0 |
-| **App Preview video** | Optional, skip for 1.0. Screenshots carry this listing fine. |
-| **Localizations** | English (U.S.) only for 1.0 |
+| **Phased Release for automatic updates** | Optional for 2.0.0; use it if you want a slower rollout |
+| **App Preview video** | Optional. Screenshots carry this listing fine. |
+| **Localizations** | English (U.S.) only |
 
 ---
 
@@ -229,7 +235,7 @@ are what most people ever see, so they lead with the hook:
 7. `shop-fresh-start` — the shop and the $100 you start with
 8. `duplicate-keep-or-sell` — the keep-or-sell decision
 9. `stats-run-summary` — the run stats
-10. `win-master-collector` — the win screen
+10. `win-master-collector` — the Master Collector milestone celebration
 
 `grading-gem-mint` comes from the endgame pass, which grades rares out of the
 seeded collection until a 10 rolls, so the jackpot is always in the set. The
@@ -321,12 +327,13 @@ sign-in and no network connection are required; launch the app and tap "Start
 Collecting" to begin.
 
 There is one in-app purchase: a single non-consumable, "Unlock the full
-collection," that opens sets 2-5 and the 250-card completion. Set 1 is free to
-play in full without it. The purchase unlocks existing bundled content only - it
+collection," that opens sets 2-5. Set 1 is free to play in full without it,
+including the multi-Show Season loop, Bazaar rewards, Renown, the Collectors'
+Guild and Milestones. The purchase unlocks existing bundled content only - it
 grants no in-game currency and no randomised pull, and there is no advertising
-and no other real-money transaction. The "$" figures in the app are a fictional
-in-game currency that is granted by the game, cannot be purchased, and cannot be
-exchanged for anything outside the app.
+and no other real-money transaction. The "$" figures, Energy and Renown in the
+app are fictional resources earned through play, cannot be purchased, and cannot
+be exchanged for anything outside the app.
 
 Regarding the age-rating gambling questions: the app has no wagering, betting,
 casino games or cash-out. Buying a pack always delivers six cards, so nothing is
@@ -339,8 +346,9 @@ https://callmegreg.github.io/trading-up/support/.
 All 250 creatures, their names, artwork, flavour text and set names are original
 works created for this app. No third-party or licensed content is used.
 
-To reach the end state quickly: buy and rip packs from set 1, sell the duplicates
-to fund the next set, and the Collection and Stats tabs show progress at any time.
+To see the core loop quickly: play Show 1, buy and rip Set 1 packs, sell or grade
+duplicates to raise net worth, Make the Cut, then visit the Bazaar between Shows.
+The Collection and Stats tabs show progress at any time.
 ```
 
 ---
@@ -353,7 +361,7 @@ to fund the next set, and the Collection and Stats tabs show progress at any tim
 | **Availability** | All countries and regions |
 | **Pre-Orders** | Off |
 | **Distribution on Apple Vision Pro** | Off (untested on visionOS) |
-| **Distribute on Mac (Designed for iPad)** | Optional; off for 1.0 unless you've tested it |
+| **Distribute on Mac (Designed for iPad)** | Optional; off for 2.0.0 unless you've tested it |
 | **Educational discount / Volume purchase** | N/A for a free app |
 
 ### In-App Purchase — "Unlock the full collection"
@@ -367,7 +375,7 @@ One product, created under **Features → In-App Purchases**:
 | **Product ID** | `com.callmegreg.tradingup.fullunlock` |
 | **Price** | **$2.99** (Tier 3) |
 | **Display Name** | Unlock the Full Collection |
-| **Description** | Unlocks sets 2–5 and the 250-card Master Collector finish. A one-time purchase, not a subscription. |
+| **Description** | Unlocks sets 2–5 for every Season, including their cards, packs, Bazaar offers and Master Collector milestone progress. A one-time purchase, not a subscription. |
 | **Review screenshot** | `docs/app-store/iap-review-full-collection.png` — a real capture of the paywall, from `tools/capture_iap_review.sh` (required) |
 | **Promotional Image** | `docs/app-store/iap-full-unlock-1024.png` (optional; needed only to promote the IAP or use offer codes / win-back offers) |
 | **Cleared for Sale** | Yes |
@@ -390,11 +398,13 @@ Type: Non-consumable, one-time $2.99 purchase. Not a subscription.
 WHAT IT UNLOCKS
 A single one-time unlock of already-bundled content. It opens the four
 remaining card sets — Set 2 Tidecaller, Set 3 Verdspire, Set 4 Voltcrest and
-Set 5 Umbral Reach (200 additional cards) — plus the 250-card "Master
-Collector" win and the set-completion/evolution bonuses beyond Set 1. Set 1
-Emberfall is free to play in full, so the app is completely functional before
-any purchase. The unlock grants NO in-game currency and NO randomized pull —
-it only removes the gate on existing content.
+Set 5 Umbral Reach (200 additional cards) — for use across every Season,
+including their packs, Bazaar offers, evolution-line bonuses and the 250-card
+"Master Collector" milestone. Set 1 Emberfall is free to play in full, including
+the multi-Show Season loop, Quotas, Rips, Bazaar, Trainers, Power-Ups, Energy,
+Renown, the Collectors' Guild and Milestones, so the app is completely
+functional before any purchase. The unlock grants NO in-game currency and NO
+randomized pull — it only removes the gate on existing content.
 
 HOW TO REACH THE PURCHASE (for review)
 1. Launch the app and tap "Start Collecting" on the welcome screen. No account,
@@ -450,7 +460,7 @@ Connect reads it and stops asking.
 - [ ] App ID `com.callmegreg.tradingup` created in the Developer portal
 - [ ] App record created in App Store Connect with the name reserved
 - [ ] App Information filled in (§1) and Age Rating answered (§2)
-- [ ] Version 1.0 metadata pasted in (§3)
+- [ ] Version 2.0.0 metadata pasted in (§3)
 - [ ] 10 iPhone 6.9", 10 iPhone 6.5" **and** 10 iPad 13" screenshots uploaded (§4)
 - [x] Privacy policy, support and marketing pages live on GitHub Pages
       (`site/`, deployed by `.github/workflows/pages.yml`)
@@ -468,8 +478,8 @@ Connect reads it and stops asking.
 - [ ] `python3 tools/check_icon.py` passes — 1024×1024, opaque, square (§ issue #5 step 4)
 - [ ] *(optional)* IAP promo image uploaded if promoting the purchase —
       `python3 tools/generate_iap_promo.py` writes `docs/app-store/iap-full-unlock-1024.png`
-- [ ] `MARKETING_VERSION = 1.0`, `CURRENT_PROJECT_VERSION` bumped
+- [ ] `MARKETING_VERSION = 2.0.0`, `CURRENT_PROJECT_VERSION` bumped
 - [ ] Archive built with a Distribution signing identity and uploaded
       ([APP_STORE.md § Build upload](APP_STORE.md#build-upload))
-- [ ] Build finished processing and is attached to the 1.0 version
+- [ ] Build finished processing and is attached to the 2.0.0 version
 - [ ] "Manually release this version" selected, then Submit for Review

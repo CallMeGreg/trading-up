@@ -2,22 +2,28 @@ import XCTest
 @testable import TradingUp
 
 final class WinPresentationTests: XCTestCase {
-    func testWinOverlayShowsOnceCollectionIsComplete() {
+    /// A core that has just won the Season by clearing the Championship Show.
+    private func championCore() -> GameCore {
         var core = GameCore()
-        for c in CardDatabase.all { core.instances.append(CardInstance(cardId: c.id)) }
-        _ = core.checkBonuses()
-        XCTAssertTrue(core.hasWon)
-        XCTAssertTrue(core.shouldShowWin, "the win overlay should show once the collection is complete")
+        core.ensureActiveRun()
+        core.run.show = Economy.seasonShows
+        core.cash = Economy.quota(show: Economy.seasonShows) + 1_000   // trivially over the bar
+        _ = core.makeCut()
+        return core
+    }
+
+    func testWinOverlayShowsOnceTheSeasonIsWon() {
+        let core = championCore()
+        XCTAssertTrue(core.hasWon, "clearing the Championship wins the Season")
+        XCTAssertTrue(core.shouldShowWin, "the win overlay should show once the Season is won")
     }
 
     func testDismissingWinKeepsCollectionInsteadOfResetting() {
-        var core = GameCore()
-        for c in CardDatabase.all { core.instances.append(CardInstance(cardId: c.id)) }
-        _ = core.checkBonuses()
+        var core = championCore()
         core.acknowledgeWin()
         XCTAssertTrue(core.hasWon)
         XCTAssertFalse(core.shouldShowWin, "dismissing the win should not force a reset")
-        XCTAssertFalse(core.isGameOver, "a finished collection can't then be flagged game over")
+        XCTAssertFalse(core.isGameOver, "a won Season can't then be flagged game over")
     }
 
     func testNewGameStartsWithWinUnacknowledged() {

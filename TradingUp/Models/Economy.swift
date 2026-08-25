@@ -56,11 +56,103 @@ enum Economy {
     static let foilMultiplier = 3.0
 
     // Bonuses
+    //
+    // Evolution-line completion still pays cash: it's the run's main *non-sale*
+    // faucet, the thing that lets an early Show grow its holdings without dumping
+    // cards at the 75% buylist. Completing a whole *set* no longer pays cash at
+    // all (v1 did, at 15× pack price) — in the roguelite that's the `setMaster`
+    // milestone instead (a permanent unlock + Renown), see `Milestone`.
     static func evolutionBonus(set: Int, stageCount: Int) -> Double {
         let p = packPrice(set: set)
-        return stageCount >= 3 ? p * 2.0 : p * 1.0
+        return stageCount >= 3 ? p * 0.5 : p * 0.25
     }
-    static func setCompletionBonus(set: Int) -> Double { packPrice(set: set) * 15 }
+
+    // MARK: - The Circuit (roguelite run structure)
+    //
+    // A run is a *Season*: a climb through `seasonShows` Shows. Each Show sets a
+    // `quota` — a net-worth bar (cash + collection value) you must reach to
+    // "Make the Cut" and advance — that you have `ripsPerShow` pack-opens to
+    // clear. Using net worth (not banked cash) as the bar is deliberate: opening
+    // packs is ~EV-neutral, so it neither trivially clears nor tanks the bar; you
+    // climb by *adding value* (grading, foils, evolution lines, relics) faster
+    // than the bar rises, within a finite pull budget. Clearing Show
+    // `seasonShows` wins the Season; running out of rooms to grow before the bar
+    // is met busts it. Both bank Renown — death is progress.
+    static let seasonShows = 8
+
+    /// Net-worth bar for a Show, escalating geometrically from `quotaBase`.
+    /// Tuned so a Set-1-only player gets a real multi-Show climb and a fully
+    /// unlocked player can chase the Championship. Calibrated by the verify
+    /// harness — re-run it after any change here.
+    static let quotaBase: Double = 110
+    static let quotaGrowth: Double = 1.12
+    static func quota(show: Int) -> Double {
+        let s = max(1, show)
+        return (quotaBase * pow(quotaGrowth, Double(s - 1))).rounded()
+    }
+
+    /// Pack-opens allowed per Show before the room closes. Flat by default;
+    /// Trainers and Guild upgrades add to it. The clock that stops a Show from
+    /// being ground out.
+    static let baseRipsPerShow = 7
+    static func ripsPerShow(bonus: Int = 0) -> Int { baseRipsPerShow + bonus }
+
+    // Energy powers the single-use Power-Ups. A small persistent pool per Season,
+    // refilled only by Energy cards and a few Trainers — never automatically —
+    // so spending it is a real choice.
+    static let startingEnergy = 2
+    static let baseMaxEnergy = 6
+
+    /// Instant cash paid by the Market Tip Power-Up, scaled to the Show so it
+    /// stays relevant as the bar climbs (roughly a tenth of the Show's bar).
+    static func marketTipCash(show: Int) -> Double { (quota(show: show) * 0.10).rounded() }
+
+    /// The starting bankroll of a fresh Season, including any Guild "Stake"
+    /// upgrade the player has bought with Renown.
+    static func startingStake(stakeLevel: Int) -> Double {
+        startingCash + Double(stakeLevel) * stakeUpgradeStep
+    }
+
+    // MARK: - Renown (meta-currency)
+    static let renownPerShowCleared = 2
+    static let renownChampionBonus = 6
+    /// Total Renown a finished Season pays out from its progress alone
+    /// (milestone Renown is awarded separately, once ever, as each fires).
+    static func seasonRenown(showsCleared: Int, champion: Bool) -> Int {
+        showsCleared * renownPerShowCleared + (champion ? renownChampionBonus : 0)
+    }
+
+    // MARK: - Bazaar
+    static let draftChoices = 3
+    static let bazaarSlots = 3
+    /// Reroll price for the Bazaar's stock, rising each time within a visit.
+    static func rerollCost(rerolls: Int) -> Double { Double(6 + rerolls * 6) }
+
+    // MARK: - Collectors' Guild (Renown-purchased permanent upgrades)
+    //
+    // Each upgrade is a capped ladder; `guildCost` is the Renown price of the
+    // *next* level. Effects are read where they apply (starting stake, rip/energy
+    // budgets, Trainer slots).
+    static let stakeUpgradeStep: Double = 30      // +$30 starting cash per level
+    static let baseTrainerSlots = 3
+
+    static func guildMaxLevel(_ u: GuildUpgrade) -> Int {
+        switch u {
+        case .stake:       return 5
+        case .trainerSlot: return 3
+        case .rip:         return 4
+        case .energy:      return 4
+        }
+    }
+    static func guildCost(_ u: GuildUpgrade, currentLevel: Int) -> Int {
+        let n = currentLevel + 1
+        switch u {
+        case .stake:       return 2 * n
+        case .trainerSlot: return 5 * n
+        case .rip:         return 4 * n
+        case .energy:      return 3 * n
+        }
+    }
 
     // MARK: Grading table (grade, odds %, value multiplier)
     static let gradeTable: [(grade: Int, odds: Int, mult: Double)] = [

@@ -11,14 +11,31 @@
 
 ## 1. Concept
 
-You are a card collector with **$100** starting cash. Buy packs, open them in an
-exciting reveal, and try to **collect all 250 creatures** across 5 sets. Sell
-duplicates back to the shop, gamble on **card grading** for value swings, and chase
-**foils** and **ultra rares**. Run out of money with nothing left worth selling and
-you lose. Complete the collection and you win.
+You are a card **dealer** climbing **the Circuit**. You start a **Season** with
+**$100** and a folding table at a local show; you win it by clearing your way up to
+the **Masters Invitational**. Buy packs, open them in an exciting reveal, and turn
+cards into value faster than the bar in front of you rises: sell duplicates back to
+the shop, gamble on **card grading** for value swings, chase **foils** and **ultra
+rares**, and complete **evolution lines**. Each **Show** sets a **Quota** — a
+net‑worth bar you must reach within a budget of pack‑opens (**Rips**) to *Make the
+Cut* and advance. Clear all **8 Shows** and you win the Season; run out of room to
+grow before you hit a Quota and you **bust**.
 
-It's a *slot‑machine‑meets‑collection* loop: the pack opening is the dopamine, the
-economy is the strategy, the 250‑card completion is the goal.
+Busting is not the end of the story. Every Season — win or bust — banks **Renown**
+and can trip permanent **Milestones**, and both spend into permanent upgrades at the
+**Collectors' Guild** that make your *next* Season stronger. That's the roguelite:
+one Season is a single run; the meta‑progression carries between runs. The full
+run‑structure — Shows, Quota, Rips, the Bazaar, the three new card types, Renown, the
+Guild and Milestones — is **§9, "The Circuit."**
+
+It's a *slot‑machine‑meets‑deckbuilder* loop: the pack opening is the dopamine, the
+economy and your **Trainer** engine are the strategy, and the escalating Circuit is
+the run.
+
+> **This is v2.0.0.** v1 was a single terminal *completion* game — rip until you own
+> all 250 Sprytes or go broke. v2 keeps that entire economy intact but wraps it in a
+> replayable roguelite. Owning all 250 cards is now the **Master Collector**
+> milestone (a permanent achievement), not the win condition.
 
 ### Art direction (important — read this)
 We can't commission real creature art for 250 characters, and we must not copy
@@ -206,9 +223,10 @@ is back to **20 points**.
 Sell‑back rate is the right knob because the grading threshold is
 `fee / (0.5 × sellbackRate)` — a higher rate raises the payoff of grading *and* lowers
 the bar for which cards are worth grading, so it compounds for players who grade
-before they sell. A bigger set‑completion bonus was measured too and rejected: it fixes
-winnability but pays reckless and thoughtful play equally, flattening the skill gap to
-1–2 points.
+before they sell. A bigger set‑completion bonus was measured too and rejected: it
+fixed winnability but paid reckless and thoughtful play equally, flattening the skill
+gap to 1–2 points. In v2 the set‑completion **cash** bonus is gone entirely (it's now
+the *Set Master* milestone — §9); sell‑back and grading carry the skill expression.
 
 This is deliberately a **tighter game than the boxes era**, which sat at a 69%
 thoughtful win rate. The knob is sensitive — roughly 3 points of thoughtful win rate
@@ -283,53 +301,182 @@ and one big multi‑pack open, **not** a bulk discount.
 
 ---
 
-## 9. Bonuses
+## 9. The Circuit (roguelite run structure)
 
-- **Complete an evolution line** → cash bonus:
-  - 2‑stage line = **1.0× pack price** of its set · 3‑stage line = **2.0× pack price**.
-- **Complete a full set (all 50)** → cash bonus = **15× that set's pack price**
-  (S1 $150 … S5 $4,800) — a meaningful reward that helps toward the next set without
-  fully bankrolling infinite spending (it was 30×, which snowballed too hard).
+v2 wraps the economy above in a replayable roguelite. All of its balance lives in
+`Economy.swift` (run structure) and `Boosts.swift` (the card catalog); both are
+guarded by `tools/verify`.
+
+### 9.1 A Season is a climb through Shows
+A **run** is a **Season**: a climb through **`seasonShows = 8`** escalating Shows,
+from a local table up to **Show 8, the Masters Invitational**.
+
+- **Quota(show)** — a **net‑worth** bar (cash **+** full collection value) you must
+  reach to *Make the Cut* and advance. It escalates geometrically:
+  `quota = 110 × 1.12^(show−1)`, rounded — **110, 123, 138, 155, 173, 194, 217, 243**
+  across Shows 1–8. Using *net worth* (not banked cash) is deliberate: opening packs
+  is ~EV‑neutral, so ripping neither trivially clears the bar nor tanks it; you climb
+  by *adding value* — grading, foils, evolution lines, extra copies — faster than the
+  bar rises.
+- **Rips(show)** — the pack‑opens you may make this Show (`baseRipsPerShow = 7`, plus
+  Trainer/Guild bonuses). Ripping a pack spends **one Rip and its cash price**;
+  selling and grading are free actions. The finite Rip budget is the clock that stops
+  a Show from being ground out.
+- **Cash and binder carry between Shows** within a Season — only the *bar* resets
+  upward. **Making the Cut** banks Renown, keeps your surplus, and sends you to the
+  **Bazaar**. Clearing **Show 8** wins the Season (the **Season Champion** milestone).
+- **Bust** if you run out of ways to grow before the Quota is met — no affordable Rip
+  left, nothing left worth grading or playing. The Season ends and you keep your
+  Renown. **Death is progress**, not v1's terminal Game Over.
+
+### 9.2 Three new run‑scoped card types
+None are Sprytes; none are pulled from packs (the reveal stays Sprytes‑only); none
+count toward the 250; none persist past the Season. They come from the **Bazaar**.
+Defined in `Boosts.swift`.
+
+**Trainers — passive relics (the engine).** Always‑on for the whole Season; you hold
+a limited number (**`baseTrainerSlots = 3`**, +1 per Guild *Trainer Slot*). Effects
+are plain data that stack into builds.
+
+| Trainer | Cost | Effect | Unlocked by |
+|---|--:|---|---|
+| Jeweler's Loupe | $90 | Grading is free. | — |
+| Bulk Buyer | $110 | Shop buys dupes at 90% (vs 75%). | — |
+| Hot Hands | $120 | +2 Rips every Show. | — |
+| Evolutionist | $120 | Evolution‑line bonuses doubled. | — |
+| Speculator | $140 | First pack each Show is free (no cash, no Rip). | — |
+| Dynamo | $100 | +1 Energy at the start of each Show. | — |
+| Gilder | $100 | +5% foil chance on every card. | *Gem Holo* |
+| Appraiser | $130 | Every grade rolls one tier higher. | *Ace Grader* |
+| The Whale | $150 | Every pack holds one extra hit. | *Hoarder* |
+| Patron of the Set | $110 | +$2 per unique card owned, paid on Make the Cut. | *Set Master* |
+
+**Power‑Ups — active consumables (the burst).** Single‑use, played anytime, spend
+**Energy**. Copies can stack.
+
+| Power‑Up | Cost | Energy | Effect | Unlocked by |
+|---|--:|:--:|---|---|
+| Market Tip | $25 | 1 | Instant cash, scaled to the Show (`quota × 0.10`). | — |
+| Polish | $30 | 1 | Bump a graded card up two tiers. | — |
+| Holo Press | $40 | 2 | Turn a chosen card foil (×3 value). | — |
+| Fast‑Track Grade | $45 | 2 | Grade a card free — guaranteed PSA 8+. | — |
+| Counterfeit | $50 | 3 | Add a second copy of a card you own. | *Hoarder* |
+| Pack Search | $35 | 1 | Next pack's hit is a guaranteed ultra. | *Ultra Hunter* |
+
+**Energy — the throttle.** A small persistent pool (`startingEnergy = 2`,
+`baseMaxEnergy = 6`) that Power‑Ups spend. It refills **only** from **Energy cards**
+and a few Trainers (Dynamo) — never automatically — so spending it is a real choice.
+Energy cards: **Energy Cell** ($30, +2 now) and **Capacitor** ($45, +1 now, +2 max).
+
+### 9.3 The Bazaar (between Shows)
+After Making the Cut, before the next Show:
+1. **Draft** — pick **1 of 3** offered boosts, **free**.
+2. **Bazaar** — spend cash on **3** more offers, with a **reroll** that rises in
+   price within a visit (`6 + 6 × rerolls`). Spending here competes directly with
+   banking net worth toward the next, higher Quota — the core invest‑vs‑save tension.
+
+The offer pool is gated by unlocked Milestones and hides unique Trainers you already
+hold; Power‑Ups and Energy can repeat.
+
+### 9.4 Twists (per‑Show modifiers)
+Some Shows carry a **Twist** that forces adaptation: **Cold Snap** (buylist −15% this
+Show), **Counterfeit Scare** (no foils pull this Show), **Rush Hour** (−2 Rips but the
+bar drops 15%), **Bull Market** (the bar climbs 20%). Modeled as plain data in
+`Boosts.swift`; a couple are wired into the UI this release, the rest are staged.
+
+### 9.5 Renown & Milestones (meta‑progression)
+**Renown** is the meta‑currency, banked every Season and spent at the Guild. A Season
+pays `showsCleared × 2` (`renownPerShowCleared`) plus **+6** for a champion
+(`renownChampionBonus`), plus one‑time Milestone awards.
+
+**Milestones** fire **once, ever**. Each banks Renown and can permanently unlock new
+Trainers/Power‑Ups into the Bazaar pool, so variety compounds run over run:
+
+| Milestone | Trigger | Renown |
+|---|---|--:|
+| First Cut | Make the Cut at your first Show | 1 |
+| Hoarder | Hold 8 copies of a single card | 3 |
+| Ace Grader | Grade three cards PSA 9+ in one run | 3 |
+| Ultra Hunter | Pull 10 ultra rares (all‑time) | 3 |
+| Gem Holo | Own a foil graded PSA 10 | 4 |
+| Deep Run | Reach Show 5 in a single Season | 4 |
+| Set Master | Complete a full 50‑card set in one run | 5 |
+| Centurion | Own 100 unique cards at once | 5 |
+| Season Champion | Win a Season at the Masters Invitational | 8 |
+| Master Collector | Own all 250 cards at once | 20 |
+
+### 9.6 The Collectors' Guild (permanent, Renown‑bought)
+Persistent upgrades, each a capped ladder (`guildCost` is the Renown price of the
+*next* level):
+
+| Upgrade | Effect | Max level | Cost (per next level) |
+|---|---|:--:|---|
+| Bigger Stake | +$30 starting cash per level | 5 | `2 × n` |
+| Trainer Slot | Hold one more Trainer | 3 | `5 × n` |
+| Extra Rip | +1 pack‑open every Show | 4 | `4 × n` |
+| Energy Cell | +1 starting & max Energy | 4 | `3 × n` |
+
+### 9.7 Bonuses (what's left of v1's cash rewards)
+- **Complete an evolution line** → cash, the run's main *non‑sale* faucet (what lets
+  an early Show grow without dumping cards at the 75% buylist): a **3‑stage** line pays
+  **0.5× pack price**, a **2‑stage** line **0.25× pack price** of its set (doubled by
+  the *Evolutionist* Trainer). These are trimmed from v1's 2.0×/1.0× because cash no
+  longer has to bankroll a whole terminal collection — only a Season's climb.
+- **Complete a full set (all 50)** → **no cash.** In v2 this fires the **Set Master**
+  milestone (a permanent unlock + Renown), not a payout. This is the single biggest
+  economy change from v1.
 
 ---
 
 ## 10. Win / lose & stats
 
-- **Lose:** cash drops **below the cheapest pack price ($10)** and **no amount of
-  selling could get you back to one**. You can never sell your **last copy** of a
-  unique card (you'd lose collection progress), so what's left to raise is your
-  duplicates — sold at the buylist price, or graded first when even the luckiest
-  roll would more than cover its own fee. Once that optimistic total still falls
-  short of $10, the run is provably finished and the loss screen appears
-  immediately, rather than making you sell out card-by-card first. A loss screen
-  shows: cards collected per set, and total unique cards.
-  - **This is now genuinely reachable.** The **sell‑back spread** (§6), the **steep
-    per‑set price curve** (§3), and the **trimmed set‑completion bonus** (§9) together
-    mean careless play — spamming the cheapest set and dumping every dupe at 75% — can
-    bleed you dry before a set completes. In simulation that reckless loop **busts ~61%**
-    of the time.
-- **Win:** collect all **250** unique creatures. A winner's screen shows full stats:
-  per‑set completion, foils, best grades, peak cash, packs opened, etc.
-  - Thoughtful play — pacing your buys, keeping a cash cushion, and **grading valuable
-    dupes before selling** — still **wins ~59%** of the time. The gap between the two is
-    the point: skill, not grinding, is what carries you through.
-  - **Winning is not an exit.** The celebration is shown once; dismissing it keeps the
-    completed collection intact and browsable. Starting over is always a separate,
-    confirmed action — the reward for finishing shouldn't be losing what you finished.
+The win and loss conditions are now **per‑Season**, and neither is terminal for the
+save — both feed the meta‑progression.
 
-**Difficulty target: moderate.** Thoughtful play usually wins; careless play can
-bankrupt you. Balance knobs all live in `Economy.swift`; the simulations that hold this
-target live in `tools/verify/main.swift` (strategy sims + economy‑knob assertions).
+- **Bust (lose the Season):** you have no way left to grow toward the current
+  **Quota** before the room closes — no affordable Rip (cash *and* Rips remaining),
+  no ungraded card worth grading, no Power‑Up you have the Energy to play — and your
+  net worth is still under the bar. Because it's provable, the Season‑Over screen
+  appears immediately rather than making you spend down first. It shows the Show you
+  reached, the Quota you fell short of, the **Renown banked**, and your haul, then
+  hands you to the **Guild** to spend Renown and launch a stronger new Season.
+  - **Busting is genuinely reachable.** The **sell‑back spread** (§6), the **steep
+    per‑set price curve** (§3), the **removed set‑completion cash** (§9) and the
+    **rising Quota** together mean careless play — spamming the cheapest set, dumping
+    every dupe at 75%, buying no engine — falls behind the bar and busts. The verify
+    harness asserts a real bust rate for weak play.
+- **Win (the Season):** clear all **8 Shows** — Make the Cut at the **Masters
+  Invitational**. A **Season Champion** celebration shows full stats (per‑set
+  completion this Season, foils, best grades, peak cash, packs opened) and mints the
+  1‑of‑1 collector card for the Season. Thoughtful play — pacing buys, grading
+  valuable dupes before selling, and building a Trainer engine whose return outruns
+  the Quota — is what carries you there; the harness asserts a healthy win rate for
+  strong play.
+  - **Winning is not an exit.** The celebration is shown once; dismissing it (**Keep
+    Browsing**) leaves the Season intact and browsable. Starting the **New Season** is
+    always a separate, confirmed action, and it preserves all meta‑progression
+    (Renown, Milestones, Guild) — only the binder and cash reset for the fresh climb.
+- **Owning all 250** is no longer the win — it's the **Master Collector** milestone
+  (§9.5), a permanent achievement worth a large one‑time Renown bounty.
+
+**Difficulty target: moderate, over Seasons.** A first Season with no Guild upgrades
+is meant to be a real, mostly‑losable climb; permanent upgrades make later Seasons
+reach deeper. Run‑structure knobs live in `Economy.swift`, the card catalog in
+`Boosts.swift`; the simulations that hold this target live in `tools/verify/main.swift`
+(strategy sims + economy‑knob assertions).
 
 ---
 
 ## 11. Monetization: free tier + full unlock
 
 Trading Up ships **free**, with a single one-time **non-consumable** in-app
-purchase — *Unlock the full collection* — that opens sets 2–5 and the 250-card
-Master Collector win. **Set 1 · Emberfall is free to play in full**: the whole
-loop (rip, sell, grade, evolution-line bonuses, the set-completion payout) plays
-out across its 50 cards before the paywall is ever reached.
+purchase — *Unlock the full collection* — that opens sets 2–5, the deep Circuit they
+fuel, and the 250-card **Master Collector** milestone. **Set 1 · Emberfall is free to
+play in full**: the entire roguelite loop — Shows, Quota, Rips, the Bazaar,
+Trainers/Power-Ups/Energy, Renown, the Guild and Milestones — runs on Set-1 packs, so
+a free player gets a real, satisfying multi-Show climb before the paywall is ever
+reached. The purchase sells the game's *depth* (higher-value sets reach deeper Shows
+and put a Season win in range), never the roguelite itself.
 
 **What the purchase changes — and, deliberately, what it doesn't:**
 
@@ -359,11 +506,17 @@ knob `GameState.freeSetCount`. The gate is covered in both states by
 
 ## 12. Persistence
 Local save (Codable → JSON in the app's Documents dir): cash, owned cards (with
-foil/grade state + counts), stats, and claimed bonuses. No account/server needed for v1.
+foil/grade state + counts), stats, claimed bonuses, and — new in v2 — the current
+**run** (Show, Quota progress, Rips, Energy, held Trainers/Power-Ups, the pending
+Bazaar) and the persistent **meta** (Renown, fired Milestones, Guild upgrade levels).
+No account/server needed.
 
 The payload is wrapped in a small versioned envelope (`SaveFile`, see
-`Models/Persistence.swift`) so future schema changes are detectable rather than guessed
-at. Three rules keep a player's collection safe across updates:
+`Models/Persistence.swift`), now at **version 3**, so future schema changes are
+detectable rather than guessed at. The v2 additions are **purely additive** — a v1/v2
+save still decodes: its collection and stats load, `run`/`meta` fall back to their
+defaults, and the next launch simply starts a fresh Season around the existing binder.
+Three rules keep a player's collection safe across updates:
 
 - **Additive changes are free.** `GameCore` decodes every key independently, so a field
   added in a later build falls back to its default instead of failing the whole decode.

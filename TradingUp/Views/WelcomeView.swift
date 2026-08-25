@@ -42,31 +42,31 @@ struct WelcomeView: View {
             }
 
             VStack(alignment: .leading, spacing: d.infoRows) {
-                infoRow(d, "📦", "Buy & open packs",
-                        "Six cards a pack — 3 common, 2 uncommon, and a rare or ultra.")
-                infoRow(d, "💰", "Sell your extras",
-                        "Turn duplicate copies into cash. You can never sell the last copy of a card, though.")
-                infoRow(d, "🎁", "Cash in bonuses",
-                        "Complete evolution lines and full sets for payouts. New sets unlock as your collection grows.")
-                infoRow(d, "🔍", "Grade rares & ultras",
-                        "Pay to grade a rare or ultra and roll a PSA score — it can multiply the card's value or leave it worth far less.")
+                infoRow(d, "📦", "Rip packs to build value",
+                        "Each Show gives you a limited number of rips. Every pack is 6 cards — 3 common, 2 uncommon, and a rare or ultra.")
+                infoRow(d, "🎯", "Beat the Quota",
+                        "Grow your net worth past each Show's Quota, then Make the Cut to climb the Circuit.")
+                infoRow(d, "🔍", "Grade, foil & flip",
+                        "Grade rares and ultras for a PSA score, chase foils, and spend Energy on Power-Ups to swing a run.")
+                infoRow(d, "⭐", "Earn permanent upgrades",
+                        "Hit milestones to bank Renown, then spend it at the Guild on upgrades that carry into every future Season.")
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .panel(d.panelPad)
 
             VStack(alignment: .leading, spacing: d.goalRows) {
                 goalRow(d, "🏆", "How you win",
-                        "Collect all \(game.totalCards) cards across the five sets.",
+                        "Clear all \(game.seasonShows) Shows in a Season to win the Masters Invitational.",
                         Palette.money)
                 Rectangle().fill(Palette.stroke).frame(height: 1)
-                goalRow(d, "💸", "How you lose",
-                        "Can't afford the \(game.cheapestPackPrice.money) cheapest pack — even after selling every duplicate you own.",
+                goalRow(d, "💥", "How you lose",
+                        "Bust — miss a Show's Quota with no move left. But you keep your Renown and unlocks for the next run.",
                         Color(hex: "e0663b"))
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .panel(d.panelPad)
 
-            BigButton(title: "Start Collecting", systemImage: "sparkles",
+            BigButton(title: "Start the Circuit", systemImage: "sparkles",
                       tint: [Palette.money, Color(hex: "39b56a")]) {
                 Haptics.play(.success)
                 game.markWelcomeSeen()

@@ -4,11 +4,11 @@
 
 # Trading Up
 
-### Rip packs, chase the rares.
+### Rip packs, beat the Quota, rule the Circuit.
 
-**Start with $100. Finish with all 250 Sprytes.**
+**Trade up from a folding table to the Masters Invitational.**
 
-A card‑collecting economy game for iPhone and iPad, built in SwiftUI.
+A replayable card‑collecting roguelite for iPhone and iPad.
 
 [![Platform](https://img.shields.io/badge/platform-iOS%2017%2B-lightgrey)](docs/DEVELOPMENT.md#requirements)
 [![Made with SwiftUI](https://img.shields.io/badge/made%20with-SwiftUI-orange)](https://developer.apple.com/xcode/swiftui/)
@@ -22,17 +22,24 @@ A card‑collecting economy game for iPhone and iPad, built in SwiftUI.
 ## Overview
 
 Trading Up is built around the best part of trading cards: tearing open a fresh
-pack and turning it over one card at a time.
+pack and turning it over one card at a time — then turning those pulls into a
+career.
 
-Buy a pack, rip it, and find out what you got. Six cards — three commons, two
-uncommons, and a rare or an ultra rare — with a 1% shot at a shimmering foil on
-any of them. New pulls go straight into your binder. Extras become cash, at the
-shop's price rather than yours.
+You're a card **dealer** climbing **the Circuit**. Each run is a **Season** of
+8 Shows, from a folding table at a local show to the **Masters Invitational**.
+Every Show sets a rising **Quota**: fill the net‑worth bar with your cash and
+collection value before your limited **Rips** run out, then **Make the Cut** and
+move on.
 
-Between those two ends is a real economy — pack odds, a buylist spread, grading
-variance and set bonuses — that you can actually play against instead of just
-watching. Collect all **250 Sprytes** and you're a Master Collector. Run out of
-cash with nothing left worth selling and you're tapped out.
+The card economy is still the heart of it: packs, foils, ultra rares, duplicates,
+selling back at 75%, grading swings and evolution lines. Between Shows, the
+**Bazaar** lets you draft new cards, buy extras and find Season‑long **Trainers**,
+single‑use **Power‑Ups** and the **Energy** to fire them.
+
+Busts are not dead ends. Clear Shows and unlock **Milestones** to bank **Renown**,
+then spend it at the **Collectors' Guild** on permanent upgrades for future
+Seasons. Completing all **250 Sprytes** is now the **Master Collector** milestone;
+winning means clearing all 8 Shows and becoming Season Champion.
 
 Every creature, name, illustration and line of flavor text is original to the
 game, generated from code and shipped inside the app. No accounts, no ads, no
@@ -58,56 +65,58 @@ purchase unlocks the other four sets.
 </tr>
 </table>
 
-<sub>Real screenshots from the current build, captured on an iPhone by
-<a href="docs/APP_STORE.md#screenshots"><code>tools/capture_screenshots.sh</code></a>.</sub>
+<sub>Real screenshots from the current iPhone build.</sub>
 
 ## How to play
 
-### 🛒 Buy a pack
+### 🎪 Enter a Show
 
-Each of the five sets sells a **Pack** of 6 cards. Higher sets cost steeply more —
-$10 → $30 → $75 → $160 → $400 — but hold far more valuable cards, so working your
-way up is the only route to the expensive half of the collection.
+Each **Season** is a climb through **8 Shows**. Every Show gives you a rising
+**Quota** — a net‑worth bar made from your cash plus your collection's value — and
+a limited number of **Rips** to get there. Hit the Quota to **Make the Cut** and
+advance.
 
 ### ✨ Rip it
 
-Tap to reveal cards one at a time, with the hit slot always saved for last. Every
-pack is **3 commons, 2 uncommons, and 1 rare‑or‑ultra**, and every card has a
-**1% chance** to be a shiny **foil** (×3 value).
+Spend one Rip and the pack price to tear into 6 cards. Every pack is **3 commons,
+2 uncommons, and 1 rare‑or‑ultra**, with the hit slot saved for last and a
+**1% chance** for any card to be a shiny **foil** (×3 value).
 
-### 🗂️ Keep or sell
+### 🗂️ Keep, sell or grade
 
-On the pack summary, brand‑new cards are flagged **✦ NEW**. Tap any duplicate to
-keep or sell it individually, or use **Sell Duplicates** / **Keep All** at the
-bottom — the sell total updates live as you decide each card.
+Brand‑new cards grow your collection and your net worth. Duplicates can be kept
+or sold at the shop's **buylist spread**: **75%** of market value. You can
+**never sell your last copy**, so your binder stays safe while you chase the next
+Quota.
 
-The shop buys at a **buylist spread**: you get **75%** of a card's market value.
-Churning packs and dumping dupes slowly bleeds money, and that spread is the
-game's main risk. You can **never sell your last copy** of a card, so your
-collection is always safe.
+Send rares and ultras to grading and roll a PSA‑style grade. A **PSA 10** is ×5,
+a **PSA 9** is ×2, and a **PSA 1** is a freak ×10 jackpot — but grades 2–7 are
+worth *less* than ungraded. Grading and foils stack.
 
-### 🏅 Grade your best
+### 🧰 Visit the Bazaar
 
-Send a rare or ultra to grading for a flat per‑set fee ($2–$10) and roll a PSA
-grade. A **PSA 10** is ×5, a **PSA 9** is ×2, and a **PSA 1** is a freak ×10
-jackpot — but grades 2–7 are worth *less* than ungraded. Because the fee is cheap
-next to a pricey card, grading valuable duplicates **before** you sell them is a
-real edge. Grading and foils stack.
+Between Shows, draft 1 of 3 new cards for free, then decide whether to spend cash
+on more or reroll the offers. The Bazaar also serves up run‑scoped tools:
+**Trainers** are passive upgrades for the whole Season, **Power‑Ups** are
+single‑use plays, and **Energy** powers them.
 
-### 📖 Complete the binder
+### 📖 Build the binder
 
 Browse all 50 cards per set. Owned cards show off your best copy; unowned cards
-are locked silhouettes. Filter the grid by **Dupes**, **Foils** and **Rare+**, and
-combine filters to narrow further. Completing an **evolution line** pays a cash
-bonus; completing a whole **set** pays a big one (15× the pack price).
+are locked silhouettes. Filter by **Dupes**, **Foils** and **Rare+** while your
+collection feeds the Quota, evolution lines pay bonuses, and big achievements
+unlock permanent **Milestones** like **Master Collector** for owning all 250 cards
+at once.
 
-### 🏆 Win or go broke
+### 🏆 Win the Season — or bust forward
 
-**Win** by collecting all 250 cards. **Lose** if your cash drops below $10 — the
-cheapest pack — with no way to raise it, even by selling every duplicate you own.
-Winning is a celebration, not an ending: dismiss the win screen and your completed
-collection stays yours to browse. Starting over is always an explicit, confirmed
-choice.
+Clear all 8 Shows and Make the Cut at the **Masters Invitational** to become
+**Season Champion**. Bust if the Show closes and you have no way left to grow
+toward the Quota — but busting still banks earned **Renown**.
+
+Spend Renown at the **Collectors' Guild** on permanent upgrades like more starting
+cash, more Trainer slots, more Rips and more Energy. Death is progress: every
+Season starts stronger.
 
 Your progress **auto‑saves** after every action, and a save is never silently
 discarded.
@@ -123,17 +132,17 @@ discarded.
 | 5 | **Umbral Reach** | Shadow / cosmic | $400 |
 
 Each set is 50 cards with its own creatures, evolution lines, flavor text and
-rarity spread, and unlocks as your collection grows.
+rarity spread. Set 1 is free; one optional unlock opens the other four sets.
 
 ## No catches
 
-- **Set 1 is free to play in full** — the whole 50‑card loop: rip, sell, grade,
-  evolution‑line bonuses and the set‑completion payout. One optional **one‑time
-  purchase** unlocks the other four sets and the 250‑card Master Collector
-  finish. That's the only thing you can ever buy.
+- **Set 1 is free to play in full** — the whole roguelite loop: Shows, Quotas,
+  Rips, the Bazaar, Trainers, Power‑Ups, Energy, Renown, the Collectors' Guild,
+  Milestones, ripping, selling and grading. One optional **one‑time purchase**
+  unlocks the other four sets. That's the only thing you can ever buy.
 - **No ads, no tracking, no subscriptions.**
 - **No real‑money packs and no gambling.** You never spend real money on a
-  random pull — the only currency inside the game is fictional.
+  random pull — every in‑game currency is fictional and earned through play.
 - **No account, no sign‑in.** Your collection lives in a single file on your
   device and is never sent anywhere.
 - **Plays offline**, on both iPhone and iPad — a connection is only needed the

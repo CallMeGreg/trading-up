@@ -15,16 +15,21 @@ final class RevealFlowTests: XCTestCase {
         return SaveStore(directory: dir)
     }
 
-    private func completedCore() -> GameCore {
+    /// A core that has just won the Season by clearing the Championship — the
+    /// state that now pops the win celebration (completing the 250-card binder no
+    /// longer does; that's the Master Collector milestone).
+    private func wonCore() -> GameCore {
         var core = GameCore()
-        for c in CardDatabase.all { core.instances.append(CardInstance(cardId: c.id)) }
-        _ = core.checkBonuses()
+        core.ensureActiveRun()
+        core.run.show = Economy.seasonShows
+        core.cash = Economy.quota(show: Economy.seasonShows) + 1_000
+        _ = core.makeCut()
         return core
     }
 
     func testWinCelebrationWaitsForTheRevealToFinish() {
-        let game = GameState(core: completedCore(), store: tempStore())
-        XCTAssertTrue(game.shouldShowWin, "the collection is complete, so a win is pending")
+        let game = GameState(core: wonCore(), store: tempStore())
+        XCTAssertTrue(game.shouldShowWin, "the Season is won, so a win is pending")
         XCTAssertTrue(game.presentsWin, "with no reveal on screen the win shows immediately")
 
         game.beginReveal()
@@ -76,13 +81,16 @@ final class DebugLaunchStateTests: XCTestCase {
         }
     }
 
-    func testFinishingTheCollectionFromTheSeedTriggersTheWin() {
+    func testFinishingTheCollectionFromTheSeedFiresMasterCollector() {
         var core = DebugLaunchState.almostWon()
         let missing = Set(CardDatabase.all.map { $0.id }).subtracting(core.uniqueOwnedIds)
         XCTAssertEqual(missing.count, 1)
         core.instances.append(CardInstance(cardId: missing.first!))
         _ = core.checkBonuses()
-        XCTAssertTrue(core.hasWon, "adding the last missing card wins the game")
+        XCTAssertFalse(core.hasWon, "completing the binder no longer wins — the Championship does")
+        let fired = core.refreshMilestones()
+        XCTAssertTrue(fired.contains { $0.milestone == .masterCollector },
+                      "adding the last missing card fires the Master Collector milestone")
     }
 
     func testEnvironmentGatesTheSeed() {

@@ -76,7 +76,6 @@ final class RunSignatureTests: XCTestCase {
         var core = GameCore()
         for c in CardDatabase.all { core.instances.append(CardInstance(cardId: c.id)) }
         _ = core.checkBonuses()
-        XCTAssertTrue(core.hasWon)
 
         let sig = RunSignature.make(from: core)
         XCTAssertFalse(sig.title.isEmpty)

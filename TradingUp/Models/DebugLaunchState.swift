@@ -47,6 +47,8 @@ enum DebugLaunchState {
         switch state {
         case "almost-won":
             return almostWon(missing: (missing?.isEmpty == false) ? missing : nil, cash: cash)
+        case "almost-champion":
+            return almostChampion(cash: cash)
         default:
             return nil
         }
@@ -90,6 +92,21 @@ enum DebugLaunchState {
         // Set cash last so the seeded bankroll is exactly what was asked for,
         // rather than that plus the pre-claim bonuses just banked above.
         core.cash = cash ?? 2_000
+        return core
+    }
+
+    /// A Season sitting at the Championship (final Show) with net worth already
+    /// past the Quota — so the shop shows the "Make the Cut" call-to-action and a
+    /// single tap wins the Season. The fast path a UI test uses to reach the
+    /// Season Champion celebration without playing eight Shows by hand.
+    static func almostChampion(cash: Double? = nil) -> GameCore {
+        var core = GameCore()
+        core.welcomeSeen = true
+        core.ensureActiveRun()
+        core.run.show = Economy.seasonShows                 // the Masters Invitational
+        // Comfortably clear the final Quota outright, so `canMakeCut` is true the
+        // moment the shop appears.
+        core.cash = cash ?? (Economy.quota(show: Economy.seasonShows) + 500)
         return core
     }
 }

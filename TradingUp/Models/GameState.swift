@@ -49,6 +49,7 @@ final class GameState {
         // release builds entirely, so a shipped App Store build has no way in.
         if let seeded = DebugLaunchState.core() {
             core = seeded
+            core.ensureActiveRun()
             loadIssue = nil
             // An optional seed pins the RNG so a scripted run (the recorded
             // ending demo) pulls the exact same cards every time.
@@ -59,6 +60,7 @@ final class GameState {
         #endif
         let (loaded, issue) = store.load()
         core = loaded ?? GameCore()
+        core.ensureActiveRun()   // a fresh game — or a pre-Circuit save — joins the Circuit
         loadIssue = issue
         // Persist immediately if load had to repair or quarantine something, so
         // the cleaned state is what's on disk from here on.
@@ -70,6 +72,8 @@ final class GameState {
     /// compiled into DEBUG (test) builds, so it can't be reached in production.
     init(core: GameCore, store: SaveStore) {
         self.store = store
+        var core = core
+        core.ensureActiveRun()   // the shop is always inside an active Show, same as the real init
         self.core = core
         self.loadIssue = nil
     }
@@ -103,6 +107,56 @@ final class GameState {
     var shouldShowWelcome: Bool { core.shouldShowWelcome }
     var cheapestPackPrice: Double { Economy.cheapestPackPrice }
 
+    // MARK: The Circuit (read-through)
+
+    var show: Int { core.run.show }
+    var seasonShows: Int { Economy.seasonShows }
+    var ripsRemaining: Int { core.run.ripsRemaining }
+    var energy: Int { core.run.energy }
+    var maxEnergy: Int { core.run.maxEnergy }
+    var currentQuota: Double { core.currentQuota }
+    var quotaProgress: Double { core.quotaProgress }
+    var canMakeCut: Bool { core.canMakeCut }
+    var isChampionshipShow: Bool { core.isChampionshipShow }
+    var atBazaar: Bool { core.run.atBazaar }
+    var isBust: Bool { core.isBust }
+    var firstPackFreeAvailable: Bool { core.firstPackFreeAvailable }
+    var guaranteedUltraNextPack: Bool { core.run.guaranteedUltraNextPack }
+
+    var renown: Int { core.meta.renown }
+    var unlockedMilestones: Set<String> { core.meta.milestones }
+    var activeTrainers: [Trainer] { core.activeTrainers }
+    var heldPowerUps: [PowerUp] { core.heldPowerUps }
+    var activeTwist: Twist? { core.activeTwist }
+    var trainerSlots: Int { core.meta.trainerSlots }
+    var hasTrainerSlotFree: Bool { core.hasTrainerSlotFree }
+
+    var draftOffers: [BoostCard] { core.run.draftIds.compactMap { BoostCatalog.boost($0) } }
+    var bazaarOffers: [BoostCard] { core.run.bazaarIds.compactMap { BoostCatalog.boost($0) } }
+    var rerollCost: Double { Economy.rerollCost(rerolls: core.run.rerolls) }
+
+    func guildLevel(_ u: GuildUpgrade) -> Int { core.meta.guildLevel(u) }
+    func guildMaxLevel(_ u: GuildUpgrade) -> Int { Economy.guildMaxLevel(u) }
+    func guildCost(_ u: GuildUpgrade) -> Int { Economy.guildCost(u, currentLevel: core.meta.guildLevel(u)) }
+    func canBuyGuild(_ u: GuildUpgrade) -> Bool { core.canBuyGuild(u) }
+    func canAffordBoost(_ b: BoostCard) -> Bool { core.cash >= b.cost }
+    /// Whether an offer can be taken slot-wise: Trainers need a free Trainer slot;
+    /// Power-Ups and Energy never do. (Cash is checked separately.)
+    func hasSlotFor(_ b: BoostCard) -> Bool {
+        if case .trainer = b { return core.hasTrainerSlotFree }
+        return true
+    }
+
+    /// Milestones unlocked since the UI last drained them — a small queue the
+    /// app surfaces as celebratory toasts, regardless of which action fired them.
+    private(set) var pendingMilestones: [MilestoneEvent] = []
+    @discardableResult
+    func drainMilestones() -> [MilestoneEvent] {
+        let m = pendingMilestones
+        pendingMilestones = []
+        return m
+    }
+
     func canAffordPack(set: Int) -> Bool { core.cash >= Economy.packPrice(set: set) }
     func canAffordBox(set: Int) -> Bool { core.cash >= Economy.boxPrice(set: set) }
     func canAffordGrade(set: Int) -> Bool { core.cash >= Economy.gradeFee(set: set) }
@@ -118,6 +172,9 @@ final class GameState {
     }
     func ownedCount(inSet set: Int) -> Int { core.ownedCount(inSet: set) }
     func instances(of cardId: String) -> [CardInstance] { core.instances(of: cardId) }
+    /// Every owned copy in the current Season's binder — used by the power-up
+    /// target picker to list cards a consumable can act on.
+    var binderInstances: [CardInstance] { core.instances }
     func owns(_ id: String) -> Bool { core.owns(id) }
     func count(of id: String) -> Int { core.count(of: id) }
     func isSellable(_ inst: CardInstance) -> Bool { core.isSellable(inst) }
@@ -168,6 +225,86 @@ final class GameState {
         if r != nil { save() }
         return r
     }
+
+    // MARK: The Circuit (mutations)
+
+    /// Open a pack inside the current Show (consumes a rip or the free first
+    /// pack). The run-loop counterpart to `buyPack`. Surfaces any milestones the
+    /// pull unlocked as toasts.
+    @discardableResult
+    func ripPack(set: Int) -> OpenResult? {
+        guard !requiresFullUnlock(set: set) else { return nil }
+        let r = core.ripPack(set: set, using: &rng)
+        if let r {
+            pendingMilestones += r.milestones
+            save()
+        }
+        return r
+    }
+
+    /// Clear the current Show. Advances to the Bazaar (freshly stocked) before the
+    /// next Show, or wins the Season at the Championship. Returns milestones fired.
+    @discardableResult
+    func makeCut() -> [MilestoneEvent] {
+        let fired = core.makeCut()
+        pendingMilestones += fired
+        // Entering the Bazaar: stock the draft and shelf now (GameState owns rng).
+        if core.run.atBazaar {
+            core.rollDraft(using: &rng)
+            core.rollBazaar(using: &rng)
+        }
+        save()
+        return fired
+    }
+
+    /// Leave the Bazaar and begin the next Show under the chosen Twist (or none).
+    func enterShow(twistId: String?) {
+        core.enterShow(twistId: twistId)
+        save()
+    }
+
+    @discardableResult
+    func takeDraft(_ id: String) -> Bool {
+        let ok = core.takeDraft(id)
+        if ok { save() }
+        return ok
+    }
+
+    @discardableResult
+    func buyFromBazaar(_ id: String) -> Bool {
+        let ok = core.buyFromBazaar(id)
+        if ok { save() }
+        return ok
+    }
+
+    @discardableResult
+    func rerollBazaar() -> Bool {
+        let ok = core.rerollBazaar(using: &rng)
+        if ok { save() }
+        return ok
+    }
+
+    @discardableResult
+    func playPowerUp(_ id: String, target: UUID? = nil) -> Bool {
+        let ok = core.playPowerUp(id, target: target, using: &rng)
+        if ok {
+            pendingMilestones += core.refreshMilestones()
+            save()
+        }
+        return ok
+    }
+
+    @discardableResult
+    func buyGuildUpgrade(_ u: GuildUpgrade) -> Bool {
+        let ok = core.buyGuildUpgrade(u)
+        if ok { save() }
+        return ok
+    }
+
+    /// Start a fresh Season, banking the finished one into lifetime totals and
+    /// keeping all permanent progress (Renown, milestones, Guild). Alias of
+    /// `newGame()` that reads clearly at Circuit call sites.
+    func startNewSeason() { newGame() }
 
     @discardableResult
     func sell(_ instanceId: UUID) -> Double? {

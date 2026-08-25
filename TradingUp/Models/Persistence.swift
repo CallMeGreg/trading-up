@@ -11,9 +11,14 @@ struct SaveFile: Codable {
     /// can't absorb on its own.
     ///
     /// v2: split lifetime stats out of the per-run `Stats` (see `LifetimeStats`
-    /// on `GameCore`). v1 saves have no `lifetime` key at all; `SaveStore.load()`
-    /// branches on `schemaVersion` to migrate them explicitly.
-    static let currentVersion = 2
+    /// on `GameCore`). v1 saves have no `lifetime` key at all.
+    ///
+    /// v3: the Circuit roguelite. Adds the per-Season `run` and permanent `meta`
+    /// blocks. A pre-v3 save has neither, so its in-progress collection is
+    /// dropped into Show 1 of a fresh Season on load (`ensureActiveRun()`), with
+    /// Renown/milestones/Guild all starting empty. `SaveStore.load()` branches on
+    /// `schemaVersion` to migrate older payloads explicitly.
+    static let currentVersion = 3
 
     var schemaVersion: Int
     var core: GameCore
@@ -101,6 +106,8 @@ struct SaveStore {
                 return (nil, .fromNewerVersion(quarantinedAs: quarantine()))
             case 1:
                 decoded = migrateV1((try? decoder.decode(SaveFile.self, from: data))?.core)
+            case 2:
+                decoded = migrateV2((try? decoder.decode(SaveFile.self, from: data))?.core)
             default:
                 // Current version — decode as-is; `GameCore`'s lenient init
                 // absorbs any additive fields within this schema version.
@@ -108,7 +115,7 @@ struct SaveStore {
             }
         } else {
             // No `schemaVersion` key at all: a pre-envelope, bare-`GameCore` save.
-            decoded = try? decoder.decode(GameCore.self, from: data)
+            decoded = migrateV2(try? decoder.decode(GameCore.self, from: data))
         }
 
         guard let decoded else { return (nil, .unreadable(quarantinedAs: quarantine())) }
@@ -117,15 +124,24 @@ struct SaveStore {
         return (clean, dropped > 0 ? .droppedUnknownCards(count: dropped) : nil)
     }
 
-    /// v1 -> v2: v1 predates lifetime stats entirely, so there's nothing to
+    /// v1 -> v2 -> v3. v1 predates lifetime stats entirely, so there's nothing to
     /// carry over beyond what `GameCore`'s lenient decode already defaults
-    /// `lifetime` to (all zero). That's correct, not just convenient: the
-    /// player's in-progress run gets folded into that zero lifetime at display
-    /// time (`GameCore.lifetimeIncludingCurrentRun`), so their all-time totals
-    /// read right immediately, with no data loss. Kept as an explicit branch —
-    /// rather than only relying on the lenient decode — so the next schema
-    /// change has a template to extend instead of inventing this from scratch.
-    private func migrateV1(_ core: GameCore?) -> GameCore? { core }
+    /// `lifetime` to (all zero) — the player's in-progress run gets folded into
+    /// that zero lifetime at display time, so their all-time totals read right
+    /// immediately, with no data loss. It then falls through the v2 step so a v1
+    /// save also joins the Circuit. Kept as an explicit branch so the next schema
+    /// change has a template to extend.
+    private func migrateV1(_ core: GameCore?) -> GameCore? { migrateV2(core) }
+
+    /// v2 -> v3: a v2 save has a collection, cash and stats but no Season. Drop
+    /// it straight into Show 1 of a fresh Circuit run without disturbing what the
+    /// player has (`ensureActiveRun` keeps the binder and wallet, only wrapping a
+    /// Season around them). Renown, milestones and Guild all start empty.
+    private func migrateV2(_ core: GameCore?) -> GameCore? {
+        guard var core else { return nil }
+        core.ensureActiveRun()
+        return core
+    }
 
     @discardableResult
     func save(_ core: GameCore) -> Bool {
