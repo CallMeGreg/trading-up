@@ -2,25 +2,20 @@ import SwiftUI
 
 @main
 struct TradingUpApp: App {
-    @State private var game: GameState
-    @State private var purchases: PurchaseStore
+    // The Chase (v2) root. One shared observable engine, loaded from disk (or
+    // seeded once from a v1/v2 collection on first 2.0 launch). Runs on the main
+    // actor; App.init is on the main thread.
+    @State private var chase = ChaseState()
 
     init() {
-        // One shared GameState, with the StoreKit layer built on top of it so it
-        // can push the verified entitlement in. Both are @MainActor; App.init
-        // runs on the main thread.
-        let game = GameState()
-        _game = State(initialValue: game)
-        _purchases = State(initialValue: PurchaseStore(game: game))
         // Decode the SFX and warm the audio session so the first pack-open is instant.
         SoundManager.shared.preloadAll()
     }
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
-                .environment(game)
-                .environment(purchases)
+            ChaseRootView()
+                .environment(chase)
                 .preferredColorScheme(.dark)
         }
     }

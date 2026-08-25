@@ -48,8 +48,8 @@ extension ChaseCore {
         case .medium:
             let set = Int.random(in: 1...max(1, maxSet), using: &rng)
             var g = Grail(tier: .medium, price: 0); g.setId = set
-            if Bool.random(using: &rng) { g.requireFoil = true; g.headline = "A \(CardDatabase.setName(set)) foil" }
-            else { g.gradeMin = 8; g.headline = "A \(CardDatabase.setName(set)) card graded 8+" }
+            if Bool.random(using: &rng) { g.requireFoil = true; g.headline = "Any \(CardDatabase.setName(set)) foil" }
+            else { g.gradeMin = 8; g.headline = "Any \(CardDatabase.setName(set)) card graded 8+" }
             g.price = Economy.grailPrice(tier: .medium, setId: set, requireFoil: g.requireFoil, gradeMin: g.gradeMin)
             return g
         case .hard:
