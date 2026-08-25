@@ -24,6 +24,10 @@ jobs:
         run: |
           swiftc TradingUp/Models/Card.swift TradingUp/Models/Economy.swift TradingUp/Models/FeatureFlags.swift TradingUp/Models/GameCore.swift TradingUp/Models/Persistence.swift TradingUp/Generated/CardData.swift tools/verify/main.swift -o /tmp/tu_verify
           /tmp/tu_verify
+      - name: Compile and run tools/chase_verify/main.swift
+        run: |
+          swiftc -O TradingUp/Models/Card.swift TradingUp/Models/Economy.swift TradingUp/Models/Economy+Chase.swift TradingUp/Models/FeatureFlags.swift TradingUp/Models/GameCore.swift TradingUp/Models/Persistence.swift TradingUp/Models/Boosts.swift TradingUp/Models/Hunt.swift TradingUp/Models/MetaState.swift TradingUp/Models/ChaseCore.swift TradingUp/Models/ChaseEngine.swift TradingUp/Models/ChasePersistence.swift TradingUp/Generated/CardData.swift tools/chase_verify/main.swift -o /tmp/chase_verify
+          /tmp/chase_verify
 
   build:
     name: Build (iOS Simulator)

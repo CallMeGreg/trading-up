@@ -1,390 +1,441 @@
-# Trading Up — Game Design Document
+# Trading Up — Game Design ("The Chase")
 
-> A trading‑card‑game‑inspired **card collecting + economy** game for iOS (SwiftUI).
-> Every creature, name, set and illustration is original to this project. No real
-> trading‑card brand, character, or artwork is referenced, named, or reproduced —
-> deliberately, because a trademark in the app or its metadata is a
-> [Guideline 5.2](https://developer.apple.com/app-store/review/guidelines/#intellectual-property)
-> rejection risk.
+> **This is the design of record for Trading Up 2.0.** The game is a grail-hunter
+> roguelite: the same 250 Sprytes and the same pack-rip reveal as 1.0, but the
+> purpose of a run is reinvented — you no longer collect-them-all in one terminal
+> run, you **trade up toward one dream card (a Grail)**, over and over, filling a
+> permanent Binder across many runs. Sections are marked **Ships** vs **Staged for
+> follow-up** in §13; anything staged is designed here but not yet wired.
 
 ---
 
-## 1. Concept
+## 0. What changes, and why
 
-You are a card collector with **$100** starting cash. Buy packs, open them in an
-exciting reveal, and try to **collect all 250 creatures** across 5 sets. Sell
-duplicates back to the shop, gamble on **card grading** for value swings, and chase
-**foils** and **ultra rares**. Run out of money with nothing left worth selling and
-you lose. Complete the collection and you win.
+v1 is a **completion** game: rip packs until you own all 250 Sprytes, or go broke. One
+long terminal run, no reason to replay after winning. The Circuit draft turned that into
+a dealer-ladder climb toward escalating cash Quotas. This revision keeps the roguelite
+bones but **changes the fantasy**:
 
-It's a *slot‑machine‑meets‑collection* loop: the pack opening is the dopamine, the
-economy is the strategy, the 250‑card completion is the goal.
+- The competitive card-**show** circuit is gone.
+- A run's purpose is no longer *"get richer / rank up."* It's **land a Grail** — one
+  specific dream card you trade up toward.
 
-### Art direction (important — read this)
-We can't commission real creature art for 250 characters, and we must not copy
-anyone else's. So every Spryte is **drawn in code**: `tools/generate_art.py` builds a
-flat‑vector creature and stands it on a per‑set scene. It is deterministic,
-name‑aligned, scales to 250 cards for free, and can be swapped for commissioned art
-later without changing the game. The app icon is built from the same code, so the two
-can't drift apart.
+The title finally reads literally: you start a Hunt with a fistful of commons and a
+stake, and you **trade up** — rip, grade, foil, flip — until you can put the Grail in
+your hands.
 
-**No card is a recolour of another.** Each of the five sets has its own *design
-language* that changes the actual geometry — silhouette, limbs, head, eyes, mouth,
-crest, tail and surface treatment — not just the palette:
+---
 
-| Set | Design language |
+## 1. The run loop — a Hunt
+
+- A **Hunt** is one run. It targets a **Grail**: a specific Spryte + condition. You **pick
+  your Grail from 3 offers at the start — always one Easy, one Medium, and one Hard** (§2):
+  a loose classifier, a set-plus-classifier, and a named-card/evolution target. A harder
+  Grail pays more Renown but means a longer, meaner Hunt. The Grail is your win condition
+  for the run.
+- A Hunt is a chain of escalating **Leads** `L = 1, 2, 3, …` ending in **the Score**.
+- **Leads** replace "Shows." A Lead is a *source* you chase the Grail through — an estate
+  find, a shop's backstock, a convention floor, an online lot, a private collection.
+  Flavor only: no competition, no ranking, no "making the cut."
+- **Each Lead has:**
+  - an **Ask** — the objective you must satisfy to **run the Lead down** and follow it to
+    the next, hotter one. Asks **vary by type** (§1.1) — they are *not* always cash. This
+    is the big change from the single escalating cash Quota.
+  - an **Energy budget** — how many packs you may rip at this Lead (the round clock). Rip a
+    pack = spend **1 Energy** *and* its cash price. Selling and grading **don't** cost
+    Energy — only ripping does (grading still pays its cash fee). Energy **does not** carry
+    between Leads.
+  - optionally a **Complication** (§8) — a weather/market/authenticity modifier that
+    forces adaptation.
+- **Run the Lead down** the instant you satisfy its Ask → advance, bank Renown, keep your
+  cash / stock / Items, **draft a reward**, visit the **Bazaar**.
+- **The Score** — the final Lead. The Grail is on the table at a **price** (cash) and/or
+  **condition**. Meet it → **the Grail is yours and the Hunt is won on the spot** — no
+  gamble, no extra step. This is the terminal cash sink everything else was building toward.
+- **Bust** — fail a Lead's Ask before its Energy runs out with no way there, or reach the
+  Score but can't meet the Grail's price → the Grail slips away and the Hunt ends. This
+  is a **summary**, not a punishment (§6). Death is progress.
+
+Cash, stock and Items **persist across Leads within a Hunt**; only the Energy budget
+refreshes and the Ask bar rises — the same escalating pressure as the Circuit draft, but
+now the finish line is a *card*, not a number.
+
+### 1.1 Asks — the varied objective (a strategy engine)
+
+Where the Circuit had one thing (`cash ≥ Quota`), a Lead's **Ask** is drawn from a deck
+of objective types, so every Lead asks a different question of your engine:
+
+| Ask type | Satisfy by… | Consumes the card? |
+| --- | --- | :---: |
+| **Cash** | bank $X | no |
+| **Grade** | possess a card graded ≥ N | no |
+| **Handover** | give your contact a card meeting a spec (a rare, a foil, a graded 8+) | **yes** |
+| **Set** | own K distinct cards from a named set | no |
+| **Evolution** | complete a named evolution line | no |
+| **Value** | own a single card worth ≥ $X | no |
+
+You always see the **current Lead's Ask *and* the next Lead's Ask** (route foreknowledge),
+so you can plan two moves ahead and draft/shop to fit. **Handover** Asks create a real
+*spend-vs-keep* dilemma: pay your worst qualifying card, and protect the ones you need
+for the Grail or a later Set/Evolution Ask.
+
+### Why it's tense, not grindy
+
+Same contract as v1: packs are ≤1.0× EV and dupes sell at 75%, so **buy-and-dump loses
+money**; you grow only through *edges* — grade-before-sell, foils, evolution bonuses,
+your Item engine. Energy caps each Lead so you can't grind. The new pressure is **varied
+Asks**: no single strategy (hoard cash) solves every Lead, so your engine has to stay
+flexible against whatever the next one demands.
+
+---
+
+## 2. Strategic decisions (expanded)
+
+The redesign deliberately widens the decision space. Each Hunt is a stack of choices:
+
+1. **Pick your Grail** *(Hunt start)* — the three offers are **always one Easy, one Medium,
+   one Hard**. **Easy** = a loose classifier (any foil, any PSA 10, any ultra worth ≥ $X) —
+   many cards qualify, so it's a fast Hunt for the least Renown. **Medium** = a **named set**
+   plus a classifier (a *Voltcrest* foil, a graded-8+ *Tidecaller* ultra). **Hard** = a
+   **specific named card** or an **evolution-line placement** plus a classifier
+   (*Cinderling's final evo graded 9+*, the foil Set-5 legendary) — a one-in-250 target, the
+   longest, meanest Hunt, the most Renown. Match your pick to your Guild upgrades and Trainer.
+2. **Pick your Trainer** *(loadout)* — *(formerly "Patron.")* a starting specialist that
+   bends the whole Hunt (e.g. *The Grader* opens with a Loupe; *The Digger* with +2 Energy
+   each Lead; *The Speculator* with a free first pack). You **start with 1 Trainer** and
+   unlock more options with Renown (§6), so every Hunt begins with a strategic identity.
+3. **Route the Leads** — after each Lead you choose the next from **2–3 branches**, each
+   shown up front with its **Ask type**, **Complication** and **reward**. Steer toward Asks
+   you can already meet and rewards you need; steer around Complications that punish your
+   build. *Example:* you're offered **(A)** *Cash $600* under *Cold Snap* → reward a passive
+   Item, **(B)** *Grade ≥ 8* → reward +2 Energy, **(C)** *Handover: a foil* → reward cash.
+   Holding a graded 9 but low on cash, you take **(B)** — you already satisfy it and pocket
+   the Energy — and you dodge **(C)** if that foil is bait you need for your Grail.
+4. **Read the Ask, plan two ahead** — you always see the current Ask **and** the next one,
+   so buy and draft for the *next* Ask, not just this one. *Example:* this Ask is *Cash $500*
+   and the next is *Set: 4 distinct Tidecallers* — hit the cash bar by selling your
+   **Emberfall** dupes, **not** your Tidecallers, so you arrive already halfway to the Set
+   Ask. Or the next Ask is *Grade ≥ 9*, so you bank a rare **now** and grade it while this
+   Lead's Energy is still spare.
+5. **Spend-vs-keep on Handover Asks** — which card do you surrender, and which do you
+   protect for the Grail or a later Set/Evolution Ask?
+6. **Invest vs save at the Bazaar** — every dollar spent on **Items** is a dollar not banked
+   toward the Score's Grail price. The core roguelite tension, kept.
+7. **Rip strategy** — each Lead's Energy is a fixed budget: spend it on **many cheap packs**
+   (volume — more cards to sell, hand over, or complete sets with) or **fewer premium packs**
+   (higher-value hits toward a Value/Grade Ask or the Grail itself)?
+
+---
+
+## 3. Your Trainer + run-scoped cards
+
+Beside the Sprytes sit your **Trainer**, your **Items**, and **Energy**. None are Sprytes,
+none count toward the 250, and **packs still contain only Sprytes, so the reveal is
+untouched.** Items and Energy come from the post-Lead **draft** and the **Bazaar**.
+
+### Trainers — your Hunt specialist (pick 1)
+
+*(Formerly "Patron.")* At the start of every Hunt you pick **one Trainer** — a mentor who
+gives the whole run a strategic identity. You **start with just 1 Trainer available**; the
+rest are **options you unlock permanently with Renown** at the Guild (§6), so widening your
+Trainer menu is the main long-haul Renown sink.
+
+| Trainer | Bends the Hunt by… |
 | --- | --- |
-| 1 · Emberfall | Cooling crust over living flame: fractured faceted plates, glowing fissures, blocky basalt limbs, ember motes. |
-| 2 · Tidecaller | Current and freeze: streamlined teardrops, webbed fin crests, ice facets and gill arcs, flipper limbs, bubble rings. |
-| 3 · Verdspire | Canopy growth: layered lobes, bark rings, leaf collars, root limbs, blossoms and spore caps, asymmetric sprouting. |
-| 4 · Voltcrest | Charge and machine: chamfered plates, bolted armour, copper coil wraps, vents, visor eyes, antenna racks, zigzag pistons. |
-| 5 · Umbral Reach | Void and starlight: bodies are windows onto a starfield cut by rifts, detached limbs, star‑core eyes, orbiting shards, eclipse haloes, comet trails. |
+| **The Grader** | opening each Hunt with a **Loupe** (grading is free). |
+| **The Digger** | **+2 Energy** every Lead — more packs to rip. |
+| **The Speculator** | **first pack each Lead is free** (no cash, no Energy). |
+| **The Financier** | a **bigger stake** (+starting cash) and cheaper Bazaar rerolls. |
+| **The Curator** | **draft 2-keep-1** and +1 starting Item. |
+| **The Foilhunter** | **+5% foil** all Hunt, and foils sell for more. |
 
-On top of that, every *slot* (canine, golem, dragon, moth…) gets a different concept
-in every set, and every evolution stage adds real structure rather than scale.
-`python3 tools/generate_art.py dupes` hashes each creature's geometry with palette and
-elemental accents stripped out and fails if any two of the 250 cards resolve to the
-same character design. The 15 ultra legendaries are fully bespoke compositions.
+### Items — bought with cash, used free (your engine + burst)
 
-An earlier draft used **procedural elemental "sigils"** — deterministic geometric
-emblems generated from a card's name and type. Those have been replaced by the
-creatures; `SigilView` survives only as the fallback if an art asset ever goes
-missing.
+*(Formerly the "Trainer" relics **and** the "Power-Ups.")* Items are gear you collect
+during a Hunt — some **passive** (always-on for the run), some **one-shot** (single use).
+You **buy them with cash** at the Bazaar, or take one free from the post-Lead **draft**.
+**Using an item costs nothing** — no Energy, no second fee; the only cost is the cash you
+paid (and, for one-shots, that they're consumed). **Cash is the natural limiter** on how
+big your engine grows.
 
-**Pack art** is drawn in code too, but it is *landscape*, not creature: each set
-gets its own hand-built miniature scene in `SetArt.swift` (`SetEmblem`), so a
-booster is recognisable by silhouette alone before you read the name —
-**Emberfall** an erupting volcano over a magma pool, **Tidecaller** small islands
-under a curling swell, **Verdspire** a stand of mossy jungle trees, **Voltcrest** a bolt
-splitting a thunderhead above a ridge, **Umbral Reach** an eclipse over drifting
-spirits. Every scene is drawn in a 100×100 design space and scaled to the pack,
-the booster box and the 58 pt shop shelf; fine detail (embers, spray, rain,
-pollen) is dropped below 64 pt so the small sizes stay legible.
-`tools/generate_screenshots.py` redraws the same scenes in SVG so the marketing
-screenshots match the app.
+| Item | Type | Effect |
+| --- | --- | --- |
+| **Loupe** | passive | Grading is free. |
+| **Bulk Buyer** | passive | Duplicates sell at 90% (vs 75%). |
+| **Gilder** | passive | +5% foil chance. |
+| **Appraiser** | passive | Every grade rolls one tier higher (min bump). |
+| **Whale** | passive | +1 card in every pack (7-card packs). |
+| **Stipend** | passive | +$2 per unique card owned, paid when you run down a Lead. |
+| **Holo Press** | one-shot | Turn a chosen card foil (×3 value). |
+| **Fast-Track Grade** | one-shot | Grade a card free, guaranteed 8+. |
+| **Pack Search** | one-shot | Next pack's hit is guaranteed an ultra. |
+| **Market Tip** | one-shot | Instant +$X cash (scaled to the current Lead). |
+| **Counterfeit** | one-shot | Add a second copy of a card you own. |
+| **Polish** | one-shot | Bump a graded card up two grade tiers. |
 
----
+### Energy — the pack-ripping fuel (the throttle)
 
-## 2. Brand / naming
-
-- **App / game title:** **Trading Up**
-- **Creatures are called:** **Sprytes** *(decided)*
-- Tagline: *"Collect all 250 Sprytes."*
-
-Creature-brand names considered before settling on `Sprytes`:
-`Mythlings` · `Critterions` · `Fablings` · `Aurabeasts` · `Kindra`
+Energy is what you **spend to rip packs**. Each Lead grants an **Energy budget** (base +
+your Trainer + Guild upgrades); **each pack you rip costs 1 Energy plus the pack's cash
+price.** Energy is the **round clock** — it caps how many packs you can open at a Lead so
+you can't grind — and it **doesn't carry between Leads.** *(This replaces the old "Rips.")*
 
 ---
 
-## 3. The 5 sets (250 cards)
+## 4. The Bazaar (kept) + the draft
 
-Each set = **50 cards**, themed as an elemental region. Later sets cost more per pack
-but hold more valuable cards.
+You liked it — it stays, between Leads:
 
-| # | Set name       | Theme            | Pack price | Card value scale |
-|---|----------------|------------------|-----------:|-----------------:|
-| 1 | **Emberfall**  | Fire / magma     |       $10  | ×1 (base)        |
-| 2 | **Tidecaller** | Water / ice      |       $30  | ×3               |
-| 3 | **Verdspire**  | Grass / nature   |       $75  | ×7.5             |
-| 4 | **Voltcrest**  | Electric / storm |      $160  | ×16              |
-| 5 | **Umbral Reach**| Shadow / cosmic |      $400  | ×40              |
-
-The price curve is deliberately **steep** — the gap between sets widens ($20 → $45 →
-$85 → $240), so each later set is a genuinely bigger‑stakes push, not a gentle step up.
+1. **Draft** — pick **1 of 3** offered cards (an **Item** or **Energy**), free.
+2. **Bazaar** — spend cash on **Items** (and Energy) + **reroll**. Spending here competes
+   with banking toward the Score's Grail price — the invest-vs-save squeeze, now pointed at
+   a *card* instead of a quota.
 
 ---
 
-## 4. Card structure per set
+## 5. Currencies & resources — what each is for
 
-Each 50‑card set is built from a mix of evolution lines and standalone creatures:
+The redesign runs on **three spendable things** — plus a permanent collection (your
+**Binder**, §6) that's never spent:
 
-- **6 three‑stage lines** (18 cards)
-- **7 two‑stage lines** (14 cards)
-- **18 single creatures** (18 cards)
-- **= 50 cards**
+| Resource | Scope | Earn it by | Spend it on | In one line |
+| --- | --- | --- | --- | --- |
+| **Cash ($)** | per-Hunt | selling dupes (75%, more if graded/foil), evolution bonuses, cash Items (Market Tip), Stipend payouts | **ripping packs** (each pack's cash price), **buying Items** at the Bazaar, Cash/Value Asks, and the **Grail's price at the Score** | moment-to-moment fuel; starts each Hunt at your **stake** |
+| **Energy** | per-Lead | granted fresh each Lead (base + your Trainer + Guild) | **ripping packs** (1 Energy + the pack's cash each) | the round clock — paces your ripping, stops you grinding a Lead |
+| **Renown** | **permanent** | running down Leads, landing Grails, Discoveries, Prestige surplus | permanent upgrades at the **Collectors' Guild** — including unlocking more **Trainer options** | the meta-progression currency; the *only* thing you spend that lasts |
 
-**Rarity counts per set** (same for all 5 sets):
-
-| Rarity     | Count | Notes |
-|------------|------:|-------|
-| Common     |  25   | mostly evolution bases + small singles |
-| Uncommon   |  15   | mid evolutions + better singles |
-| Rare       |   7   | final evolutions + strong singles |
-| Ultra Rare |   3   | standalone "legendary" creatures (no evolution) |
-
-That's **15 ultra rares total** across the game — the true chase cards.
-
-Evolutions generally climb in rarity (e.g., common → uncommon → rare). Completing a
-full evolution line pays a cash bonus (see §9).
+**Rules of thumb:** *Cash* is short-term fuel (gone when the Hunt ends) and now the **only**
+cost of Items — you buy them, then use them free. *Energy* paces your ripping, one Lead at
+a time. *Renown* is the only thing you *spend* that lasts. Your **Binder** is the only
+thing you *keep* — a permanent collection, not a resource (§6).
 
 ---
 
-## 5. Naming scheme + Set 1 sample
+## 6. Meta-progression & the main menu (persists across Hunts)
 
-Names are original, evocative compounds themed to the set element. Evolution lines
-share a root that "grows up" across stages.
+Everything permanent lives behind a **main menu** with four destinations:
 
-**Set 1 · Emberfall — sample names (style preview):**
+| Menu item | What it opens |
+| --- | --- |
+| **New Run** | The **Collectors' Guild** — the between-run hub where you spend **Renown** on permanent unlocks, pick your **Trainer** and **Grail**, then launch a Hunt. |
+| **Binder** | Your **permanent collection** — the long-term goal (below). |
+| **Stats** | Lifetime totals, records, **Discoveries**, and **Grails landed**. |
+| **Settings** | Existing app settings (audio, data, restore purchase…). |
 
-Three‑stage line (the fire "starter"):
-`Emberpup` → `Cinderhound` → `Pyrewolf`
+### The permanent Binder — the long-term goal
 
-Three‑stage line (magma):
-`Pebblit` → `Boulderkin` → `Magmalith`
+The **Binder** is a persistent album with **one slot per Spryte — all 250**. When a Hunt
+ends — **win *or* bust** — the **best (highest-value) version of each card you were
+holding** is deposited into its slot if it beats the copy already there. **Foil and grade
+count**, so a slot is never "done" at first ownership: you keep chasing a *foil*, then a
+*9*, then a *Gem-Mint 10* to upgrade it. Collection becomes a **quality chase**, not a
+checkbox.
 
-Two‑stage lines:
-`Ashling` → `Cendrake` · `Flicktail` → `Emberdon`
+- It's **read-only** — a museum of your best copies. You never spend from it and it never
+  feeds a Hunt (so it can't trivialise Asks); it is pure progress and prestige.
+- **Binder completion** (weighted by grade/foil) is the headline endgame number: a raw
+  copy of all 250 is **Master Collector**; a *Gem-Mint foil* of all 250 is true 100%.
+- Because **every** Hunt — even a bust — deposits its best copies, **no run is wasted**:
+  you always advance the Binder. *Death is progress*, literally.
 
-Single creatures (commons/uncommons):
-`Sootmoth` · `Coalcrab` · `Wispfox` · `Flarebud` · `Torchfin` · `Ashhare`
+### Long-term goals (why you keep playing)
 
-The three Set 1 **ultra‑rare legendaries** (the "Emberfall Wardens"):
-`Ignarok` · `Solmyr` · `Emberyx`
+1. **Fill the Binder** — best version of all 250, then **upgrade every slot** toward
+   foil / Gem-Mint. The deep, effectively endless chase.
+2. **Unlock every Trainer** — spend Renown to permanently add specialists to your pick list
+   (you start with just one), turning Renown into build variety.
+3. **Buy out the Guild** — every permanent upgrade (Trainer options, stake, Energy, Bazaar).
+4. **Land the marquee Grails** — the hardest chase cards (a Set-5 foil-10), logged in Stats.
+5. **Climb Ascension** — escalating difficulty tiers for prestige once the rest is in reach.
 
-The remaining ~230 names follow the same recipe per set theme and will be generated
-after you approve the style.
+### Renown & the Guild
 
----
+- **Renown** — earned per Hunt = `Leads run down × base + Grail bounty + Discovery
+  bonuses + Prestige surplus`. Spent at the **Collectors' Guild** (reached via **New Run**).
+- **Guild upgrades** (Renown-bought, permanent, incremental): **unlock Trainer options**
+  (widen your pick list from the starting **1**) · +**stake** · +1 starting **Energy** per
+  Lead · +**Bazaar slot** / cheaper rerolls · **discount or unlock Items** in the Bazaar ·
+  unlock **Ascension** (harder Hunts for more Renown — the long tail).
 
-## 6. Economy: values, packs, foils
+### Discoveries (re-themed Milestones)
 
-### Value bands (base value, ungraded, non‑foil)
-Bands **never overlap** — the best common is worth less than the worst uncommon, etc.
-Each tier has **1–2 outliers** priced near the top of its band (the "chase" cards of
-that tier); the rest sit lower. Each set's values are scaled so its packs pay back the
-target EV (see **Packs** below); absolute magnitude still climbs every set, so
-higher‑set cards are always worth more. Approximate resulting bands:
+One-time achievements that permanently unlock content, so variety compounds Hunt over
+Hunt. They're a *second* unlock path alongside the Renown shop — a few signature **Items
+and Trainers** are **earned** this way rather than bought:
 
-| Tier       | Set 1       | Set 2        | Set 3        | Set 4          | Set 5           |
-|------------|-------------|--------------|--------------|----------------|-----------------|
-| Common     | $0.25–0.75  | $0.72–2.01   | $1.60–4.91   | $2.95–8.59     | $5.22–14.70     |
-| Uncommon   | $0.98–2.38  | $2.87–6.80   | $6.15–13.74  | $11.34–26.45   | $20.25–48.33    |
-| Rare       | $3.40–6.25  | $8.24–17.51  | $18.24–40.61 | $33.45–75.92   | $58.87–133.92   |
-| Ultra Rare | $9.79–22.27 | $26.59–61.85 | $63.48–123.04| $122.93–230.57 | $198.81–394.42  |
+| Discovery | Trigger | Unlocks |
+| --- | --- | --- |
+| **First Lead** | run down your first Lead | the Guild itself |
+| **First Grail** | land your first Grail | Prestige/endless + a new Trainer |
+| **Set Master** | complete a full 50-card set in a Hunt | strong Item into the pool + big Renown |
+| **Hoarder** | hold 8 copies of one card | *Counterfeit* + *Whale* |
+| **Gem Holo** | own a foil graded 10 | *Gilder* + *Polish* |
+| **Ace Grader** | grade 3 cards 9+ in a Hunt | *Appraiser* |
+| **Deep Chase** | reach the Score on a Set-4+ Grail | Ascension tiers + a new Trainer |
+| **Ultra Hunter** | pull 10 ultras (lifetime) | *Pack Search* |
+| **Centurion** | 100 unique cards in the Binder (lifetime) | a new Trainer |
+| **Master Collector** | all 250 in the Binder (lifetime) | huge Renown + prestige cosmetic |
 
-### Packs
-- **6 cards per pack:** 3 commons, 2 uncommons, 1 "hit."
-- The **hit slot** is a Rare 80% of the time, Ultra Rare 20%.
-- A pack's contents are worth, on average, a **per‑set multiple of the pack price**.
-  The payout curve **shrinks as sets get pricier** — early packs are generous, later
-  packs are a bigger gamble:
+### Win / loss
 
-  | Set             | Pack price | Target EV | Avg pack contents |
-  |-----------------|-----------|-----------|-------------------|
-  | 1 Emberfall     | $10       | **1.00×** | ~$10   |
-  | 2 Tidecaller    | $30       | **0.90×** | ~$27   |
-  | 3 Verdspire     | $75       | **0.80×** | ~$60   |
-  | 4 Voltcrest     | $160      | **0.70×** | ~$112  |
-  | 5 Umbral Reach  | $400      | **0.60×** | ~$240  |
-
-  Any single pack still has **lots of variance** — a foil or a top‑tier hit blows past
-  the average, a cold pack falls below it. Foils (~+2% expected) and opt‑in grading are
-  upside on top of these base‑value targets.
-
-### Sell‑back spread (the shop lowballs the buylist)
-Every card has a **market value** (`currentValue`) — that's what drives your collection
-value, net worth, and the "Value" readouts. But when you **sell** a duplicate, the shop
-only pays **75%** of that market value (`sellbackRate = 0.75`; `sellValue = 0.75 ×
-currentValue`), exactly like a real card shop buylisting below market.
-
-This spread is the **main source of losing risk**. Because liquidation is now
-net‑negative, churning packs and dumping the dupes slowly **bleeds** cash — the
-more you spam, the faster you bleed. As a set fills up and packs start pulling mostly
-duplicates, the endgame of each set becomes a squeeze: gamble to complete it before you
-run dry. Collection value / net worth stay at **full** market value (aspirational); the
-spread only bites at the moment of sale.
-
-**Why 75% and not 65%.** The rate was 65% while booster boxes were on the shelf. Boxes
-were the faucet that paid for that spread: their guaranteed ultras and foils converted
-cash into set progress fast enough that a 35% haircut on every sale was survivable.
-Taking boxes off the shelf (§8) removed the faucet and left the drain, and measured
-win rates collapsed — thoughtful play fell from 69% to 27%, and the gap between
-thoughtful and reckless play shrank from 25 points to 7, i.e. the game stopped
-rewarding skill. Narrowing the spread to 75% makes a packs‑only shop work again:
-thoughtful play wins **~59%**, reckless spam‑and‑dump busts **~61%**, and the skill gap
-is back to **20 points**.
-Sell‑back rate is the right knob because the grading threshold is
-`fee / (0.5 × sellbackRate)` — a higher rate raises the payoff of grading *and* lowers
-the bar for which cards are worth grading, so it compounds for players who grade
-before they sell. A bigger set‑completion bonus was measured too and rejected: it fixes
-winnability but pays reckless and thoughtful play equally, flattening the skill gap to
-1–2 points.
-
-This is deliberately a **tighter game than the boxes era**, which sat at a 69%
-thoughtful win rate. The knob is sensitive — roughly 3 points of thoughtful win rate
-per point of sell‑back (0.76 → 62%, 0.77 → 66%, 0.78 → 69%) — so the harness's
-winnability floor is **55%**, not 60%. Move the rate in single points and re‑run
-`tools/verify` in the same change.
-
-### Foils
-- **1% chance per card**, rolled independently for all 6 cards in a pack.
-- A foil is worth **×3** its base value. Stacks with grading.
+- **Win:** landing a Grail = a **Grail Landed** celebration (reuse v1's 1-of-1
+  `RunSignature`, minted as a **Grail plate**); the card itself lands in your **Binder**
+  with a special Grail frame, and the Grail is logged in **Stats**. Then **Prestige** (a
+  bonus Grail appears) or cash out.
+- **Loss:** failing a Lead or the Score ends the Hunt with a **summary** (Leads run down,
+  Renown earned, Discoveries hit, **cards deposited to the Binder**) → back to the Guild.
+  **Death is progress**, the roguelite contract — not v1's terminal Game Over.
 
 ---
 
-## 7. Grading (rares & ultra rares only)
+## 7. Base economy & tuning (base $$ adjusted)
 
-Send a rare/ultra to be graded for a random PSA grade. The grade multiplies the
-card's base value:
-
-| Grade | Multiplier | Odds |
-|------:|-----------:|-----:|
-| 1     | **10×**    |  1%  |
-| 2     | 0.10×      |  2%  |
-| 3     | 0.25×      |  3%  |
-| 4     | 0.40×      |  4%  |
-| 5     | 0.55×      |  5%  |
-| 6     | 0.70×      | 10%  |
-| 7     | 0.85×      | 15%  |
-| 8     | 1.00×      | 35%  |
-| 9     | 2.00×      | 15%  |
-| 10    | 5.00×      | 10%  |
-
-(Grades 3–7 are the linear ramp between grade 2 = 0.10× and grade 8 = 1.00×.)
-Grade 1 is so rare it's a collector's oddity worth **10×**. Odds sum to 100%.
-
-**Grading fee — a shallow flat ramp, decoupled from pack price:**
-**S1 $2 · S2 $4 · S3 $6 · S4 $8 · S5 $10** (`Economy.gradeFees`). With the odds above
-grading is *positive* EV (~1.5× on average), so a fee is what makes it a **decision**
-rather than a free action. Because the fee is small and flat while card values climb
-steeply, grading a **high‑set** card is cheap relative to its worth (the fee is 0.2× the
-pack price in S1 but only ~0.03× in S5) — so it's attractive to grade your valuable
-dupes before selling them. But the **downside scales with the card**: a low PSA grade
-multiplies value *down* (grade 2 = 0.10×), so grading a pricey card that tanks is a much
-bigger absolute loss. Rule of thumb: grade before selling once a card's value clears
-`fee / (0.5 × sellbackRate)`. Grading valuable duplicates before dumping them is the
-clearest **skill edge** thoughtful play has over careless spamming.
-
-Foil × grade stack, e.g. a foil rare that grades PSA 10 = base **×3 ×5 = ×15**.
+- **Starting stake: `$120`** per Hunt — up from v1's **`$100`**. Rationale: the new
+  **varied Asks** add early-game friction the Circuit draft's single cash Quota didn't, so
+  a slightly bigger cushion keeps **Lead 1–2 genuinely gentle** (critique #2) while the
+  escalating Asks and the Grail's price at the Score re-tighten the vise. It's a
+  Guild-upgradable knob (`+$ stake`), so *felt* starting cash rises with meta-progress.
+- **Pack prices unchanged:** `[10, 30, 75, 160, 400]`. The reveal and the set-value curve
+  players already know are untouched.
+- **Cash Asks** scale **~×1.5 per Lead** from a low base (Lead 1 ≈ **`$80`**, comfortably
+  under a `$120` stake so the opener breathes), **interleaved** with non-cash Asks so cash
+  is never a monotonic wall.
+- **Grail price at the Score** scales by the Grail's set × condition — a Set-1 ungraded
+  Grail is a few hundred; a Set-5 foil-9 Grail is several thousand — which is exactly what
+  the deep, escalating Leads exist to fund.
+- All numbers above are **illustrative**. The real values live in `Economy.swift` and are
+  owned by the **verify harness**, which must assert a real bust rate for weak play and a
+  healthy win rate for strong play across Hunts (same statistical contract as v1). The
+  **set-completion cash bonus stays removed**; **evolution-line bonuses stay** as the key
+  early growth lever and a non-sale cash source.
 
 ---
 
-## 8. Booster box — **currently off the shelf**
+## 8. Complications (variety / bosses) — re-themed Twists
 
-> **Status:** disabled via `FeatureFlags.removeBoosterBoxes`. The shop sells packs
-> only. The rules below still describe the model exactly as `GameCore` and `Economy`
-> implement it — the mechanics and their tests are deliberately kept intact so the
-> feature can be re‑enabled or redesigned without rebuilding it. Anything below is
-> **not** part of the shipping game today. Note that removing boxes is what forced the
-> sell‑back rate from 65% to 75% (§6); re‑enabling them means re‑running the balance
-> checks in `tools/verify`, not just flipping the flag.
+Some Leads (and a **boss Lead** every 4th) carry a **Complication** that forces
+adaptation. Because you see it while routing (§2, *Route the Leads*), it's a *pre-committed
+strategic wager*, not a random gotcha:
 
-A bulk buy with **guaranteed hits** — the reason to buy is the guaranteed chase cards
-and one big multi‑pack open, **not** a bulk discount.
-
-- **Box = 12 packs**, priced at **11× the pack price**.
-  - S1 $110 · S2 $330 · S3 $825 · S4 $1,760 · S5 $3,520.
-- **Guarantees:** at least **3 ultra rares** and **at least 2 foils**. If a freshly
-  opened box falls short, extra hits are upgraded in.
-- **Why 11× and not 10×:** at 10× (12 packs for the price of 10) a box was strictly
-  cheaper‑per‑pack than singles *and* came with guaranteed hits — spamming boxes was a
-  risk‑free money machine. At **11×** the box is a **variance play for guaranteed
-  chase cards**, priced close to buying the packs outright, so it no longer dominates.
+*Cold Snap* (sellback 60%) · *Backlog* (grading 2×) · *Counterfeits* (no foils this Lead)
+· *Rush* (−2 Energy, −20% Ask) · *Bull Market* (+20% pack value, +25% Ask) · **Boss — The
+Authenticator** (Ask requires a graded 9+). Your Trainer and your Items are the counters.
 
 ---
 
-## 9. Bonuses
+## 9. Updating to 2.0 — fresh start + a "What's New" explainer
 
-- **Complete an evolution line** → cash bonus:
-  - 2‑stage line = **1.0× pack price** of its set · 3‑stage line = **2.0× pack price**.
-- **Complete a full set (all 50)** → cash bonus = **15× that set's pack price**
-  (S1 $150 … S5 $4,800) — a meaningful reward that helps toward the next set without
-  fully bankrolling infinite spending (it was 30×, which snowballed too hard).
+Because the game **fundamentally changes shape**, a v1 completion save has no faithful
+mapping onto a grail-hunt (no Hunt, no Renown, no Trainers, no Leads). Rather than
+silently fabricate a half-migrated state, **updating to 2.0 resets the game to a clean
+slate and shows the player exactly why.** On first launch of 2.0:
 
----
+1. **The old save is quarantined, never deleted** — reusing `Persistence.swift`'s existing
+   move-aside mechanism. The v1 collection is preserved on disk, recoverable, exactly like
+   a corrupt or newer-schema save today.
+2. **A fresh roguelite game begins** — Guild at zero, first Hunt ready, stake at base.
+3. **A full-screen "Welcome to Trading Up 2.0 — What's New" explainer** appears: what a
+   Hunt / Lead / Grail is, the Bazaar and your Trainer / Items / Energy, Renown and the Guild,
+   **why your old game was reset**, and reassurance that the old collection file is kept in
+   Documents. Gated on a stored `lastSeenMajorVersion`, so it shows **once**.
+4. **Your old v1 collection seeds the new permanent Binder** — the best copy you owned of
+   each Spryte is imported as that slot's starting version, so *years of collecting aren't
+   erased; they become your Binder*. That's the **only** carryover: **nothing
+   gameplay-affecting transfers** (no cash, no run, no Renown), and the Binder is read-only
+   (§6), so it can't skew the fresh economy. Player-friendly and honest.
 
-## 10. Win / lose & stats
-
-- **Lose:** cash drops **below the cheapest pack price ($10)** and **no amount of
-  selling could get you back to one**. You can never sell your **last copy** of a
-  unique card (you'd lose collection progress), so what's left to raise is your
-  duplicates — sold at the buylist price, or graded first when even the luckiest
-  roll would more than cover its own fee. Once that optimistic total still falls
-  short of $10, the run is provably finished and the loss screen appears
-  immediately, rather than making you sell out card-by-card first. A loss screen
-  shows: cards collected per set, and total unique cards.
-  - **This is now genuinely reachable.** The **sell‑back spread** (§6), the **steep
-    per‑set price curve** (§3), and the **trimmed set‑completion bonus** (§9) together
-    mean careless play — spamming the cheapest set and dumping every dupe at 75% — can
-    bleed you dry before a set completes. In simulation that reckless loop **busts ~61%**
-    of the time.
-- **Win:** collect all **250** unique creatures. A winner's screen shows full stats:
-  per‑set completion, foils, best grades, peak cash, packs opened, etc.
-  - Thoughtful play — pacing your buys, keeping a cash cushion, and **grading valuable
-    dupes before selling** — still **wins ~59%** of the time. The gap between the two is
-    the point: skill, not grinding, is what carries you through.
-  - **Winning is not an exit.** The celebration is shown once; dismissing it keeps the
-    completed collection intact and browsable. Starting over is always a separate,
-    confirmed action — the reward for finishing shouldn't be losing what you finished.
-
-**Difficulty target: moderate.** Thoughtful play usually wins; careless play can
-bankrupt you. Balance knobs all live in `Economy.swift`; the simulations that hold this
-target live in `tools/verify/main.swift` (strategy sims + economy‑knob assertions).
+Implemented as a new `SaveLoadIssue` case (e.g. `.resetForNewVersion(previousSave
+QuarantinedAs:)`) that the UI renders as the What's-New screen, and covered by
+`SaveFormatTests` / `SaveStoreTests` — the never-delete contract stays a tested invariant.
 
 ---
 
-## 11. Monetization: free tier + full unlock
+## 10. Free tier / IAP (principle unchanged)
 
-Trading Up ships **free**, with a single one-time **non-consumable** in-app
-purchase — *Unlock the full collection* — that opens sets 2–5 and the 250-card
-Master Collector win. **Set 1 · Emberfall is free to play in full**: the whole
-loop (rip, sell, grade, evolution-line bonuses, the set-completion payout) plays
-out across its 50 cards before the paywall is ever reached.
-
-**What the purchase changes — and, deliberately, what it doesn't:**
-
-- It lifts a *paywall*, not a *progression gate*. Buying into sets 2–5 requires
-  the entitlement **and** the existing unique-count threshold
-  (`Economy.uniquesToUnlock`), so the unlock removes the paywall but never
-  *skips* the collection milestones a free player would also have to clear.
-- It grants **no in-game currency and no randomised pull**. Because no real
-  money ever buys a random reward, the loot-box-odds rule (App Store Guideline
-  3.1.1) doesn't apply and the app stays rated 4+ — see
-  [`app-store-listing.md`](app-store-listing.md).
-- It touches **no balance knob**. The entitlement is a gate layered *around* the
-  economy in `GameState`, not a value inside `Economy.swift`, so the tuned
-  difficulty curve — and the `tools/verify` harness that guards it — is
-  unchanged. Cards already owned in paid sets stay viewable in the Collection
-  regardless; only *buying* packs in those sets needs the unlock.
-
-**Where it lives.** StoreKit 2 is the source of truth (`PurchaseStore`, kept
-outside `Models/` so the game logic stays Foundation-only): it verifies
-`Transaction.currentEntitlements` on launch and on every transaction update, then
-pushes the verified flag into `GameState.isFullVersionUnlocked`. Product id
-`com.callmegreg.tradingup.fullunlock`; the size of the free slice is the single
-knob `GameState.freeSetCount`. The gate is covered in both states by
-`FullUnlockGateTests`.
+Set 1 (Emberfall) stays **free to play in full**: the whole loop — Hunts, Leads, the
+Bazaar, Trainers, Items, Energy, Renown, the Guild, Discoveries — runs on Set-1 packs,
+with Set-1 Grails. The one-time **full unlock** opens Sets 2–5 (whose higher-value cards
+fuel the deep Grails and the biggest Scores) and the Master Collector goal.
+`freeSetCount = 1` and the StoreKit gate in `GameState` are unchanged; the economy knobs
+(which the harness guards) stay out of the entitlement path. Tune so a Set-1-only player
+still gets a satisfying multi-Lead Hunt and can land Set-1 Grails.
 
 ---
 
-## 12. Persistence
-Local save (Codable → JSON in the app's Documents dir): cash, owned cards (with
-foil/grade state + counts), stats, and claimed bonuses. No account/server needed for v1.
+## 11. Architecture / persistence
 
-The payload is wrapped in a small versioned envelope (`SaveFile`, see
-`Models/Persistence.swift`) so future schema changes are detectable rather than guessed
-at. Three rules keep a player's collection safe across updates:
-
-- **Additive changes are free.** `GameCore` decodes every key independently, so a field
-  added in a later build falls back to its default instead of failing the whole decode.
-  (Swift's synthesized `Codable` would otherwise throw on the missing key and — with the
-  old `try?` fallback — silently reset the game.)
-- **Retired cards degrade, they don't crash.** If a save references a card id that's no
-  longer in the catalogue, those copies are dropped on load, any bonus the player no
-  longer qualifies for is un‑claimed, and the player is told what changed.
-- **A bad save is never deleted.** An undecodable file is moved to
-  `tradingup_save.corrupt-<timestamp>.json` and the player gets an explanation, so a bug
-  or a botched migration can't quietly erase a collection.
+- Pure model stays Foundation-only. New `Models/Boosts.swift` (Trainer / Item / Energy
+  defs + effect model + catalog). New `RunState` (the Hunt: Grail, Lead index, Ask, route,
+  **stock**, cash, **chosen Trainer**, **Items**, Energy) and `MetaState` (Renown, the
+  **permanent Binder** — best copy per card, 250 slots — **unlocked Trainer options**,
+  Discoveries, Guild upgrades, Grails landed, lifetime). `GameCore` gains the Lead loop,
+  Ask evaluation, effect application, Discovery checks and Renown accrual. **All balance in
+  `Economy.swift`.**
+- Save envelope → **v3**. The reset-and-explain flow (§9) *replaces* the Circuit draft's
+  "seed a fresh Season from the old collection" migration: v1/v2 saves are quarantined,
+  the old collection is imported into the permanent Binder (§9), everything else fresh.
+  Lenient decode + corrupt-save quarantine unchanged.
+- `verify` harness rewritten to enforce the new balance (losable / winnable / skill gap
+  across Hunts, varied-Ask satisfiability) + integrity of the new card types. CI unchanged.
 
 ---
 
-## 13. Open questions for review
-1. **Creature brand name** — ✅ *decided:* **Sprytes** (see §2).
-2. **Art direction** — ✅ *decided:* hand-built flat-vector creatures, one per card,
-   generated by `tools/generate_art.py` (see §1). Every card has its own character
-   design — no recolours — enforced by `generate_art.py dupes`. The earlier
-   procedural "sigil" emblems are retired; `SigilView` survives only as the fallback
-   if an art asset is ever missing.
-3. **Grading fee** — ✅ *decided:* flat per‑set ramp **$2/$4/$6/$8/$10** (see §7).
-4. **Card look** — thumbs‑up the mockup style, or tweak colors/frames/foil?
-5. Set names / theme order OK? Any names to change?
+## 12. Critique (as a game critic) + resolutions
+
+1. **"It's Balatro with cards."** Still an ante/joker skeleton. *Resolution:* the
+   **grail-hunt purpose** and **varied Asks** pull it toward the game's own fantasy —
+   *trading up toward a specific card* — powered by pre-existing systems (grading variance,
+   buylist spread, evolution lines) that aren't Balatro's. Naming stays original.
+2. **Snowball knife-edge.** Cash carryover + rising Asks still compounds. *Resolution:*
+   varied (non-cash) Asks + route branching + Ask foreknowledge give more ways to recover
+   than a single cash wall did; early Leads gentle; harness asserts both bust and win
+   rates.
+3. **Selling at 75% feels bad.** *Resolution:* intended squeeze; Bulk Buyer +
+   grade-before-sell are the counters, evolution bonuses a non-sale cash source. And a
+   Handover or Value **Ask** can suddenly want a card you'd have dumped, so selling is a
+   *judgement call*, not a reflex.
+4. **Scope explosion.** Grail, Leads, Asks, route map, Trainers, the permanent Binder +
+   main menu, Items, Energy, Bazaar, Guild, Discoveries, Ascension, Complications.
+   *Resolution:* ship a **rock-solid core** (§13); design and stage the rest, marked in
+   DESIGN.md.
+5. **Free tier could feel gutted.** *Resolution:* on-brand; Set-1-only must still deliver a
+   real multi-Lead Hunt with Set-1 Grails, Renown and Discoveries. The paywall sells
+   *depth*, never the loop.
+6. **Reveal shares the stage.** *Resolution:* the point — and packs stay Sprytes-only, so
+   the dopamine is intact; the new strategy wraps around it.
+7. **Resetting saves is hostile.** *(new)* *Resolution:* the reset is **explained,
+   one-time, and non-destructive** — old save quarantined, and your old collection
+   imported into the new Binder (§9). Honesty plus a real What's-New beats a silently
+   broken half-migration.
+8. **Enough long-term goal? Does a bust matter?** *(new)* *Resolution:* the **permanent
+   Binder** is the spine — best copy of all 250, then upgraded toward Gem-Mint foil, an
+   effectively endless *quality* chase — and **every Hunt, win or bust, deposits its best
+   copies** and can hit Discoveries or Renown unlocks, so no run is wasted. Renown's
+   roster / Guild buildout and Ascension stack on top.
+
+---
+
+## 13. What ships in this PR (the core) vs designed-for-later
+
+**Ships (fully modeled, tested, playable):**
+
+- Hunt → Lead → **Ask** → **Score** loop; run-down / bust; **Grail selection** (pick 1 of
+  3); Renown; run-summary loss.
+- **Main menu** (New Run · Binder · Stats · Settings) + the **permanent Binder** (best
+  copy of all 250, weighted completion %), seeded from any v1 collection on update.
+- **Varied Asks** (all six types) with evaluation + a basic **branching route** (2–3
+  choices per Lead).
+- Your **Trainer** pick + an **Items** catalog (~12 Items: passive + one-shot) + **Energy**,
+  with a working **effect engine**.
+- **Draft (1 of 3) + Bazaar** with reroll; **Items bought with cash, used free**.
+- A starter set of **Trainers** (specialists): you **start with 1**, and Renown at the Guild
+  **unlocks more Trainer options** — the main permanent Renown sink.
+- **Discoveries** (§6) + a **Collectors' Guild** (reached from **New Run**) with a starter
+  set of Renown upgrades (Trainer options / stake / Energy / Bazaar).
+- **Update reset + "What's New" explainer** (§9); persistence **v3**; verify harness +
+  unit tests rewritten; DESIGN / DEV / TESTING / README updated; `MARKETING_VERSION → 2.0`.
+- **Light Complications** (a couple wired into UI).
+
+**Designed, staged for follow-up:** full Complication/boss deck; deep Ascension / Circuit
+tiers; richer route maps; Bazaar economy depth; more Trainers and Items; bespoke Grail-plate
+art. Marked as such in DESIGN.md.

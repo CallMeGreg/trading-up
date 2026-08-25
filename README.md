@@ -4,9 +4,9 @@
 
 # Trading Up
 
-### Rip packs, chase the rares.
+### Trade up. Land the grail.
 
-**Start with $100. Finish with all 250 Sprytes.**
+**Start a Hunt with a stake and a fistful of commons. Trade up until the grail is in your hands.**
 
 A card‑collecting economy game for iPhone and iPad, built in SwiftUI.
 
@@ -22,94 +22,74 @@ A card‑collecting economy game for iPhone and iPad, built in SwiftUI.
 ## Overview
 
 Trading Up is built around the best part of trading cards: tearing open a fresh
-pack and turning it over one card at a time.
+pack and turning it over one card at a time — now in service of a **hunt**.
 
-Buy a pack, rip it, and find out what you got. Six cards — three commons, two
-uncommons, and a rare or an ultra rare — with a 1% shot at a shimmering foil on
-any of them. New pulls go straight into your binder. Extras become cash, at the
-shop's price rather than yours.
+Every run is a **Hunt** for one **Grail**: a specific dream card you trade up
+toward. You pick your Grail and a **Trainer** at the Collectors' Guild, then chase
+it through a chain of escalating **Leads**. Each Lead sets an **Ask** — own a card
+worth this much, hand over a graded card, hit a foil — and you meet it by ripping
+packs, grading your best pulls, and trading through the Bazaar. Meet the final Ask,
+hold the Grail, pay its price at the **Score**, and the Hunt is won.
 
 Between those two ends is a real economy — pack odds, a buylist spread, grading
-variance and set bonuses — that you can actually play against instead of just
-watching. Collect all **250 Sprytes** and you're a Master Collector. Run out of
-cash with nothing left worth selling and you're tapped out.
+variance and set bonuses — that you play against instead of just watching. And win
+or bust, the **best copy of every card you touched is kept forever** in your
+permanent Binder, so no Hunt is ever wasted. Filling that Binder — first every
+card, then every card as a Gem‑Mint foil — is the long game.
 
 Every creature, name, illustration and line of flavor text is original to the
 game, generated from code and shipped inside the app. No accounts, no ads, no
-tracking — just the game. Set 1 is free to play in full; one optional one‑time
-purchase unlocks the other four sets.
+tracking — just the game, and it plays fully offline.
 
 ## Screenshots
 
-<table>
-<tr>
-<td width="20%"><img src="docs/screenshots/app/01-shop.png" alt="The shop: cash, binder progress, and five sets of packs with the later ones still locked"></td>
-<td width="20%"><img src="docs/screenshots/app/02-rip-packs.png" alt="A new rare flipping over during a pack reveal"></td>
-<td width="20%"><img src="docs/screenshots/app/03-keep-or-sell.png" alt="The pack summary paying out evolution bonuses, with the duplicate ready to sell"></td>
-<td width="20%"><img src="docs/screenshots/app/04-grade.png" alt="A card coming back from grading as a PSA 10, worth five times what it was"></td>
-<td width="20%"><img src="docs/screenshots/app/05-collect.png" alt="The collection grid filling in, unowned cards still locked"></td>
-</tr>
-<tr>
-<td align="center"><b>Shop</b></td>
-<td align="center"><b>Rip packs</b></td>
-<td align="center"><b>Keep or sell</b></td>
-<td align="center"><b>Grade</b></td>
-<td align="center"><b>Collect</b></td>
-</tr>
-</table>
-
-<sub>Real screenshots from the current build, captured on an iPhone by
-<a href="docs/APP_STORE.md#screenshots"><code>tools/capture_screenshots.sh</code></a>.</sub>
+<sub>Fresh 2.0 "The Chase" screenshots are being recaptured for the store listing.
+The captures below show the live build: the main menu, the Collectors' Guild, and
+a Hunt in progress.</sub>
 
 ## How to play
 
-### 🛒 Buy a pack
+### 🎯 Pick a Grail at the Guild
 
-Each of the five sets sells a **Pack** of 6 cards. Higher sets cost steeply more —
-$10 → $30 → $75 → $160 → $400 — but hold far more valuable cards, so working your
-way up is the only route to the expensive half of the collection.
+Every Hunt starts at the **Collectors' Guild** with three Grails to choose from —
+one **Easy**, one **Medium**, one **Hard** (say, *any Ultra worth $120+*, *any
+Emberfall card graded 8+*, or *a specific named Spryte in foil*). A harder Grail
+pays more **Renown** but means a longer, meaner Hunt. Pick a **Trainer** too — a
+specialist who tilts the run (more Energy, cheaper grading, a bigger stake).
 
-### ✨ Rip it
+### ⚡ Work the Leads
 
-Tap to reveal cards one at a time, with the hit slot always saved for last. Every
-pack is **3 commons, 2 uncommons, and 1 rare‑or‑ultra**, and every card has a
-**1% chance** to be a shiny **foil** (×3 value).
+A Hunt is a chain of **Leads**. Each Lead has an **Ask** you must satisfy to run it
+down and follow it to the next, hotter one. You meet Asks by **ripping packs** —
+each pack costs **1 Energy** plus its cash price — then grading, foiling and trading
+what you pull. Energy is your rip budget for the Lead; cash is your bankroll for the
+whole Hunt.
 
-### 🗂️ Keep or sell
+### 🏅 Grade, foil, and flip
 
-On the pack summary, brand‑new cards are flagged **✦ NEW**. Tap any duplicate to
-keep or sell it individually, or use **Sell Duplicates** / **Keep All** at the
-bottom — the sell total updates live as you decide each card.
+Send a rare or ultra to grading and roll a PSA grade — a **PSA 10** is ×5, a **PSA
+9** is ×2. The shop buys duplicates at a **buylist spread**, so grading a pricey
+card *before* you sell it is a real edge. Between Leads, a **Bazaar** sells one‑shot
+and passive **Items** for cash (using them is free), and a **draft** hands you one
+pick for nothing.
 
-The shop buys at a **buylist spread**: you get **75%** of a card's market value.
-Churning packs and dumping dupes slowly bleeds money, and that spread is the
-game's main risk. You can **never sell your last copy** of a card, so your
-collection is always safe.
+### 🏆 Land the grail
 
-### 🏅 Grade your best
+The final Lead is the **Score**: if you can hold the Grail and pay its price, the
+Hunt is **won** and the Grail headlines your Binder. Come up short — run out of
+Energy and cash before you get there — and the Hunt **busts**. Either way, the best
+copy of every card you held is deposited into your permanent Binder, and you bank
+the Renown you earned.
 
-Send a rare or ultra to grading for a flat per‑set fee ($2–$10) and roll a PSA
-grade. A **PSA 10** is ×5, a **PSA 9** is ×2, and a **PSA 1** is a freak ×10
-jackpot — but grades 2–7 are worth *less* than ungraded. Because the fee is cheap
-next to a pricey card, grading valuable duplicates **before** you sell them is a
-real edge. Grading and foils stack.
+### 📖 Fill the Binder — the long game
 
-### 📖 Complete the binder
+The **Binder** is the spine of the game: one slot for each of the **250 Sprytes**,
+always showing your best copy. Owned cards flaunt their foil and grade; the rest are
+locked silhouettes. Completion is weighted toward quality, so even a full set keeps
+pulling you back to chase Gem‑Mint foils. Spend **Renown** at the Guild to recruit
+more Trainers and buy permanent upgrades.
 
-Browse all 50 cards per set. Owned cards show off your best copy; unowned cards
-are locked silhouettes. Filter the grid by **Dupes**, **Foils** and **Rare+**, and
-combine filters to narrow further. Completing an **evolution line** pays a cash
-bonus; completing a whole **set** pays a big one (15× the pack price).
-
-### 🏆 Win or go broke
-
-**Win** by collecting all 250 cards. **Lose** if your cash drops below $10 — the
-cheapest pack — with no way to raise it, even by selling every duplicate you own.
-Winning is a celebration, not an ending: dismiss the win screen and your completed
-collection stays yours to browse. Starting over is always an explicit, confirmed
-choice.
-
-Your progress **auto‑saves** after every action, and a save is never silently
+Your progress **auto‑saves** after every Hunt, and a save is never silently
 discarded.
 
 ## Five sets, 250 cards
@@ -123,21 +103,18 @@ discarded.
 | 5 | **Umbral Reach** | Shadow / cosmic | $400 |
 
 Each set is 50 cards with its own creatures, evolution lines, flavor text and
-rarity spread, and unlocks as your collection grows.
+rarity spread. Early Hunts stay in Emberfall; deeper sets open up as you spend
+Renown and climb the difficulty tiers.
 
 ## No catches
 
-- **Set 1 is free to play in full** — the whole 50‑card loop: rip, sell, grade,
-  evolution‑line bonuses and the set‑completion payout. One optional **one‑time
-  purchase** unlocks the other four sets and the 250‑card Master Collector
-  finish. That's the only thing you can ever buy.
 - **No ads, no tracking, no subscriptions.**
 - **No real‑money packs and no gambling.** You never spend real money on a
-  random pull — the only currency inside the game is fictional.
-- **No account, no sign‑in.** Your collection lives in a single file on your
+  random pull — every currency inside the game (cash, Energy, Renown) is
+  fictional.
+- **No account, no sign‑in.** Your Binder lives in a single file on your
   device and is never sent anywhere.
-- **Plays offline**, on both iPhone and iPad — a connection is only needed the
-  once to make or restore the purchase.
+- **Plays fully offline**, on both iPhone and iPad.
 
 ## Documentation
 

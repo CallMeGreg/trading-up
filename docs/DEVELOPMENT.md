@@ -36,7 +36,8 @@ Optional, only for regenerating content:
 3. **Pick a simulator** in the scheme selector at the top — e.g. *iPhone 16*.
 4. Press **▶︎ Run** (or `⌘R`). First build takes a moment; the app launches in the
    Simulator.
-5. You start with **$100**. Open the **Shop** tab, buy a pack, and tap to reveal!
+5. From the main menu tap **New Run**, pick a Grail and a Trainer at the Collectors'
+   Guild, then **Start the Hunt** and rip your first pack.
 
 There's nothing else to install — the app has **zero third‑party dependencies** and
 all 250 cards are embedded in the binary.
@@ -48,14 +49,25 @@ TradingUp.xcodeproj/         Xcode project (open this)
 TradingUp/
   Models/                    Pure, testable game logic (Foundation only)
     Card.swift               Card, Rarity, Element, CardDatabase
-    Economy.swift            Prices, grading table, value math — all tuning lives here
-    GameCore.swift           Deterministic game state: buy / open / sell / grade / bonuses
-    Persistence.swift        Versioned save envelope, load hygiene, corrupt-save quarantine
-    GameState.swift          @Observable wrapper: randomness + autosave; owns the full-version entitlement gate
+    Economy.swift            v1 prices, grading table, value math
+    Economy+Chase.swift      The Chase (2.0) balance knobs — stake, Energy, Grails, Asks, Renown
+    GameCore.swift           v1 deterministic state: buy / open / sell / grade / bonuses
+    Boosts.swift             Trainers (specialists) + the Items catalog + their effects
+    Hunt.swift               Run structures: Ask, Lead, Grail, RouteBonus, Complication, phases
+    MetaState.swift          Permanent meta: Binder, Renown, Trainer unlocks, Guild upgrades, lifetime stats
+    ChaseCore.swift          The Chase run state (RunState) + ChaseCore (meta + optional run)
+    ChaseEngine.swift        The Chase engine: Grail offers, Asks, rip / grade / sell / land, phase flow
+    Persistence.swift        v1 versioned save envelope, load hygiene, corrupt-save quarantine
+    ChasePersistence.swift   v3 Chase save store + one-time 2.0 migration (seeds Binder from a v1 save)
+    GameState.swift          v1 @Observable wrapper (kept compiled; the full-version entitlement gate)
+    ChaseState.swift         @Observable @MainActor store the Chase UI binds to (randomness + autosave)
+    DebugLaunchState.swift   DEBUG-only launch-env seeding for screenshots/tests
     FeatureFlags.swift       Build-time switches (see "Feature flags" below)
   Generated/
     CardData.swift           The 250 cards (auto-generated — do not edit by hand)
-  Views/                     SwiftUI screens (Shop, Collection, pack opening, PaywallView, etc.)
+  Views/                     SwiftUI screens
+    Chase/                   The 2.0 front end: main menu, Guild, Hunt, Binder, Stats, Settings, What's New
+    (v1 Shop/Collection/PaywallView etc. remain compiled but are no longer the app root)
   Store/
     PurchaseStore.swift      StoreKit 2 layer for the one-time full-version unlock (outside Models/)
   Audio/
@@ -64,8 +76,8 @@ TradingUp/
   Assets.xcassets/           App icon + accent color + CardArt/ (250 card illustrations)
   PrivacyInfo.xcprivacy      Privacy manifest (no tracking, no data collection)
   TradingUp.storekit         StoreKit config for testing the IAP in the Simulator (dev only)
-TradingUpTests/              XCTest unit tests (fast, deterministic)
-TradingUpUITests/            The screenshot playthrough (TradingUpScreenshots scheme)
+TradingUpTests/              XCTest unit tests (fast, deterministic) — incl. ChaseEngineTests, ChaseSaveTests
+TradingUpUITests/            v1 screenshot playthrough (TradingUpScreenshots scheme; staged for a Chase rewrite)
 data/cards.json              The 250 cards as JSON (source for tooling/other targets)
 docs/                        Everything in this folder — design, dev, testing, App Store
   mockups/                   Interactive HTML card-style mockups (open index.html)
@@ -83,19 +95,24 @@ tools/
   seed_save.py               Writes a completed-collection save (late-game screenshots)
   check_icon.py              Checks the 1024² icon against App Store rules
   check_screenshots.py       Checks captured screenshots against App Store sizes
-  verify/main.swift          The Foundation-only simulation harness (see TESTING.md)
+  verify/main.swift          The v1 Foundation-only simulation harness (see TESTING.md)
+  chase_verify/main.swift    The Chase Foundation-only play-test harness (see TESTING.md)
 ```
 
 ## Where to tweak the game
 
-Almost all balance knobs (starting cash, pack prices, pack composition, foil
+The v1 collection game's knobs (starting cash, pack prices, pack composition, foil
 chance, grade odds/multipliers, box guarantees, bonuses) live in
-`TradingUp/Models/Economy.swift`. Card names and values live in
-`tools/generate_cards.py`.
+`TradingUp/Models/Economy.swift`. **The Chase (2.0) has its own knobs** in
+`TradingUp/Models/Economy+Chase.swift`: the starting stake, Energy budgets, Grail
+prices and difficulty tiers, the Ask curves, Renown rates and Guild upgrade costs.
+Card names and values live in `tools/generate_cards.py`.
 
-Re‑run the [verify harness](TESTING.md#the-simulation-harness-no-xcode-needed)
-after any economy change — it enforces the target difficulty curve, not just
-correctness.
+Re‑run the matching harness after any economy change — it enforces the target
+difficulty curve, not just correctness. Use
+[`verify`](TESTING.md#the-simulation-harness-no-xcode-needed) for `Economy.swift`
+and [`chase_verify`](TESTING.md#the-simulation-harness-no-xcode-needed) for
+`Economy+Chase.swift`.
 
 ## Feature flags
 
@@ -112,6 +129,13 @@ Each flag is covered by `TradingUpTests/FeatureFlagTests.swift` in **both**
 states, so flipping one is a one-line change rather than a leap of faith.
 
 ## In-app purchase (full-version unlock)
+
+> **2.0 note:** The Chase front end doesn't surface the paywall yet — the app root
+> (`TradingUpApp`) presents `ChaseRootView` and no longer instantiates
+> `PurchaseStore`, so every set is currently reachable through play (Renown / the
+> Ascension tier). The StoreKit layer below stays compiled and tested; re-wiring the
+> "sell depth, not the loop" gate into the Hunt is designed and **staged for
+> follow-up** (see `docs/DESIGN.md` §13).
 
 The app is free with one non-consumable IAP that unlocks sets 2–5; Set 1 is free
 to play in full (design rationale in `docs/DESIGN.md` §11). The moving parts:

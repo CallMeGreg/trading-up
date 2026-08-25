@@ -4,14 +4,16 @@ Trading Up has two test layers, on purpose:
 
 | Layer | What it is | When it runs | Needs Xcode? |
 | --- | --- | --- | --- |
-| `TradingUpTests/` | Fast, deterministic XCTest unit tests | Every push and PR (CI) | Yes |
-| `tools/verify/main.swift` | Foundation‑only Monte Carlo simulation of the whole economy | Every push and PR (CI), and locally after any economy change | No |
+| `TradingUpTests/` | Fast, deterministic XCTest unit tests (v1 collection game **and** the Chase engine/saves) | Every push and PR (CI) | Yes |
+| `tools/verify/main.swift` | Foundation‑only Monte Carlo simulation of the v1 economy | Every push and PR (CI), and locally after any `Economy.swift` change | No |
+| `tools/chase_verify/main.swift` | Foundation‑only Monte Carlo play‑test of **The Chase** (2.0) | Every push and PR (CI), and locally after any `Economy+Chase.swift` change | No |
 
 The split exists because the interesting properties of this game are
 *statistical* — pack expected value, grade odds, how often reckless play goes
-bust. Those need tens of thousands of simulated runs, which is the wrong shape
-for a unit‑test suite, so they live in a standalone harness that compiles the
-pure model files with `swiftc` and runs in seconds.
+bust, whether a thoughtful Hunt actually lands its Grail. Those need thousands of
+simulated runs, which is the wrong shape for a unit‑test suite, so they live in
+standalone harnesses that compile the pure model files with `swiftc` and run in
+seconds.
 
 ---
 
@@ -37,6 +39,8 @@ Or just press `⌘U` in Xcode.
 | `WinAndUnlockTests.swift` | Winning shows once, doesn't erase the collection; set unlocks |
 | `FullUnlockGateTests.swift` | The free-tier/full-version IAP gate: Set 1 free, paid sets refuse a buy until unlocked, and the unlock never skips progression |
 | `RevealFlowTests.swift` | The win/Game Over overlay waits for a pack reveal to finish; the DEBUG fast‑travel seed |
+| `ChaseEngineTests.swift` | The Chase engine: Grail offers (3 tiers, a real named Hard target), Trainer stakes, rip Energy/cash costs, grade fee + free‑grade, sell, land‑the‑Grail win + Binder deposit (keep‑better‑copy), give‑up still deposits, the Trainer‑unlock order, and retired‑card sanitizing |
+| `ChaseSaveTests.swift` | The v3 Chase save store: round‑trip, unreadable/newer‑schema quarantine (bytes preserved), and the one‑time 2.0 migration (seeds the Binder from a v1 save, quarantines the legacy file, `.resetForNewVersion`) |
 
 ## The simulation harness (no Xcode needed)
 
@@ -86,20 +90,68 @@ It prints `ALL CHECKS PASSED ✅` on success, and checks, among other things:
 That last one is the reason to run this harness after *any* balance change: it's
 the only thing that will tell you the game is still winnable and still losable.
 
+## The Chase play‑test harness (no Xcode needed)
+
+The 2.0 grail‑hunter has its own harness. It compiles the pure Chase model files
+and Monte‑Carlo‑plays thousands of Hunts with two scripted strategies. Always build
+it optimized (`-O`) — an unoptimized run is minutes instead of seconds:
+
+```bash
+swiftc -O TradingUp/Models/Card.swift \
+          TradingUp/Models/Economy.swift \
+          TradingUp/Models/Economy+Chase.swift \
+          TradingUp/Models/FeatureFlags.swift \
+          TradingUp/Models/GameCore.swift \
+          TradingUp/Models/Persistence.swift \
+          TradingUp/Models/Boosts.swift \
+          TradingUp/Models/Hunt.swift \
+          TradingUp/Models/MetaState.swift \
+          TradingUp/Models/ChaseCore.swift \
+          TradingUp/Models/ChaseEngine.swift \
+          TradingUp/Models/ChasePersistence.swift \
+          TradingUp/Generated/CardData.swift \
+          tools/chase_verify/main.swift \
+          -o /tmp/chase_verify && /tmp/chase_verify
+```
+
+It prints `ALL CHECKS PASSED ✅` on success, and enforces, among other things:
+
+- the **save round‑trip** and the **2.0 migration** — a v3 envelope survives a
+  round‑trip, and a first‑2.0 launch seeds the permanent Binder from a v1
+  collection;
+- **strategy matters** — across thousands of Hunts, a *thoughtful* strategy (meet
+  the Ask, grade before selling, pace Energy) **wins ≥45%** of Hunts, while a
+  *reckless* one **busts ≥30%** (in practice 100%), for a **≥12‑point skill gap**;
+- **no engine invariant is ever violated** across every simulated Hunt (no negative
+  cash/Energy, phases advance legally, the Grail is only landed when actually held
+  and paid for);
+- **meta‑progression accrues** over a fresh career — every Hunt is counted, Renown
+  builds, the Binder fills, and a Trainer can be recruited once affordable.
+
+Run it after *any* change to `Economy+Chase.swift`: the win/bust rates are a
+statistical contract, and a unit test won't catch a balance regression.
+
 ## CI
 
 `.github/workflows/ci.yml` runs three jobs on every push to `main` and every pull
 request, on `macos-15` with Xcode 16.4:
 
-1. **Verify harness** — compiles and runs `tools/verify/main.swift`.
+1. **Verify harnesses** — compiles and runs **both** `tools/verify/main.swift`
+   (v1 economy) and `tools/chase_verify/main.swift` (The Chase).
 2. **Build (iOS Simulator)** — `xcodebuild build` with code signing off.
 3. **Unit tests (iOS Simulator)** — `xcodebuild test` against a simulator picked
    at runtime by `.github/scripts/pick_simulator.py`, so the workflow doesn't
    break when GitHub rotates the installed runtimes.
 
+The `TradingUp` scheme's test action runs only `TradingUpTests`, so the unit‑test
+job covers the whole engine (v1 + Chase) without building the UI‑test target.
+
 The UI screenshot pass is deliberately **not** in CI — it takes ~10 minutes and
 lives on its own `TradingUpScreenshots` scheme so the unit‑test run stays fast.
-See [APP_STORE.md](APP_STORE.md#screenshots).
+Those `TradingUpUITests` drive the **retired v1 front end** (shop, paywall, pack
+reveal); rewriting them against the Chase UI, and recapturing the store
+screenshots, is **staged for follow-up** (see `docs/DESIGN.md` §13). See
+[APP_STORE.md](APP_STORE.md#screenshots).
 
 ### CodeQL code scanning
 
