@@ -48,6 +48,24 @@ final class PurchaseStore {
         return fullUnlock?.displayPrice
     }
 
+    #if DEBUG
+    /// Launch key for the DEBUG-only entitlement override.
+    private static let forceUnlockKey = "TU_FORCE_UNLOCK"
+
+    /// DEBUG-only launch override that forces the full-version entitlement on, so
+    /// the *unlocked* main menu — and Gauntlet Mode — can be exercised and
+    /// screenshotted without a live StoreKit purchase. It is the entitlement
+    /// analogue of `TU_FAKE_PRICE`: read only here, honoured by `init` and
+    /// `refresh()`, and compiled out of release entirely, so a shipped build has
+    /// no code path that can grant the unlock this way.
+    private static var forcedUnlock: Bool {
+        switch ProcessInfo.processInfo.environment[forceUnlockKey]?.lowercased() {
+        case "1", "true", "yes": return true
+        default: return false
+        }
+    }
+    #endif
+
     /// The verified entitlement, mirrored here for the paywall's own UI.
     /// `GameState.isFullVersionUnlocked` is the game-facing copy and is kept in
     /// step through `apply(_:)`.
@@ -73,9 +91,12 @@ final class PurchaseStore {
 
         // Instant, cached hint so an owner's paid sets are open on cold launch,
         // before the async StoreKit check lands. Overwritten by `refresh()`.
-        let cached = UserDefaults.standard.bool(forKey: Self.cacheKey)
-        isFullVersionUnlocked = cached
-        game.setFullVersionUnlocked(cached)
+        var initial = UserDefaults.standard.bool(forKey: Self.cacheKey)
+        #if DEBUG
+        initial = initial || Self.forcedUnlock
+        #endif
+        isFullVersionUnlocked = initial
+        game.setFullVersionUnlocked(initial)
 
         // A lifetime listener for transactions that arrive *outside* a direct
         // purchase: Ask-to-Buy approvals, a buy made on another device, or a
@@ -111,6 +132,9 @@ final class PurchaseStore {
     /// authoritative, locally-verified set of non-consumables the account owns.
     /// Runs on launch, after a purchase, and after a restore.
     func refresh() async {
+        #if DEBUG
+        if Self.forcedUnlock { apply(true); return }
+        #endif
         var owned = false
         for await result in Transaction.currentEntitlements {
             guard case .verified(let transaction) = result else { continue }

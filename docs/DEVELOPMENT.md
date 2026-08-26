@@ -51,11 +51,15 @@ TradingUp/
     Economy.swift            Prices, grading table, value math — all tuning lives here
     GameCore.swift           Deterministic game state: buy / open / sell / grade / bonuses
     Persistence.swift        Versioned save envelope, load hygiene, corrupt-save quarantine
-    GameState.swift          @Observable wrapper: randomness + autosave; owns the full-version entitlement gate
+    GameState.swift          @Observable wrapper: randomness + autosave; owns the full-version entitlement gate and the Binder
+    Binder.swift             All-time showcase model: best copy ever owned of each Spryte (survives New Game)
+    BinderStore.swift        Versioned store for the Binder, in its own file separate from the run save
     FeatureFlags.swift       Build-time switches (see "Feature flags" below)
   Generated/
     CardData.swift           The 250 cards (auto-generated — do not edit by hand)
-  Views/                     SwiftUI screens (Shop, Collection, pack opening, PaywallView, etc.)
+  Views/                     SwiftUI screens. Menu shell: MainMenuView + SpryteParadeView (home animation),
+                             ClassicModeView (the tabbed game), GauntletView (placeholder), BinderView;
+                             plus Shop, Collection, pack opening, PaywallView, etc.
   Store/
     PurchaseStore.swift      StoreKit 2 layer for the one-time full-version unlock (outside Models/)
   Audio/
