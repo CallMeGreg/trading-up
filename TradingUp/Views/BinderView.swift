@@ -11,6 +11,7 @@ struct BinderView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var set = 1
+    @State private var selected: Card?
 
     private var binder: Binder { game.binder }
     private var cards: [Card] { CardDatabase.cards(inSet: set) }
@@ -53,6 +54,11 @@ struct BinderView: View {
                             .font(.system(size: 15, weight: .bold))
                     }
                     .tint(Palette.text)
+                }
+            }
+            .sheet(item: $selected) { card in
+                if let best = binder.best(for: card.id) {
+                    BinderCardDetailView(card: card, best: best)
                 }
             }
         }
@@ -102,9 +108,88 @@ struct BinderView: View {
     @ViewBuilder
     private func slot(for card: Card) -> some View {
         if let best = binder.best(for: card.id) {
-            CardView(card: card, instance: best, width: 104)
+            Button {
+                Haptics.play(.light)
+                selected = card
+            } label: {
+                CardView(card: card, instance: best, width: 104)
+            }
+            .buttonStyle(.plain)
         } else {
             LockedCardView(card: card, width: 104)
         }
+    }
+}
+
+// MARK: - Binder card detail
+
+/// Read-only Binder card detail: the best copy on record shown large, with its
+/// value and evolution line — and none of the Collection sheet's per-copy
+/// sell/grade controls, since the Binder is a permanent showcase, not a live run.
+private struct BinderCardDetailView: View {
+    let card: Card
+    let best: CardInstance
+    @Environment(GameState.self) private var game: GameState
+    @Environment(\.dismiss) private var dismiss
+
+    private var line: [Card] { CardDatabase.line(card.lineId) }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 18) {
+                    CardView(card: card, instance: best, width: 250)
+                        .padding(.top, 8)
+                    valuePanel
+                    if line.count > 1 {
+                        EvolutionLineView(line: line, currentCardId: card.id) {
+                            game.binder.hasCard($0)
+                        }
+                    }
+                }
+                .padding(16)
+                .readableWidth()
+            }
+            .background(Palette.screen.ignoresSafeArea())
+            .navigationTitle(card.name)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+    }
+
+    /// The best copy's headline value and pedigree — the Binder's stand-in for the
+    /// Collection sheet's per-copy rows, minus anything that can spend or sell it.
+    private var valuePanel: some View {
+        VStack(spacing: 8) {
+            HStack(spacing: 6) {
+                if best.foil { pedigree("★ FOIL", Color(hex: "ff8ad6")) }
+                if let g = best.grade { pedigree("PSA \(g)", gradeColor(g)) }
+                if !best.foil && best.grade == nil {
+                    Text("Standard")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(Palette.subtle)
+                }
+            }
+            Text(best.currentValue.money)
+                .font(.system(size: 30, weight: .heavy, design: .rounded))
+                .foregroundStyle(Palette.money)
+            Text("Best copy on record")
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(Palette.subtle)
+        }
+        .frame(maxWidth: .infinity)
+        .panel()
+    }
+
+    private func pedigree(_ t: String, _ color: Color) -> some View {
+        Text(t)
+            .font(.system(size: 10, weight: .black))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 6).padding(.vertical, 2)
+            .background(Capsule().fill(color))
     }
 }

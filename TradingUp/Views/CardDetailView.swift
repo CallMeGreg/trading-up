@@ -19,7 +19,9 @@ struct CardDetailView: View {
                     CardView(card: card, instance: copies.first, width: 250)
                         .padding(.top, 8)
 
-                    if line.count > 1 { evolutionSection }
+                    if line.count > 1 {
+                        EvolutionLineView(line: line, currentCardId: card.id) { game.owns($0) }
+                    }
                     copiesSection
                 }
                 .padding(16)
@@ -39,62 +41,6 @@ struct CardDetailView: View {
                 }
             }
         }
-    }
-
-    // MARK: Evolution line
-
-    private var evolutionSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            sectionHeader("Evolution Line")
-            HStack(spacing: 6) {
-                ForEach(Array(line.enumerated()), id: \.element.id) { idx, stageCard in
-                    VStack(spacing: 5) {
-                        miniStage(stageCard)
-                        Text(stageCard.name)
-                            .font(.system(size: 10, weight: .semibold))
-                            .foregroundStyle(game.owns(stageCard.id) ? Palette.text : Palette.subtle)
-                            .lineLimit(1).minimumScaleFactor(0.5)
-                            .frame(width: 68)
-                    }
-                    if idx < line.count - 1 {
-                        Image(systemName: "arrow.right")
-                            .font(.system(size: 12, weight: .bold))
-                            .foregroundStyle(Palette.subtle)
-                    }
-                }
-                Spacer(minLength: 0)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .panel()
-    }
-
-    private func miniStage(_ c: Card) -> some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 10)
-                .fill(game.owns(c.id) ? AnyShapeStyle(c.element.artGradient) : AnyShapeStyle(Palette.bg0.opacity(0.5)))
-            if game.owns(c.id) {
-                // Same shipped illustration the card itself uses, so the line
-                // reads as a row of familiar creatures rather than placeholders.
-                if let art = UIImage(named: c.id) {
-                    Image(uiImage: art)
-                        .resizable()
-                        .interpolation(.high)
-                        .scaledToFill()
-                } else {
-                    SigilView(seed: c.name + c.element.rawValue, element: c.element).padding(6)
-                }
-            } else {
-                Image(systemName: "questionmark")
-                    .font(.system(size: 22, weight: .black))
-                    .foregroundStyle(Palette.stroke)
-            }
-            RoundedRectangle(cornerRadius: 10)
-                .strokeBorder(c.id == card.id ? card.rarity.accent : Palette.stroke,
-                              lineWidth: c.id == card.id ? 2 : 1)
-        }
-        .frame(width: 68, height: 68)
-        .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 
     // MARK: Copies
@@ -187,6 +133,74 @@ struct CardDetailView: View {
         }
         .buttonStyle(.plain)
         .disabled(!enabled)
+    }
+}
+
+// MARK: - Evolution line (shared)
+
+/// The evolution-line strip shared by the Collection and Binder card details.
+/// Each stage shows its shipped art when owned — per the injected `owns`
+/// predicate, which differs by context (the live run vs. the all-time Binder) —
+/// or a locked placeholder, with the detail's own card highlighted.
+struct EvolutionLineView: View {
+    let line: [Card]
+    let currentCardId: String
+    let owns: (String) -> Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("EVOLUTION LINE")
+                .font(.system(size: 12, weight: .black))
+                .foregroundStyle(Palette.subtle)
+            HStack(spacing: 6) {
+                ForEach(Array(line.enumerated()), id: \.element.id) { idx, stageCard in
+                    VStack(spacing: 5) {
+                        miniStage(stageCard)
+                        Text(stageCard.name)
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(owns(stageCard.id) ? Palette.text : Palette.subtle)
+                            .lineLimit(1).minimumScaleFactor(0.5)
+                            .frame(width: 68)
+                    }
+                    if idx < line.count - 1 {
+                        Image(systemName: "arrow.right")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(Palette.subtle)
+                    }
+                }
+                Spacer(minLength: 0)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .panel()
+    }
+
+    private func miniStage(_ c: Card) -> some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 10)
+                .fill(owns(c.id) ? AnyShapeStyle(c.element.artGradient) : AnyShapeStyle(Palette.bg0.opacity(0.5)))
+            if owns(c.id) {
+                // Same shipped illustration the card itself uses, so the line
+                // reads as a row of familiar creatures rather than placeholders.
+                if let art = UIImage(named: c.id) {
+                    Image(uiImage: art)
+                        .resizable()
+                        .interpolation(.high)
+                        .scaledToFill()
+                } else {
+                    SigilView(seed: c.name + c.element.rawValue, element: c.element).padding(6)
+                }
+            } else {
+                Image(systemName: "questionmark")
+                    .font(.system(size: 22, weight: .black))
+                    .foregroundStyle(Palette.stroke)
+            }
+            RoundedRectangle(cornerRadius: 10)
+                .strokeBorder(c.id == currentCardId ? c.rarity.accent : Palette.stroke,
+                              lineWidth: c.id == currentCardId ? 2 : 1)
+        }
+        .frame(width: 68, height: 68)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 }
 
