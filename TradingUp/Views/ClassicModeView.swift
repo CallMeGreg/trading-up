@@ -20,9 +20,12 @@ struct ClassicModeView: View {
             CollectionView()
                 .tabItem { Label("Collection", systemImage: "square.grid.3x3.fill") }
                 .tag(AppTab.collection)
-            StatsView(onExitToMenu: { dismiss() })
+            StatsView()
                 .tabItem { Label("Stats", systemImage: "chart.bar.fill") }
                 .tag(AppTab.stats)
+            SettingsView(onExitToMenu: { dismiss() })
+                .tabItem { Label("Settings", systemImage: "gearshape.fill") }
+                .tag(AppTab.settings)
         }
         .tint(Palette.money)
         // "Start Collecting" is the only way out of the welcome intro, so its
@@ -69,7 +72,7 @@ enum AppOverlay: Int, Identifiable {
     var id: Int { rawValue }
 }
 
-/// The three main tabs, so `ClassicModeView` can drive selection programmatically.
+/// The four main tabs, so `ClassicModeView` can drive selection programmatically.
 enum AppTab: Hashable {
-    case shop, collection, stats
+    case shop, collection, stats, settings
 }

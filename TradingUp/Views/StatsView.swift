@@ -2,13 +2,7 @@ import SwiftUI
 
 struct StatsView: View {
     @Environment(GameState.self) var game: GameState
-    @Bindable private var sound = SoundManager.shared
-    @State private var confirmNew = false
     @State private var scope: Scope = .run
-
-    /// Provided by `ClassicModeView` so the meta tab can bow out to the main menu.
-    /// Left `nil` anywhere Stats is shown on its own, which hides the button.
-    var onExitToMenu: (() -> Void)? = nil
 
     private enum Scope: String, CaseIterable, Identifiable {
         case run = "This Run"
@@ -96,63 +90,12 @@ struct StatsView: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .panel()
-
-                    VStack(alignment: .leading, spacing: 12) {
-                        header("Settings")
-                        Toggle(isOn: $sound.isEnabled) {
-                            Label("Sound Effects",
-                                  systemImage: sound.isEnabled ? "speaker.wave.2.fill" : "speaker.slash.fill")
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundStyle(Palette.text)
-                        }
-                        .tint(Palette.money)
-                        .onChange(of: sound.isEnabled) { _, on in
-                            Haptics.play(.light)
-                            if on { Sound.play(.coin) }   // brief confirmation you can hear
-                        }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .panel()
-
-                    if let onExitToMenu {
-                        Button {
-                            Haptics.play(.light)
-                            onExitToMenu()
-                        } label: {
-                            Label("Main Menu", systemImage: "house.fill")
-                                .font(.system(size: 14, weight: .bold))
-                                .foregroundStyle(Palette.tapCue)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 12)
-                                .background(RoundedRectangle(cornerRadius: 14).strokeBorder(Palette.tapCue.opacity(0.5), lineWidth: 1))
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityIdentifier("exitToMenu")
-                    }
-
-                    Button {
-                        confirmNew = true
-                    } label: {
-                        Label("New Game", systemImage: "arrow.counterclockwise")
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundStyle(Color(hex: "e0663b"))
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
-                            .background(RoundedRectangle(cornerRadius: 14).strokeBorder(Color(hex: "e0663b").opacity(0.5), lineWidth: 1))
-                    }
-                    .buttonStyle(.plain)
                 }
                 .padding(16)
                 .readableWidth()
             }
             .background(Palette.screen.ignoresSafeArea())
             .toolbar(.hidden, for: .navigationBar)
-            .alert("Start a new game?", isPresented: $confirmNew) {
-                Button("Cancel", role: .cancel) {}
-                Button("Reset", role: .destructive) { game.newGame() }
-            } message: {
-                Text("This erases your current collection and cash, and starts over with \(Economy.startingCash.money). Your all-time record is kept.")
-            }
         }
     }
 

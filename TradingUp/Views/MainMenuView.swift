@@ -283,21 +283,21 @@ private struct SetRingBadge: View {
     private var element: Element { Element.theme(forSet: set) }
 
     var body: some View {
-        let glow = size * 1.85
+        let glow = size * 2.35
         return ZStack {
             Circle()
                 .fill(
                     RadialGradient(
-                        colors: [element.palette[1].opacity(0.5),
-                                 element.palette[1].opacity(0.14),
+                        colors: [element.palette[1].opacity(0.62),
+                                 element.palette[1].opacity(0.24),
                                  .clear],
                         center: .center,
-                        startRadius: size * 0.42,
+                        startRadius: size * 0.4,
                         endRadius: glow / 2
                     )
                 )
                 .frame(width: glow, height: glow)
-                .blur(radius: 3)
+                .blur(radius: 5)
 
             SetEmblem(set: set)
                 .frame(width: size, height: size)

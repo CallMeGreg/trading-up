@@ -14,24 +14,34 @@ struct WelcomeView: View {
                            center: .top, startRadius: 20, endRadius: 480)
                 .ignoresSafeArea()
 
-            // There's not much to read here, so nobody should have to scroll to
-            // find the button that starts the game. Try the roomy layout first
-            // and step down through tighter spacing until one fits the screen;
-            // scrolling is only the last resort, for the cases where even the
-            // tightest layout can't fit (small phones, landscape).
-            ViewThatFits(in: .vertical) {
-                content(.roomy)
-                content(.compact)
-                content(.tight)
-                ScrollView { content(.tight) }
+            VStack(spacing: 12) {
+                // There's not much to read here, so nobody should have to scroll
+                // to find the button that starts the game. Try the roomy layout
+                // first and step down through tighter spacing until one fits;
+                // scrolling is the last resort (small phones, landscape). The
+                // greedy frame lets the button settle near the bottom so it stays
+                // reachable without scrolling, however tall the screen.
+                ViewThatFits(in: .vertical) {
+                    explainer(.roomy)
+                    explainer(.compact)
+                    explainer(.tight)
+                    ScrollView { explainer(.tight) }
+                }
+                .frame(maxHeight: .infinity)
+
+                BigButton(title: "Start Collecting", systemImage: "sparkles",
+                          tint: [Palette.money, Color(hex: "39b56a")]) {
+                    Haptics.play(.success)
+                    game.markWelcomeSeen()
+                }
             }
+            .padding(16)
+            .readableWidth()
         }
     }
 
-    private func content(_ d: Density) -> some View {
+    private func explainer(_ d: Density) -> some View {
         VStack(spacing: d.stack) {
-            Text("🎴").font(.system(size: d.hero))
-
             VStack(spacing: 6) {
                 Text("WELCOME TO")
                     .font(.system(size: 13, weight: .black)).tracking(3)
@@ -39,6 +49,10 @@ struct WelcomeView: View {
                 Text("Trading Up")
                     .font(.system(size: d.wordmark, weight: .black, design: .rounded))
                     .foregroundStyle(.white)
+                Text("Classic Mode")
+                    .font(.system(size: 15, weight: .heavy, design: .rounded))
+                    .tracking(0.5)
+                    .foregroundStyle(Palette.money)
             }
 
             VStack(alignment: .leading, spacing: d.infoRows) {
@@ -65,15 +79,7 @@ struct WelcomeView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .panel(d.panelPad)
-
-            BigButton(title: "Start Collecting", systemImage: "sparkles",
-                      tint: [Palette.money, Color(hex: "39b56a")]) {
-                Haptics.play(.success)
-                game.markWelcomeSeen()
-            }
         }
-        .padding(d.outerPad)
-        .readableWidth()
     }
 
     private func infoRow(_ d: Density, _ emoji: String, _ title: String, _ body: String) -> some View {
@@ -109,7 +115,6 @@ struct WelcomeView: View {
     /// How generously the intro is spaced. `ViewThatFits` walks these from
     /// roomiest to tightest and picks the first one the screen can hold.
     fileprivate struct Density {
-        var hero: CGFloat
         var wordmark: CGFloat
         var stack: CGFloat
         var infoRows: CGFloat
@@ -118,13 +123,12 @@ struct WelcomeView: View {
         var rowEmoji: CGFloat
         var rowTitle: CGFloat
         var rowBody: CGFloat
-        var outerPad: CGFloat
 
-        static let roomy = Density(hero: 68, wordmark: 32, stack: 18, infoRows: 16, goalRows: 14,
-                                   panelPad: 16, rowEmoji: 26, rowTitle: 15, rowBody: 13, outerPad: 16)
-        static let compact = Density(hero: 52, wordmark: 30, stack: 13, infoRows: 12, goalRows: 11,
-                                     panelPad: 14, rowEmoji: 24, rowTitle: 15, rowBody: 13, outerPad: 14)
-        static let tight = Density(hero: 38, wordmark: 26, stack: 9, infoRows: 9, goalRows: 8,
-                                   panelPad: 11, rowEmoji: 21, rowTitle: 14, rowBody: 12, outerPad: 10)
+        static let roomy = Density(wordmark: 32, stack: 18, infoRows: 16, goalRows: 14,
+                                   panelPad: 16, rowEmoji: 26, rowTitle: 15, rowBody: 13)
+        static let compact = Density(wordmark: 30, stack: 13, infoRows: 12, goalRows: 11,
+                                     panelPad: 14, rowEmoji: 24, rowTitle: 15, rowBody: 13)
+        static let tight = Density(wordmark: 26, stack: 9, infoRows: 9, goalRows: 8,
+                                   panelPad: 11, rowEmoji: 21, rowTitle: 14, rowBody: 12)
     }
 }
