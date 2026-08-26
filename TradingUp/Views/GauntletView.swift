@@ -45,8 +45,6 @@ struct GauntletView: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.horizontal, 12)
 
-                comingSoonBadge
-
                 Spacer()
 
                 BigButton(title: "Back to Menu", systemImage: "chevron.left",
@@ -59,15 +57,6 @@ struct GauntletView: View {
             .readableWidth()
         }
         .overlay(alignment: .topLeading) { backButton }
-    }
-
-    private var comingSoonBadge: some View {
-        Label("In development", systemImage: "hammer.fill")
-            .font(.system(size: 12, weight: .bold))
-            .foregroundStyle(Color(hex: "ffd54a"))
-            .padding(.horizontal, 12).padding(.vertical, 7)
-            .background(Capsule().fill(Color(hex: "ffd54a").opacity(0.12)))
-            .overlay(Capsule().strokeBorder(Color(hex: "ffd54a").opacity(0.35), lineWidth: 1))
     }
 
     private var backButton: some View {

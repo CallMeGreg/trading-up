@@ -103,8 +103,9 @@ struct MainMenuView: View {
 
     /// Gauntlet is gated behind the Full Game unlock. Unlocked, it's an ordinary
     /// frosted tile that enters the mode. Locked, it expands into a "vault": the
-    /// mode keeps its purple identity up top with a LOCKED badge, and a full-width
-    /// amber call-to-action opens the paywall to buy the Full Game.
+    /// mode keeps its purple identity up top with a "Coming soon!" badge, and a
+    /// full-width amber call-to-action opens the paywall to buy the Full Game.
+    /// The badge rides along in both states, since the mode is a placeholder.
     @ViewBuilder
     private var gauntletButton: some View {
         if unlocked {
@@ -112,7 +113,8 @@ struct MainMenuView: View {
                 title: "Gauntlet Mode",
                 subtitle: "A relentless new way to play",
                 systemImage: "bolt.fill",
-                accent: Color(hex: "b98cff")
+                accent: Color(hex: "b98cff"),
+                badge: "Coming soon!"
             ) {
                 Haptics.play(.medium)
                 route = .gauntlet
@@ -193,6 +195,8 @@ private struct MenuButton: View {
     let systemImage: String
     /// Drives both the leading accent rail and the glyph tint.
     var accent: Color
+    /// Optional capsule tag shown beside the title, e.g. "Coming soon!".
+    var badge: String? = nil
     let action: () -> Void
 
     var body: some View {
@@ -204,9 +208,13 @@ private struct MenuButton: View {
                     .frame(width: 44, height: 46)
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
-                        .font(.system(size: 18, weight: .heavy, design: .rounded))
-                        .foregroundStyle(.white)
+                    HStack(spacing: 7) {
+                        Text(title)
+                            .font(.system(size: 18, weight: .heavy, design: .rounded))
+                            .foregroundStyle(.white)
+                            .lineLimit(1).minimumScaleFactor(0.75)
+                        if let badge { MenuBadge(text: badge) }
+                    }
                     if let subtitle {
                         Text(subtitle)
                             .font(.system(size: 12, weight: .semibold))
@@ -230,8 +238,23 @@ private struct MenuButton: View {
     }
 }
 
+/// A small capsule tag shown beside a mode's title — e.g. "Coming soon!" on
+/// Gauntlet Mode, in both its locked and unlocked states.
+private struct MenuBadge: View {
+    let text: String
+    var body: some View {
+        Text(text)
+            .font(.system(size: 9, weight: .heavy))
+            .tracking(0.4)
+            .foregroundStyle(.white.opacity(0.85))
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
+            .background(Capsule().fill(.white.opacity(0.16)))
+    }
+}
+
 /// The locked Gauntlet "vault": a frosted tile that keeps Gauntlet's purple
-/// identity (medallion glyph + LOCKED badge) and hosts a full-width amber
+/// identity (medallion glyph + "Coming soon!" badge) and hosts a full-width amber
 /// call-to-action, which opens the Full Game paywall.
 private struct GauntletVaultButton: View {
     /// The amber CTA line, e.g. "Unlock the Full Game · $2.99".
@@ -264,13 +287,7 @@ private struct GauntletVaultButton: View {
                             Text("Gauntlet Mode")
                                 .font(.system(size: 18, weight: .heavy, design: .rounded))
                                 .foregroundStyle(.white)
-                            Text("LOCKED")
-                                .font(.system(size: 9, weight: .heavy))
-                                .tracking(0.6)
-                                .foregroundStyle(.white.opacity(0.85))
-                                .padding(.horizontal, 7)
-                                .padding(.vertical, 3)
-                                .background(Capsule().fill(.white.opacity(0.16)))
+                            MenuBadge(text: "Coming soon!")
                         }
                         Text("A relentless new way to play")
                             .font(.system(size: 12, weight: .semibold))
