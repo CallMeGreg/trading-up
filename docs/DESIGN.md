@@ -329,8 +329,9 @@ target live in `tools/verify/main.swift` (strategy sims + economy‑knob asserti
 ## 11. Monetization: free tier + full unlock
 
 Trading Up ships **free**, with a single one-time **non-consumable** in-app
-purchase — *Unlock the full collection* — that opens sets 2–5 and the 250-card
-Master Collector win. **Set 1 · Emberfall is free to play in full**: the whole
+purchase — *Unlock the full collection* — that opens sets 2–5, the 250-card
+Master Collector win, and **Gauntlet Mode** (§13). **Set 1 · Emberfall is free to
+play in full**: the whole
 loop (rip, sell, grade, evolution-line bonuses, the set-completion payout) plays
 out across its 50 cards before the paywall is ever reached.
 
@@ -394,7 +395,7 @@ slow "parade" of Sprytes drifting behind it. It routes to:
 
 - **Classic Mode** — the original loop above (buy → rip → sell → grade → complete 250).
   Unchanged; it just lives behind the menu now (`Views/ClassicModeView.swift`), and the
-  way back out is the **Main Menu** button on the Stats tab.
+  way back out is the **Main Menu** button on the Settings tab.
 - **Gauntlet Mode** — a new mode, gated behind the full‑game unlock. Design TBD; the
   build ships a themed placeholder (`Views/GauntletView.swift`) so the menu, the paywall
   gate, and navigation are all wired ahead of the real thing.
