@@ -77,9 +77,9 @@ struct MainMenuView: View {
         VStack(spacing: 12) {
             MenuButton(
                 title: "Classic Mode",
-                subtitle: "Chase the full \(game.totalCards)-card collection",
+                subtitle: "Chase the \(game.totalCards)-card collection",
                 systemImage: "square.grid.3x3.fill",
-                tint: [Palette.money, Color(hex: "39b56a")]
+                accent: Color(hex: "56d98a")
             ) {
                 Haptics.play(.medium)
                 route = .classic
@@ -92,7 +92,7 @@ struct MainMenuView: View {
                 title: "Binder",
                 subtitle: binderSubtitle,
                 systemImage: "books.vertical.fill",
-                tint: [Color(hex: "3b82f6"), Color(hex: "6d5cf7")]
+                accent: Color(hex: "6f9dff")
             ) {
                 Haptics.play(.light)
                 route = .binder
@@ -101,40 +101,43 @@ struct MainMenuView: View {
         }
     }
 
-    /// Gauntlet is gated behind the Full Game unlock, and while locked it doubles
-    /// as the unlock call-to-action: it wears a padlock, its subtitle carries the
-    /// price, and a tap opens the paywall. Unlocked, it simply enters the mode.
+    /// Gauntlet is gated behind the Full Game unlock. Unlocked, it's an ordinary
+    /// frosted tile that enters the mode. Locked, it expands into a "vault": the
+    /// mode keeps its purple identity up top with a LOCKED badge, and a full-width
+    /// amber call-to-action opens the paywall to buy the Full Game.
+    @ViewBuilder
     private var gauntletButton: some View {
-        MenuButton(
-            title: "Gauntlet Mode",
-            subtitle: gauntletSubtitle,
-            systemImage: "bolt.fill",
-            tint: [Color(hex: "b06cf7"), Color(hex: "6d2bb3")],
-            locked: !unlocked
-        ) {
-            if unlocked {
+        if unlocked {
+            MenuButton(
+                title: "Gauntlet Mode",
+                subtitle: "A relentless new way to play",
+                systemImage: "bolt.fill",
+                accent: Color(hex: "b98cff")
+            ) {
                 Haptics.play(.medium)
                 route = .gauntlet
-            } else {
+            }
+            .accessibilityIdentifier("gauntletMode")
+        } else {
+            GauntletVaultButton(unlockTitle: unlockCTA) {
                 Haptics.play(.light)
                 showPaywall = true
             }
+            .accessibilityIdentifier("gauntletMode")
         }
-        .accessibilityIdentifier("gauntletMode")
     }
 
     private var binderSubtitle: String {
         "Your best Sprytes · \(game.binder.filledCount)/\(game.binder.totalSlots)"
     }
 
-    /// Locked, the Gauntlet button doubles as the Full Game unlock CTA, so its
-    /// subtitle carries the price; unlocked, it's just the mode's tagline.
-    private var gauntletSubtitle: String {
-        if unlocked { return "A relentless new way to play" }
+    /// The locked Gauntlet vault's amber CTA line. Carries the live price once
+    /// StoreKit resolves it, and stays a clean call to action before then.
+    private var unlockCTA: String {
         if let price = purchases.displayPrice, !price.isEmpty {
             return "Unlock the Full Game · \(price)"
         }
-        return "Unlock the Full Game — all sets + Gauntlet"
+        return "Unlock the Full Game"
     }
 
     private var background: some View {
@@ -179,26 +182,26 @@ enum MenuRoute: Int, Identifiable {
     var id: Int { rawValue }
 }
 
-// MARK: - Menu button
+// MARK: - Menu tiles
 
-/// A tall home-screen menu tile: icon, title, subtitle, and a trailing chevron —
-/// or a padlock when the option is gated behind a purchase.
+/// A home-screen menu tile in the frosted-glass style: a blurred translucent
+/// panel with a colored accent rail and tinted glyph on the leading edge, the
+/// title and subtitle, and a trailing chevron.
 private struct MenuButton: View {
     let title: String
     var subtitle: String? = nil
     let systemImage: String
-    var tint: [Color]
-    var locked: Bool = false
+    /// Drives both the leading accent rail and the glyph tint.
+    var accent: Color
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             HStack(spacing: 14) {
                 Image(systemName: systemImage)
-                    .font(.system(size: 20, weight: .bold))
-                    .foregroundStyle(.white)
-                    .frame(width: 46, height: 46)
-                    .background(Circle().fill(.white.opacity(0.18)))
+                    .font(.system(size: 21, weight: .bold))
+                    .foregroundStyle(accent)
+                    .frame(width: 44, height: 46)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
@@ -207,30 +210,132 @@ private struct MenuButton: View {
                     if let subtitle {
                         Text(subtitle)
                             .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(.white.opacity(0.82))
+                            .foregroundStyle(.white.opacity(0.7))
                             .lineLimit(1).minimumScaleFactor(0.7)
                     }
                 }
                 Spacer(minLength: 4)
 
-                Image(systemName: locked ? "lock.fill" : "chevron.right")
-                    .font(.system(size: locked ? 16 : 14, weight: .bold))
-                    .foregroundStyle(.white.opacity(locked ? 0.9 : 0.6))
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(.white.opacity(0.4))
             }
             .padding(.vertical, 14)
-            .padding(.horizontal, 16)
+            .padding(.leading, 18)
+            .padding(.trailing, 16)
             .frame(maxWidth: .infinity)
-            .background(
-                RoundedRectangle(cornerRadius: 18).fill(
-                    LinearGradient(colors: tint, startPoint: .leading, endPoint: .trailing)
-                )
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 18).strokeBorder(.white.opacity(0.12), lineWidth: 1)
-            )
-            .shadow(color: tint.first?.opacity(0.35) ?? .clear, radius: 10, y: 4)
+            .frostedTile(accent: accent)
         }
         .buttonStyle(MenuPressStyle())
+    }
+}
+
+/// The locked Gauntlet "vault": a frosted tile that keeps Gauntlet's purple
+/// identity (medallion glyph + LOCKED badge) and hosts a full-width amber
+/// call-to-action, which opens the Full Game paywall.
+private struct GauntletVaultButton: View {
+    /// The amber CTA line, e.g. "Unlock the Full Game · $2.99".
+    let unlockTitle: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 12) {
+                HStack(spacing: 14) {
+                    Image(systemName: "bolt.fill")
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundStyle(Color(hex: "c9a9ff"))
+                        .frame(width: 46, height: 46)
+                        .background(
+                            RoundedRectangle(cornerRadius: 14, style: .continuous).fill(
+                                RadialGradient(
+                                    colors: [Color(hex: "2a1c47"), Color(hex: "170e2b")],
+                                    center: UnitPoint(x: 0.5, y: 0.32),
+                                    startRadius: 1, endRadius: 40)
+                            )
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .strokeBorder(Color(hex: "4a2f86"), lineWidth: 1)
+                        )
+
+                    VStack(alignment: .leading, spacing: 3) {
+                        HStack(spacing: 7) {
+                            Text("Gauntlet Mode")
+                                .font(.system(size: 18, weight: .heavy, design: .rounded))
+                                .foregroundStyle(.white)
+                            Text("LOCKED")
+                                .font(.system(size: 9, weight: .heavy))
+                                .tracking(0.6)
+                                .foregroundStyle(.white.opacity(0.85))
+                                .padding(.horizontal, 7)
+                                .padding(.vertical, 3)
+                                .background(Capsule().fill(.white.opacity(0.16)))
+                        }
+                        Text("A relentless new way to play")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(.white.opacity(0.7))
+                            .lineLimit(1).minimumScaleFactor(0.7)
+                    }
+                    Spacer(minLength: 4)
+                }
+
+                Text(unlockTitle)
+                    .font(.system(size: 14, weight: .heavy, design: .rounded))
+                    .foregroundStyle(Color(hex: "241a05"))
+                    .lineLimit(1).minimumScaleFactor(0.7)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 13, style: .continuous).fill(
+                            LinearGradient(colors: [Color(hex: "ffd15c"), Color(hex: "f5a300")],
+                                           startPoint: .leading, endPoint: .trailing)
+                        )
+                    )
+                    .shadow(color: Color(hex: "f5a300").opacity(0.35), radius: 8, y: 4)
+            }
+            .padding(15)
+            .frame(maxWidth: .infinity)
+            .frostedTile(accent: Color(hex: "b98cff"))
+        }
+        .buttonStyle(MenuPressStyle())
+    }
+}
+
+/// The frosted-glass material shared by every menu tile: a blurred translucent
+/// panel, a subtle dark wash for legibility over the Spryte parade, a hairline
+/// border, and a colored accent rail down the leading edge.
+private struct FrostedTile: ViewModifier {
+    var accent: Color
+    var corner: CGFloat = 18
+
+    func body(content: Content) -> some View {
+        content
+            .background {
+                RoundedRectangle(cornerRadius: corner, style: .continuous)
+                    .fill(.ultraThinMaterial)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: corner, style: .continuous)
+                            .fill(Color(hex: "0e1420").opacity(0.45))
+                    )
+                    .overlay(alignment: .leading) {
+                        Capsule()
+                            .fill(accent)
+                            .frame(width: 5)
+                            .padding(.vertical, 12)
+                    }
+                    .overlay(
+                        RoundedRectangle(cornerRadius: corner, style: .continuous)
+                            .strokeBorder(.white.opacity(0.10), lineWidth: 1)
+                    )
+            }
+            .shadow(color: .black.opacity(0.35), radius: 10, y: 6)
+    }
+}
+
+private extension View {
+    func frostedTile(accent: Color, corner: CGFloat = 18) -> some View {
+        modifier(FrostedTile(accent: accent, corner: corner))
     }
 }
 
