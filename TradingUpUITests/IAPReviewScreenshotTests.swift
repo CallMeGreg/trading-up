@@ -32,6 +32,11 @@ final class IAPReviewScreenshotTests: XCTestCase {
         app.launch()
 
         // First-launch explainer, then into the shop with the starting bankroll.
+        // v2.0.0 opens on the main menu, so step into Classic Mode first.
+        let classic = app.buttons["classicMode"].firstMatch
+        XCTAssertTrue(classic.waitForExistence(timeout: 30), "main menu never appeared")
+        classic.tap()
+
         let start = app.buttons["Start Collecting"]
         if start.waitForExistence(timeout: 30) { start.tap() }
 

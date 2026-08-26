@@ -42,7 +42,7 @@ struct PaywallView: View {
     private var header: some View {
         VStack(spacing: 10) {
             Text("🗂️").font(.system(size: 60))
-            Text("UNLOCK THE FULL COLLECTION")
+            Text("UNLOCK THE FULL GAME")
                 .font(.system(size: 13, weight: .black)).tracking(2)
                 .foregroundStyle(Palette.subtle)
                 .multilineTextAlignment(.center)
@@ -58,6 +58,8 @@ struct PaywallView: View {
         VStack(alignment: .leading, spacing: 14) {
             perk("🌊", "Four more sets",
                  "Tidecaller, Verdspire, Voltcrest and Umbral Reach — 200 more cards to chase.")
+            perk("⚡", "Gauntlet Mode",
+                 "Unlocks a relentless new way to play, arriving in a future update.")
             perk("🏆", "Go for Master Collector",
                  "The full 250-card win, plus every set-completion and evolution bonus past Set 1.")
             perk("💎", "One-time purchase",

@@ -22,6 +22,14 @@ final class GameState {
     private var rng = AppRNG()
     private let store: SaveStore
 
+    /// The all-time showcase: the best copy of each Spryte the player has ever
+    /// owned, across every run and game mode. Persisted separately from the run
+    /// (`binderStore`) so it survives `newGame()` — a fresh run resets the
+    /// collection, never the Binder. Rebuilt from the loaded collection on launch
+    /// and topped up after every acquisition.
+    private(set) var binder: Binder
+    private let binderStore: BinderStore
+
     /// How many sets are playable for free. Set 1 (Emberfall) is the free tier;
     /// sets above this need the one-time "Unlock the full collection" purchase.
     /// A single tuning point should the free slice ever change.
@@ -41,8 +49,13 @@ final class GameState {
     /// the unlocked game.
     private(set) var isFullVersionUnlocked = false
 
-    init(store: SaveStore = SaveStore()) {
+    init(store: SaveStore = SaveStore(), binderStore: BinderStore? = nil) {
         self.store = store
+        // Default the binder file to the same directory as the save, so a test
+        // pointing the save at a temp dir automatically isolates the binder too
+        // (and production, with the default save store, lands in Documents).
+        self.binderStore = binderStore ?? BinderStore(directory: store.url.deletingLastPathComponent())
+        self.binder = self.binderStore.load()
         #if DEBUG
         // An automated test (or a developer) can launch straight into a scripted
         // late-game state instead of loading the real save. Compiled out of
@@ -54,6 +67,7 @@ final class GameState {
             // ending demo) pulls the exact same cards every time.
             if let seed = DebugLaunchState.seed() { rng = AppRNG(seed: seed) }
             store.save(core)
+            recordBinder()
             return
         }
         #endif
@@ -63,15 +77,21 @@ final class GameState {
         // Persist immediately if load had to repair or quarantine something, so
         // the cleaned state is what's on disk from here on.
         if issue != nil { store.save(core) }
+        // Fold whatever collection just loaded into the all-time Binder, so an
+        // existing save populates the showcase on first launch after the update.
+        recordBinder()
     }
 
     #if DEBUG
     /// Test seam: build a state around an explicit core, bypassing disk. Only
     /// compiled into DEBUG (test) builds, so it can't be reached in production.
-    init(core: GameCore, store: SaveStore) {
+    init(core: GameCore, store: SaveStore, binderStore: BinderStore? = nil) {
         self.store = store
+        self.binderStore = binderStore ?? BinderStore(directory: store.url.deletingLastPathComponent())
         self.core = core
         self.loadIssue = nil
+        self.binder = self.binderStore.load()
+        recordBinder()
     }
     #endif
 
@@ -143,7 +163,7 @@ final class GameState {
         // purchase opens the paid sets but never *skips* their unlock.)
         guard !requiresFullUnlock(set: set) else { return nil }
         let r = core.buyPack(set: set, using: &rng)
-        if r != nil { save() }
+        if r != nil { save(); recordBinder() }
         return r
     }
 
@@ -152,7 +172,7 @@ final class GameState {
         guard FeatureFlags.boosterBoxesAvailable else { return nil }
         guard !requiresFullUnlock(set: set) else { return nil }
         let r = core.buyBox(set: set, using: &rng)
-        if r != nil { save() }
+        if r != nil { save(); recordBinder() }
         return r
     }
 
@@ -165,7 +185,7 @@ final class GameState {
         guard FeatureFlags.boosterBoxesAvailable else { return nil }
         guard !requiresFullUnlock(set: set) else { return nil }
         let r = core.buyBoxPacks(set: set, using: &rng)
-        if r != nil { save() }
+        if r != nil { save(); recordBinder() }
         return r
     }
 
@@ -190,7 +210,7 @@ final class GameState {
     @discardableResult
     func grade(_ instanceId: UUID) -> GradeResult? {
         let r = core.grade(instanceId: instanceId, using: &rng)
-        if r != nil { save() }
+        if r != nil { save(); recordBinder() }
         return r
     }
 
@@ -220,5 +240,14 @@ final class GameState {
 
     private func save() {
         store.save(core)
+    }
+
+    /// Fold the current collection into the all-time Binder and persist it if a
+    /// slot was filled or upgraded. Called after every acquisition; it only ever
+    /// records new bests, so calling it after a sale or reset is a safe no-op.
+    private func recordBinder() {
+        if binder.record(core.instances) {
+            binderStore.save(binder)
+        }
     }
 }

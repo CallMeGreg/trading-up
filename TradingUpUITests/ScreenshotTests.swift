@@ -59,6 +59,9 @@ final class ScreenshotTests: XCTestCase {
         shotBase = Self.playthroughShots
         shotCap = Self.endgameShots
 
+        // The win overlay lives inside Classic Mode, so step in from the menu.
+        try enterClassicMode()
+
         let keep = button(labeled: "Keep My Collection")
         try XCTSkipUnless(keep.waitForExistence(timeout: 30),
                           "no completed-collection save was seeded; skipping the endgame pass")
@@ -100,6 +103,13 @@ final class ScreenshotTests: XCTestCase {
 
     /// The first-launch explainer, then into the shop with the starting $100.
     private func onboarding() throws {
+        // v2.0.0 opens on the main menu; capture it, then step into Classic Mode
+        // where the welcome explainer and the game itself live.
+        let classic = classicModeButton
+        XCTAssertTrue(classic.waitForExistence(timeout: 30), "main menu never appeared")
+        shot("main-menu", settle: 1.4)
+        classic.tap()
+
         let start = button(labeled: "Start Collecting")
         XCTAssertTrue(start.waitForExistence(timeout: 30), "welcome screen never appeared")
         shot("welcome", settle: 1.2)
@@ -294,6 +304,13 @@ final class ScreenshotTests: XCTestCase {
 
     // MARK: - Pack helpers
 
+    /// From the main menu, open Classic Mode and wait for it to settle.
+    private func enterClassicMode() throws {
+        let classic = classicModeButton
+        XCTAssertTrue(classic.waitForExistence(timeout: 30), "main menu never appeared")
+        classic.tap()
+    }
+
     @discardableResult
     private func tapBuyPack() -> Bool {
         let b = buyPack
@@ -407,6 +424,8 @@ final class ScreenshotTests: XCTestCase {
 
     private var buyPack: XCUIElement { app.buttons["buyPack"].firstMatch }
     private var buyBox: XCUIElement { app.buttons["buyBox"].firstMatch }
+    /// The main-menu tile into the original game.
+    private var classicModeButton: XCUIElement { app.buttons["classicMode"].firstMatch }
     /// Anchored on "Duplicate" so it can't collide with the keep-or-sell
     /// sheet's "Sell for $x" button while that sheet is open.
     private var sellDuplicates: XCUIElement {

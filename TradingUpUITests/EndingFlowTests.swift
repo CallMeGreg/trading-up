@@ -39,6 +39,8 @@ final class EndingFlowTests: XCTestCase {
     }
 
     func testWinWaitsForThePackSummaryThenSetReadsComplete() throws {
+        // v2.0.0 opens on the main menu; the game (and its shop) is one tap in.
+        enterClassicMode()
         XCTAssertTrue(buyPack.waitForExistence(timeout: 30), "shop never appeared")
         // Set 1 is the one still one card short in the seeded state.
         XCTAssertTrue(text(containing: "49 of 50").waitForExistence(timeout: 10),
@@ -93,6 +95,13 @@ final class EndingFlowTests: XCTestCase {
     }
 
     // MARK: - Actions
+
+    /// From the main menu, open Classic Mode where the shop and the game live.
+    private func enterClassicMode() {
+        let classic = app.buttons["classicMode"].firstMatch
+        XCTAssertTrue(classic.waitForExistence(timeout: 30), "main menu never appeared")
+        classic.tap()
+    }
 
     @discardableResult
     private func tapBuyPack() -> Bool {

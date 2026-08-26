@@ -6,6 +6,10 @@ struct StatsView: View {
     @State private var confirmNew = false
     @State private var scope: Scope = .run
 
+    /// Provided by `ClassicModeView` so the meta tab can bow out to the main menu.
+    /// Left `nil` anywhere Stats is shown on its own, which hides the button.
+    var onExitToMenu: (() -> Void)? = nil
+
     private enum Scope: String, CaseIterable, Identifiable {
         case run = "This Run"
         case allTime = "All Time"
@@ -109,6 +113,22 @@ struct StatsView: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .panel()
+
+                    if let onExitToMenu {
+                        Button {
+                            Haptics.play(.light)
+                            onExitToMenu()
+                        } label: {
+                            Label("Main Menu", systemImage: "house.fill")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundStyle(Palette.tapCue)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                                .background(RoundedRectangle(cornerRadius: 14).strokeBorder(Palette.tapCue.opacity(0.5), lineWidth: 1))
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("exitToMenu")
+                    }
 
                     Button {
                         confirmNew = true
