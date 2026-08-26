@@ -17,7 +17,7 @@ struct SpryteParadeView: View {
     var featured: [String] = []
 
     /// How many Sprytes drift at once. A calm crowd, not a swarm.
-    var count: Int = 14
+    var count: Int = 20
 
     var body: some View {
         GeometryReader { geo in
@@ -48,13 +48,14 @@ struct SpryteParadeView: View {
     }
 
     /// A hand-picked spread across all five sets and every element, so the default
-    /// parade shows the game's range before a player has collected anything.
+    /// parade shows the game's range before a player has collected anything. Laid
+    /// out one-per-set in rounds, so any prefix `count` stays balanced across sets.
     static let curated: [String] = [
-        "S1-047", "S1-012", "S1-031",
-        "S2-044", "S2-008", "S2-025",
-        "S3-050", "S3-017", "S3-033",
-        "S4-021", "S4-006", "S4-040",
-        "S5-049", "S5-014", "S5-028",
+        "S1-047", "S2-044", "S3-050", "S4-021", "S5-049",
+        "S1-012", "S2-008", "S3-017", "S4-006", "S5-014",
+        "S1-031", "S2-025", "S3-033", "S4-040", "S5-028",
+        "S1-003", "S2-016", "S3-009", "S4-013", "S5-005",
+        "S1-022", "S2-037", "S3-041", "S4-029", "S5-036",
     ]
 }
 

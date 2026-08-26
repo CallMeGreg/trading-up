@@ -60,19 +60,17 @@ struct MainMenuView: View {
     }
 
     private func wordmark(compact: Bool) -> some View {
-        VStack(spacing: 8) {
-            Text("🎴")
-                .font(.system(size: compact ? 40 : 58))
-                .shadow(color: Palette.money.opacity(0.4), radius: 12)
+        let ringW: CGFloat = compact ? 250 : 300
+        let ringH: CGFloat = compact ? 180 : 220
+        let badge: CGFloat = compact ? 48 : 54
+        return ZStack {
+            SetLogoRing(width: ringW, height: ringH, badgeSize: badge)
             Text("Trading Up")
-                .font(.system(size: compact ? 38 : 46, weight: .black, design: .rounded))
+                .font(.system(size: compact ? 30 : 38, weight: .black, design: .rounded))
                 .foregroundStyle(.white)
-                .shadow(color: .black.opacity(0.5), radius: 8, y: 3)
-            Text("Collect all \(game.totalCards) Sprytes")
-                .font(.system(size: 13, weight: .bold))
-                .tracking(1.5)
-                .foregroundStyle(Palette.subtle)
+                .shadow(color: .black.opacity(0.6), radius: 8, y: 3)
         }
+        .frame(height: ringH + badge)
     }
 
     private var buttons: some View {
@@ -100,17 +98,16 @@ struct MainMenuView: View {
                 route = .binder
             }
             .accessibilityIdentifier("binder")
-
-            unlockButton
         }
     }
 
-    /// Gauntlet is gated behind the Full Game unlock. Locked, it wears a padlock
-    /// and routes a tap to the paywall; unlocked, it opens the mode.
+    /// Gauntlet is gated behind the Full Game unlock, and while locked it doubles
+    /// as the unlock call-to-action: it wears a padlock, its subtitle carries the
+    /// price, and a tap opens the paywall. Unlocked, it simply enters the mode.
     private var gauntletButton: some View {
         MenuButton(
             title: "Gauntlet Mode",
-            subtitle: unlocked ? "A relentless new way to play" : "Requires the Full Game",
+            subtitle: gauntletSubtitle,
             systemImage: "bolt.fill",
             tint: [Color(hex: "b06cf7"), Color(hex: "6d2bb3")],
             locked: !unlocked
@@ -126,40 +123,18 @@ struct MainMenuView: View {
         .accessibilityIdentifier("gauntletMode")
     }
 
-    /// The unlock call-to-action, swapped for a quiet "owned" chip once bought.
-    @ViewBuilder
-    private var unlockButton: some View {
-        if unlocked {
-            Label("Full Game unlocked", systemImage: "checkmark.seal.fill")
-                .font(.system(size: 13, weight: .bold))
-                .foregroundStyle(Palette.money)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
-                .background(RoundedRectangle(cornerRadius: 14).fill(Palette.money.opacity(0.10)))
-                .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Palette.money.opacity(0.35), lineWidth: 1))
-        } else {
-            MenuButton(
-                title: "Unlock the Full Game",
-                subtitle: unlockSubtitle,
-                systemImage: "lock.open.fill",
-                tint: [Color(hex: "f5a300"), Color(hex: "e0663b")]
-            ) {
-                Haptics.play(.medium)
-                showPaywall = true
-            }
-            .accessibilityIdentifier("unlockFullGameMenu")
-        }
-    }
-
     private var binderSubtitle: String {
         "Your best Sprytes · \(game.binder.filledCount)/\(game.binder.totalSlots)"
     }
 
-    private var unlockSubtitle: String {
+    /// Locked, the Gauntlet button doubles as the Full Game unlock CTA, so its
+    /// subtitle carries the price; unlocked, it's just the mode's tagline.
+    private var gauntletSubtitle: String {
+        if unlocked { return "A relentless new way to play" }
         if let price = purchases.displayPrice, !price.isEmpty {
-            return "All sets + Gauntlet · \(price)"
+            return "Unlock the Full Game · \(price)"
         }
-        return "All classic sets + Gauntlet Mode"
+        return "Unlock the Full Game — all sets + Gauntlet"
     }
 
     private var background: some View {
@@ -266,5 +241,71 @@ private struct MenuPressStyle: ButtonStyle {
             .scaleEffect(configuration.isPressed ? 0.97 : 1)
             .opacity(configuration.isPressed ? 0.9 : 1)
             .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+    }
+}
+
+/// A slowly revolving ring of the five sets' emblems, encircling the wordmark.
+/// Each set is stood in for by its signature element — the same element gradients
+/// the shop uses to brand its banners — so the crest reads as "all five sets" at
+/// a glance. The ring is elliptical so it hugs the wide title without the side
+/// emblems colliding with it, and purely decorative (non-interactive).
+private struct SetLogoRing: View {
+    var width: CGFloat
+    var height: CGFloat
+    var badgeSize: CGFloat
+    /// Seconds per full revolution — slow enough to feel like drift, not spin.
+    var period: Double = 54
+
+    var body: some View {
+        TimelineView(.animation) { tl in
+            let base = tl.date.timeIntervalSinceReferenceDate / period * 2 * Double.pi
+            ZStack {
+                ForEach(1...CardDatabase.setCount, id: \.self) { set in
+                    let a = -Double.pi / 2 + base
+                        + Double(set - 1) / Double(CardDatabase.setCount) * 2 * Double.pi
+                    SetRingBadge(set: set, size: badgeSize)
+                        .offset(x: CGFloat(cos(a)) * width / 2,
+                                y: CGFloat(sin(a)) * height / 2)
+                }
+            }
+        }
+        .frame(width: width + badgeSize, height: height + badgeSize)
+        .allowsHitTesting(false)
+    }
+}
+
+/// One set's crest for the ring: its hand-drawn `SetEmblem` scene set into a dark
+/// disc rimmed in the set's signature element colour, wrapped in a soft aura of
+/// that same colour so it carries more presence and glows against the parade.
+private struct SetRingBadge: View {
+    let set: Int
+    var size: CGFloat
+    private var element: Element { Element.theme(forSet: set) }
+
+    var body: some View {
+        let glow = size * 1.85
+        return ZStack {
+            Circle()
+                .fill(
+                    RadialGradient(
+                        colors: [element.palette[1].opacity(0.5),
+                                 element.palette[1].opacity(0.14),
+                                 .clear],
+                        center: .center,
+                        startRadius: size * 0.42,
+                        endRadius: glow / 2
+                    )
+                )
+                .frame(width: glow, height: glow)
+                .blur(radius: 3)
+
+            SetEmblem(set: set)
+                .frame(width: size, height: size)
+                .background(Circle().fill(Color(hex: "0c1730")))
+                .clipShape(Circle())
+                .overlay(Circle().strokeBorder(element.palette[1].opacity(0.85), lineWidth: 2))
+                .shadow(color: element.palette[1].opacity(0.55), radius: size * 0.18, y: 1)
+        }
+        .frame(width: glow, height: glow)
     }
 }
