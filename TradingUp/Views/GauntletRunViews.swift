@@ -132,22 +132,36 @@ private struct PackRail: View {
     let state: GauntletState
     let run: GauntletRun
 
+    /// Cap so a pack thumbnail never balloons on iPad; the row still fits five
+    /// across on a phone by shrinking to the column width below this.
+    private let maxPack: CGFloat = 62
+    private let gap: CGFloat = 6
+    private var railHeight: CGFloat { PackWrapper.height(forWidth: maxPack) + 22 }
+
     var body: some View {
         VStack(spacing: 6) {
             HStack {
-                SectionTitle(text: "Packs — pick an element to rip")
+                SectionTitle(text: "Packs — pick a set to rip")
+                Spacer(minLength: 6)
                 Text("\(run.ripsLeft) rip\(run.ripsLeft == 1 ? "" : "s") left")
                     .font(.system(size: 11, weight: .heavy, design: .rounded))
                     .foregroundStyle(run.ripsLeft > 0 ? Palette.text : Palette.subtle)
             }
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
+            // Fixed row (no horizontal scroll): every set gets an equal column and
+            // the pack shrinks to fit whatever width is available.
+            GeometryReader { geo in
+                let n = CGFloat(state.packTiers.count)
+                let col = max(1, (geo.size.width - gap * (n - 1)) / n)
+                let w = max(28, min(maxPack, col))
+                HStack(spacing: gap) {
                     ForEach(state.packTiers, id: \.self) { set in
-                        PackTile(state: state, run: run, set: set)
+                        PackTile(state: state, run: run, set: set, packWidth: w)
+                            .frame(width: col)
                     }
                 }
-                .padding(.horizontal, 1)
+                .frame(width: geo.size.width, height: railHeight, alignment: .center)
             }
+            .frame(height: railHeight)
         }
     }
 }
@@ -156,6 +170,7 @@ private struct PackTile: View {
     let state: GauntletState
     let run: GauntletRun
     let set: Int
+    var packWidth: CGFloat
 
     private var element: Element { Element.theme(forSet: set) }
     private var unlocked: Bool { state.isPackUnlocked(set) }
@@ -168,48 +183,58 @@ private struct PackTile: View {
 
     var body: some View {
         Button(action: act) {
-            VStack(spacing: 6) {
-                Image(systemName: symbol)
-                    .font(.system(size: 20, weight: .bold))
-                    .foregroundStyle(unlocked ? element.badgeTint : Palette.subtle)
-                Text(element.display)
-                    .font(.system(size: 12, weight: .heavy, design: .rounded))
-                    .foregroundStyle(unlocked ? .white : Palette.subtle)
-                    .lineLimit(1)
+            VStack(spacing: 5) {
+                packArt
                 Text(statusLine)
-                    .font(.system(size: 10, weight: .bold))
+                    .font(.system(size: 10.5, weight: .heavy, design: .rounded))
                     .foregroundStyle(statusTint)
                     .lineLimit(1)
+                    .minimumScaleFactor(0.7)
             }
-            .frame(width: 88, height: 84)
-            .background(RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(unlocked ? element.badgeTint.opacity(0.14) : Palette.bg0.opacity(0.35)))
-            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .strokeBorder(borderColor, style: StrokeStyle(lineWidth: 1, dash: isNext ? [4, 3] : [])))
-            .opacity(unlocked ? (enabled ? 1 : 0.55) : (isNext ? 0.95 : 0.4))
+            .frame(maxWidth: .infinity)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .disabled(!enabled)
+        .accessibilityLabel("\(CardDatabase.setName(set)) pack — \(statusLine)")
     }
 
-    private var symbol: String {
-        if unlocked { return "sparkles" }
-        return isNext ? "lock.open.fill" : "lock.fill"
+    /// A miniature of the Classic pack wrapper, dimmed and locked when it isn't
+    /// yet available this run.
+    private var packArt: some View {
+        ZStack {
+            PackWrapper(set: set, width: packWidth, detail: .mini)
+                .saturation(unlocked ? 1 : 0.12)
+                .opacity(unlocked ? (enabled ? 1 : 0.6) : (isNext ? 0.72 : 0.42))
+            if !unlocked {
+                ZStack {
+                    Circle().fill(.black.opacity(0.55))
+                        .frame(width: packWidth * 0.5, height: packWidth * 0.5)
+                    Image(systemName: isNext ? "lock.open.fill" : "lock.fill")
+                        .font(.system(size: packWidth * 0.24, weight: .bold))
+                        .foregroundStyle(.white.opacity(0.92))
+                }
+            }
+        }
+        .shadow(color: glow, radius: glow == .clear ? 0 : 6)
     }
+
+    /// A tint halo that marks a pack you can act on right now.
+    private var glow: Color {
+        if unlocked && enabled { return element.badgeTint.opacity(0.55) }
+        if isNext && state.canUnlockNextPack { return Color(hex: "ffd54a").opacity(0.6) }
+        return .clear
+    }
+
     private var statusLine: String {
         if unlocked { return "Rip" }
         if isNext, let cost = state.packUnlockCost { return "Unlock \(cost.moneyShort)" }
         return "Locked"
     }
     private var statusTint: Color {
-        if unlocked { return element.badgeTint }
+        if unlocked { return enabled ? element.badgeTint : Palette.subtle }
         if isNext { return state.canUnlockNextPack ? Palette.money : Palette.subtle }
         return Palette.subtle
-    }
-    private var borderColor: Color {
-        if unlocked { return element.badgeTint.opacity(0.4) }
-        if isNext { return Color(hex: "ffd54a").opacity(0.55) }
-        return Palette.stroke
     }
 
     private func act() {
