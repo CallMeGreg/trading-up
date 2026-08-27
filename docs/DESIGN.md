@@ -536,17 +536,23 @@ and the just-unlocked Trainers are celebrated on the selection screen after a ru
 stats. Thresholds are meta-pacing knobs, **not** a difficulty lever — the harness still
 proves a neutral Rookie clears Hard, so the roster stays gravy rather than a gate.
 
-**Cross-run progression:** clearing a run with a Trainer grants that Trainer **XP**; levels
-award **pick-1-of-2 perks** (a small talent tree) that deepen its identity or patch a
-weakness, and can unlock new Catalysts into the pool. *(The XP/level fields persist today;
-the perk trees themselves are not yet built.)*
+**Cross-run progression:** every run banks that Trainer **XP** — **per round cleared**, so
+even a run that busts still matures the Trainer *provided it got past round 1* (a round-1
+loss banks nothing). A win adds a **completion bonus** on top, so full clears pay best and
+Hard pays the most (Easy 13 / Medium 27 / Hard 55 for a full clear; 2 / 3 / 5 per round on a
+partial). Levels award **pick-1-of-2 perks** (a small talent tree) that deepen its identity
+or patch a weakness, and can unlock new Catalysts into the pool. *(XP, levels and partial-run
+banking persist today; the perk trees themselves are not yet built.)*
 
-**Meta ceiling — decided.** Each Trainer caps at **10 levels**. XP is earned per cleared
-run and scales with tier (Hard pays the most), so a Trainer matures over a handful of wins
-rather than a grind. Every level offers **pick-1-of-2** perks (≈9 choices across its life),
-and the last couple of levels also drop a **new Catalyst into the global pool** — the
-ceiling expands the game *sideways*, not upward. (New *Trainers* unlock separately, off
-lifetime milestones, not levels — see the roster above.)
+**Meta ceiling — decided.** Each Trainer caps at **10 levels** on an **exponential curve**
+(cumulative XP-to-reach `[0, 10, 24, 44, 72, 110, 160, 225, 320, 460]`; the gap grows ~1.4×
+each level). A Trainer climbs fast early and the cap is a real commitment (≈8 Hard wins), not
+a formality — so levelling stays engaging rather than a flat 1-win-per-level march. The level
+pill always shows the number (a maxed Trainer reads **Lv 10**, with `MAX LEVEL 10` surfaced in
+the XP row rather than replacing the level). Every level offers **pick-1-of-2** perks (≈9
+choices across its life), and the last couple of levels also drop a **new Catalyst into the
+global pool** — the ceiling expands the game *sideways*, not upward. (New *Trainers* unlock
+separately, off lifetime milestones, not levels — see the roster above.)
 
 ⚠️ **Guardrail — perks are sidegrades, never raw power.** Classic's whole thesis (§10) is
 *skill, not grinding, carries you*, so perks read as **tradeoffs or new build lines** (e.g.
@@ -622,12 +628,16 @@ foil × grade, exactly as in Classic (§6–§7), and the Binder still keeps the
 or lowers a slot's value.
 
 What changes is *which illustration renders* that slot: the base art is swapped for its
-Extended Art composition, and **the foil shimmer and the PSA grade slab layer on top of
-it.** So a foil PSA-10 you pulled in Classic keeps its value *and* its effects; once you've
-also won that card's Extended Art in Gauntlet, the slot is drawn as a foil, graded,
-Extended-Art card — all three finishes stacked. The tier's reward arrives as a **Foil**
-Extended Art copy (a guaranteed foil is the sweetener), but the durable prize is the **art
-unlock**, which sticks regardless of which copy is your value-best.
+Extended Art composition — a **generated, full-card `{id}-ext` asset** (one per Spryte,
+authored in `tools/generate_art.py`: the card's own creature re-staged in a taller, richer,
+per-card-unique set scene) — and **the foil shimmer and the PSA grade slab layer on top of
+it** (`CardView(extendedArt:)`). So a foil PSA-10 you pulled in Classic keeps its value *and*
+its effects; once you've also won that card's Extended Art in Gauntlet, the slot is drawn as
+a foil, graded, Extended-Art card — all three finishes stacked. It renders on the **Binder**
+(the permanent showcase) and in the reward picker; the live-run Collection still shows base
+art. The tier's reward arrives as a **Foil** Extended Art copy (a guaranteed foil is the
+sweetener), but the durable prize is the **art unlock**, which sticks regardless of which
+copy is your value-best.
 
 Two notes:
 

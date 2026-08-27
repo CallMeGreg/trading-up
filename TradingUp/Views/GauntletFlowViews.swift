@@ -19,12 +19,12 @@ private struct GauntletHeader: View {
     }
 }
 
-/// A compact "Lv N" pill with the mode's gold accent.
+/// A compact "Lv N" pill with the mode's gold accent. Even a maxed Trainer shows
+/// its number rather than "MAX" — the cap is surfaced in the XP row instead. (req 3)
 private struct LevelPill: View {
     let level: Int
-    let max: Int
     var body: some View {
-        Text(level >= max ? "MAX" : "Lv \(level)")
+        Text("Lv \(level)")
             .font(.system(size: 11, weight: .black, design: .rounded))
             .foregroundStyle(Color(hex: "1a0d2e"))
             .padding(.horizontal, 8).padding(.vertical, 3)
@@ -102,7 +102,7 @@ private struct TrainerCard: View {
                         .foregroundStyle(unlocked ? .white : Palette.subtle)
                     Spacer()
                     if unlocked {
-                        LevelPill(level: level, max: maxLevel)
+                        LevelPill(level: level)
                     } else {
                         Image(systemName: "lock.fill")
                             .font(.system(size: 14, weight: .bold))
@@ -122,6 +122,14 @@ private struct TrainerCard: View {
                         Text("\(xp) XP · \(xpToNext) to next level")
                             .font(.system(size: 10, weight: .semibold))
                             .foregroundStyle(Palette.subtle)
+                    } else {
+                        // Maxed: a full gold bar and the cap shown where XP-to-next
+                        // normally lives. (req 3)
+                        ProgressBar(value: 1, total: 1,
+                                    tint: Color(hex: "ffd54a"), height: 6)
+                        Text("MAX LEVEL \(maxLevel) · \(xp) XP")
+                            .font(.system(size: 10, weight: .black))
+                            .foregroundStyle(Color(hex: "ffd54a"))
                     }
                 } else if let u = trainer.unlock {
                     Divider().overlay(Palette.stroke)
@@ -326,6 +334,23 @@ struct LostScreen: View {
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.horizontal, 8)
+            }
+            if let clear = state.lastClear, clear.xpGained > 0 {
+                // Partial runs still bank XP for the rounds cleared. (req 3)
+                VStack(spacing: 12) {
+                    HStack {
+                        Text("XP Earned").foregroundStyle(Palette.subtle)
+                        Spacer()
+                        Text("+\(clear.xpGained)").foregroundStyle(Palette.money)
+                    }
+                    .font(.system(size: 15, weight: .bold))
+                    if clear.leveledUp {
+                        Text("LEVEL UP → Lv \(clear.newLevel)")
+                            .font(.system(size: 15, weight: .black, design: .rounded))
+                            .foregroundStyle(Color(hex: "b06cf7"))
+                    }
+                }
+                .panel()
             }
             UnlockedTrainersBanner(trainers: state.lastUnlockedTrainers)
             Spacer()

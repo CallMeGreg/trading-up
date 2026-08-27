@@ -312,6 +312,10 @@ final class GauntletState {
         case .won:
             rollReward()
         case .lost:
+            // Bank XP for any rounds cleared before the bust (none if the player
+            // didn't get past round 1); losses never unlock a tier. (req 3)
+            let roundsCleared = max(0, r.round - 1)
+            lastClear = progress.recordLoss(trainerId: r.trainer.id, tier: r.tier, roundsCleared: roundsCleared)
             ingestRunStats()
             store.save(progress)
             phase = .lost

@@ -183,6 +183,22 @@ struct GauntletProgress: Codable, Equatable {
                            unlockedTier: newlyUnlocked)
     }
 
+    /// Bank a *busted* run's partial progress: grant XP for the rounds that were
+    /// cleared before the loss (nothing if the player didn't get past round 1) and
+    /// do NOT unlock any tier — only a win opens the ladder. Returns what changed so
+    /// the loss screen can still celebrate XP and level-ups. (req 3)
+    @discardableResult
+    mutating func recordLoss(trainerId: String, tier: GauntletTier, roundsCleared: Int) -> ClearResult {
+        let levelBefore = level(forTrainer: trainerId)
+        let gained = GauntletEconomy.runXP(tier: tier, roundsCleared: roundsCleared, won: false)
+        if gained > 0 { xpByTrainer[trainerId, default: 0] += gained }
+        let levelAfter = level(forTrainer: trainerId)
+        return ClearResult(xpGained: gained,
+                           newLevel: levelAfter,
+                           leveledUp: levelAfter > levelBefore,
+                           unlockedTier: nil)
+    }
+
     /// Drop XP entries for Trainers no longer in the roster — the same load
     /// hygiene the Binder does — so a record written against an older roster
     /// doesn't keep dead ids around. Returns how many entries were removed.

@@ -112,7 +112,8 @@ struct BinderView: View {
                 Haptics.play(.light)
                 selected = card
             } label: {
-                CardView(card: card, instance: best, width: 104)
+                CardView(card: card, instance: best, width: 104,
+                         extendedArt: binder.hasExtendedArt(card.id))
             }
             .buttonStyle(.plain)
         } else {
@@ -138,7 +139,8 @@ private struct BinderCardDetailView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 18) {
-                    CardView(card: card, instance: best, width: 250)
+                    CardView(card: card, instance: best, width: 250,
+                             extendedArt: game.binder.hasExtendedArt(card.id))
                         .padding(.top, 8)
                     valuePanel
                     if line.count > 1 {

@@ -334,14 +334,9 @@ private struct HUDPanel: View {
                         .background(Capsule().fill(Color(hex: "ffd54a")))
                 }
                 Spacer()
-                VStack(alignment: .trailing, spacing: 1) {
-                    Text(run.cash.moneyShort)
-                        .font(.system(size: 16, weight: .black, design: .rounded))
-                        .foregroundStyle(Palette.money)
-                    Text(CardDatabase.setName(run.packTier))
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(run.packTier <= 5 ? Element.theme(forSet: run.packTier).badgeTint : Palette.subtle)
-                }
+                Text(run.cash.moneyShort)
+                    .font(.system(size: 18, weight: .black, design: .rounded))
+                    .foregroundStyle(Palette.money)
             }
 
             VStack(spacing: 4) {
@@ -522,12 +517,68 @@ private struct ShowcasePanel: View {
 
 private struct AttunedPanel: View {
     let run: GauntletRun
+    @State private var selected: Catalyst?
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             SectionTitle(text: "Attuned \(run.attunedCatalysts.count)/\(run.effectiveCatalystSlots)")
-            FlowRow(items: run.attunedCatalysts) { CatalystChip(catalyst: $0) }
+            FlowRow(items: run.attunedCatalysts) { catalyst in
+                Button {
+                    Haptics.play(.light); selected = catalyst
+                } label: {
+                    CatalystChip(catalyst: catalyst)
+                }
+                .buttonStyle(.plain)
+            }
         }
         .panel()
+        .sheet(item: $selected) { CatalystDetailSheet(catalyst: $0) }
+    }
+}
+
+/// The tap-to-inspect view for an attuned Catalyst: its full card face plus a
+/// plain-language line of the run-long effect it's granting. (req 1)
+private struct CatalystDetailSheet: View {
+    let catalyst: Catalyst
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        ZStack {
+            GauntletBackdrop()
+            ScrollView {
+                VStack(spacing: 18) {
+                    CatalystCardView(catalyst: catalyst, width: 220)
+                        .padding(.top, 24)
+
+                    VStack(spacing: 8) {
+                        Text("ATTUNED EFFECT")
+                            .font(.system(size: 11, weight: .black)).tracking(1.5)
+                            .foregroundStyle(catalyst.element.badgeTint)
+                        Text(catalyst.effectSummary)
+                            .font(.system(size: 16, weight: .heavy, design: .rounded))
+                            .foregroundStyle(.white)
+                            .multilineTextAlignment(.center)
+                        Text("Active for the rest of this run.")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(Palette.subtle)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .panel()
+                    .padding(.horizontal, 20)
+                }
+                .padding(.bottom, 24)
+            }
+        }
+        .overlay(alignment: .topTrailing) {
+            Button { dismiss() } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: 26))
+                    .symbolRenderingMode(.hierarchical)
+                    .foregroundStyle(Palette.subtle)
+            }
+            .buttonStyle(.plain)
+            .padding(14)
+            .accessibilityLabel("Close catalyst")
+        }
     }
 }
 
@@ -835,12 +886,12 @@ struct RewardScreen: View {
                         Button {
                             Haptics.play(.success); state.chooseReward(option)
                         } label: {
-                            VStack(spacing: 6) {
-                                ZStack(alignment: .top) {
-                                    CardView(card: option.card, instance: option.instance, width: 128)
-                                    ExtendedArtRibbon()
-                                        .padding(.top, 6)
-                                }
+                            VStack(spacing: 5) {
+                                CardView(card: option.card, instance: option.instance,
+                                         width: 128, extendedArt: true)
+                                Text("EXTENDED ART")
+                                    .font(.system(size: 9, weight: .black)).tracking(1)
+                                    .foregroundStyle(Color(hex: "ffd54a"))
                                 Text(option.card.rarity.display.uppercased())
                                     .font(.system(size: 10, weight: .heavy))
                                     .foregroundStyle(option.card.rarity.accent)
@@ -852,20 +903,6 @@ struct RewardScreen: View {
                 .padding(.vertical, 4)
             }
         }
-    }
-}
-
-/// A gold "EXTENDED ART" ribbon overlaid on reward cards to signal the cosmetic
-/// prize (the art swap itself ships with real assets later; this reads the intent).
-private struct ExtendedArtRibbon: View {
-    var body: some View {
-        Text("EXTENDED ART")
-            .font(.system(size: 8.5, weight: .black)).tracking(1)
-            .foregroundStyle(Color(hex: "1a0d2e"))
-            .padding(.horizontal, 8).padding(.vertical, 3)
-            .background(Capsule().fill(
-                LinearGradient(colors: GauntletTheme.gold, startPoint: .leading, endPoint: .trailing)))
-            .shadow(color: .black.opacity(0.35), radius: 3, y: 1)
     }
 }
 

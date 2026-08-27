@@ -96,6 +96,50 @@ final class GauntletMetaTests: XCTestCase {
         XCTAssertGreaterThan(p.level(forTrainer: "grader"), 1)
     }
 
+    // MARK: Progress — partial runs (req 3)
+
+    func testPartialRunBanksPerRoundXPButUnlocksNothing() {
+        var p = GauntletProgress()
+        let r = p.recordLoss(trainerId: "ripper", tier: .medium, roundsCleared: 3)
+        XCTAssertEqual(r.xpGained, 3 * GauntletEconomy.roundClearXP(.medium))
+        XCTAssertNil(r.unlockedTier)
+        // A loss on Easy must never open Medium — only a win does.
+        let r2 = p.recordLoss(trainerId: "ripper", tier: .easy, roundsCleared: 4)
+        XCTAssertNil(r2.unlockedTier)
+        XCTAssertFalse(p.isUnlocked(.medium))
+        XCTAssertEqual(p.xp(forTrainer: "ripper"),
+                       3 * GauntletEconomy.roundClearXP(.medium) + 4 * GauntletEconomy.roundClearXP(.easy))
+    }
+
+    func testRoundOneLossBanksNoXP() {
+        var p = GauntletProgress()
+        let r = p.recordLoss(trainerId: "ripper", tier: .hard, roundsCleared: 0)
+        XCTAssertEqual(r.xpGained, 0)
+        XCTAssertFalse(r.leveledUp)
+        XCTAssertEqual(p.xp(forTrainer: "ripper"), 0)
+    }
+
+    func testWinningBeatsLosingWithTheSameRoundsCleared() {
+        let tier = GauntletTier.hard
+        let rounds = GauntletEconomy.rounds(tier)
+        let won = GauntletEconomy.runXP(tier: tier, roundsCleared: rounds, won: true)
+        let lost = GauntletEconomy.runXP(tier: tier, roundsCleared: rounds, won: false)
+        XCTAssertEqual(won - lost, GauntletEconomy.completionBonus(tier))
+        XCTAssertEqual(won, GauntletEconomy.clearXP(tier))
+    }
+
+    func testLevelThresholdGapsStrictlyGrow() {
+        let t = GauntletEconomy.trainerLevelThresholds
+        XCTAssertEqual(t.first, 0)
+        XCTAssertEqual(t.count, GauntletEconomy.maxTrainerLevel)
+        var lastGap = Int.min
+        for i in 1..<t.count {
+            let gap = t[i] - t[i - 1]
+            XCTAssertGreaterThan(gap, lastGap, "level \(i) gap should exceed the previous")
+            lastGap = gap
+        }
+    }
+
     func testProgressSanitizeDropsUnknownTrainers() {
         var p = GauntletProgress(xpByTrainer: ["ripper": 5, "ghost_trainer": 99])
         p.sanitize()

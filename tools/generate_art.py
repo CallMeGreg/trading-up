@@ -477,6 +477,250 @@ SCENES = {1: scene_fire, 2: scene_water, 3: scene_grass, 4: scene_electric, 5: s
 
 
 # ==================================================================================
+# EXTENDED ART — full-card illustrations (Gauntlet win reward)
+# ----------------------------------------------------------------------------------
+# The extended-art variant fills the *whole* card (portrait 216x302, the card's own
+# aspect) instead of the 216x150 art window. It reuses the card's exact spryte — so
+# grading/foil overlays still read as the same creature — but rebuilds a taller,
+# richer environment around it. Unlike the base scenes (one fixed backdrop per set),
+# every extended scene is driven by the card's vary() seed, so the scenery is unique
+# on every card. See CardView(extendedArt:) and docs/DESIGN.md §14.6.
+# ==================================================================================
+EXT_W, EXT_H = 216, 302
+EXT_GROUND = 250  # the y where the spryte's feet rest / the stage glow sits
+
+
+def ext_scene_fire(ctx):
+    """Emberfall — a vertical caldera: distant cones, an ember-filled sky, a lava lake."""
+    uid = ctx.uid
+    rp = ctx.rng(11)
+    peaks, x = "", -12.0
+    while x < 228:
+        w, h = rp.f(34, 64), rp.f(46, 104)
+        peaks += (f'<path d="M{x:.0f},178 L{x + w / 2:.0f},{178 - h:.0f} L{x + w:.0f},178 Z" '
+                  f'fill="#2a0a06" opacity="0.85"/>')
+        x += w * 0.62
+    re = ctx.rng(12)
+    embers = "".join(
+        f'<circle cx="{re.f(6, 210):.1f}" cy="{re.f(8, 236):.1f}" r="{re.f(0.8, 2.6):.2f}" '
+        f'fill="#ffcf6a" opacity="{re.f(0.4, 0.95):.2f}"/>' for _ in range(28))
+    sparks = "".join(star(re.f(20, 196), re.f(24, 150), re.f(1.6, 3.0), "#ffe8b0", re.f(.5, .9))
+                     for _ in range(5))
+    return f"""
+  <defs>
+    <linearGradient id="esky{uid}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#370c05"/><stop offset="42%" stop-color="#7a1c06"/>
+      <stop offset="70%" stop-color="#c2440e"/><stop offset="100%" stop-color="#1e060a"/>
+    </linearGradient>
+    <radialGradient id="elava{uid}" cx="50%" cy="100%" r="72%">
+      <stop offset="0%" stop-color="#ffe08a"/><stop offset="34%" stop-color="#ff6a1a"/>
+      <stop offset="100%" stop-color="#7a1c06" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="{EXT_W}" height="{EXT_H}" fill="url(#esky{uid})"/>
+  <ellipse cx="108" cy="150" rx="120" ry="70" fill="#ff7a1a" opacity="0.10"/>
+  {peaks}
+  {sparks}
+  {embers}
+  <rect x="0" y="206" width="{EXT_W}" height="96" fill="url(#elava{uid})"/>
+  <path d="M0,302 L0,248 L38,260 L76,244 L112,258 L150,242 L188,258 L216,246 L216,302 Z" fill="#280a06"/>
+  <path d="M0,302 L0,272 Q54,262 108,272 T216,270 L216,302 Z" fill="#ff8a2a" opacity="0.85"/>
+  <path d="M0,302 L0,286 Q54,278 108,286 T216,284 L216,302 Z" fill="#ffe08a" opacity="0.7"/>
+  <ellipse cx="108" cy="{EXT_GROUND}" rx="98" ry="30" fill="url(#stage{uid})"/>"""
+
+
+def ext_scene_water(ctx):
+    """Tidecaller — a deep trench: god rays, drifting bubbles, kelp, a bright surface."""
+    uid = ctx.uid
+    rr = ctx.rng(21)
+    rays = "".join(
+        f'<polygon points="{rr.f(0, 200):.0f},0 {rr.f(0, 200) + 14:.0f},0 '
+        f'{rr.f(0, 200) + 48:.0f},302 {rr.f(0, 200) + 18:.0f},302" fill="#bfeaff" opacity="0.06"/>'
+        for _ in range(5))
+    rb = ctx.rng(22)
+    bubbles = "".join(
+        f'<circle cx="{rb.f(8, 208):.1f}" cy="{rb.f(20, 250):.1f}" r="{rb.f(1.2, 3.4):.2f}" '
+        f'fill="#dff6ff" opacity="{rb.f(0.3, 0.6):.2f}"/>' for _ in range(20))
+    rk = ctx.rng(23)
+    kelp = ""
+    for _ in range(5):
+        bx = rk.f(10, 206)
+        sway = rk.f(-16, 16)
+        kelp += (f'<path d="M{bx:.0f},302 C{bx + sway:.0f},260 {bx - sway:.0f},226 {bx + sway * 0.6:.0f},196" '
+                 f'stroke="#0f7d7d" stroke-width="{rk.f(3, 6):.1f}" fill="none" '
+                 f'stroke-linecap="round" opacity="0.75"/>')
+    return f"""
+  <defs>
+    <linearGradient id="esky{uid}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1a72c4"/><stop offset="40%" stop-color="#0b3f86"/>
+      <stop offset="100%" stop-color="#03102e"/>
+    </linearGradient>
+  </defs>
+  <rect width="{EXT_W}" height="{EXT_H}" fill="url(#esky{uid})"/>
+  <ellipse cx="108" cy="0" rx="150" ry="70" fill="#bff0ff" opacity="0.16"/>
+  {rays}
+  {bubbles}
+  {kelp}
+  <path d="M0,302 L0,254 Q40,266 78,254 Q120,242 150,256 Q186,268 216,254 L216,302 Z" fill="#06255a"/>
+  <path d="M0,302 L0,276 Q54,286 108,276 T216,278 L216,302 Z" fill="#041a44"/>
+  <ellipse cx="108" cy="{EXT_GROUND}" rx="98" ry="30" fill="url(#stage{uid})"/>"""
+
+
+def ext_scene_grass(ctx):
+    """Verdspire — the canopy floor: trunks, arching foliage, light shafts, drifting pollen."""
+    uid = ctx.uid
+    rt = ctx.rng(31)
+    trunks = ""
+    for _ in range(3):
+        tx, tw = rt.f(4, 190), rt.f(16, 28)
+        trunks += f'<rect x="{tx:.0f}" y="-6" width="{tw:.0f}" height="308" rx="{tw / 2:.0f}" fill="#123f1e" opacity="0.9"/>'
+    rc = ctx.rng(32)
+    canopy = "".join(
+        f'<ellipse cx="{rc.f(0, 216):.0f}" cy="{rc.f(-6, 26):.0f}" rx="{rc.f(30, 58):.0f}" '
+        f'ry="{rc.f(16, 28):.0f}" fill="#0d3517" opacity="0.85"/>' for _ in range(4))
+    shafts = "".join(
+        f'<polygon points="{rc.f(20, 180):.0f},0 {rc.f(20, 180) + 22:.0f},0 '
+        f'{rc.f(20, 180) + 40:.0f},302 {rc.f(20, 180) + 12:.0f},302" fill="#eaffb0" opacity="0.08"/>'
+        for _ in range(3))
+    rpo = ctx.rng(33)
+    pollen = "".join(
+        f'<circle cx="{rpo.f(8, 208):.1f}" cy="{rpo.f(16, 240):.1f}" r="{rpo.f(1.0, 2.2):.2f}" '
+        f'fill="#f6ffcf" opacity="{rpo.f(0.4, 0.75):.2f}"/>' for _ in range(14))
+    rbl = ctx.rng(34)
+    ferns = "".join(
+        f'<path d="M{fx:.0f},302 C{fx - 8:.0f},272 {fx - 4:.0f},244 {fx + 4:.0f},220" '
+        f'stroke="#1c5a2a" stroke-width="4" fill="none" stroke-linecap="round"/>'
+        for fx in [rbl.f(4, 212) for _ in range(4)])
+    return f"""
+  <defs>
+    <linearGradient id="esky{uid}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2f8a45"/><stop offset="45%" stop-color="#155224"/>
+      <stop offset="100%" stop-color="#06180c"/>
+    </linearGradient>
+  </defs>
+  <rect width="{EXT_W}" height="{EXT_H}" fill="url(#esky{uid})"/>
+  {trunks}
+  {canopy}
+  {shafts}
+  {pollen}
+  <path d="M0,302 L0,262 Q54,274 108,264 T216,266 L216,302 Z" fill="#0a2f14"/>
+  {ferns}
+  <ellipse cx="108" cy="{EXT_GROUND}" rx="98" ry="30" fill="url(#stage{uid})"/>"""
+
+
+def ext_scene_electric(ctx):
+    """Voltcrest — a storm ridge: thunderheads, forked bolts, pylons, sparks, rain."""
+    uid = ctx.uid
+    rc = ctx.rng(41)
+    clouds = "".join(
+        f'<ellipse cx="{rc.f(0, 216):.0f}" cy="{rc.f(6, 40):.0f}" rx="{rc.f(40, 66):.0f}" '
+        f'ry="{rc.f(18, 26):.0f}" fill="#20233a" opacity="0.9"/>' for _ in range(4))
+    rb = ctx.rng(42)
+    bolts = ""
+    for _ in range(2):
+        bx, by = rb.f(30, 186), rb.f(30, 46)
+        bolts += (f'<polyline points="{bx:.0f},{by:.0f} {bx - 12:.0f},{by + 38:.0f} '
+                  f'{bx:.0f},{by + 38:.0f} {bx - 18:.0f},{by + 92:.0f}" fill="none" '
+                  f'stroke="#fff29a" stroke-width="2.2" opacity="0.4"/>')
+    rp = ctx.rng(43)
+    pylons = ""
+    for _ in range(2):
+        px, ph = rp.f(16, 200), rp.f(46, 74)
+        base = 214.0
+        pylons += (f'<g stroke="#101218" stroke-width="2" fill="none" opacity="0.7">'
+                   f'<path d="M{px - 9:.0f},{base:.0f} L{px:.0f},{base - ph:.0f} L{px + 9:.0f},{base:.0f} '
+                   f'M{px - 5:.0f},{base - ph * 0.42:.0f} L{px + 5:.0f},{base - ph * 0.42:.0f} '
+                   f'M{px - 3:.0f},{base - ph * 0.72:.0f} L{px + 3:.0f},{base - ph * 0.72:.0f}"/></g>')
+    rs = ctx.rng(44)
+    sparks = "".join(star(rs.f(16, 200), rs.f(40, 200), rs.f(1.6, 3.0), "#fff6b0", rs.f(.6, .85))
+                     for _ in range(6))
+    rain = "".join(
+        f'<line x1="{rs.f(0, 216):.0f}" y1="{rs.f(0, 200):.0f}" x2="{rs.f(0, 216) - 4:.0f}" '
+        f'y2="{rs.f(0, 200) + 18:.0f}" stroke="#cfe0ff" stroke-width="1" opacity="0.18"/>' for _ in range(9))
+    return f"""
+  <defs>
+    <linearGradient id="esky{uid}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2b2f45"/><stop offset="52%" stop-color="#3a3320"/>
+      <stop offset="100%" stop-color="#12120a"/>
+    </linearGradient>
+  </defs>
+  <rect width="{EXT_W}" height="{EXT_H}" fill="url(#esky{uid})"/>
+  {clouds}
+  {bolts}
+  {rain}
+  {sparks}
+  {pylons}
+  <path d="M0,302 L0,258 Q54,270 108,260 T216,262 L216,302 Z" fill="#181812"/>
+  <ellipse cx="108" cy="{EXT_GROUND}" rx="98" ry="30" fill="url(#stage{uid})"/>"""
+
+
+def ext_scene_shadow(ctx):
+    """Umbral Reach — deep space: nebula veils, a dense starfield, a ringed dead world, shards."""
+    uid = ctx.uid
+    field = starfield(0, 0, EXT_W, 240, ctx.var["seed"] + 51 * 7919, count=40, tint="#ffffff")
+    rp = ctx.rng(52)
+    planet_x, planet_y, pr = rp.f(40, 176), rp.f(30, 66), rp.f(15, 24)
+    tilt = rp.f(-26, -8)
+    rs = ctx.rng(53)
+    shards = "".join(
+        f'<path d="M{rs.f(10, 206):.0f},{rs.f(60, 210):.0f} l{rs.f(4, 9):.0f},{rs.f(-8, -4):.0f} '
+        f'l{rs.f(3, 6):.0f},{rs.f(6, 12):.0f} l{rs.f(-6, -3):.0f},{rs.f(4, 8):.0f} Z" '
+        f'fill="#4a2b7a" stroke="#9c7bdc" stroke-width="0.7" opacity="0.7"/>' for _ in range(5))
+    return f"""
+  <defs>
+    <radialGradient id="esky{uid}" cx="52%" cy="34%" r="82%">
+      <stop offset="0%" stop-color="#2a1450"/><stop offset="52%" stop-color="#140925"/>
+      <stop offset="100%" stop-color="#05020f"/>
+    </radialGradient>
+    <radialGradient id="eneb{uid}" cx="50%" cy="42%" r="46%">
+      <stop offset="0%" stop-color="#7a4fdd" stop-opacity="0.32"/><stop offset="100%" stop-color="#7a4fdd" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="eneb2{uid}" cx="28%" cy="66%" r="48%">
+      <stop offset="0%" stop-color="#ff6fd8" stop-opacity="0.16"/><stop offset="100%" stop-color="#ff6fd8" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="eorb{uid}" cx="40%" cy="36%" r="66%">
+      <stop offset="0%" stop-color="#5a3a92"/><stop offset="100%" stop-color="#150a2c"/>
+    </radialGradient>
+  </defs>
+  <rect width="{EXT_W}" height="{EXT_H}" fill="url(#esky{uid})"/>
+  <ellipse cx="108" cy="120" rx="132" ry="120" fill="url(#eneb{uid})"/>
+  <ellipse cx="64" cy="180" rx="120" ry="96" fill="url(#eneb2{uid})"/>
+  {field}
+  <g opacity="0.9">
+    <circle cx="{planet_x:.0f}" cy="{planet_y:.0f}" r="{pr:.0f}" fill="url(#eorb{uid})"/>
+    <circle cx="{planet_x:.0f}" cy="{planet_y:.0f}" r="{pr:.0f}" fill="none" stroke="#9c7bdc" stroke-width="0.8" opacity="0.7"/>
+    <ellipse cx="{planet_x:.0f}" cy="{planet_y:.0f}" rx="{pr * 1.7:.0f}" ry="{pr * 0.42:.0f}" fill="none"
+             stroke="#d9c6ff" stroke-width="1.6" opacity="0.5" transform="rotate({tilt:.0f} {planet_x:.0f} {planet_y:.0f})"/>
+  </g>
+  {shards}
+  <path d="M0,302 L0,262 Q54,272 108,263 T216,265 L216,302 Z" fill="#0b0620"/>
+  <path d="M0,264 Q54,274 108,265 T216,267" fill="none" stroke="#a06cf6" stroke-width="1" opacity="0.5"/>
+  <ellipse cx="108" cy="{EXT_GROUND}" rx="92" ry="30" fill="url(#stage{uid})" opacity="0.55"/>"""
+
+
+EXT_SCENES = {1: ext_scene_fire, 2: ext_scene_water, 3: ext_scene_grass,
+              4: ext_scene_electric, 5: ext_scene_shadow}
+
+
+def ext_art_inner(card):
+    e = ELE[card["element"]]
+    uid = card["id"].replace("-", "_")
+    role = ROLES[card["name"]]
+    ctx = Ctx(uid, e, card["set"], vary(card["name"]), card["name"])
+    body = creature(ctx, role)                      # same spryte as the base card
+    scene = EXT_SCENES[card["set"]](ctx)            # unique full-card environment
+    # The spryte is authored in 216x150 space; enlarge it about its footing (108,150)
+    # and drop it onto the extended stage so it reads as the hero of the scene.
+    hero = (f'<g transform="translate(108 {EXT_GROUND}) scale(1.28) translate(-108 -150)">'
+            f'{body}</g>')
+    return defs(ctx) + scene + hero
+
+
+def ext_art_svg(card):
+    return f'<svg viewBox="0 0 {EXT_W} {EXT_H}" xmlns="http://www.w3.org/2000/svg">{ext_art_inner(card)}</svg>'
+
+
+# ==================================================================================
 # SET MORPHOLOGY
 # ----------------------------------------------------------------------------------
 # The same call produces genuinely different geometry in every set. Emberfall is
@@ -2751,17 +2995,27 @@ def build_assets():
     jobs = []
     for c in CARDS:
         fid = c["id"]
+        # Base art window (216x150).
         svg = art_svg(c)
         svg_path = os.path.join(MOCKART, f"{fid}.svg")
         open(svg_path, "w").write(svg)
         iset = os.path.join(CARDART, f"{fid}.imageset")
         os.makedirs(iset, exist_ok=True)
         open(os.path.join(iset, "Contents.json"), "w").write(_contents_json(fid))
-        jobs.append((svg_path, os.path.join(iset, f"{fid}.png")))
+        jobs.append((svg_path, os.path.join(iset, f"{fid}.png"), "864", "600"))
+
+        # Extended full-card art (216x302) — the Gauntlet win reward.
+        eid = f"{fid}-ext"
+        esvg_path = os.path.join(MOCKART, f"{eid}.svg")
+        open(esvg_path, "w").write(ext_art_svg(c))
+        eiset = os.path.join(CARDART, f"{eid}.imageset")
+        os.makedirs(eiset, exist_ok=True)
+        open(os.path.join(eiset, "Contents.json"), "w").write(_contents_json(eid))
+        jobs.append((esvg_path, os.path.join(eiset, f"{eid}.png"), "864", "1208"))
 
     def render_one(job):
-        svg_path, png = job
-        subprocess.run(["rsvg-convert", "-w", "864", "-h", "600", svg_path, "-o", png],
+        svg_path, png, w, h = job
+        subprocess.run(["rsvg-convert", "-w", w, "-h", h, svg_path, "-o", png],
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         return png
 

@@ -6,6 +6,10 @@ struct CardView: View {
     let card: Card
     var instance: CardInstance? = nil
     var width: CGFloat = 230
+    /// When true (and a `{id}-ext` asset exists), render the full-bleed Extended-Art
+    /// treatment: new artwork fills the entire card, with the title/value floated on
+    /// scrims and foil/grade still layered on top. (req 4)
+    var extendedArt: Bool = false
 
     private var s: CGFloat { width / 230 }
     private var height: CGFloat { width * 1.4 }
@@ -13,6 +17,7 @@ struct CardView: View {
     private var grade: Int? { instance?.grade }
     private var value: Double { instance?.currentValue ?? card.baseValue }
     private var corner: CGFloat { 16 * s }
+    private var showExtended: Bool { extendedArt && UIImage(named: card.id + "-ext") != nil }
 
     var body: some View {
         ZStack {
@@ -24,15 +29,19 @@ struct CardView: View {
                     )
                 )
 
-            VStack(spacing: 6 * s) {
-                header
-                artWindow
-                metaRow
-                flavorText
-                Spacer(minLength: 0)
-                valueBar
+            if showExtended {
+                extendedContent
+            } else {
+                VStack(spacing: 6 * s) {
+                    header
+                    artWindow
+                    metaRow
+                    flavorText
+                    Spacer(minLength: 0)
+                    valueBar
+                }
+                .padding(10 * s)
             }
-            .padding(10 * s)
 
             if foil {
                 FoilOverlay(cornerRadius: corner)
@@ -51,6 +60,39 @@ struct CardView: View {
     }
 
     // MARK: Pieces
+
+    /// Full-bleed Extended-Art face: the `{id}-ext` illustration edge to edge, with a
+    /// top scrim carrying the name/element and a bottom scrim carrying set/number and
+    /// value. Foil and grade badges are drawn by `body` over this. (req 4)
+    private var extendedContent: some View {
+        ZStack {
+            if let art = UIImage(named: card.id + "-ext") {
+                Image(uiImage: art)
+                    .resizable()
+                    .interpolation(.high)
+                    .scaledToFill()
+            }
+            VStack(spacing: 0) {
+                header
+                    .padding(.horizontal, 11 * s)
+                    .padding(.top, 10 * s)
+                    .padding(.bottom, 11 * s)
+                    .background(LinearGradient(colors: [.black.opacity(0.5), .clear],
+                                              startPoint: .top, endPoint: .bottom))
+                Spacer(minLength: 0)
+                VStack(spacing: 5 * s) {
+                    metaRow
+                    valueBar
+                }
+                .padding(.horizontal, 11 * s)
+                .padding(.top, 16 * s)
+                .padding(.bottom, 11 * s)
+                .background(LinearGradient(colors: [.clear, .black.opacity(0.65)],
+                                          startPoint: .top, endPoint: .bottom))
+            }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: corner))
+    }
 
     private var header: some View {
         HStack(spacing: 4 * s) {

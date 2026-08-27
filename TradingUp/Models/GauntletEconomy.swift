@@ -241,19 +241,48 @@ enum GauntletEconomy {
     /// a level-0 Trainer can already clear Hard — is the guardrail the harness holds.
     static let maxTrainerLevel = 10
 
-    /// XP granted for clearing a run at each tier (Hard pays the most).
-    static func clearXP(_ tier: GauntletTier) -> Int {
+    /// XP granted per round cleared, by tier (Hard pays the most). Every cleared
+    /// round is banked — even on a run that later busts — so partial progress still
+    /// matures a Trainer. See `runXP`.
+    static func roundClearXP(_ tier: GauntletTier) -> Int {
         switch tier {
-        case .easy: return 1
-        case .medium: return 2
-        case .hard: return 4
+        case .easy: return 2
+        case .medium: return 3
+        case .hard: return 5
         }
     }
 
-    /// Cumulative XP required to *reach* each level (index 0 = level 1 = 0 XP). A
-    /// gentle triangular ramp: ~7 Hard clears to max, proportionally more at the
-    /// easier tiers.
-    static let trainerLevelThresholds: [Int] = [0, 1, 2, 4, 6, 9, 12, 16, 20, 25]
+    /// A one-off bonus for actually *winning* the whole Gauntlet at a tier, on top
+    /// of the per-round XP.
+    static func completionBonus(_ tier: GauntletTier) -> Int {
+        switch tier {
+        case .easy: return 3
+        case .medium: return 6
+        case .hard: return 10
+        }
+    }
+
+    /// XP a finished run banks: `roundsCleared` per-round XP plus a completion bonus
+    /// on a win. A run that doesn't get past round 1 (0 rounds cleared) banks
+    /// nothing, so XP always reflects real progress.
+    static func runXP(tier: GauntletTier, roundsCleared: Int, won: Bool) -> Int {
+        guard roundsCleared >= 1 else { return 0 }
+        return roundsCleared * roundClearXP(tier) + (won ? completionBonus(tier) : 0)
+    }
+
+    /// XP for a full clear (win) at each tier — every round plus the completion
+    /// bonus. Hard pays the most. This is the headline number the results screen
+    /// and tests speak in.
+    static func clearXP(_ tier: GauntletTier) -> Int {
+        runXP(tier: tier, roundsCleared: rounds(tier), won: true)
+    }
+
+    /// Cumulative XP required to *reach* each level (index 0 = level 1 = 0 XP). The
+    /// gaps grow ~1.4× per level, so each level is meaningfully harder to earn than
+    /// the last — a Trainer climbs fast early and matures over many runs. Partial
+    /// runs feed the same pool, so progress is always moving. Reaching the cap is a
+    /// real commitment (≈8 Hard wins), not a formality.
+    static let trainerLevelThresholds: [Int] = [0, 10, 24, 44, 72, 110, 160, 225, 320, 460]
 
     /// The level a Trainer is at for a given lifetime XP total (clamped to the cap).
     static func trainerLevel(forXP xp: Int) -> Int {
