@@ -1,65 +1,45 @@
 import SwiftUI
 
-/// Gauntlet Mode — a placeholder for now. The full mode design lands later; this
-/// screen just holds its place in the menu so the navigation, the Full Game gate,
-/// and the theming are all wired up and ready for the real thing to drop in.
+/// Gauntlet Mode — the roguelite loop. This is the host: it builds the
+/// `GauntletState` driver from the shared, Binder-owning `GameState`, paints the
+/// signature purple backdrop, and swaps in the screen for the current phase.
+/// Every game rule lives behind `GauntletState`; these views just present it.
 ///
 /// Reached only when the Full Game is unlocked (the menu routes locked taps to the
-/// paywall instead), so there's no entitlement check to do here.
+/// paywall instead), so there's no entitlement check to do here. See §14.
 struct GauntletView: View {
+    @Environment(GameState.self) private var game
     @Environment(\.dismiss) private var dismiss
+    @State private var state: GauntletState?
 
     var body: some View {
         ZStack {
-            LinearGradient(colors: [Color(hex: "1a0d2e"), Palette.bg0],
-                           startPoint: .top, endPoint: .bottom)
-                .ignoresSafeArea()
-            RadialGradient(gradient: Gradient(colors: [Color(hex: "b06cf7").opacity(0.28), .clear]),
-                           center: .top, startRadius: 20, endRadius: 480)
-                .ignoresSafeArea()
-
-            VStack(spacing: 22) {
-                Spacer()
-
-                Image(systemName: "bolt.fill")
-                    .font(.system(size: 66, weight: .bold))
-                    .foregroundStyle(
-                        LinearGradient(colors: [Color(hex: "ffd54a"), Color(hex: "b06cf7")],
-                                       startPoint: .top, endPoint: .bottom)
-                    )
-                    .shadow(color: Color(hex: "b06cf7").opacity(0.6), radius: 18)
-
-                VStack(spacing: 8) {
-                    Text("GAUNTLET MODE")
-                        .font(.system(size: 14, weight: .black)).tracking(3)
-                        .foregroundStyle(Palette.subtle)
-                    Text("Coming Soon")
-                        .font(.system(size: 30, weight: .black, design: .rounded))
-                        .foregroundStyle(.white)
-                }
-
-                Text("A relentless new way to play Trading Up is on its way. The design is still being forged — check back in a future update.")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(Palette.subtle)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.horizontal, 12)
-
-                Spacer()
-
-                BigButton(title: "Back to Menu", systemImage: "chevron.left",
-                          tint: [Color(hex: "6d5cf7"), Color(hex: "b06cf7")]) {
-                    Haptics.play(.light)
-                    dismiss()
-                }
+            GauntletBackdrop()
+            if let state {
+                content(state)
+                    .readableWidth()
+                    .padding(20)
             }
-            .padding(20)
-            .readableWidth()
         }
-        .overlay(alignment: .topLeading) { backButton }
+        .task { if state == nil { state = GauntletState(game: game) } }
+        .overlay(alignment: .topLeading) { closeButton }
     }
 
-    private var backButton: some View {
+    @ViewBuilder
+    private func content(_ state: GauntletState) -> some View {
+        switch state.phase {
+        case .intro:         IntroScreen(state: state)
+        case .trainerSelect: TrainerSelectScreen(state: state)
+        case .tierSelect:    TierSelectScreen(state: state)
+        case .ripping:       RunScreen(state: state)
+        case .shop:          ShopScreen(state: state)
+        case .reward:        RewardScreen(state: state)
+        case .results:       ResultsScreen(state: state) { dismiss() }
+        case .lost:          LostScreen(state: state) { dismiss() }
+        }
+    }
+
+    private var closeButton: some View {
         Button { dismiss() } label: {
             Image(systemName: "xmark.circle.fill")
                 .font(.system(size: 26))
@@ -68,6 +48,27 @@ struct GauntletView: View {
         }
         .buttonStyle(.plain)
         .padding(12)
-        .accessibilityLabel("Close")
+        .accessibilityLabel("Close Gauntlet")
     }
+}
+
+/// The mode's shared backdrop: a deep violet wash with a top glow, distinct from
+/// Classic's blue so the two modes read apart at a glance.
+struct GauntletBackdrop: View {
+    var body: some View {
+        ZStack {
+            LinearGradient(colors: [Color(hex: "1a0d2e"), Palette.bg0],
+                           startPoint: .top, endPoint: .bottom)
+                .ignoresSafeArea()
+            RadialGradient(gradient: Gradient(colors: [Color(hex: "b06cf7").opacity(0.24), .clear]),
+                           center: .top, startRadius: 20, endRadius: 480)
+                .ignoresSafeArea()
+        }
+    }
+}
+
+/// The mode's accent gradient, reused on primary actions and headers.
+enum GauntletTheme {
+    static let tint = [Color(hex: "6d5cf7"), Color(hex: "b06cf7")]
+    static let gold = [Color(hex: "ffd54a"), Color(hex: "ff8ad6")]
 }

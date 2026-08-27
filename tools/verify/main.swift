@@ -649,6 +649,100 @@ do {
     check(thoughtfulWin - recklessWin >= 10, "grading dupes is a real edge (win gap ≥ 10 pts)")
 }
 
+print("\n== Gauntlet: appraisal engine & knobs ==")
+do {
+    // Synergy: two same-element cards must appraise higher than two off-element
+    // ones of equal value, and the empty Showcase scores nothing.
+    // Elements are set-locked (Set 1 = fire, Set 2 = water, …), so a mixed-element
+    // pair means pulling cards from two different sets/tiers.
+    let fireCards = CardDatabase.cards(inSet: 1).filter { $0.element == .fire }
+    let fireA = CardInstance(cardId: fireCards[0].id)
+    let fireB = CardInstance(cardId: fireCards[1].id)
+    let water = CardInstance(cardId: CardDatabase.cards(inSet: 2).first { $0.element == .water }!.id)
+    let spm = GauntletEconomy.baseSynergyPerMatch
+    check(GauntletRun.appraise([], synergyPerMatch: spm, appraisalMult: 1) == 0, "empty Showcase appraises to 0")
+    // The engine formula is exact: a same-element pair earns the synergy multiplier,
+    // a mixed pair earns none — regardless of the cards' raw base values.
+    let matched = GauntletRun.appraise([fireA, fireB], synergyPerMatch: spm, appraisalMult: 1)
+    let mixed = GauntletRun.appraise([fireA, water], synergyPerMatch: spm, appraisalMult: 1)
+    let matchedExpected = (fireA.currentValue + fireB.currentValue) * (1 + spm)
+    let mixedExpected = fireA.currentValue + water.currentValue
+    check(abs(matched - matchedExpected) < 1e-6, "same-element pair earns the synergy multiplier")
+    check(abs(mixed - mixedExpected) < 1e-6, "off-element pair earns no synergy")
+
+    // RunMods compose: additive fields add, multiplicative fields multiply.
+    var a = RunMods.none; a.extraRipsPerRound = 1; a.appraisalMult = 1.10
+    var b = RunMods.none; b.extraRipsPerRound = 2; b.appraisalMult = 1.20
+    let sum = a + b
+    check(sum.extraRipsPerRound == 3, "RunMods sum additive fields")
+    check(abs(sum.appraisalMult - 1.32) < 1e-9, "RunMods multiply the *Mult fields")
+
+    // Target curve rises every round and the Hard finale is a spiked boss.
+    var rising = true
+    for r in 2...GauntletEconomy.rounds(.hard) where GauntletEconomy.target(.hard, round: r) <= GauntletEconomy.target(.hard, round: r - 1) { rising = false }
+    check(rising, "Hard target rises every round")
+    check(GauntletEconomy.isBossRound(.hard, round: GauntletEconomy.rounds(.hard)), "Hard's last round is the boss")
+    let bossR = GauntletEconomy.rounds(.hard)
+    let unspiked = GauntletEconomy.baseTarget(.hard) * pow(GauntletEconomy.targetGrowth(.hard), Double(bossR - 1))
+    check(GauntletEconomy.target(.hard, round: bossR) > unspiked * 1.4, "boss round spikes the bar")
+    check(!GauntletEconomy.isBossRound(.easy, round: GauntletEconomy.rounds(.easy)), "Easy/Medium have no boss round")
+
+    // Interest is capped — banking is a lever, not a runaway engine.
+    check(GauntletEconomy.interest(on: 100_000) == GauntletEconomy.interestCap, "interest is capped")
+    check(GauntletEconomy.interest(on: 100) == 100 * GauntletEconomy.interestRate, "interest is linear below the cap")
+}
+
+print("\n== Gauntlet: difficulty curve (Monte Carlo) ==")
+do {
+    let n = 200
+    var opt: [GauntletTier: Double] = [:]
+    var car: [GauntletTier: Double] = [:]
+    var cappedTotal = 0
+    for tier in GauntletTier.allCases {
+        let o = GauntletSim.winRate(tier: tier, trainer: .neutral, style: .optimized, trials: n, seed0: 0x6A17)
+        let c = GauntletSim.winRate(tier: tier, trainer: .neutral, style: .careless, trials: n, seed0: 0x6A17)
+        opt[tier] = o.win; car[tier] = c.win
+        cappedTotal += o.capped + c.capped
+        print("  \(tier.rawValue): optimized win \(Int(o.win.rounded()))% / careless win \(Int(c.win.rounded()))%  (n=\(n))")
+    }
+
+    check(cappedTotal == 0, "every Gauntlet run resolves (no runaway)")
+
+    // Winnable with skill on every tier; Easy is a gentle teacher.
+    check(opt[.easy]! >= 90, "Easy is winnable with optimal play (≥ 90%)")
+    check(opt[.medium]! >= 70, "Medium is winnable with optimal play (≥ 70%)")
+    // Guardrail (docs/DESIGN.md §14.3): a level-0, no-Trainer run clears Hard.
+    check(opt[.hard]! >= 45, "a level-0 neutral run clears Hard with optimal play (≥ 45%)")
+    // …but Hard is never a formality.
+    check(opt[.hard]! <= 85, "Hard is not a formality even played perfectly (≤ 85%)")
+
+    // Careless play carries real bankruptcy risk that climbs with the tier.
+    check(100 - car[.medium]! >= 45, "careless play often busts on Medium (bust ≥ 45%)")
+    check(100 - car[.hard]! >= 80, "careless play almost always busts on Hard (bust ≥ 80%)")
+
+    // Skill is worth a lot — the whole point of the mode.
+    check(opt[.medium]! - car[.medium]! >= 25, "skill is a big edge on Medium (win gap ≥ 25 pts)")
+    check(opt[.hard]! - car[.hard]! >= 30, "skill is a big edge on Hard (win gap ≥ 30 pts)")
+
+    // Difficulty is ordered Easy → Medium → Hard, not just re-skinned.
+    check(opt[.easy]! >= opt[.medium]! && opt[.medium]! >= opt[.hard]! + 10, "optimal win rate falls Easy → Medium → Hard")
+    check(car[.easy]! >= car[.medium]! && car[.medium]! >= car[.hard]!, "careless win rate falls Easy → Medium → Hard")
+}
+
+print("\n== Gauntlet: Trainers help but are never required ==")
+do {
+    let n = 120
+    let base = GauntletSim.winRate(tier: .hard, trainer: .neutral, style: .optimized, trials: n, seed0: 0x2C7)
+    var minT = 100.0, maxT = 0.0
+    for t in Trainer.roster {
+        let r = GauntletSim.winRate(tier: .hard, trainer: t, style: .optimized, trials: n, seed0: 0x2C7)
+        minT = min(minT, r.win); maxT = max(maxT, r.win)
+        print("  \(t.name): Hard optimized win \(Int(r.win.rounded()))%  (vs neutral \(Int(base.win.rounded()))%)")
+    }
+    check(minT >= base.win - 5, "no Trainer is a downgrade on Hard (all ≥ neutral within noise)")
+    check(maxT <= 97, "no Trainer trivialises Hard (best ≤ 97%)")
+}
+
 print("\n\(failures == 0 ? "ALL CHECKS PASSED ✅" : "\(failures) CHECK(S) FAILED ❌")")
 exit(failures == 0 ? 0 : 1)
 

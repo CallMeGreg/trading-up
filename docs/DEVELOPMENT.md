@@ -54,12 +54,20 @@ TradingUp/
     GameState.swift          @Observable wrapper: randomness + autosave; owns the full-version entitlement gate and the Binder
     Binder.swift             All-time showcase model: best copy ever owned of each Spryte (survives New Game)
     BinderStore.swift        Versioned store for the Binder, in its own file separate from the run save
+    GauntletEconomy.swift    Gauntlet balance knobs: tier config, target curve, interest, RunMods aggregator (Gauntlet's Economy)
+    Trainer.swift            Gauntlet Trainers: per-run archetypes (only the Rookie is free; five specialists unlock on Gauntlet milestones) + cross-run XP/level
+    Catalyst.swift           Gauntlet Catalysts: run-long buff cards, one per element lane
+    GauntletCore.swift       Deterministic Gauntlet run state machine: rip (per-element pack rail) / keep / grade / shop / round resolution
+    GauntletProgress.swift   Cross-run Gauntlet meta: per-Trainer XP/level, unlocked tiers + Trainers, lifetime stats, intro-seen flag (survives New Game)
+    GauntletProgressStore.swift  Versioned store for Gauntlet progress, in its own file separate from the run save
+    GauntletReward.swift     Win payout: the choose-1-of-3 Foil Extended Art reward (rarity, promotion, consolation)
+    GauntletState.swift      @Observable driver: runs a GauntletRun, banks progress, routes the win reward into the Binder
     FeatureFlags.swift       Build-time switches (see "Feature flags" below)
   Generated/
     CardData.swift           The 250 cards (auto-generated — do not edit by hand)
   Views/                     SwiftUI screens. Menu shell: MainMenuView + SpryteParadeView (home animation),
-                             ClassicModeView (the tabbed game), GauntletView (placeholder), BinderView;
-                             plus Shop, Collection, pack opening, PaywallView, etc.
+                             ClassicModeView (the tabbed game), GauntletView + GauntletFlowViews + GauntletRunViews
+                             (the Gauntlet loop), BinderView; plus Shop, Collection, pack opening, PaywallView, etc.
   Store/
     PurchaseStore.swift      StoreKit 2 layer for the one-time full-version unlock (outside Models/)
   Audio/
@@ -100,6 +108,16 @@ chance, grade odds/multipliers, box guarantees, bonuses) live in
 Re‑run the [verify harness](TESTING.md#the-simulation-harness-no-xcode-needed)
 after any economy change — it enforces the target difficulty curve, not just
 correctness.
+
+**Gauntlet Mode has its own knobs, kept out of `Economy.swift`.** Tier configs, the
+target-appraisal curve, interest rate/ceiling, stipend curve, and the `RunMods` aggregator
+live in `TradingUp/Models/GauntletEconomy.swift`; the Trainer roster and its unlock
+thresholds live in `TradingUp/Models/Trainer.swift`; Catalyst effects in `Catalyst.swift`.
+The pack rail (which element sets start unlocked and what unlocking a set costs mid-round)
+is driven from `GauntletCore.swift`. Gauntlet has its **own** `tools/verify` checks
+(§14.8) — a level-0 Rookie must still clear Hard — so re‑run the harness after any Gauntlet
+balance change too; trainer-unlock thresholds are meta pacing and don't affect the win-rate
+assertions.
 
 ## Feature flags
 

@@ -396,9 +396,10 @@ slow "parade" of Sprytes drifting behind it. It routes to:
 - **Classic Mode** — the original loop above (buy → rip → sell → grade → complete 250).
   Unchanged; it just lives behind the menu now (`Views/ClassicModeView.swift`), and the
   way back out is the **Main Menu** button on the Settings tab.
-- **Gauntlet Mode** — a new mode, gated behind the full‑game unlock. Design TBD; the
-  build ships a themed placeholder (`Views/GauntletView.swift`) so the menu, the paywall
-  gate, and navigation are all wired ahead of the real thing.
+- **Gauntlet Mode** — a roguelite mode, gated behind the full‑game unlock and **specced +
+  shipped per §14**. `Views/GauntletView.swift` now hosts the real run loop (its Trainer
+  select, pack rail, shop, and reward flow live in `Views/Gauntlet*Views.swift` over the
+  `Models/Gauntlet*` engine), not a placeholder.
 - **Binder** — see below.
 
 The one‑time **full‑game unlock** (§11) now unlocks *both* the four paid sets **and**
@@ -407,7 +408,7 @@ routes to the same paywall.
 
 ### The Binder
 A permanent trophy case: one slot per Spryte, each holding the single **most valuable
-copy ever owned** of it — across every Classic run and (eventually) Gauntlet Mode.
+copy ever owned** of it — across every Classic run and Gauntlet Mode.
 
 Where a Classic run is a roguelike that empties on **New Game**, the Binder only ever
 grows: pull a foil, land a PSA 10, complete a set, and the best copy of each Spryte is
@@ -420,7 +421,305 @@ roll‑ups.
 
 ---
 
-## 14. Open questions for review
+## 14. Gauntlet Mode
+
+> **Status:** the **core mode now ships** — the run loop, rounds/rips/appraisal engine,
+> Catalysts, the Trainer roster with meta-unlocks, the three tiers, interest banking, the
+> pack rail, and the choose-1-of-3 Extended-Art reward are all live in
+> `Models/Gauntlet*` and `Views/Gauntlet*`, balance-verified by the Gauntlet `tools/verify`
+> harness (§14.8) and covered by XCTest. What remains design-only are the §14.7 "other
+> levers" (bounties, event nodes, the booster-box splurge, damaged/sealed pulls) and the
+> per-Trainer level perks (§14.3), which are noted inline where they aren't built yet.
+> Gauntlet is gated behind the full-game unlock (§11).
+
+Gauntlet distils Classic to its strategic spine. Classic is, underneath, one tension:
+**value vs. liquidity** under a completion deadline — a card is worth more kept than sold
+(the 75% sell-back spread, §6), but you need cash to keep ripping, and grading (§7) is the
+skill lever that wrings extra value from the same pulls. Gauntlet concentrates that
+tension into a short, escalating, **engine-building run**: you rip toward a rising
+appraisal target, and every pull is a live **keep-for-score vs. sell-for-fuel** decision.
+Same DNA as Classic, roguelite pacing.
+
+### 14.1 The run: rounds, rips, a rising appraisal
+
+A run is a sequence of **rounds**. Each round sets a **Target Appraisal** — a collection
+value you must reach — and gives you a fixed number of **rips** (pack opens) to reach it.
+Clear it and you advance through a **shop** to a higher target; miss it and the run ends.
+The Showcase (the cards you keep) **carries across rounds and compounds**, so it's an
+engine you grow, not a fresh hand each round. It's a **per-run** construct — like a Classic
+run's collection it's discarded when the run ends, and only the Binder reward (§14.6)
+outlives it.
+
+Three resources, each generating a *different* decision:
+
+| Resource | Scope | Decision it forces |
+| --- | --- | --- |
+| **Rips** | Per round; a hard count that resets each round | Tempo — is *this* rip worth spending? The "last rip, need a hit" crunch. |
+| **Appraisal** | Value of the cards you **keep**; must clear the round's Target | Which pulls to bank; whether to gamble-grade a keeper to clear the line. |
+| **Cash** | Across the run; earned by selling (at the spread), spent in the **shop** between rounds | Sell now for shop power later, vs. keep for this round's target. |
+
+Because the Showcase carries over, **selling a kept card is a real sacrifice** — it drops
+appraisal you'll still need next round. That knife-edge keeps the loop strategic instead
+of a slot machine. Running out of rips below target with no legal play ends the run — the
+same "provably stuck" logic as Classic's `isGameOver` (§10), but per-round and escalating,
+so optimisation becomes *mandatory* on the higher tiers rather than optional.
+
+(The two constraints — a hard **rip count** and **cash** — are deliberate: the rip count
+creates tempo pressure, cash creates the economy. A single blended currency was considered
+and rejected as mushier — it collapses two distinct decisions into one.)
+
+**Banking.** Cash you *don't* spend in the shop earns **interest** between rounds — a small,
+capped return on what you've banked — so saving toward a pricier set's packs or a
+booster-box splurge (§14.7) is a live alternative to spending now. It's a deliberate third
+force: the appraisal engine pushes you to *keep* cards, the sell-back spread punishes
+*selling* them, and interest rewards *not spending* the cash you do raise. Three pulls
+working against each other is where the optimisation lives — and the knob (rate + ceiling)
+is tuned by the Gauntlet harness (§14.8) alongside targets and rip counts.
+
+**Targets & faucets.** A round's Target is a **cumulative** bar: it measures your whole
+standing Showcase's appraisal, not just what you added this round, so *selling a keeper
+drops you back toward the line* — the sacrifice that keeps selling honest. Bars rise each
+round and spike on the Hard **boss** round (§14.5). Cash for the shop comes from two
+faucets: **selling** pulls mid-round (at the spread), and a **round-clear stipend that
+scales with how far you overshoot** the Target — so pushing *past* the bar, not stopping
+exactly on it, is the keep-heavy player's way to fund Catalysts. Per-tier counts (rounds,
+rips, retries, starting slots) live in §14.5.
+
+### 14.2 The appraisal engine (where the strategy lives)
+
+For a run to reward **builds** rather than luck, kept cards must **multiply each other**.
+Gauntlet extends Classic's value formula — `Economy.value(base × foil × grade)` — into a
+scoring engine you assemble mid-run:
+
+> **appraisal(card) = base × foil × grade × _synergy_ , then × _run multipliers_**
+
+The two new terms are what a build is *made of*:
+
+- **synergy(card)** — element stacking (each kept Fire Spryte lifts other Fire
+  appraisals), a spotlighted set scoring extra, a completed evolution line or set as a
+  multiplier (reusing the existing `checkBonuses` hooks, but paying *score* rather than
+  only cash).
+- **run multipliers** — global effects from Catalysts (§14.4) and your Trainer (§14.3).
+
+This yields replayable identities — mono-element aggro, foil-chaser, grade-gambler,
+completionist — the reason to replay. Surface the build-up on screen
+(base → ×foil → ×grade → ×synergy) so players *learn* the engine; it doubles as the
+reveal dopamine.
+
+**Keep-slots.** The Showcase holds a **run-long capacity** of *N* cards (a starting count
+per tier, §14.5, raisable in the shop). Once it's full, keeping a new card means **swapping
+one out** — the knapsack question "is this rare better than my current worst keeper?" —
+instead of "keep everything good." Because widening the Showcase competes with Catalysts for
+shop cash, *how big to build it* is itself a decision, and it's the main lever the
+difficulty tiers squeeze.
+
+### 14.3 Trainers — the meta progression
+
+A **Trainer** is the run's starting **archetype** (like a Classic character), chosen
+before the run. Each has one always-on base advantage that biases a strategy rather than
+handing out flat stats. **Only the Rookie is free; the other five are earned** by hitting a
+lifetime Gauntlet milestone (tracked in `GauntletProgress.stats`), so meta progression is
+about *earning the roster*, not just levelling it — and each milestone is phrased to teach
+the lane it unlocks. The shipped roster (`Models/Trainer.swift`):
+
+| Trainer | Leans | Base advantage | Unlocked by |
+| --- | --- | --- | --- |
+| **Rookie** | — (neutral) | No edge — the harness's proof the mode is winnable on skill alone | Free starter |
+| **Ripper** | Tempo | +1 rip every round | Rip **25** packs across runs |
+| **Curator** | Build width | +1 Showcase slot, +0.05 synergy per element match | Build a **9-card** Showcase in one run |
+| **Appraiser** | Value | ×1.10 appraisal on everything | Reach a round score of **200** |
+| **Grader** | Grading | ½ grade fee, +0.12 grade luck | Grade **12** cards across runs |
+| **Merchant** | Economy | +0.08 sell-back, ×1.25 stipend, +$20 seed cash | Hold **$120** cash at once in a run |
+
+Locked cards show the requirement and a live progress bar (e.g. "12 / 25 packs ripped"),
+and the just-unlocked Trainers are celebrated on the selection screen after a run banks its
+stats. Thresholds are meta-pacing knobs, **not** a difficulty lever — the harness still
+proves a neutral Rookie clears Hard, so the roster stays gravy rather than a gate.
+
+**Cross-run progression:** clearing a run with a Trainer grants that Trainer **XP**; levels
+award **pick-1-of-2 perks** (a small talent tree) that deepen its identity or patch a
+weakness, and can unlock new Catalysts into the pool. *(The XP/level fields persist today;
+the perk trees themselves are not yet built.)*
+
+**Meta ceiling — decided.** Each Trainer caps at **10 levels**. XP is earned per cleared
+run and scales with tier (Hard pays the most), so a Trainer matures over a handful of wins
+rather than a grind. Every level offers **pick-1-of-2** perks (≈9 choices across its life),
+and the last couple of levels also drop a **new Catalyst into the global pool** — the
+ceiling expands the game *sideways*, not upward. (New *Trainers* unlock separately, off
+lifetime milestones, not levels — see the roster above.)
+
+⚠️ **Guardrail — perks are sidegrades, never raw power.** Classic's whole thesis (§10) is
+*skill, not grinding, carries you*, so perks read as **tradeoffs or new build lines** (e.g.
+"+1 rip but −1 Showcase slot," "Shadow grades swing harder both ways"), never a flat
+win-rate bump, and a Trainer's total stat budget is capped. The Gauntlet `tools/verify` sims
+(§14.8) enforce this by proving a **level-0** Trainer clears Hard with optimal play — if a
+maxed Trainer is *required* to win, the perks have overstepped and get retuned.
+
+### 14.4 Catalysts — the run-long buff cards
+
+New non-Spryte cards that grant run-long effects — the piece originally sketched as
+"Energy cards" (increased foil chance, increased ultra chance, better grading luck, more
+pack-opening power, …). Two design choices turn them from a buff pile into a system:
+
+1. **Slot scarcity.** You may attune only *N* at once; a better one forces a **swap**.
+   Scarcity is what makes them a build decision, not a checklist.
+2. **Element lanes** so they combo — aligned to the game's existing six elements
+   (`Element`: fire, rock, water, grass, electric, shadow), *not* a new set:
+
+| Lane | Fantasy | Example effects |
+| --- | --- | --- |
+| Fire | Variance / aggro | +ultra chance, reroll a pack, "hot streak" per new card |
+| Water | Economy | better spread, cheaper rips, dupe refunds |
+| Grass | Scaling | appraisal grows per rip, evolution-line multipliers |
+| Electric | Tempo | +rips, +card per pack, chain multipliers |
+| Rock | Defence / floors | guarantee a rarity floor, protect a grade roll |
+| Shadow | Gambling | grading luck, high-roll multipliers with a downside |
+
+Split them into **persistent attunements** (occupy a slot, last the run — the
+"one-time-use, lasts-the-run" idea) and **instants** (no slot, consumed on use, e.g.
+"guarantee a foil next rip"). Same-element pairs and cross-element combos (Fire + Shadow =
+"meltdown": big ultra odds, worse spread) supply the depth. They drop from packs (competing
+with Sprytes for the slot — real opportunity cost) *and* stock the shop (deterministic
+acquisition).
+
+⚠️ **Naming (Guideline 5.2) — decided.** "Energy cards" typed **Fire / Water / Grass /
+Electric / Dark** is very close to a specific real TCG's terminology — exactly the
+trademark-echo risk this doc opens by warning about (§1, §11). So the buff cards are
+**Catalysts**, and the gambling lane is the game's own **Shadow**, never "Dark," staying on
+the six shipped elements (`Element`). The word "Energy" is retired from the design; it
+survives above only as a note of what the concept was first sketched as.
+
+### 14.5 Difficulty tiers
+
+Each tier **adds a mechanic**, not just bigger numbers, and each is unlocked by clearing
+the previous one once (Easy → Medium → Hard). The counts below are **starting points for
+the harness** (§14.8) — the shape is fixed, the magnitudes get tuned:
+
+| Tier | Rounds | Rips / round | Round retries | Showcase slots (start) |
+| --- | --- | --- | --- | --- |
+| **Easy** | 5 | 6 | 2 | 8 |
+| **Medium** | 7 | 5 | 1 | 6 |
+| **Hard** | 9 (last = **boss**) | 4 (boss 5) | 0 (single-life) | 5 |
+
+Target-appraisal bars rise ~1.6× per round and spike on the boss round; absolute dollar
+values are harness-tuned (§14.2, §14.8). **Round retries** ("reprints") let a failed round
+be replayed with fresh rips — a training-wheel that Hard removes entirely. What each tier
+*adds* on top:
+
+| Tier | Adds | Win reward (§14.6) |
+| --- | --- | --- |
+| **Easy** | The training-wheel tier: forgiving **round retries** and a wide Showcase soften the loop while it's being learned. | Foil Extended Art **common** |
+| **Medium** | Steeper targets + a **rotation**: a different set is spotlighted each round; off-set cards score less, so you must adapt. | Foil Extended Art **uncommon** |
+| **Hard** | Aggressive targets + a random **curse per round** (e.g. "foils off," "spread 60%") and a **boss appraisal** finale. | Foil Extended Art **rare / ultra** |
+
+### 14.6 Rewards & the Binder
+
+Winning a run grants a card's **Extended Art** — a full-bleed alternate illustration — and
+files it in the **Binder** (§13). Extended Art is **purely cosmetic: it overwrites only the
+artwork layer, never the value.** A card's worth still comes entirely from its base value ×
+foil × grade, exactly as in Classic (§6–§7), and the Binder still keeps the
+**highest-value** copy per card across **both** modes — so earning Extended Art never raises
+or lowers a slot's value.
+
+What changes is *which illustration renders* that slot: the base art is swapped for its
+Extended Art composition, and **the foil shimmer and the PSA grade slab layer on top of
+it.** So a foil PSA-10 you pulled in Classic keeps its value *and* its effects; once you've
+also won that card's Extended Art in Gauntlet, the slot is drawn as a foil, graded,
+Extended-Art card — all three finishes stacked. The tier's reward arrives as a **Foil**
+Extended Art copy (a guaranteed foil is the sweetener), but the durable prize is the **art
+unlock**, which sticks regardless of which copy is your value-best.
+
+Two notes:
+
+- **It's an art layer, not a value tier.** Extended Art is *not* a value multiplier and
+  touches no `Economy` knob; it needs new renders from `tools/generate_art.py` and a
+  compositor that stacks the existing foil/grade effects over them. Model it as a per-card
+  **cosmetic record on the Binder** (e.g. the set of card ids whose Extended Art is earned),
+  kept **separate** from the value-best `CardInstance` snapshot and added **additively**
+  (§12) so old Binder files keep decoding.
+- **The pull — decided.** The reward is **choose 1 of 3**, not a blind drop. Each option is
+  a Foil Extended Art card at the tier's rarity — **Easy → common, Medium → uncommon,
+  Hard → rare with a 20% chance to be ultra** (reusing `Economy.ultraHitChance`). Options
+  are weighted toward cards whose Extended Art is still **unearned**; if every card at that
+  rarity is already earned the pull promotes to the next rarity up, and if the whole
+  catalogue's Extended Art is complete it pays a cash-and-Catalyst consolation instead.
+  Choosing rather than rolling makes the reward one last decision and defuses the dupe.
+
+### 14.7 Other strategic levers on the table
+
+Curated, highest-leverage first; not all need to ship in v1:
+
+- **Pack choice — ✅ shipped as the pack rail.** The run screen shows a tile per element
+  set; you rip **whichever unlocked set you like** each rip, and locked sets are **bought
+  open mid-round with cash** (a within-run tech tree — the five sets have distinct
+  value/rarity curves, §3, §6, so which to unlock and when is a real lever). Set 1 starts
+  unlocked; the rest gray out until purchased. This replaced the old single "rip a pack"
+  button and the shop's "upgrade packs" line — packs are now a *round* decision, not a
+  *shop* one.
+- **Optional bounties** — per-round side goals ("keep 2 foils," "complete a Fire line")
+  paying Catalysts or cash; rewards flexible, risky play.
+- **Event nodes** between rounds — *The Appraiser* (pay for a guaranteed minimum grade, or
+  gamble for GEM MINT), *Black Market* (buy an ultra outright — deterministic score),
+  deal-with-the-devil **curse trades** for a strong Catalyst.
+- **Reuse the booster box** (§8) as a high-variance shop splurge — its model, guarantees
+  and tests already exist behind `FeatureFlags.removeBoosterBoxes`; Gauntlet is a natural
+  home for it.
+- **Damaged / sealed pulls** — cards worth little until graded, or hidden until appraised —
+  extra per-pack decisions.
+
+### 14.8 Guardrails & implementation notes
+
+- **Own knobs, own harness.** Gauntlet gets its **own** balance constants (separate from
+  `Economy.swift`'s Classic curve) and its **own** `tools/verify` simulations, held to the
+  same statistical bar Classic is: an optimised build clears Hard, careless play busts, and
+  a **level-0 Trainer can still win** (grinding is not required). Do not fold Gauntlet
+  tuning into the Classic EV / win-rate assertions — they guard a different game.
+- **Foundation-only model.** Gauntlet logic lives in `Models/` like `GameCore`, so the
+  headless harness can compile it. Views stay SwiftUI-only.
+- **Additive persistence** (§12). Trainer XP/levels, unlocked tiers, and the per-card
+  Extended-Art cosmetic record (on the Binder, *not* `CardInstance`) are all new optional
+  fields; old saves and the Binder file must keep decoding, and a bad file is quarantined,
+  never destroyed.
+- **Free vs. paid.** Gauntlet stays behind the full-game unlock (§11); it grants no
+  in-game currency for real money and no randomised *paid* pull, so the 4+ rating and
+  Guideline 3.1.1 stance are unchanged.
+
+### 14.9 Design decisions & remaining tuning
+
+The **shape** of the mode is now decided; what's left is numeric tuning the harness owns
+(§14.8).
+
+1. **Naming** — ✅ Catalysts + Shadow (never "Energy" / "Dark"), for the Guideline 5.2
+   reason (§14.4).
+2. **Interest** — ✅ banking between rounds (§14.1); rate + ceiling 🔧 harness-tuned.
+3. **Run length** — ✅ Easy 5 / Medium 7 / Hard 9-with-boss rounds; 6 / 5 / 4 rips a round;
+   2 / 1 / 0 round retries (§14.5). Absolute target-dollar bars 🔧 harness-tuned.
+4. **Rip model** — ✅ a hard **rip count per round + cash in the shop** (two currencies); the
+   single-blended-currency option is dropped (§14.1).
+5. **Reward pull** — ✅ **choose 1 of 3**, rarity by tier (common / uncommon /
+   rare-with-20%-ultra), weighted toward unearned Extended Art (§14.6).
+6. **Showcase carry-over** — ✅ one **compounding standing Showcase** per run, with a
+   run-long capacity raisable in the shop, discarded at run's end — only the Binder reward
+   persists (§14.1–§14.2).
+7. **Meta ceiling** — ✅ **10 levels**, pick-1-of-2 sidegrade perks, horizontal unlocks; a
+   level-0 Trainer must still clear Hard (§14.3).
+8. **Trainer roster** — ✅ **earned, not just levelled**: only the **Rookie** is free; the
+   five specialists each unlock on a lifetime Gauntlet milestone shown with a live progress
+   bar (§14.3). Milestone thresholds are meta pacing, not a difficulty knob.
+9. **Pack rail** — ✅ pick **which unlocked element** to rip each rip; locked sets bought
+   open mid-round with cash. Replaced the single rip button and the shop's pack upgrade
+   (§14.7).
+10. **First-run explainer** — ✅ a one-time intro screen (re-openable from the ⓘ button)
+    walks scoring, the shop, and interest before the first run, so the loop is legible
+    without a tutorial mode. Gated on a `hasSeenIntro` flag in `GauntletProgress`.
+
+🔧 **Left for the harness** (§14.8): the magnitudes — target-dollar bars per round, the
+interest rate/ceiling, the round-clear stipend curve, and each perk's stat budget — tuned so
+an optimised build clears Hard, careless play busts, and grinding is never required.
+
+---
+
+## 15. Open questions for review
 1. **Creature brand name** — ✅ *decided:* **Sprytes** (see §2).
 2. **Art direction** — ✅ *decided:* hand-built flat-vector creatures, one per card,
    generated by `tools/generate_art.py` (see §1). Every card has its own character
@@ -430,3 +729,4 @@ roll‑ups.
 3. **Grading fee** — ✅ *decided:* flat per‑set ramp **$2/$4/$6/$8/$10** (see §7).
 4. **Card look** — thumbs‑up the mockup style, or tweak colors/frames/foil?
 5. Set names / theme order OK? Any names to change?
+6. **Gauntlet Mode** — full design drafted in §14; decisions and remaining tuning in §14.9.

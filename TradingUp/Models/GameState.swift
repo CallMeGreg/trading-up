@@ -250,4 +250,17 @@ final class GameState {
             binderStore.save(binder)
         }
     }
+
+    /// Award a Gauntlet win's Extended-Art reward: unlock the card's cosmetic
+    /// Extended Art and fold the guaranteed **Foil** copy into the all-time Binder,
+    /// persisting if anything changed. The art unlock never alters a slot's value
+    /// (§14.6); the foil copy is recorded like any other pull, so it can only ever
+    /// raise a slot's value-best, never lower it. Returns whether anything changed.
+    @discardableResult
+    func awardExtendedArt(_ option: GauntletRewardOption) -> Bool {
+        let earnedArt = binder.earnExtendedArt(option.cardId)
+        let recorded = binder.record([option.instance])
+        if earnedArt || recorded { binderStore.save(binder) }
+        return earnedArt || recorded
+    }
 }
