@@ -115,8 +115,8 @@ enum GauntletSim {
             var improved = true
             while improved {
                 improved = false
-                if let cost = run.packTierUpgradeCost, run.cash >= cost {
-                    run.upgradePackTier(); improved = true; continue
+                if let set = run.nextLockedPack, let cost = run.packUnlockCost(set), run.cash >= cost {
+                    run.unlockPack(set); improved = true; continue
                 }
                 if run.effectiveSlots < optimizedSlotCap, run.cash >= run.nextSlotCost {
                     run.buySlot(); improved = true; continue
@@ -127,10 +127,10 @@ enum GauntletSim {
                 }
             }
         case .careless:
-            // Hoards a little less; springs for a pack-tier bump once it can afford
-            // one with a modest buffer — but still ignores slots and Catalyst slots.
-            if let cost = run.packTierUpgradeCost, run.cash >= cost * 1.4 {
-                run.upgradePackTier()
+            // Hoards a little less; springs for a pack unlock once it can afford one
+            // with a modest buffer — but still ignores slots and Catalyst slots.
+            if let set = run.nextLockedPack, let cost = run.packUnlockCost(set), run.cash >= cost * 1.4 {
+                run.unlockPack(set)
             }
         }
     }

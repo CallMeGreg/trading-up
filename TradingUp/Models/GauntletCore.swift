@@ -64,7 +64,7 @@ struct GauntletRun {
 
     // Resources
     var cash: Double = 0
-    var packTier = 1                      // highest set unlocked; any set 1…packTier is rippable
+    var unlockedPacks: Set<Int> = [1]    // element sets rippable this run; set 1 is free, others bought open in any order
     var showcase: [CardInstance] = []     // the cards you keep (capacity = effectiveSlots)
     var attunedCatalysts: [Catalyst] = []
     var purchasedSlots = 0
@@ -243,16 +243,24 @@ struct GauntletRun {
 
     // MARK: Packs (the rip rail)
 
-    /// Whether a set's packs can be ripped this run — everything up to the highest
-    /// unlocked tier. Richer sets are unlocked (for cash) as the run goes.
-    func isPackUnlocked(_ set: Int) -> Bool { set >= 1 && set <= packTier }
+    /// Highest set currently unlocked — the default set `rip` opens and what the
+    /// end-of-run trace reports. Derived from `unlockedPacks` (starter set 1 is
+    /// always in the set, so this never falls below 1).
+    var packTier: Int { unlockedPacks.max() ?? 1 }
+
+    /// Whether a set's packs can be ripped this run. Sets unlock independently and
+    /// out of order — buying set 4 open doesn't require sets 2 or 3.
+    func isPackUnlocked(_ set: Int) -> Bool { unlockedPacks.contains(set) }
 
     /// Every set the pack rail shows, low → high.
     static let allPackTiers: [Int] = Array(1...GauntletEconomy.maxPackTier)
 
-    /// The next set that can be unlocked (one above the highest unlocked), or nil
-    /// once the run is at the cap.
-    var nextPackTier: Int? { packTier < GauntletEconomy.maxPackTier ? packTier + 1 : nil }
+    /// The cheapest still-locked set on the rail (used by the sim/AI to pick the
+    /// next sensible unlock), or nil once every set is open.
+    var nextLockedPack: Int? {
+        Self.allPackTiers.filter { !isPackUnlocked($0) }
+            .min { (GauntletEconomy.packUnlockCost(set: $0) ?? .infinity) < (GauntletEconomy.packUnlockCost(set: $1) ?? .infinity) }
+    }
 
     // MARK: Keep / sell / swap
 
@@ -323,19 +331,34 @@ struct GauntletRun {
 
     // MARK: Shop (between rounds)
 
-    var packTierUpgradeCost: Double? {
-        guard packTier < GauntletEconomy.maxPackTier else { return nil }
-        return GauntletEconomy.packTierUpgradeCost(to: packTier + 1)
+    /// Cost to unlock a specific locked set's packs, or nil if it's the free
+    /// starter, already unlocked, or off the rail.
+    func packUnlockCost(_ set: Int) -> Double? {
+        guard !isPackUnlocked(set) else { return nil }
+        return GauntletEconomy.packUnlockCost(set: set)
+    }
+    /// Whether the run can afford to open a given locked set right now.
+    func canUnlockPack(_ set: Int) -> Bool {
+        guard let cost = packUnlockCost(set) else { return false }
+        return cash >= cost
     }
     var nextSlotCost: Double { GauntletEconomy.slotCost(purchased: purchasedSlots) }
     var nextCatalystSlotCost: Double { GauntletEconomy.catalystSlotCost(purchased: purchasedCatalystSlots) }
 
+    /// Buy a specific locked set open (any order). No-op if unaffordable/invalid.
     @discardableResult
-    mutating func upgradePackTier() -> Bool {
-        guard let cost = packTierUpgradeCost, cash >= cost else { return false }
+    mutating func unlockPack(_ set: Int) -> Bool {
+        guard let cost = packUnlockCost(set), cash >= cost else { return false }
         cash -= cost
-        packTier += 1
+        unlockedPacks.insert(set)
         return true
+    }
+
+    /// Convenience for the sim/AI: open the cheapest still-locked set if affordable.
+    @discardableResult
+    mutating func unlockNextPack() -> Bool {
+        guard let set = nextLockedPack else { return false }
+        return unlockPack(set)
     }
 
     @discardableResult

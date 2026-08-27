@@ -59,8 +59,8 @@ extension Trainer {
         Trainer(id: "ripper", name: "Ripper",
                 blurb: "Lives for the tear. One extra rip every round.",
                 baseMods: { var m = RunMods.none; m.extraRipsPerRound = 1; return m }(),
-                unlock: TrainerUnlock(stat: GauntletStat.packsRipped, threshold: 25,
-                                      summary: "Rip 25 packs across your Gauntlet runs.",
+                unlock: TrainerUnlock(stat: GauntletStat.packsRipped, threshold: 100,
+                                      summary: "Rip 100 packs across your Gauntlet runs.",
                                       noun: "packs ripped")),
 
         Trainer(id: "curator", name: "Curator",

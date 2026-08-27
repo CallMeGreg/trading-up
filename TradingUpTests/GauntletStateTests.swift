@@ -118,8 +118,69 @@ final class GauntletStateTests: XCTestCase {
         XCTAssertEqual(s.packTier, 1)
         XCTAssertTrue(s.isPackUnlocked(1))
         XCTAssertFalse(s.isPackUnlocked(2))
-        XCTAssertEqual(s.nextPackTier, 2)
+        XCTAssertNotNil(s.packUnlockCost(2), "a locked set advertises an unlock price")
+        XCTAssertNil(s.packUnlockCost(1), "the free starter has no unlock price")
         XCTAssertEqual(s.packTiers, Array(1...GauntletEconomy.maxPackTier))
+    }
+
+    func testPackRailReadThroughReflectsTheRun() {
+        let (s, _) = makeState(seed: 3)
+        s.chooseTrainer(.neutral)
+        s.startRun(tier: .easy)
+        // Costs and gates delegate straight to the underlying run.
+        XCTAssertNil(s.packUnlockCost(1), "the free starter has no unlock price")
+        XCTAssertEqual(s.packUnlockCost(2), GauntletEconomy.packUnlockCost(set: 2))
+        XCTAssertEqual(s.packUnlockCost(GauntletEconomy.maxPackTier),
+                       GauntletEconomy.packUnlockCost(set: GauntletEconomy.maxPackTier))
+        // At the starting stake nothing on the rail is affordable yet, and an
+        // unaffordable unlock is a no-op that opens nothing. (Successful out-of-order
+        // unlocking is proven at the model layer in GauntletCoreTests.)
+        XCTAssertFalse(s.canUnlockPack(2))
+        XCTAssertFalse(s.unlockPack(2))
+        XCTAssertFalse(s.isPackUnlocked(2))
+    }
+
+    func testRippingRecordsPulledCardsIntoTheSharedBinder() {
+        let (s, game) = makeState(seed: 7)
+        s.chooseTrainer(.neutral)
+        s.startRun(tier: .easy)
+        XCTAssertEqual(game.binder.filledCount, 0, "the Binder starts empty in this run's temp dir")
+
+        s.rip(set: 1)
+        XCTAssertFalse(s.pendingCards.isEmpty)
+        // Every card the pack surfaced should now sit in the all-time Binder at a
+        // value at least as high as what was pulled — Gauntlet pulls feed the
+        // collection just like Classic (item 1), before any keep/sell decision.
+        for card in s.pendingCards {
+            let best = game.binder.best(for: card.cardId)
+            XCTAssertNotNil(best, "pulled card \(card.cardId) should be recorded in the Binder")
+            XCTAssertGreaterThanOrEqual(best!.currentValue, card.currentValue)
+        }
+    }
+
+    func testGradingAShowcaseCardUpdatesTheBinderValue() {
+        let (s, game) = makeState(seed: 11)
+        s.chooseTrainer(.neutral)
+        s.startRun(tier: .easy)
+        // Pull a card, keep it, and settle the rest of the pack. The set-1 grade fee
+        // is $2 against the $15 starting stake, so no cash plumbing is needed.
+        s.rip(set: 1)
+        guard let first = s.pendingCards.first else { return XCTFail("expected a pull") }
+        s.keep(first)
+        while let c = s.pendingCards.first { s.sell(c) }
+        let idx = 0
+        let beforeValue = s.run!.showcase[idx].currentValue
+        guard s.canGrade(showcaseIndex: idx) else { return }
+
+        if s.grade(showcaseIndex: idx) != nil {
+            let graded = s.run!.showcase[idx]
+            // The Binder keeps the running max, so it reflects at least the ungraded
+            // pull and the graded card — grading never lowers a recorded best.
+            let best = game.binder.best(for: graded.cardId)
+            XCTAssertNotNil(best)
+            XCTAssertGreaterThanOrEqual(best!.currentValue, beforeValue)
+            XCTAssertGreaterThanOrEqual(best!.currentValue, graded.currentValue)
+        }
     }
 
     func testRipRejectsALockedPackSetButSpendsNothing() {

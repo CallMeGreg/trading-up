@@ -187,6 +187,7 @@ final class GauntletState {
         let opened = set ?? r.packTier
         let result = r.rip(from: set, using: &rng)
         run = r
+        game.recordGauntletCards(result.cards)
         pendingCards = result.cards
         pendingCatalyst = result.catalyst
         lastRippedSet = opened
@@ -204,21 +205,16 @@ final class GauntletState {
 
     /// The element sets, low→high, for the run's pack rail.
     var packTiers: [Int] { GauntletRun.allPackTiers }
-    /// The highest set unlocked this run (any set 1…`packTier` is rippable).
+    /// The highest set unlocked this run — the set a bare `rip()` opens.
     var packTier: Int { run?.packTier ?? 1 }
     func isPackUnlocked(_ set: Int) -> Bool { run?.isPackUnlocked(set) ?? false }
-    /// The next set that can be bought open, or `nil` at the top of the rail.
-    var nextPackTier: Int? { run?.nextPackTier }
-    /// Cash cost to unlock the next set, or `nil` if there's none left.
-    var packUnlockCost: Double? { run?.packTierUpgradeCost }
-    /// Whether the player can afford to unlock the next set right now.
-    var canUnlockNextPack: Bool {
-        guard let cost = packUnlockCost, let run else { return false }
-        return run.cash >= cost
-    }
-    /// Buy open the next element set (same mechanic/cost as the old shop upgrade).
+    /// Cash cost to unlock a specific locked set (nil if free/already open).
+    func packUnlockCost(_ set: Int) -> Double? { run?.packUnlockCost(set) }
+    /// Whether the player can afford to unlock a specific locked set right now.
+    func canUnlockPack(_ set: Int) -> Bool { run?.canUnlockPack(set) ?? false }
+    /// Buy open one specific locked set (any order, independently priced).
     @discardableResult
-    func unlockNextPack() -> Bool { mutateRun { $0.upgradePackTier() } }
+    func unlockPack(_ set: Int) -> Bool { mutateRun { $0.unlockPack(set) } }
 
     var canKeepPending: Bool { run?.canKeep ?? false }
 
@@ -282,6 +278,9 @@ final class GauntletState {
         guard var r = run else { return nil }
         let g = r.gradeShowcaseCard(at: index, using: &rng)
         run = r
+        if g != nil, r.showcase.indices.contains(index) {
+            game.recordGauntletCards([r.showcase[index]])
+        }
         return g
     }
 
@@ -331,8 +330,6 @@ final class GauntletState {
 
     // MARK: Shop (between rounds)
 
-    @discardableResult
-    func upgradePackTier() -> Bool { mutateRun { $0.upgradePackTier() } }
     @discardableResult
     func buySlot() -> Bool { mutateRun { $0.buySlot() } }
     @discardableResult

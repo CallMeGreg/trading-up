@@ -244,12 +244,11 @@ private struct PackTile: View {
 
     private var element: Element { Element.theme(forSet: set) }
     private var unlocked: Bool { state.isPackUnlocked(set) }
-    private var isNext: Bool { state.nextPackTier == set }
-    private var enabled: Bool {
-        if unlocked { return state.canRip }
-        if isNext { return state.canUnlockNextPack }
-        return false
-    }
+    /// Cost to open this locked set (every locked set is independently buyable).
+    private var unlockCost: Double? { state.packUnlockCost(set) }
+    /// Whether the run can afford to open this locked set right now.
+    private var affordable: Bool { state.canUnlockPack(set) }
+    private var enabled: Bool { unlocked ? state.canRip : affordable }
 
     var body: some View {
         Button(action: act) {
@@ -270,17 +269,18 @@ private struct PackTile: View {
     }
 
     /// A miniature of the Classic pack wrapper, dimmed and locked when it isn't
-    /// yet available this run.
+    /// yet available this run. Affordable locked packs read a touch brighter so the
+    /// eye lands on what you can buy open.
     private var packArt: some View {
         ZStack {
             PackWrapper(set: set, width: packWidth, detail: .mini)
                 .saturation(unlocked ? 1 : 0.12)
-                .opacity(unlocked ? (enabled ? 1 : 0.6) : (isNext ? 0.72 : 0.42))
+                .opacity(unlocked ? (enabled ? 1 : 0.6) : (affordable ? 0.72 : 0.42))
             if !unlocked {
                 ZStack {
                     Circle().fill(.black.opacity(0.55))
                         .frame(width: packWidth * 0.5, height: packWidth * 0.5)
-                    Image(systemName: isNext ? "lock.open.fill" : "lock.fill")
+                    Image(systemName: affordable ? "lock.open.fill" : "lock.fill")
                         .font(.system(size: packWidth * 0.24, weight: .bold))
                         .foregroundStyle(.white.opacity(0.92))
                 }
@@ -292,26 +292,25 @@ private struct PackTile: View {
     /// A tint halo that marks a pack you can act on right now.
     private var glow: Color {
         if unlocked && enabled { return element.badgeTint.opacity(0.55) }
-        if isNext && state.canUnlockNextPack { return Color(hex: "ffd54a").opacity(0.6) }
+        if !unlocked && affordable { return Color(hex: "ffd54a").opacity(0.6) }
         return .clear
     }
 
     private var statusLine: String {
         if unlocked { return "Rip" }
-        if isNext, let cost = state.packUnlockCost { return "Unlock \(cost.moneyShort)" }
+        if let cost = unlockCost { return "Unlock \(cost.moneyShort)" }
         return "Locked"
     }
     private var statusTint: Color {
         if unlocked { return enabled ? element.badgeTint : Palette.subtle }
-        if isNext { return state.canUnlockNextPack ? Palette.money : Palette.subtle }
-        return Palette.subtle
+        return affordable ? Palette.money : Palette.subtle
     }
 
     private func act() {
         if unlocked {
             Haptics.play(.medium); state.rip(set: set)
-        } else if isNext {
-            Haptics.play(.success); state.unlockNextPack()
+        } else if affordable {
+            Haptics.play(.success); state.unlockPack(set)
         }
     }
 }

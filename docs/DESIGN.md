@@ -447,8 +447,9 @@ value you must reach — and gives you a fixed number of **rips** (pack opens) t
 Clear it and you advance through a **shop** to a higher target; miss it and the run ends.
 The Showcase (the cards you keep) **carries across rounds and compounds**, so it's an
 engine you grow, not a fresh hand each round. It's a **per-run** construct — like a Classic
-run's collection it's discarded when the run ends, and only the Binder reward (§14.6)
-outlives it.
+run's collection the Showcase itself is discarded when the run ends. What outlives it is the
+**Binder**: the run's Extended-Art reward (§14.6) *and* the value-best of every card the run
+pulled or graded, folded into the all-time collection along the way.
 
 Three resources, each generating a *different* decision:
 
@@ -525,13 +526,13 @@ the lane it unlocks. The shipped roster (`Models/Trainer.swift`):
 | Trainer | Leans | Base advantage | Unlocked by |
 | --- | --- | --- | --- |
 | **Rookie** | — (neutral) | No edge — the harness's proof the mode is winnable on skill alone | Free starter |
-| **Ripper** | Tempo | +1 rip every round | Rip **25** packs across runs |
+| **Ripper** | Tempo | +1 rip every round | Rip **100** packs across runs |
 | **Curator** | Build width | +1 Showcase slot, +0.05 synergy per element match | Build a **9-card** Showcase in one run |
 | **Appraiser** | Value | ×1.10 appraisal on everything | Reach a round score of **200** |
 | **Grader** | Grading | ½ grade fee, +0.12 grade luck | Grade **12** cards across runs |
 | **Merchant** | Economy | +0.08 sell-back, ×1.25 stipend, +$20 seed cash | Hold **$120** cash at once in a run |
 
-Locked cards show the requirement and a live progress bar (e.g. "12 / 25 packs ripped"),
+Locked cards show the requirement and a live progress bar (e.g. "60 / 100 packs ripped"),
 and the just-unlocked Trainers are celebrated on the selection screen after a run banks its
 stats. Thresholds are meta-pacing knobs, **not** a difficulty lever — the harness still
 proves a neutral Rookie clears Hard, so the roster stays gravy rather than a gate.
@@ -627,6 +628,14 @@ foil × grade, exactly as in Classic (§6–§7), and the Binder still keeps the
 **highest-value** copy per card across **both** modes — so earning Extended Art never raises
 or lowers a slot's value.
 
+**Every Gauntlet pull and grade feeds the Binder too**, exactly like Classic: each card a
+run rips or grades is folded into the all-time Binder and only ever raises a slot's
+value-best (`GameState.recordGauntletCards`, called from the rip and grade paths). The
+run's own Showcase is still discarded when the run ends — but the *collection value* a card
+earned along the way persists, so a lucky Gauntlet foil or a GEM-MINT grade counts toward
+the Binder even if you never win the run. Extended Art remains a separate cosmetic layer
+over whatever value-best copy you hold.
+
 What changes is *which illustration renders* that slot: the base art is swapped for its
 Extended Art composition — a **generated, full-card `{id}-ext` asset** (one per Spryte,
 authored in `tools/generate_art.py`: the card's own creature re-staged in a taller, richer,
@@ -663,9 +672,11 @@ Curated, highest-leverage first; not all need to ship in v1:
   set; you rip **whichever unlocked set you like** each rip, and locked sets are **bought
   open mid-round with cash** (a within-run tech tree — the five sets have distinct
   value/rarity curves, §3, §6, so which to unlock and when is a real lever). Set 1 starts
-  unlocked; the rest gray out until purchased. This replaced the old single "rip a pack"
-  button and the shop's "upgrade packs" line — packs are now a *round* decision, not a
-  *shop* one.
+  unlocked; every other set shows **its own unlock price** and can be bought open **in any
+  order** — each is priced independently off its Classic pack price (`GauntletEconomy.packUnlockCost`),
+  so a run can splurge straight to a rich set or ladder up cheaply. This replaced the old
+  single "rip a pack" button and the shop's "upgrade packs" line — packs are now a *round*
+  decision, not a *shop* one.
 - **Optional bounties** — per-round side goals ("keep 2 foils," "complete a Fire line")
   paying Catalysts or cash; rewards flexible, risky play.
 - **Event nodes** between rounds — *The Appraiser* (pay for a guaranteed minimum grade, or
@@ -716,9 +727,9 @@ The **shape** of the mode is now decided; what's left is numeric tuning the harn
 8. **Trainer roster** — ✅ **earned, not just levelled**: only the **Rookie** is free; the
    five specialists each unlock on a lifetime Gauntlet milestone shown with a live progress
    bar (§14.3). Milestone thresholds are meta pacing, not a difficulty knob.
-9. **Pack rail** — ✅ pick **which unlocked element** to rip each rip; locked sets bought
-   open mid-round with cash. Replaced the single rip button and the shop's pack upgrade
-   (§14.7).
+9. **Pack rail** — ✅ pick **which unlocked element** to rip each rip; every locked set is
+   bought open mid-round with cash, **independently priced and in any order** (not a forced
+   ladder). Replaced the single rip button and the shop's pack upgrade (§14.7).
 10. **First-run explainer** — ✅ a one-time intro screen (re-openable from the ⓘ button)
     walks scoring, the shop, and interest before the first run, so the loop is legible
     without a tutorial mode. Gated on a `hasSeenIntro` flag in `GauntletProgress`.

@@ -203,12 +203,16 @@ enum GauntletEconomy {
 
     // MARK: Shop costs
 
-    /// Cost to raise the pack tier you rip (unlocking a higher set's packs). Keyed
-    /// by the set you're upgrading *to*; scales off Classic pack prices. Tuned so
-    /// the first upgrade lands around round 2–3 and each later one paces ~2 rounds.
-    static let packTierUpgradeFactor = 1.4
-    static func packTierUpgradeCost(to set: Int) -> Double {
-        Economy.packPrice(set: set) * packTierUpgradeFactor
+    /// Cost to unlock a single element set's packs this run. Each set is priced
+    /// **independently** off its Classic pack price, so a run can buy any locked
+    /// set open in any order (not a forced sequential ladder) — richer sets simply
+    /// cost more. Returns `nil` for the always-open starter (set 1) or an id off
+    /// the rail. Tuned so the first unlock lands around round 2–3 and the top set
+    /// stays a late-run investment; the harness holds the difficulty curve.
+    static let packUnlockFactor = 1.4
+    static func packUnlockCost(set: Int) -> Double? {
+        guard set >= 2, set <= maxPackTier else { return nil }
+        return Economy.packPrice(set: set) * packUnlockFactor
     }
 
     /// Cost of the next Showcase slot, given how many have already been bought.

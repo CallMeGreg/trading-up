@@ -160,18 +160,18 @@ final class GauntletMetaTests: XCTestCase {
     func testIngestUnlocksATrainerOnceItsMilestoneIsMet() {
         var p = GauntletProgress()
 
-        // Below the Ripper's 25-pack bar: still locked, nothing announced.
-        var short = GauntletRunReport(); short.packsRipped = 10
+        // Below the Ripper's 100-pack bar: still locked, nothing announced.
+        var short = GauntletRunReport(); short.packsRipped = 60
         XCTAssertTrue(p.ingest(short).isEmpty)
         XCTAssertFalse(p.isTrainerUnlocked("ripper"))
 
-        // Crossing the bar (10 + 20 ≥ 25) unlocks it and reports the id once.
-        var more = GauntletRunReport(); more.packsRipped = 20
+        // Crossing the bar (60 + 40 ≥ 100) unlocks it and reports the id once.
+        var more = GauntletRunReport(); more.packsRipped = 40
         XCTAssertEqual(p.ingest(more), ["ripper"])
         XCTAssertTrue(p.isTrainerUnlocked("ripper"))
 
         // Idempotent: a later run never re-announces an already-earned Trainer.
-        var again = GauntletRunReport(); again.packsRipped = 25
+        var again = GauntletRunReport(); again.packsRipped = 100
         XCTAssertFalse(p.ingest(again).contains("ripper"))
     }
 
@@ -190,11 +190,11 @@ final class GauntletMetaTests: XCTestCase {
     func testUnlockProgressClampsToTheThreshold() {
         var p = GauntletProgress()
         let ripper = Trainer.roster.first { $0.id == "ripper" }!
-        var r = GauntletRunReport(); r.packsRipped = 40      // overshoots the 25-pack bar
+        var r = GauntletRunReport(); r.packsRipped = 140      // overshoots the 100-pack bar
         _ = p.ingest(r)
         let prog = p.unlockProgress(for: ripper)
-        XCTAssertEqual(prog?.have, 25, "the progress line clamps have ≤ need")
-        XCTAssertEqual(prog?.need, 25)
+        XCTAssertEqual(prog?.have, 100, "the progress line clamps have ≤ need")
+        XCTAssertEqual(prog?.need, 100)
         XCTAssertNil(p.unlockProgress(for: .neutral), "the Rookie has no criterion")
     }
 

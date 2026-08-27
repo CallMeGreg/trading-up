@@ -188,20 +188,45 @@ final class GauntletCoreTests: XCTestCase {
 
     // MARK: Shop
 
-    func testUpgradePackTierCostsCashAndStopsAtMax() {
+    func testUnlockingPacksCostsCashAndOpensEverySet() {
         var run = GauntletRun(tier: .easy, trainer: .neutral)
         run.cash = 100_000
-        var tier = run.packTier
-        while let cost = run.packTierUpgradeCost {
+        // Only the starter set is open; unlocking the cheapest-next set each time
+        // walks the whole rail and matches the per-set price.
+        while let set = run.nextLockedPack {
+            let cost = run.packUnlockCost(set)!
             let cashBefore = run.cash
-            XCTAssertTrue(run.upgradePackTier())
+            XCTAssertFalse(run.isPackUnlocked(set))
+            XCTAssertTrue(run.unlockPack(set))
             XCTAssertEqual(run.cash, cashBefore - cost, accuracy: 1e-6)
-            tier += 1
-            XCTAssertEqual(run.packTier, tier)
+            XCTAssertTrue(run.isPackUnlocked(set))
         }
+        XCTAssertEqual(run.unlockedPacks.count, GauntletEconomy.maxPackTier)
         XCTAssertEqual(run.packTier, GauntletEconomy.maxPackTier)
-        XCTAssertNil(run.packTierUpgradeCost)
-        XCTAssertFalse(run.upgradePackTier())
+        XCTAssertNil(run.nextLockedPack)
+        XCTAssertFalse(run.unlockNextPack())
+    }
+
+    func testPacksUnlockOutOfOrderIndependently() {
+        var run = GauntletRun(tier: .easy, trainer: .neutral)
+        run.cash = 100_000
+        // Buying the top set open must not require the sets beneath it.
+        let top = GauntletEconomy.maxPackTier
+        XCTAssertTrue(run.unlockPack(top))
+        XCTAssertTrue(run.isPackUnlocked(top))
+        XCTAssertFalse(run.isPackUnlocked(2), "unlocking a high set leaves lower sets locked")
+        XCTAssertEqual(run.packTier, top, "packTier tracks the highest unlocked set")
+        // The starter is always open and can't be re-bought.
+        XCTAssertNil(run.packUnlockCost(1))
+        XCTAssertFalse(run.unlockPack(1))
+    }
+
+    func testUnlockPackIsANoOpWhenUnaffordable() {
+        var run = GauntletRun(tier: .easy, trainer: .neutral)
+        run.cash = 0
+        XCTAssertFalse(run.canUnlockPack(2))
+        XCTAssertFalse(run.unlockPack(2))
+        XCTAssertFalse(run.isPackUnlocked(2))
     }
 
     func testBuyingSlotsRaisesCapacityAndCosts() {

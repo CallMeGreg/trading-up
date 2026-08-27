@@ -406,35 +406,30 @@ struct IntroScreen: View {
     var body: some View {
         VStack(spacing: 16) {
             GauntletHeader(eyebrow: "Welcome to", title: "Gauntlet Mode")
-            Text("A roguelite spin on ripping packs. Clear a ladder of rounds to win a Foil Extended Art card for your Binder — and earn Trainers and levels that carry across runs.")
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(Palette.subtle)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
 
             ScrollView {
                 VStack(spacing: 10) {
                     IntroRow(icon: "target", tint: Color(hex: "ff8ad6"),
                              title: "Hit the round's bar",
-                             detail: "Each round sets a target appraisal. Rip packs, keep your best cards in the Showcase, and clear the bar before your rips run out. Every round is single-life — miss the bar and the run ends.")
+                             detail: "Clear each round's target appraisal before your rips run out. Miss it and the run ends.")
                     IntroRow(icon: "square.stack.3d.up.fill", tint: Color(hex: "6d5cf7"),
                              title: "Score & synergy",
-                             detail: "Your Showcase is scored on card value, foils, and grades. Matching elements stack a synergy bonus (+6% each), so a focused Showcase beats a scattered one. Grade cards to gamble their score higher.")
+                             detail: "Showcases score on value, foils, and grades — matching elements add a synergy bonus.")
                     IntroRow(icon: "rectangle.on.rectangle.angled", tint: Color(hex: "e0663b"),
                              title: "Five element packs",
-                             detail: "Packs come in five elements — Fire, Water, Grass, Electric, Shadow. You start with the first; unlock the rest for cash on the pack rail. Any unlocked pack is rippable, so chase the element your Showcase wants.")
+                             detail: "Start with one element pack; unlock the other four for cash, in any order.")
                     IntroRow(icon: "bolt.circle.fill", tint: Color(hex: "ffd54a"),
                              title: "Catalysts",
-                             detail: "Some rips offer a Catalyst — a one-time card you attune to buff the rest of your run (better foils, luckier grading, more pack power…). Slots are limited, so pick your build. Sell the ones you skip.")
+                             detail: "Some rips offer a Catalyst — attune it to buff the rest of your run.")
                     IntroRow(icon: "cart.fill", tint: Color(hex: "5be08a"),
                              title: "The shop, between rounds",
-                             detail: "Clear a round and the shop opens. Spend cash on extra Showcase slots and Catalyst slots to deepen your build for the harder rounds ahead.")
+                             detail: "Clear a round to open the shop and buy extra Showcase and Catalyst slots.")
                     IntroRow(icon: "banknote.fill", tint: Palette.money,
                              title: "Interest rewards restraint",
-                             detail: "Every round clear pays a stipend plus 10% interest on the cash you're holding (up to $40). Banking cash instead of spending it compounds — weigh a purchase now against the interest you'd give up.")
+                             detail: "Each clear pays a payout plus 10% interest on banked cash — saving compounds.")
                     IntroRow(icon: "person.2.fill", tint: Color(hex: "b06cf7"),
                              title: "Trainers & prizes",
-                             detail: "Start as the Rookie; unlock five specialist Trainers by hitting Gauntlet milestones, and level them up by clearing runs. Win Easy for a Common, Medium for an Uncommon, Hard for a Rare or Ultra — always a Foil Extended Art.")
+                             detail: "Unlock and level Trainers by hitting milestones; each win earns a Foil Extended Art card.")
                 }
                 .padding(.bottom, 8)
             }
