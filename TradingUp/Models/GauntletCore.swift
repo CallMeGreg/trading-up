@@ -40,8 +40,7 @@ struct RipResult {
 enum RoundOutcome: Equatable {
     case cleared   // hit the bar, advanced to the next round
     case won       // cleared the final round — run won
-    case retry     // missed the bar but spent a reprint; same round restarts
-    case lost      // missed the bar with no reprints left — run over
+    case lost      // missed the bar — run over (rounds are single-life)
 }
 
 // MARK: - Gauntlet run
@@ -60,7 +59,6 @@ struct GauntletRun {
     // Progress
     var round = 1
     var ripsLeft = 0
-    var retriesLeft = 0
     var won = false
     var lost = false
 
@@ -90,7 +88,6 @@ struct GauntletRun {
         self.tier = tier
         self.trainer = trainer
         self.cash = GauntletEconomy.startingCash + trainer.activeMods.startingCashBonus
-        self.retriesLeft = GauntletEconomy.retries(tier)
         self.maxCashReached = self.cash
         startRound()
     }
@@ -178,10 +175,6 @@ struct GauntletRun {
             round += 1
             startRound()
             return .cleared
-        } else if retriesLeft > 0 {
-            retriesLeft -= 1
-            startRound()
-            return .retry
         } else {
             lost = true
             return .lost
@@ -232,10 +225,18 @@ struct GauntletRun {
         guard isPackUnlocked(s) else { return RipResult(cards: [], catalyst: nil) }
         ripsLeft -= 1
         packsRipped += 1
-        let cards = Self.buildPack(set: s, foilChance: foilChance, ultraChance: ultraChance, using: &rng)
+        var cards = Self.buildPack(set: s, foilChance: foilChance, ultraChance: ultraChance, using: &rng)
         var cat: Catalyst? = nil
         if Double.random(in: 0..<1, using: &rng) < GauntletEconomy.catalystDropChance {
             cat = Catalyst.random(using: &rng)
+            // A Catalyst takes a normal card's slot in the pack rather than riding
+            // along as a bonus — it drops the lowest-stakes common so the pull is a
+            // real trade-off. (docs/DESIGN.md §14.4)
+            if let drop = cards.lastIndex(where: { $0.card.rarity == .common }) {
+                cards.remove(at: drop)
+            } else if !cards.isEmpty {
+                cards.removeLast()
+            }
         }
         return RipResult(cards: cards, catalyst: cat)
     }

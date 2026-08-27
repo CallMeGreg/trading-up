@@ -20,7 +20,7 @@ final class GauntletState {
         case shop               // between rounds, spend cash on upgrades
         case reward             // won: choose one of the Extended-Art prizes
         case results            // post-run summary (XP / level-up / tier unlock)
-        case lost               // missed the bar with no reprints left
+        case lost               // missed the bar — run over (rounds are single-life)
     }
 
     // MARK: Meta progression (durable, cross-run)
@@ -44,8 +44,16 @@ final class GauntletState {
     private(set) var pendingCards: [CardInstance] = []
     private(set) var pendingCatalyst: Catalyst?
 
+    /// Which element set the latest rip opened, so the full-screen reveal shows the
+    /// matching pack artwork.
+    private(set) var lastRippedSet: Int = 1
+
+    /// Drives the full-screen pack-reveal cover. A rip raises it; the reveal's
+    /// Continue button lowers it once the pull is fully resolved (`finishReveal`).
+    var revealActive = false
+
     /// The outcome of the last resolved round, so the UI can flash "cleared" /
-    /// "missed — reprint used" without inspecting the state machine.
+    /// "missed" without inspecting the state machine.
     private(set) var lastOutcome: RoundOutcome?
 
     // MARK: Reward / results
@@ -141,6 +149,7 @@ final class GauntletState {
         run = GauntletRun(tier: tier, trainer: t)
         pendingCards = []
         pendingCatalyst = nil
+        revealActive = false
         lastOutcome = nil
         rewardOptions = []
         lastClear = nil
@@ -155,6 +164,7 @@ final class GauntletState {
         run = nil
         pendingCards = []
         pendingCatalyst = nil
+        revealActive = false
         selectedTrainer = nil
         phase = .trainerSelect
     }
@@ -174,10 +184,20 @@ final class GauntletState {
     func rip(set: Int? = nil) {
         guard canRip, var r = run else { return }
         if let set, !r.isPackUnlocked(set) { return }
+        let opened = set ?? r.packTier
         let result = r.rip(from: set, using: &rng)
         run = r
         pendingCards = result.cards
         pendingCatalyst = result.catalyst
+        lastRippedSet = opened
+        revealActive = true
+    }
+
+    /// Lower the full-screen reveal cover. Only allowed once the pull is settled,
+    /// which the reveal's Continue button enforces.
+    func finishReveal() {
+        guard pendingCards.isEmpty, pendingCatalyst == nil else { return }
+        revealActive = false
     }
 
     // MARK: Pack rail (which element sets are rippable / unlockable this run)
@@ -279,8 +299,8 @@ final class GauntletState {
     }
 
     /// Resolve the current round against its target, routing into the next phase:
-    /// a clear opens the shop, a win rolls the reward, a miss either restarts the
-    /// round (reprint) or ends the run.
+    /// a clear opens the shop, a win rolls the reward, a miss ends the run (rounds
+    /// are single-life).
     func endRound() {
         guard canEndRound, var r = run else { return }
         let outcome = r.endRound(using: &rng)
@@ -289,8 +309,6 @@ final class GauntletState {
         switch outcome {
         case .cleared:
             phase = .shop
-        case .retry:
-            phase = .ripping           // same round restarted with fresh rips
         case .won:
             rollReward()
         case .lost:

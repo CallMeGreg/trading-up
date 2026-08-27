@@ -3,7 +3,7 @@ import XCTest
 
 /// The Gauntlet run state machine (`GauntletRun`): the appraisal engine, keep /
 /// sell / swap, grading, the shop, and how a round resolves into cleared / won /
-/// retry / lost. Pure Foundation logic, driven with a seeded RNG so it's
+/// lost. Pure Foundation logic, driven with a seeded RNG so it's
 /// reproducible, exactly like the Classic `GameCore` tests. See docs/DESIGN.md §14.
 final class GauntletCoreTests: XCTestCase {
 
@@ -27,7 +27,6 @@ final class GauntletCoreTests: XCTestCase {
         XCTAssertFalse(run.won)
         XCTAssertFalse(run.lost)
         XCTAssertEqual(run.cash, GauntletEconomy.startingCash)
-        XCTAssertEqual(run.retriesLeft, GauntletEconomy.retries(.easy))
         XCTAssertEqual(run.ripsLeft, GauntletEconomy.ripBudget(.easy, round: 1))
         XCTAssertEqual(run.effectiveSlots, GauntletEconomy.startingSlots(.easy))
         XCTAssertTrue(run.showcase.isEmpty)
@@ -177,22 +176,14 @@ final class GauntletCoreTests: XCTestCase {
         XCTAssertTrue(run.won)
     }
 
-    func testMissingWithRetriesReplaysTheRound() {
+    func testMissingTheBarLosesTheRunImmediately() {
         var rng = SeededRNG(3)
-        var run = GauntletRun(tier: .easy, trainer: .neutral)   // 2 retries
-        let retriesBefore = run.retriesLeft
-        // Empty showcase → appraisal 0 < target → miss.
-        XCTAssertEqual(run.endRound(using: &rng), .retry)
-        XCTAssertEqual(run.retriesLeft, retriesBefore - 1)
-        XCTAssertEqual(run.round, 1)
-        XCTAssertFalse(run.lost)
-    }
-
-    func testMissingWithNoRetriesLosesTheRun() {
-        var rng = SeededRNG(3)
-        var run = GauntletRun(tier: .hard, trainer: .neutral)   // single-life
+        var run = GauntletRun(tier: .easy, trainer: .neutral)
+        // Empty showcase → appraisal 0 < target → miss. Rounds are single-life,
+        // so any miss ends the run — no reprints.
         XCTAssertEqual(run.endRound(using: &rng), .lost)
         XCTAssertTrue(run.lost)
+        XCTAssertEqual(run.round, 1)
     }
 
     // MARK: Shop

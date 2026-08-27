@@ -483,7 +483,7 @@ round and spike on the Hard **boss** round (§14.5). Cash for the shop comes fro
 faucets: **selling** pulls mid-round (at the spread), and a **round-clear stipend that
 scales with how far you overshoot** the Target — so pushing *past* the bar, not stopping
 exactly on it, is the keep-heavy player's way to fund Catalysts. Per-tier counts (rounds,
-rips, retries, starting slots) live in §14.5.
+rips, starting slots) live in §14.5.
 
 ### 14.2 The appraisal engine (where the strategy lives)
 
@@ -595,20 +595,20 @@ Each tier **adds a mechanic**, not just bigger numbers, and each is unlocked by 
 the previous one once (Easy → Medium → Hard). The counts below are **starting points for
 the harness** (§14.8) — the shape is fixed, the magnitudes get tuned:
 
-| Tier | Rounds | Rips / round | Round retries | Showcase slots (start) |
-| --- | --- | --- | --- | --- |
-| **Easy** | 5 | 6 | 2 | 8 |
-| **Medium** | 7 | 5 | 1 | 6 |
-| **Hard** | 9 (last = **boss**) | 4 (boss 5) | 0 (single-life) | 5 |
+| Tier | Rounds | Rips / round | Showcase slots (start) |
+| --- | --- | --- | --- |
+| **Easy** | 5 | 6 | 8 |
+| **Medium** | 7 | 6 | 6 |
+| **Hard** | 9 (last = **boss**) | 4 (boss 5) | 5 |
 
-Target-appraisal bars rise ~1.6× per round and spike on the boss round; absolute dollar
-values are harness-tuned (§14.2, §14.8). **Round retries** ("reprints") let a failed round
-be replayed with fresh rips — a training-wheel that Hard removes entirely. What each tier
-*adds* on top:
+Target-appraisal bars rise per round and spike on the boss round; absolute dollar
+values are harness-tuned (§14.2, §14.8). **Rounds are single-life** — miss the bar at any
+tier and the run ends (there are no reprints). Medium leans on an extra rip each round,
+rather than a retry, to stay winnable with focused play. What each tier *adds* on top:
 
 | Tier | Adds | Win reward (§14.6) |
 | --- | --- | --- |
-| **Easy** | The training-wheel tier: forgiving **round retries** and a wide Showcase soften the loop while it's being learned. | Foil Extended Art **common** |
+| **Easy** | The gentle tier: the fewest rounds, the lowest target ramp, and the widest Showcase soften the loop while it's being learned. | Foil Extended Art **common** |
 | **Medium** | Steeper targets + a **rotation**: a different set is spotlighted each round; off-set cards score less, so you must adapt. | Foil Extended Art **uncommon** |
 | **Hard** | Aggressive targets + a random **curse per round** (e.g. "foils off," "spread 60%") and a **boss appraisal** finale. | Foil Extended Art **rare / ultra** |
 
@@ -692,8 +692,8 @@ The **shape** of the mode is now decided; what's left is numeric tuning the harn
 1. **Naming** — ✅ Catalysts + Shadow (never "Energy" / "Dark"), for the Guideline 5.2
    reason (§14.4).
 2. **Interest** — ✅ banking between rounds (§14.1); rate + ceiling 🔧 harness-tuned.
-3. **Run length** — ✅ Easy 5 / Medium 7 / Hard 9-with-boss rounds; 6 / 5 / 4 rips a round;
-   2 / 1 / 0 round retries (§14.5). Absolute target-dollar bars 🔧 harness-tuned.
+3. **Run length** — ✅ Easy 5 / Medium 7 / Hard 9-with-boss rounds; 6 / 6 / 4 rips a round;
+   **single-life at every tier — no reprints** (§14.5). Absolute target-dollar bars 🔧 harness-tuned.
 4. **Rip model** — ✅ a hard **rip count per round + cash in the shop** (two currencies); the
    single-blended-currency option is dropped (§14.1).
 5. **Reward pull** — ✅ **choose 1 of 3**, rarity by tier (common / uncommon /

@@ -244,8 +244,7 @@ private struct TierCard: View {
     private var difficultyNote: String {
         let rips = GauntletEconomy.ripBudget(tier, round: 1)
         let slots = GauntletEconomy.startingSlots(tier)
-        let retries = GauntletEconomy.retries(tier)
-        return "\(rips) rips/round · \(slots) showcase slots · \(retries) reprint\(retries == 1 ? "" : "s")"
+        return "\(rips) rips/round · \(slots) showcase slots · \(GauntletEconomy.rounds(tier)) rounds"
     }
 }
 
@@ -321,7 +320,7 @@ struct LostScreen: View {
                 .foregroundStyle(Color(hex: "e0663b"))
             GauntletHeader(eyebrow: "Gauntlet", title: "Run Over")
             if let run = state.run {
-                Text("You reached round \(run.round) of \(run.roundsTotal), short of the bar with no reprints left.")
+                Text("You reached round \(run.round) of \(run.roundsTotal), short of the bar. Every round is single-life in the Gauntlet.")
                     .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(Palette.subtle)
                     .multilineTextAlignment(.center)
@@ -392,7 +391,7 @@ struct IntroScreen: View {
                 VStack(spacing: 10) {
                     IntroRow(icon: "target", tint: Color(hex: "ff8ad6"),
                              title: "Hit the round's bar",
-                             detail: "Each round sets a target appraisal. Rip packs, keep your best cards in the Showcase, and clear the bar before your rips run out. Miss it and you spend a reprint — run out of those and the run ends.")
+                             detail: "Each round sets a target appraisal. Rip packs, keep your best cards in the Showcase, and clear the bar before your rips run out. Every round is single-life — miss the bar and the run ends.")
                     IntroRow(icon: "square.stack.3d.up.fill", tint: Color(hex: "6d5cf7"),
                              title: "Score & synergy",
                              detail: "Your Showcase is scored on card value, foils, and grades. Matching elements stack a synergy bonus (+6% each), so a focused Showcase beats a scattered one. Grade cards to gamble their score higher.")

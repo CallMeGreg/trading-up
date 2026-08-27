@@ -91,18 +91,8 @@ enum GauntletEconomy {
     static func ripsPerRound(_ tier: GauntletTier) -> Int {
         switch tier {
         case .easy: return 6
-        case .medium: return 5
+        case .medium: return 6
         case .hard: return 4
-        }
-    }
-
-    /// Round retries ("reprints"): a failed round can be replayed with fresh
-    /// rips this many times. Hard is single-life.
-    static func retries(_ tier: GauntletTier) -> Int {
-        switch tier {
-        case .easy: return 2
-        case .medium: return 1
-        case .hard: return 0
         }
     }
 
@@ -137,10 +127,12 @@ enum GauntletEconomy {
     // curve at roughly:
     //
     //     Easy    optimized 100% / careless 100%   (a forgiving, unlosable-if-you-try tutorial)
-    //     Medium  optimized  85% / careless  32%   (skill gap ~53 pts)
-    //     Hard    optimized  61% / careless   5%   (skill gap ~56 pts; boss round is the filter)
+    //     Medium  optimized  79% / careless  43%   (skill gap ~36 pts)
+    //     Hard    optimized  59% / careless   4%   (skill gap ~55 pts; boss round is the filter)
     //
-    // The guardrail: a *neutral* Trainer clears Hard with optimal play (~61% > 50%),
+    // Rounds are single-life — a missed bar ends the run at any tier (no reprints).
+    // Medium leans on an extra rip/round rather than a retry to stay winnable.
+    // The guardrail: a *neutral* Trainer clears Hard with optimal play (~59% > 50%),
     // so Trainers and Catalysts are gravy, never a requirement (docs/DESIGN.md §14.3).
     // Growth is steep because the appraisal engine snowballs ~3× per pack-tier jump;
     // a gentle curve lets an optimised build run away and kills the tension. Retune
@@ -163,7 +155,7 @@ enum GauntletEconomy {
     static func targetGrowth(_ tier: GauntletTier) -> Double {
         switch tier {
         case .easy: return 1.60
-        case .medium: return 1.95
+        case .medium: return 1.90
         case .hard: return 1.75
         }
     }

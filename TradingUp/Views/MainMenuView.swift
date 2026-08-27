@@ -110,7 +110,7 @@ struct MainMenuView: View {
         if unlocked {
             MenuButton(
                 title: "Gauntlet Mode",
-                subtitle: "Roguelite runs · Trainers, Catalysts, Extended Art",
+                subtitle: "Craft a high value showcase",
                 systemImage: "bolt.fill",
                 accent: Color(hex: "b98cff")
             ) {
