@@ -94,6 +94,18 @@ struct GauntletRun {
         startRound()
     }
 
+    /// RNG-threaded init used in play and by the balance harness, so round 1 gets
+    /// the same per-round bonus-rip roll every later round does. The no-arg init
+    /// above stays for deterministic unit tests (whose Trainers never carry a
+    /// bonus-rip chance, so the roll would be a no-op anyway).
+    init<G: RandomNumberGenerator>(tier: GauntletTier, trainer: Trainer, using rng: inout G) {
+        self.tier = tier
+        self.trainer = trainer
+        self.cash = GauntletEconomy.startingCash + trainer.activeMods.startingCashBonus
+        self.maxCashReached = self.cash
+        startRound(using: &rng)
+    }
+
     // MARK: Derived modifiers
 
     /// Trainer advantage plus every attuned Catalyst, summed.
@@ -176,6 +188,15 @@ struct GauntletRun {
         ripsLeft = GauntletEconomy.ripBudget(tier, round: round) + mods.extraRipsPerRound
     }
 
+    /// Round setup that also rolls the Trainer's per-round *chance* of one extra rip
+    /// (the Ripper's level-scaling lever). Rolled once per round so tempo climbs
+    /// smoothly with level instead of jumping a whole guaranteed rip.
+    mutating func startRound<G: RandomNumberGenerator>(using rng: inout G) {
+        startRound()
+        let chance = mods.bonusRipChance
+        if chance > 0, Double.random(in: 0..<1, using: &rng) < chance { ripsLeft += 1 }
+    }
+
     /// Resolve the round once the player is done ripping.
     mutating func endRound<G: RandomNumberGenerator>(using rng: inout G) -> RoundOutcome {
         bestRoundScore = max(bestRoundScore, showcaseAura)
@@ -193,7 +214,7 @@ struct GauntletRun {
             noteCash()
             if round >= roundsTotal { won = true; return .won }
             round += 1
-            startRound()
+            startRound(using: &rng)
             return .cleared
         } else {
             lost = true

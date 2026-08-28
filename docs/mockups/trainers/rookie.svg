@@ -1,0 +1,18 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><defs>
+  <linearGradient id="bgneutral" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#231240"/><stop offset="100%" stop-color="#0b0e14"/>
+  </linearGradient>
+  <radialGradient id="glowneutral" cx="50%" cy="34%" r="55%">
+    <stop offset="0%" stop-color="#8a94a6" stop-opacity="0.36"/>
+    <stop offset="100%" stop-color="#8a94a6" stop-opacity="0"/>
+  </radialGradient>
+  <linearGradient id="motneutral" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#8a94a6"/><stop offset="100%" stop-color="#8a94a6" stop-opacity="0.72"/>
+  </linearGradient></defs>
+  <rect x="8" y="8" width="184" height="184" rx="40" fill="url(#bgneutral)"
+        stroke="#8a94a6" stroke-opacity="0.32" stroke-width="1.6"/>
+  <rect x="8" y="8" width="184" height="184" rx="40" fill="url(#glowneutral)"/>
+  <circle cx="100" cy="92" r="60" fill="#8a94a6" fill-opacity="0.10"/><g transform="translate(100,94) scale(0.72)">
+    <path d="M0,-60 L56,-39 V6 Q56,46 0,66 Q-56,46 -56,6 V-39 Z" fill="url(#motneutral)" stroke="#3a4150" stroke-width="4"/>
+    <path d="M0,-47 L43,-31 V4 Q43,35 0,52 Q-43,35 -43,4 V-31 Z" fill="#0b0e14" fill-opacity="0.34"/>
+    <path d="M0,-31 l10,20 l23,3 l-16,16 l4,22 l-21,-11 l-21,11 l4,-22 l-16,-16 l23,-3 Z" fill="#ffffff"/></g></svg>

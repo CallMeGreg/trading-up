@@ -55,7 +55,7 @@ TradingUp/
     Binder.swift             All-time showcase model: best copy ever owned of each Spryte (survives New Game)
     BinderStore.swift        Versioned store for the Binder, in its own file separate from the run save
     GauntletEconomy.swift    Gauntlet balance knobs: tier config, target curve, interest, RunMods aggregator (Gauntlet's Economy)
-    Trainer.swift            Gauntlet Trainers: per-run archetypes (only the Rookie is free; five specialists unlock on Gauntlet milestones) + cross-run XP/level
+    Trainer.swift            Gauntlet Trainers: per-run archetypes (only the Rookie is free; five specialists unlock on Gauntlet milestones) + cross-run XP/level that scales each advantage from a ~20% level-1 baseline to a level-10 ceiling
     Catalyst.swift           Gauntlet Catalysts: run-long buff cards, one per element lane
     GauntletCore.swift       Deterministic Gauntlet run state machine: rip (per-element pack rail) / keep / grade / shop / round resolution
     GauntletProgress.swift   Cross-run Gauntlet meta: per-Trainer XP/level, unlocked tiers + Trainers, lifetime stats, intro-seen flag (survives New Game)
@@ -86,6 +86,7 @@ tools/
   generate_cards.py          Regenerates data/cards.json AND Generated/CardData.swift
   generate_art.py            Regenerates the 250 card illustrations (needs rsvg-convert)
   generate_icon.py           Regenerates the app icon (needs rsvg-convert)
+  generate_trainer_art.py    Regenerates the 6 Gauntlet Trainer emblems (needs rsvg-convert)
   generate_iap_promo.py      Regenerates the IAP promo image (needs rsvg-convert)
   generate_sfx.py            Regenerates the 3 sound effects (stdlib only)
   generate_screenshots.py    Renders framed marketing scenes (needs rsvg-convert)
@@ -110,7 +111,7 @@ after any economy change — it enforces the target difficulty curve, not just
 correctness.
 
 **Gauntlet Mode has its own knobs, kept out of `Economy.swift`.** Tier configs, the
-target-appraisal curve, interest rate/ceiling, stipend curve, and the `RunMods` aggregator
+target-Aura curve, interest rate/ceiling, stipend curve, and the `RunMods` aggregator
 live in `TradingUp/Models/GauntletEconomy.swift`; the Trainer roster and its unlock
 thresholds live in `TradingUp/Models/Trainer.swift`; Catalyst effects in `Catalyst.swift`.
 The pack rail (which element sets start unlocked and what unlocking a set costs mid-round)
@@ -227,6 +228,24 @@ apart from `rsvg-convert`.
 `check_icon.py` is what proves the marketing icon is submittable: exactly
 1024×1024, 8‑bit, **no alpha channel**, and full‑bleed to the edges (iOS applies
 the rounded‑corner mask itself, so a baked‑in one shows up as dark wedges).
+
+### Trainer emblems
+
+Each Gauntlet Trainer carries a bespoke flat‑vector badge (shown on its card in
+the Trainer‑select screen), drawn in the same stdlib‑SVG → `rsvg-convert` style as
+the card art — no third‑party art, licence or attribution:
+
+```bash
+brew install librsvg                         # one-time: provides rsvg-convert
+python3 tools/generate_trainer_art.py assets # 6 emblems -> Assets.xcassets/TrainerArt
+python3 tools/generate_trainer_art.py sheet  # labelled contact sheet -> docs/mockups/trainers
+```
+
+Emblems are keyed by Trainer `id` as `trainer-<id>` (so Farmer's asset is
+`trainer-appraiser`, matching its persisted id) and loaded via
+`UIImage(named:)`; `TrainerEmblem` grays a locked Trainer's badge the same way
+the shop fades an unaffordable item. To restyle a Trainer, edit the motif in
+`generate_trainer_art.py` and re‑run — never hand‑edit the `TrainerArt` PNGs.
 
 ### In-app purchase promo image
 

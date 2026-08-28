@@ -167,7 +167,7 @@ final class GauntletState {
         var t = trainer
         t.level = progress.level(forTrainer: trainer.id)
         t.xp = progress.xp(forTrainer: trainer.id)
-        run = GauntletRun(tier: tier, trainer: t)
+        run = GauntletRun(tier: tier, trainer: t, using: &rng)
         pendingCards = []
         pendingCatalyst = nil
         revealActive = false

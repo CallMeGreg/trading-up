@@ -714,13 +714,13 @@ struct ShopScreen: View {
 
                 ScrollView {
                     VStack(spacing: 10) {
-                        ShopRow(icon: "rectangle.stack.badge.plus",
+                        ShopRow(glyph: .symbol("square.stack.3d.up.fill", tint: Color(hex: "6d5cf7")),
                                 title: "Add Showcase Slot",
                                 subtitle: "Now \(run.effectiveSlots) → \(run.effectiveSlots + 1)",
                                 cost: run.nextSlotCost, affordable: run.cash >= run.nextSlotCost) {
                             Haptics.play(.light); state.buySlot()
                         }
-                        ShopRow(icon: "bolt.circle.fill",
+                        ShopRow(glyph: .symbol("bolt.circle.fill", tint: Color(hex: "ff9500")),
                                 title: "Add Catalyst Slot",
                                 subtitle: "Now \(run.effectiveCatalystSlots) → \(run.effectiveCatalystSlots + 1)",
                                 cost: run.nextCatalystSlotCost, affordable: run.cash >= run.nextCatalystSlotCost) {
@@ -732,7 +732,7 @@ struct ShopScreen: View {
                         }
                         ForEach(lockedPacks, id: \.self) { set in
                             if let cost = state.packUnlockCost(set) {
-                                ShopRow(icon: "lock.fill",
+                                ShopRow(glyph: .pack(set),
                                         title: "Unlock \(CardDatabase.setName(set)) Packs",
                                         subtitle: "Adds this set to your pack rail",
                                         cost: cost, affordable: state.canUnlockPack(set)) {
@@ -785,15 +785,13 @@ private struct RoundClearedHero: View {
             VStack(spacing: 9) {
                 LedgerRow(label: "Carried over", amount: carried, style: .base)
                 LedgerRow(label: "Interest", amount: run.lastInterest,
-                          style: .add, tint: Color(hex: "ffd54a"), dim: run.lastInterest <= 0)
-                LedgerRow(label: "Round Payout", amount: run.lastStipend,
-                          style: .add, tint: Palette.money)
+                          style: .add, dim: run.lastInterest <= 0)
+                LedgerRow(label: "Round Payout", amount: run.lastStipend, style: .add)
                 if run.lastRipBank > 0 {
-                    LedgerRow(label: "Rips Banked", amount: run.lastRipBank,
-                              style: .add, tint: Color(hex: "b06cf7"))
+                    LedgerRow(label: "Rips Banked", amount: run.lastRipBank, style: .add)
                 }
                 Rectangle().fill(Palette.stroke).frame(height: 1).padding(.vertical, 1)
-                LedgerRow(label: "Cash", amount: run.cash, style: .total, tint: Palette.money)
+                LedgerRow(label: "Cash", amount: run.cash, style: .total)
             }
             .panel(14)
             .opacity(appeared ? 1 : 0)
@@ -806,14 +804,14 @@ private struct RoundClearedHero: View {
     }
 }
 
-/// One line of the round-clear payout ledger: a subtle carried-over base, the two
-/// "+" credits (interest, then payout), and the emphasized ending-cash total.
+/// One line of the round-clear payout ledger. Colour follows a single consistent
+/// scheme: the carried-over **base** is yellow, each **addition** on top is white,
+/// and the **total** cash is green.
 private struct LedgerRow: View {
     enum Style { case base, add, total }
     let label: String
     let amount: Double
     var style: Style
-    var tint: Color = Palette.text
     var dim: Bool = false
 
     private var valueText: String {
@@ -823,13 +821,12 @@ private struct LedgerRow: View {
         case .total: return amount.money
         }
     }
-    private var labelColor: Color { Palette.subtle }
     private var valueColor: Color {
         if dim { return Palette.subtle }
         switch style {
-        case .base:  return Palette.text
-        case .add:   return tint
-        case .total: return tint
+        case .base:  return Color(hex: "ffd54a")   // yellow — the carried-over base
+        case .add:   return Palette.text            // white — each credit added on top
+        case .total: return Palette.money           // green — the ending total
         }
     }
 
@@ -837,7 +834,7 @@ private struct LedgerRow: View {
         HStack {
             Text(label.uppercased())
                 .font(.system(size: style == .total ? 12 : 11, weight: .heavy)).tracking(1)
-                .foregroundStyle(labelColor)
+                .foregroundStyle(Palette.subtle)
             Spacer()
             Text(valueText)
                 .font(.system(size: style == .total ? 20 : 16,
@@ -847,8 +844,39 @@ private struct LedgerRow: View {
     }
 }
 
+/// The leading visual for a shop row. Either an element-tinted SF Symbol (the
+/// Showcase / Catalyst slots, coloured to match the welcome screen's primer rows)
+/// or an actual pack thumbnail for a set you can unlock.
+private enum ShopGlyph {
+    case symbol(String, tint: Color)
+    case pack(Int)
+}
+
+/// Renders a `ShopGlyph`, greyed out until the purchase is affordable — the same
+/// desaturate-and-dim treatment the pack rail uses on the run screen, so the eye
+/// lands on what you can actually buy.
+private struct ShopGlyphView: View {
+    let glyph: ShopGlyph
+    let affordable: Bool
+
+    var body: some View {
+        switch glyph {
+        case let .symbol(name, tint):
+            Image(systemName: name)
+                .font(.system(size: 24))
+                .foregroundStyle(tint)
+                .saturation(affordable ? 1 : 0.12)
+                .opacity(affordable ? 1 : 0.5)
+        case let .pack(set):
+            PackWrapper(set: set, width: 30, detail: .mini)
+                .saturation(affordable ? 1 : 0.12)
+                .opacity(affordable ? 1 : 0.5)
+        }
+    }
+}
+
 private struct ShopRow: View {
-    let icon: String
+    let glyph: ShopGlyph
     let title: String
     let subtitle: String
     let cost: Double
@@ -857,10 +885,8 @@ private struct ShopRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: icon)
-                .font(.system(size: 22))
-                .foregroundStyle(affordable ? Color(hex: "b06cf7") : Palette.subtle)
-                .frame(width: 30)
+            ShopGlyphView(glyph: glyph, affordable: affordable)
+                .frame(width: 40)
             VStack(alignment: .leading, spacing: 2) {
                 Text(title).font(.system(size: 14, weight: .bold)).foregroundStyle(.white)
                 Text(subtitle).font(.system(size: 11, weight: .medium)).foregroundStyle(Palette.subtle)

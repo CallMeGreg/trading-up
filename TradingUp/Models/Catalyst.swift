@@ -59,25 +59,7 @@ extension Catalyst {
     /// rest of the run, derived from its `RunMods` so it always matches the real
     /// effect. Drives the tap-to-inspect detail for an attuned Catalyst.
     var effectSummary: String {
-        func pct(_ v: Double) -> String { "\(Int((v * 100).rounded()))%" }
-        var parts: [String] = []
-        if mods.extraRipsPerRound != 0 {
-            parts.append("+\(mods.extraRipsPerRound) rip\(mods.extraRipsPerRound == 1 ? "" : "s") every round")
-        }
-        if mods.extraSlots != 0 {
-            parts.append("+\(mods.extraSlots) showcase slot\(mods.extraSlots == 1 ? "" : "s")")
-        }
-        if mods.extraCatalystSlots != 0 {
-            parts.append("+\(mods.extraCatalystSlots) catalyst slot\(mods.extraCatalystSlots == 1 ? "" : "s")")
-        }
-        if mods.foilChanceBonus != 0 { parts.append("+\(pct(mods.foilChanceBonus)) foil chance") }
-        if mods.ultraChanceBonus != 0 { parts.append("+\(pct(mods.ultraChanceBonus)) ultra chance") }
-        if mods.gradeLuckBonus != 0 { parts.append("+\(pct(mods.gradeLuckBonus)) grading luck") }
-        if mods.sellbackBonus != 0 { parts.append("+\(pct(mods.sellbackBonus)) sell-back") }
-        if mods.auraMult != 1 { parts.append("+\(pct(mods.auraMult - 1)) Aura") }
-        if mods.evoLineBonusBonus != 0 { parts.append("+\(pct(mods.evoLineBonusBonus)) evolution bonus") }
-        if mods.stipendMult != 1 { parts.append("+\(pct(mods.stipendMult - 1)) round payout") }
-        if mods.startingCashBonus != 0 { parts.append("+" + String(format: "$%.0f", mods.startingCashBonus) + " seed cash") }
-        return parts.isEmpty ? "A one-time run buff." : parts.joined(separator: " · ")
+        let s = mods.effectSummary
+        return s.isEmpty ? "A one-time run buff." : s
     }
 }
