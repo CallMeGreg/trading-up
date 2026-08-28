@@ -103,18 +103,16 @@ struct MainMenuView: View {
 
     /// Gauntlet is gated behind the Full Game unlock. Unlocked, it's an ordinary
     /// frosted tile that enters the mode. Locked, it expands into a "vault": the
-    /// mode keeps its purple identity up top with a "Coming soon!" badge, and a
-    /// full-width amber call-to-action opens the paywall to buy the Full Game.
-    /// The badge rides along in both states, since the mode is a placeholder.
+    /// mode keeps its purple identity up top and a full-width amber call-to-action
+    /// opens the paywall to buy the Full Game.
     @ViewBuilder
     private var gauntletButton: some View {
         if unlocked {
             MenuButton(
                 title: "Gauntlet Mode",
-                subtitle: "A relentless new way to play",
+                subtitle: "Craft a high value showcase",
                 systemImage: "bolt.fill",
-                accent: Color(hex: "b98cff"),
-                badge: "Coming soon!"
+                accent: Color(hex: "b98cff")
             ) {
                 Haptics.play(.medium)
                 route = .gauntlet

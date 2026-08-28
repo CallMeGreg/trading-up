@@ -649,6 +649,97 @@ do {
     check(thoughtfulWin - recklessWin >= 10, "grading dupes is a real edge (win gap ≥ 10 pts)")
 }
 
+print("\n== Gauntlet: Aura engine & knobs ==")
+do {
+    // The engine sums market value and adds a bonus for each *complete* evolution
+    // line standing in the Showcase; an incomplete line earns nothing, and the
+    // empty Showcase scores zero.
+    let line = CardDatabase.evolutionLines.values.first { $0.count >= 2 }!   // sorted by stage
+    let fullLine = line.map { CardInstance(cardId: $0.id) }
+    let partialLine = [CardInstance(cardId: line[0].id)]   // only the first stage
+    let elb = GauntletEconomy.baseEvoLineBonus
+    check(GauntletRun.aura([], evoLineBonus: elb, auraMult: 1) == 0, "empty Showcase scores 0 Aura")
+    let complete = GauntletRun.aura(fullLine, evoLineBonus: elb, auraMult: 1)
+    let incomplete = GauntletRun.aura(partialLine, evoLineBonus: elb, auraMult: 1)
+    let rawFull = fullLine.reduce(0.0) { $0 + $1.currentValue }
+    check(abs(complete - rawFull * (1 + elb)) < 1e-6, "a complete evolution line earns the completion bonus")
+    check(abs(incomplete - partialLine[0].currentValue) < 1e-6, "an incomplete line earns no bonus")
+
+    // RunMods compose: additive fields add, multiplicative fields multiply.
+    var a = RunMods.none; a.extraRipsPerRound = 1; a.auraMult = 1.10
+    var b = RunMods.none; b.extraRipsPerRound = 2; b.auraMult = 1.20
+    let sum = a + b
+    check(sum.extraRipsPerRound == 3, "RunMods sum additive fields")
+    check(abs(sum.auraMult - 1.32) < 1e-9, "RunMods multiply the *Mult fields")
+
+    // Target curve rises every round and the Hard finale is a spiked boss.
+    var rising = true
+    for r in 2...GauntletEconomy.rounds(.hard) where GauntletEconomy.target(.hard, round: r) <= GauntletEconomy.target(.hard, round: r - 1) { rising = false }
+    check(rising, "Hard target rises every round")
+    check(GauntletEconomy.isBossRound(.hard, round: GauntletEconomy.rounds(.hard)), "Hard's last round is the boss")
+    let bossR = GauntletEconomy.rounds(.hard)
+    let unspiked = GauntletEconomy.baseTarget(.hard) * pow(GauntletEconomy.targetGrowth(.hard), Double(bossR - 1))
+    check(GauntletEconomy.target(.hard, round: bossR) > unspiked * 1.4, "boss round spikes the bar")
+    check(!GauntletEconomy.isBossRound(.easy, round: GauntletEconomy.rounds(.easy)), "Easy/Medium have no boss round")
+
+    // Interest is capped — banking is a lever, not a runaway engine.
+    check(GauntletEconomy.interest(on: 100_000) == GauntletEconomy.interestCap, "interest is capped")
+    check(GauntletEconomy.interest(on: 100) == 100 * GauntletEconomy.interestRate, "interest is linear below the cap")
+}
+
+print("\n== Gauntlet: difficulty curve (Monte Carlo) ==")
+do {
+    let n = 200
+    var opt: [GauntletTier: Double] = [:]
+    var car: [GauntletTier: Double] = [:]
+    var cappedTotal = 0
+    for tier in GauntletTier.allCases {
+        let o = GauntletSim.winRate(tier: tier, trainer: .neutral, style: .optimized, trials: n, seed0: 0x6A17)
+        let c = GauntletSim.winRate(tier: tier, trainer: .neutral, style: .careless, trials: n, seed0: 0x6A17)
+        opt[tier] = o.win; car[tier] = c.win
+        cappedTotal += o.capped + c.capped
+        print("  \(tier.rawValue): optimized win \(Int(o.win.rounded()))% / careless win \(Int(c.win.rounded()))%  (n=\(n))  [opt lines \(String(format: "%.1f", o.avgLines))]")
+    }
+
+    check(cappedTotal == 0, "every Gauntlet run resolves (no runaway)")
+
+    // Winnable with skill on every tier; Easy is a gentle teacher.
+    check(opt[.easy]! >= 90, "Easy is winnable with optimal play (≥ 90%)")
+    check(opt[.medium]! >= 60, "Medium is winnable with optimal play (≥ 60%)")
+    // Guardrail (docs/DESIGN.md §14.3): a level-0, no-Trainer run clears Hard.
+    check(opt[.hard]! >= 45, "a level-0 neutral run clears Hard with optimal play (≥ 45%)")
+    // …but Hard is never a formality.
+    check(opt[.hard]! <= 85, "Hard is not a formality even played perfectly (≤ 85%)")
+
+    // Careless play carries real bankruptcy risk that climbs with the tier.
+    check(100 - car[.medium]! >= 45, "careless play often busts on Medium (bust ≥ 45%)")
+    check(100 - car[.hard]! >= 80, "careless play almost always busts on Hard (bust ≥ 80%)")
+
+    // Skill is worth a lot — the whole point of the mode.
+    check(opt[.medium]! - car[.medium]! >= 25, "skill is a big edge on Medium (win gap ≥ 25 pts)")
+    check(opt[.hard]! - car[.hard]! >= 30, "skill is a big edge on Hard (win gap ≥ 30 pts)")
+
+    // Difficulty is ordered Easy → Medium → Hard, not just re-skinned. (Post-batch-4
+    // the medium/hard optimised rates sit closer together than the synergy era, so the
+    // separation margin is smaller — but still enforced.)
+    check(opt[.easy]! >= opt[.medium]! && opt[.medium]! >= opt[.hard]! + 5, "optimal win rate falls Easy → Medium → Hard")
+    check(car[.easy]! >= car[.medium]! && car[.medium]! >= car[.hard]!, "careless win rate falls Easy → Medium → Hard")
+}
+
+print("\n== Gauntlet: Trainers help but are never required ==")
+do {
+    let n = 120
+    let base = GauntletSim.winRate(tier: .hard, trainer: .neutral, style: .optimized, trials: n, seed0: 0x2C7)
+    var minT = 100.0, maxT = 0.0
+    for t in Trainer.roster {
+        let r = GauntletSim.winRate(tier: .hard, trainer: t, style: .optimized, trials: n, seed0: 0x2C7)
+        minT = min(minT, r.win); maxT = max(maxT, r.win)
+        print("  \(t.name): Hard optimized win \(Int(r.win.rounded()))%  (vs neutral \(Int(base.win.rounded()))%)")
+    }
+    check(minT >= base.win - 5, "no Trainer is a downgrade on Hard (all ≥ neutral within noise)")
+    check(maxT <= 97, "no Trainer trivialises Hard (best ≤ 97%)")
+}
+
 print("\n\(failures == 0 ? "ALL CHECKS PASSED ✅" : "\(failures) CHECK(S) FAILED ❌")")
 exit(failures == 0 ? 0 : 1)
 

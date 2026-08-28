@@ -48,7 +48,12 @@ swiftc TradingUp/Models/Card.swift \
        TradingUp/Models/FeatureFlags.swift \
        TradingUp/Models/GameCore.swift \
        TradingUp/Models/Persistence.swift \
+       TradingUp/Models/GauntletEconomy.swift \
+       TradingUp/Models/Trainer.swift \
+       TradingUp/Models/Catalyst.swift \
+       TradingUp/Models/GauntletCore.swift \
        TradingUp/Generated/CardData.swift \
+       tools/verify/gauntlet_sim.swift \
        tools/verify/main.swift \
        -o /tmp/tu_verify && /tmp/tu_verify
 ```

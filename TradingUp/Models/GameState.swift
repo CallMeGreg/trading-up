@@ -250,4 +250,28 @@ final class GameState {
             binderStore.save(binder)
         }
     }
+
+    /// Fold a batch of Gauntlet-run cards into the all-time Binder, persisting if
+    /// any slot was filled or upgraded. Gauntlet pulls live in a run's own showcase,
+    /// but every card a player rips or grades still counts toward the collection's
+    /// value-best — mirroring Classic, where the Binder keeps the running max
+    /// regardless of which mode produced the copy (§14.6). Extended Art stays a
+    /// separate cosmetic; this only touches value/foil/grade bests.
+    func recordGauntletCards(_ instances: [CardInstance]) {
+        guard !instances.isEmpty else { return }
+        if binder.record(instances) { binderStore.save(binder) }
+    }
+
+    /// Award a Gauntlet win's Extended-Art reward: unlock the card's cosmetic
+    /// Extended Art and fold the guaranteed **Foil** copy into the all-time Binder,
+    /// persisting if anything changed. The art unlock never alters a slot's value
+    /// (§14.6); the foil copy is recorded like any other pull, so it can only ever
+    /// raise a slot's value-best, never lower it. Returns whether anything changed.
+    @discardableResult
+    func awardExtendedArt(_ option: GauntletRewardOption) -> Bool {
+        let earnedArt = binder.earnExtendedArt(option.cardId)
+        let recorded = binder.record([option.instance])
+        if earnedArt || recorded { binderStore.save(binder) }
+        return earnedArt || recorded
+    }
 }

@@ -24,8 +24,18 @@ struct Binder: Codable, Equatable {
     /// run wipes the collection it came from.
     private(set) var bestByCardId: [String: CardInstance]
 
-    init(bestByCardId: [String: CardInstance] = [:]) {
+    /// The card ids whose **Extended Art** has been earned (a Gauntlet win reward,
+    /// §14.6). This is a *purely cosmetic* record kept deliberately **separate**
+    /// from the value-best snapshot above: earning Extended Art swaps which
+    /// illustration a slot renders — with the foil shimmer and grade slab layered
+    /// on top — but never changes a slot's value, which still comes entirely from
+    /// the best copy in `bestByCardId`. Stored as its own additive field so old
+    /// Binder files keep decoding (§12).
+    private(set) var extendedArtEarned: Set<String>
+
+    init(bestByCardId: [String: CardInstance] = [:], extendedArtEarned: Set<String> = []) {
         self.bestByCardId = bestByCardId
+        self.extendedArtEarned = extendedArtEarned
     }
 
     /// Decode leniently, like `GameCore`/`Stats`: a missing key falls back to its
@@ -34,6 +44,7 @@ struct Binder: Codable, Equatable {
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         bestByCardId = try c.decodeIfPresent([String: CardInstance].self, forKey: .bestByCardId) ?? [:]
+        extendedArtEarned = try c.decodeIfPresent(Set<String>.self, forKey: .extendedArtEarned) ?? []
     }
 
     // MARK: Recording
@@ -61,15 +72,33 @@ struct Binder: Codable, Equatable {
         return changed
     }
 
+    /// Record that a card's **Extended Art** has been earned (a Gauntlet win
+    /// reward, §14.6). Cosmetic only — it never touches `bestByCardId`, so a
+    /// slot's value is unaffected. Returns `true` if this newly earned it, so the
+    /// caller knows whether it needs to persist.
+    @discardableResult
+    mutating func earnExtendedArt(_ cardId: String) -> Bool {
+        guard CardDatabase.exists(cardId) else { return false }
+        return extendedArtEarned.insert(cardId).inserted
+    }
+
+    /// Whether a card's Extended Art has been earned, so its slot renders the
+    /// full-bleed alternate illustration (with foil/grade finishes stacked on top).
+    func hasExtendedArt(_ cardId: String) -> Bool { extendedArtEarned.contains(cardId) }
+
+    /// How many of the catalogue's cards have earned Extended Art.
+    var extendedArtCount: Int { extendedArtEarned.count }
+
     /// Drop any recorded slots whose card id is no longer in the shipped
     /// catalogue — the same load hygiene `GameCore.sanitized()` does — so a binder
     /// written against an older card list doesn't surface placeholder cards.
     /// Returns how many slots were removed.
     @discardableResult
     mutating func sanitize() -> Int {
-        let before = bestByCardId.count
+        let before = bestByCardId.count + extendedArtEarned.count
         bestByCardId = bestByCardId.filter { CardDatabase.exists($0.key) }
-        return before - bestByCardId.count
+        extendedArtEarned = extendedArtEarned.filter { CardDatabase.exists($0) }
+        return before - bestByCardId.count - extendedArtEarned.count
     }
 
     // MARK: Derived
