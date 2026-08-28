@@ -109,9 +109,13 @@ See [APP_STORE.md](APP_STORE.md#screenshots).
 ### CodeQL code scanning
 
 `.github/workflows/codeql.yml` runs CodeQL (code scanning) on every push to
-`main`, every pull request to `main`, and weekly. It analyses three languages:
-`actions` and `python` build‑free on Ubuntu, and `swift` on `macos-15` with
-Xcode 16.4.
+`main`, on pull requests to `main`, weekly, and on manual dispatch. It analyses
+three languages: `actions` and `python` build‑free on Ubuntu, and `swift` on
+`macos-15` with Xcode 16.4. The `swift` leg is a ~15-minute traced build, so it
+is **skipped on pull requests** (no required status check depends on it) and runs
+only on push to `main`, the weekly schedule, and manual dispatch;
+`actions`/`python` are seconds each and keep running on every push and pull
+request.
 
 Swift uses **`build-mode: manual`** and the same `xcodebuild build` as the CI
 build job (restricted to a single architecture), rather than CodeQL's autobuild.
@@ -124,13 +128,15 @@ manually makes CodeQL trace the real `swiftc` invocations instead. This is an
 two are mutually exclusive, which is why all three languages are analysed here
 rather than leaving `actions`/`python` on default setup.
 
-The Swift build is the whole cost of the scan (~20 min; init and analysis are
-seconds). Two things keep it down, and one tempting thing does **not** work:
+The Swift build is the whole cost of the scan (~15 min; init and analysis are
+seconds). A few things keep it down, and one tempting thing does **not** work:
 
 - **Single architecture.** The build passes `ARCHS=arm64` (the runner's native
   simulator slice) instead of the default arm64 + x86_64. CodeQL extracts each
   source file the traced build compiles, so building both arches extracts every
   file twice into an identical database. One arch roughly halves the build.
+- **No source index.** `COMPILER_INDEX_STORE_ENABLE=NO` skips Xcode's
+  source-index generation, an IDE-only artifact CodeQL never reads.
 - **No build‑output caching.** Caching DerivedData across runs to skip the
   rebuild would break the scan: CodeQL only extracts files the traced build
   actually recompiles, so a warm/incremental build produces an empty or

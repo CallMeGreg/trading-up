@@ -5,6 +5,12 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  # Weekly full scan keeps code scanning results fresh even though the expensive
+  # Swift leg is skipped on pull requests (see the analyze job's `if`).
+  # workflow_dispatch allows an on-demand re-scan without pushing.
+  schedule:
+    - cron: "32 4 * * 1" # Mondays 04:32 UTC
+  workflow_dispatch:
 
 concurrency:
   group: codeql-${{ github.workflow }}-${{ github.ref }}
@@ -16,6 +22,11 @@ permissions:
 jobs:
   analyze:
     name: Analyze (${{ matrix.language }})
+    # The Swift leg is a ~15-minute traced build (actions/python are buildless
+    # and take seconds). No required status check depends on it, so skip it on
+    # pull requests; it still runs on push to main, the weekly schedule, and
+    # manual dispatch. actions/python keep running on every push and pull request.
+    if: ${{ matrix.language != 'swift' || github.event_name != 'pull_request' }}
     runs-on: ${{ matrix.runner }}
     permissions:
       security-events: write # upload code scanning results
@@ -62,6 +73,9 @@ jobs:
       # extracts every file twice into an identical database. One arch produces
       # the same analysis while roughly halving this (dominant) traced build.
       #
+      # COMPILER_INDEX_STORE_ENABLE=NO skips Xcode's source-index generation, an
+      # IDE-only artifact CodeQL doesn't consume, trimming the traced build.
+      #
       # Note: don't cache DerivedData across runs to skip this build. CodeQL only
       # extracts files the traced build actually recompiles, so a warm/incremental
       # build would yield an empty or incomplete database.
@@ -74,6 +88,7 @@ jobs:
             -destination 'generic/platform=iOS Simulator' \
             ARCHS=arm64 \
             ONLY_ACTIVE_ARCH=NO \
+            COMPILER_INDEX_STORE_ENABLE=NO \
             CODE_SIGNING_ALLOWED=NO
 
       - name: Perform CodeQL Analysis
