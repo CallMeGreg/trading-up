@@ -17,7 +17,7 @@ struct GauntletSimResult {
     var finalRound = 1
     var finalPackTier = 1
     var finalSlots = 0
-    var finalAppraisal = 0.0
+    var finalAura = 0.0
     var finalCash = 0.0
     var catalystsAttuned = 0
     var finalCompleteLines = 0   // complete evolution lines standing in the final Showcase
@@ -56,13 +56,13 @@ enum GauntletSim {
     static let lineOptionWeight = 0.75
 
     /// The optimised policy's private valuation of a *whole* Showcase: the exact
-    /// appraisal engine (which already pays the completion bonus for finished lines)
+    /// Aura engine (which already pays the completion bonus for finished lines)
     /// plus a smaller "option value" for lines still assembling — weighted by how
     /// close they are. Because it scores the entire Showcase, evicting a linemate
     /// lowers the score on its own, so the argmax below never breaks a line it's
     /// trying to build.
-    static func showcaseScore(_ sc: [CardInstance], evoLineBonus: Double, appraisalMult: Double) -> Double {
-        var s = GauntletRun.appraise(sc, evoLineBonus: evoLineBonus, appraisalMult: appraisalMult)
+    static func showcaseScore(_ sc: [CardInstance], evoLineBonus: Double, auraMult: Double) -> Double {
+        var s = GauntletRun.aura(sc, evoLineBonus: evoLineBonus, auraMult: auraMult)
         guard evoLineBonus > 0 else { return s }
         let byLine = Dictionary(grouping: sc.filter { $0.card.stageCount > 1 }, by: { $0.card.lineId })
         for (_, g) in byLine {
@@ -71,7 +71,7 @@ enum GauntletSim {
             if present >= 1 && present < stageCount {
                 let lineVal = g.reduce(0.0) { $0 + $1.currentValue }
                 let progress = Double(present) / Double(stageCount)
-                s += evoLineBonus * lineVal * lineOptionWeight * progress * appraisalMult
+                s += evoLineBonus * lineVal * lineOptionWeight * progress * auraMult
             }
         }
         return s
@@ -88,19 +88,19 @@ enum GauntletSim {
             // still assembling (option value), so the policy will hold a cheap common
             // toward a completion instead of dumping it for a pricier single.
             let elb = run.evoLineBonus
-            let am = run.mods.appraisalMult
+            let am = run.mods.auraMult
             for inst in cards.sorted(by: { $0.currentValue > $1.currentValue }) {
                 if run.canKeep {
                     run.keep(inst)
                     continue
                 }
                 // "Sell" keeps the Showcase as-is; each swap trials inst into a slot.
-                var bestScore = showcaseScore(run.showcase, evoLineBonus: elb, appraisalMult: am)
+                var bestScore = showcaseScore(run.showcase, evoLineBonus: elb, auraMult: am)
                 var bestSlot: Int? = nil
                 for j in run.showcase.indices {
                     var trial = run.showcase
                     trial[j] = inst
-                    let sc = showcaseScore(trial, evoLineBonus: elb, appraisalMult: am)
+                    let sc = showcaseScore(trial, evoLineBonus: elb, auraMult: am)
                     if sc > bestScore { bestScore = sc; bestSlot = j }
                 }
                 if let j = bestSlot { run.swapIn(inst, at: j) } else { run.sell(inst) }
@@ -203,12 +203,12 @@ enum GauntletSim {
             else { gradeTopKeeper(run: &run, rng: &rng) }
 
             let roundBefore = run.round
-            let appraisalBefore = run.showcaseAppraisal
+            let auraBefore = run.showcaseAura
             let targetBefore = run.target
             let outcome = run.endRound(using: &rng)
             if trace {
-                print(String(format: "    T%@ r%d  appraisal $%.0f / target $%.0f  cash $%.0f  packTier %d  slots %d  cats %d  -> %@",
-                             tier.rawValue.prefix(1).uppercased(), roundBefore, appraisalBefore, targetBefore,
+                print(String(format: "    T%@ r%d  Aura $%.0f / target $%.0f  cash $%.0f  packTier %d  slots %d  cats %d  -> %@",
+                             tier.rawValue.prefix(1).uppercased(), roundBefore, auraBefore, targetBefore,
                              run.cash, run.packTier, run.effectiveSlots, run.attunedCatalysts.count, String(describing: outcome)))
             }
             if outcome == .cleared { shop(style: style, run: &run) }
@@ -220,7 +220,7 @@ enum GauntletSim {
         result.clearedRounds = run.won ? run.roundsTotal : max(0, run.round - 1)
         result.finalPackTier = run.packTier
         result.finalSlots = run.effectiveSlots
-        result.finalAppraisal = run.showcaseAppraisal
+        result.finalAura = run.showcaseAura
         result.finalCash = run.cash
         result.catalystsAttuned = run.attunedCatalysts.count
         result.finalCompleteLines = completeLines(run.showcase)

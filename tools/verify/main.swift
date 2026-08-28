@@ -649,7 +649,7 @@ do {
     check(thoughtfulWin - recklessWin >= 10, "grading dupes is a real edge (win gap ≥ 10 pts)")
 }
 
-print("\n== Gauntlet: appraisal engine & knobs ==")
+print("\n== Gauntlet: Aura engine & knobs ==")
 do {
     // The engine sums market value and adds a bonus for each *complete* evolution
     // line standing in the Showcase; an incomplete line earns nothing, and the
@@ -658,19 +658,19 @@ do {
     let fullLine = line.map { CardInstance(cardId: $0.id) }
     let partialLine = [CardInstance(cardId: line[0].id)]   // only the first stage
     let elb = GauntletEconomy.baseEvoLineBonus
-    check(GauntletRun.appraise([], evoLineBonus: elb, appraisalMult: 1) == 0, "empty Showcase appraises to 0")
-    let complete = GauntletRun.appraise(fullLine, evoLineBonus: elb, appraisalMult: 1)
-    let incomplete = GauntletRun.appraise(partialLine, evoLineBonus: elb, appraisalMult: 1)
+    check(GauntletRun.aura([], evoLineBonus: elb, auraMult: 1) == 0, "empty Showcase scores 0 Aura")
+    let complete = GauntletRun.aura(fullLine, evoLineBonus: elb, auraMult: 1)
+    let incomplete = GauntletRun.aura(partialLine, evoLineBonus: elb, auraMult: 1)
     let rawFull = fullLine.reduce(0.0) { $0 + $1.currentValue }
     check(abs(complete - rawFull * (1 + elb)) < 1e-6, "a complete evolution line earns the completion bonus")
     check(abs(incomplete - partialLine[0].currentValue) < 1e-6, "an incomplete line earns no bonus")
 
     // RunMods compose: additive fields add, multiplicative fields multiply.
-    var a = RunMods.none; a.extraRipsPerRound = 1; a.appraisalMult = 1.10
-    var b = RunMods.none; b.extraRipsPerRound = 2; b.appraisalMult = 1.20
+    var a = RunMods.none; a.extraRipsPerRound = 1; a.auraMult = 1.10
+    var b = RunMods.none; b.extraRipsPerRound = 2; b.auraMult = 1.20
     let sum = a + b
     check(sum.extraRipsPerRound == 3, "RunMods sum additive fields")
-    check(abs(sum.appraisalMult - 1.32) < 1e-9, "RunMods multiply the *Mult fields")
+    check(abs(sum.auraMult - 1.32) < 1e-9, "RunMods multiply the *Mult fields")
 
     // Target curve rises every round and the Hard finale is a spiked boss.
     var rising = true

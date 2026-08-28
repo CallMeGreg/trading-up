@@ -332,12 +332,12 @@ private struct HUDPanel: View {
             }
 
             VStack(spacing: 4) {
-                ProgressBar(value: run.showcaseAppraisal, total: run.target,
-                            tint: run.showcaseAppraisal >= run.target ? Palette.money : Color(hex: "b06cf7"),
+                ProgressBar(value: run.showcaseAura, total: run.target,
+                            tint: run.showcaseAura >= run.target ? Palette.money : Color(hex: "b06cf7"),
                             height: 10)
-                Text("\(fmt(run.showcaseAppraisal)) / \(fmt(run.target)) Aura")
+                Text("\(fmt(run.showcaseAura)) / \(fmt(run.target)) Aura")
                     .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(run.showcaseAppraisal >= run.target ? Palette.money : Palette.text)
+                    .foregroundStyle(run.showcaseAura >= run.target ? Palette.money : Palette.text)
                     .frame(maxWidth: .infinity, alignment: .center)
             }
         }
@@ -389,7 +389,7 @@ private struct PullRow: View {
                         .font(.system(size: 13, weight: .heavy, design: .rounded))
                         .foregroundStyle(Palette.money)
                 }
-                Text("+\(fmt(max(0, run.marginalAppraisal(of: inst)))) Aura if kept")
+                Text("+\(fmt(max(0, run.marginalAura(of: inst)))) Aura if kept")
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(Palette.subtle)
                 HStack(spacing: 8) {

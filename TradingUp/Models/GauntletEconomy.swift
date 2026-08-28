@@ -39,7 +39,7 @@ struct RunMods: Codable, Hashable {
     var extraRipsPerRound = 0
     var extraSlots = 0
     var extraCatalystSlots = 0
-    var appraisalMult = 1.0        // global score multiplier
+    var auraMult = 1.0        // global score multiplier
     var evoLineBonusBonus = 0.0    // adds to the completed-evolution-line bonus
     var foilChanceBonus = 0.0      // added to Economy.foilChance on rips
     var ultraChanceBonus = 0.0     // added to Economy.ultraHitChance on rips
@@ -56,7 +56,7 @@ struct RunMods: Codable, Hashable {
         r.extraRipsPerRound     = a.extraRipsPerRound + b.extraRipsPerRound
         r.extraSlots            = a.extraSlots + b.extraSlots
         r.extraCatalystSlots    = a.extraCatalystSlots + b.extraCatalystSlots
-        r.appraisalMult         = a.appraisalMult * b.appraisalMult
+        r.auraMult         = a.auraMult * b.auraMult
         r.evoLineBonusBonus     = a.evoLineBonusBonus + b.evoLineBonusBonus
         r.foilChanceBonus       = a.foilChanceBonus + b.foilChanceBonus
         r.ultraChanceBonus      = a.ultraChanceBonus + b.ultraChanceBonus
@@ -121,7 +121,7 @@ enum GauntletEconomy {
         ripsPerRound(tier) + (isBossRound(tier, round: round) ? bossExtraRips : 0)
     }
 
-    // MARK: Target curve — the cumulative appraisal bar each round
+    // MARK: Target curve — the cumulative Aura bar each round
     //
     // These three numbers per tier (base, growth, boss spike) are the difficulty
     // dial. The Gauntlet strategy sims in `tools/verify` peg the neutral, level-0
@@ -134,7 +134,7 @@ enum GauntletEconomy {
     // (These sit lower than the old synergy-era curve on purpose: batch-4 replaced the
     // reliable same-element synergy multiplier with an evolution-line completion bonus,
     // which is RNG-gated — you have to pull a line's whole chain — so it can't prop up
-    // optimised appraisal every round the way synergy did. Medium/Hard optimised win
+    // optimised Aura every round the way synergy did. Medium/Hard optimised win
     // rates fell ~13/~3 pts as a result; the skill *gap* is preserved by grading and
     // shop play, which is where an optimised run really separates from a careless one.)
     //
@@ -142,7 +142,7 @@ enum GauntletEconomy {
     // Medium leans on an extra rip/round rather than a retry to stay winnable.
     // The guardrail: a *neutral* Trainer clears Hard with optimal play (~56% > 45%),
     // so Trainers and Catalysts are gravy, never a requirement (docs/DESIGN.md §14.3).
-    // Growth is steep because the appraisal engine snowballs ~3× per pack-tier jump;
+    // Growth is steep because the Aura engine snowballs ~3× per pack-tier jump;
     // a gentle curve lets an optimised build run away and kills the tension. Retune
     // in small steps and re-run the harness in the same breath — careless win rate is
     // very sensitive to the bar height, optimised much less so.
@@ -158,7 +158,7 @@ enum GauntletEconomy {
     }
 
     /// Per-round multiplicative growth of the bar. Steep enough that a pack-tier
-    /// jump (~3×) is chased down over ~2 rounds, so appraisal hugs the bar instead
+    /// jump (~3×) is chased down over ~2 rounds, so Aura hugs the bar instead
     /// of running away after the opening.
     static func targetGrowth(_ tier: GauntletTier) -> Double {
         switch tier {
@@ -168,7 +168,7 @@ enum GauntletEconomy {
         }
     }
 
-    /// The cumulative appraisal the whole standing Showcase must reach in `round`.
+    /// The cumulative Aura the whole standing Showcase must reach in `round`.
     static func target(_ tier: GauntletTier, round: Int) -> Double {
         var t = baseTarget(tier) * pow(targetGrowth(tier), Double(round - 1))
         if isBossRound(tier, round: round) { t *= bossTargetSpike }
@@ -184,9 +184,9 @@ enum GauntletEconomy {
     static let baseStipendRate = 0.10   // of the round's target
     static let overshootStipendRate = 0.25
 
-    static func roundClearStipend(_ tier: GauntletTier, round: Int, appraisal: Double) -> Double {
+    static func roundClearStipend(_ tier: GauntletTier, round: Int, aura: Double) -> Double {
         let bar = target(tier, round: round)
-        let overshoot = max(0, appraisal - bar)
+        let overshoot = max(0, aura - bar)
         return bar * baseStipendRate + overshoot * overshootStipendRate
     }
 
@@ -211,7 +211,7 @@ enum GauntletEconomy {
         Double(max(0, rips)) * leftoverRipRate * Double(round)
     }
 
-    // MARK: Appraisal engine
+    // MARK: Aura engine
 
     /// How much *completing a full evolution line* in the Showcase lifts the value
     /// of that line's cards. Chasing a line to its final stage — not just hoarding

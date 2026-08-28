@@ -1,7 +1,7 @@
 import XCTest
 @testable import TradingUp
 
-/// The Gauntlet run state machine (`GauntletRun`): the appraisal engine, keep /
+/// The Gauntlet run state machine (`GauntletRun`): the Aura engine, keep /
 /// sell / swap, grading, the shop, and how a round resolves into cleared / won /
 /// lost. Pure Foundation logic, driven with a seeded RNG so it's
 /// reproducible, exactly like the Classic `GameCore` tests. See docs/DESIGN.md §14.
@@ -40,13 +40,13 @@ final class GauntletCoreTests: XCTestCase {
         XCTAssertEqual(ripRun.ripsLeft, GauntletEconomy.ripBudget(.easy, round: 1) + 1)
     }
 
-    // MARK: Appraisal engine
+    // MARK: Aura engine
 
     // A full evolution line and one of its lower stages, for the completion-bonus tests.
     private var fullLine: [Card] { CardDatabase.evolutionLines.values.first { $0.count >= 2 }! }
 
-    func testEmptyShowcaseAppraisesToZero() {
-        XCTAssertEqual(GauntletRun.appraise([], evoLineBonus: 0.90, appraisalMult: 1), 0)
+    func testEmptyShowcaseHasZeroAura() {
+        XCTAssertEqual(GauntletRun.aura([], evoLineBonus: 0.90, auraMult: 1), 0)
     }
 
     func testCompleteEvolutionLineEarnsTheCompletionBonus() {
@@ -55,7 +55,7 @@ final class GauntletCoreTests: XCTestCase {
         let b = GauntletEconomy.baseEvoLineBonus
         let raw = cards.reduce(0.0) { $0 + $1.currentValue }
 
-        let complete = GauntletRun.appraise(cards, evoLineBonus: b, appraisalMult: 1)
+        let complete = GauntletRun.aura(cards, evoLineBonus: b, auraMult: 1)
         // Every stage is present, so the whole line is lifted by the completion bonus.
         XCTAssertEqual(complete, raw * (1 + b), accuracy: 1e-6)
     }
@@ -64,33 +64,33 @@ final class GauntletCoreTests: XCTestCase {
         let line = fullLine
         let partial = [CardInstance(cardId: line[0].id)]   // only the first stage
         let b = GauntletEconomy.baseEvoLineBonus
-        let appraised = GauntletRun.appraise(partial, evoLineBonus: b, appraisalMult: 1)
-        XCTAssertEqual(appraised, partial[0].currentValue, accuracy: 1e-6)
+        let aura = GauntletRun.aura(partial, evoLineBonus: b, auraMult: 1)
+        XCTAssertEqual(aura, partial[0].currentValue, accuracy: 1e-6)
     }
 
-    func testAppraisalMultScalesTheWholeShowcase() {
+    func testAuraMultScalesTheWholeShowcase() {
         let cards = fullLine.map { CardInstance(cardId: $0.id) }
         let b = GauntletEconomy.baseEvoLineBonus
-        let base = GauntletRun.appraise(cards, evoLineBonus: b, appraisalMult: 1)
-        let lifted = GauntletRun.appraise(cards, evoLineBonus: b, appraisalMult: 1.10)
+        let base = GauntletRun.aura(cards, evoLineBonus: b, auraMult: 1)
+        let lifted = GauntletRun.aura(cards, evoLineBonus: b, auraMult: 1.10)
         XCTAssertEqual(lifted, base * 1.10, accuracy: 1e-6)
     }
 
     // MARK: RunMods composition
 
     func testRunModsCompose() {
-        var a = RunMods.none; a.extraRipsPerRound = 1; a.appraisalMult = 1.10; a.sellbackBonus = 0.05
-        var b = RunMods.none; b.extraRipsPerRound = 2; b.appraisalMult = 1.20; b.sellbackBonus = 0.03
+        var a = RunMods.none; a.extraRipsPerRound = 1; a.auraMult = 1.10; a.sellbackBonus = 0.05
+        var b = RunMods.none; b.extraRipsPerRound = 2; b.auraMult = 1.20; b.sellbackBonus = 0.03
         let sum = a + b
         XCTAssertEqual(sum.extraRipsPerRound, 3)
-        XCTAssertEqual(sum.appraisalMult, 1.32, accuracy: 1e-9)      // multiplies
+        XCTAssertEqual(sum.auraMult, 1.32, accuracy: 1e-9)      // multiplies
         XCTAssertEqual(sum.sellbackBonus, 0.08, accuracy: 1e-9)      // adds
     }
 
     func testAttunedCatalystsFoldIntoMods() {
         var run = GauntletRun(tier: .easy, trainer: .neutral)
-        let overload = Catalyst.byId("overload")!   // +1 rip
-        XCTAssertTrue(run.attune(overload))
+        let eclipse = Catalyst.byId("eclipse")!   // +1 rip
+        XCTAssertTrue(run.attune(eclipse))
         XCTAssertEqual(run.mods.extraRipsPerRound, 1)
         XCTAssertEqual(run.effectiveCatalystSlots, GauntletEconomy.baseCatalystSlots)
     }
@@ -167,7 +167,7 @@ final class GauntletCoreTests: XCTestCase {
         var run = GauntletRun(tier: .easy, trainer: .neutral)
         run.cash = 0
         run.showcase = [whale]                       // easily over the Round-1 bar
-        XCTAssertGreaterThanOrEqual(run.showcaseAppraisal, run.target)
+        XCTAssertGreaterThanOrEqual(run.showcaseAura, run.target)
         let outcome = run.endRound(using: &rng)
         XCTAssertEqual(outcome, .cleared)
         XCTAssertEqual(run.round, 2)
@@ -186,7 +186,7 @@ final class GauntletCoreTests: XCTestCase {
     func testMissingTheBarLosesTheRunImmediately() {
         var rng = SeededRNG(3)
         var run = GauntletRun(tier: .easy, trainer: .neutral)
-        // Empty showcase → appraisal 0 < target → miss. Rounds are single-life,
+        // Empty showcase → Aura 0 < target → miss. Rounds are single-life,
         // so any miss ends the run — no reprints.
         XCTAssertEqual(run.endRound(using: &rng), .lost)
         XCTAssertTrue(run.lost)

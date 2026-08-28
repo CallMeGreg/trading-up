@@ -11,7 +11,7 @@ import Foundation
 enum GauntletStat {
     static let packsRipped    = "packsRipped"     // lifetime sum
     static let maxShowcase    = "maxShowcase"     // largest Showcase reached, any run
-    static let bestRoundScore = "bestRoundScore"  // highest round appraisal, any run
+    static let bestRoundScore = "bestRoundScore"  // highest round Aura, any run
     static let cardsGraded    = "cardsGraded"     // lifetime sum
     static let maxCashHeld     = "maxCashHeld"     // most cash held at once, any run
 }
@@ -46,7 +46,7 @@ enum RoundOutcome: Equatable {
 // MARK: - Gauntlet run
 
 /// One Gauntlet run: an escalating sequence of rounds, each demanding a rising
-/// cumulative **appraisal** from your standing **Showcase**, reached within a
+/// cumulative **Aura** from your standing **Showcase**, reached within a
 /// fixed number of **rips**, while **cash** (earned by selling at the spread,
 /// spent in the between-round shop) is the across-run currency. Keep-vs-sell each
 /// pull is the core decision. Pure Foundation game logic, like `GameCore`, so the
@@ -111,14 +111,14 @@ struct GauntletRun {
     var ultraChance: Double { Economy.ultraHitChance + mods.ultraChanceBonus }
     func gradeFee(for card: Card) -> Double { Economy.gradeFee(set: card.set) * mods.gradeFeeMult }
 
-    // MARK: Appraisal engine
+    // MARK: Aura engine
 
     /// Score a set of cards: the sum of every card's market value (base × foil ×
     /// grade), lifted by a bonus for each *complete evolution line* standing in the
     /// group, then scaled by the run's global multiplier. A line is complete when
     /// every one of its stages is present — so chasing a line to its final form,
     /// not hoarding singles, is what the engine rewards (docs/DESIGN.md §14.4).
-    static func appraise(_ cards: [CardInstance], evoLineBonus: Double, appraisalMult: Double) -> Double {
+    static func aura(_ cards: [CardInstance], evoLineBonus: Double, auraMult: Double) -> Double {
         var total = cards.reduce(0.0) { $0 + $1.currentValue }
         if evoLineBonus > 0 {
             // Group the multi-stage cards by their line; a line whose every stage is
@@ -134,30 +134,30 @@ struct GauntletRun {
                 }
             }
         }
-        return total * appraisalMult
+        return total * auraMult
     }
 
-    var showcaseAppraisal: Double {
-        Self.appraise(showcase, evoLineBonus: evoLineBonus, appraisalMult: mods.appraisalMult)
+    var showcaseAura: Double {
+        Self.aura(showcase, evoLineBonus: evoLineBonus, auraMult: mods.auraMult)
     }
 
-    /// How much the Showcase's appraisal would rise if `inst` were kept (accounts
+    /// How much the Showcase's Aura would rise if `inst` were kept (accounts
     /// for any evolution line it completes). Negative-improving swaps use this too.
-    func marginalAppraisal(of inst: CardInstance) -> Double {
-        let after = Self.appraise(showcase + [inst], evoLineBonus: evoLineBonus, appraisalMult: mods.appraisalMult)
-        return after - showcaseAppraisal
+    func marginalAura(of inst: CardInstance) -> Double {
+        let after = Self.aura(showcase + [inst], evoLineBonus: evoLineBonus, auraMult: mods.auraMult)
+        return after - showcaseAura
     }
 
-    /// The Showcase card that contributes the least appraisal right now.
+    /// The Showcase card that contributes the least Aura right now.
     func weakestShowcaseIndex() -> Int? {
         guard !showcase.isEmpty else { return nil }
-        let base = showcaseAppraisal
+        let base = showcaseAura
         var worst = 0
         var worstDrop = Double.greatestFiniteMagnitude
         for i in showcase.indices {
             var without = showcase
             without.remove(at: i)
-            let drop = base - Self.appraise(without, evoLineBonus: evoLineBonus, appraisalMult: mods.appraisalMult)
+            let drop = base - Self.aura(without, evoLineBonus: evoLineBonus, auraMult: mods.auraMult)
             if drop < worstDrop { worstDrop = drop; worst = i }
         }
         return worst
@@ -168,7 +168,7 @@ struct GauntletRun {
     var target: Double { GauntletEconomy.target(tier, round: round) }
     var isBossRound: Bool { GauntletEconomy.isBossRound(tier, round: round) }
     var roundsTotal: Int { GauntletEconomy.rounds(tier) }
-    var progress: Double { target > 0 ? showcaseAppraisal / target : 1 }
+    var progress: Double { target > 0 ? showcaseAura / target : 1 }
 
     // MARK: Rounds
 
@@ -178,12 +178,12 @@ struct GauntletRun {
 
     /// Resolve the round once the player is done ripping.
     mutating func endRound<G: RandomNumberGenerator>(using rng: inout G) -> RoundOutcome {
-        bestRoundScore = max(bestRoundScore, showcaseAppraisal)
-        if showcaseAppraisal >= target {
+        bestRoundScore = max(bestRoundScore, showcaseAura)
+        if showcaseAura >= target {
             // Interest is figured on the cash you *held* (before this clear's
             // credits), so banking is what compounds. Leftover rips then cash out.
             let interest = GauntletEconomy.interest(on: cash)
-            let stipend = GauntletEconomy.roundClearStipend(tier, round: round, appraisal: showcaseAppraisal) * mods.stipendMult
+            let stipend = GauntletEconomy.roundClearStipend(tier, round: round, aura: showcaseAura) * mods.stipendMult
             let ripBank = GauntletEconomy.leftoverRipValue(round: round, rips: ripsLeft)
             lastInterest = interest
             lastStipend = stipend

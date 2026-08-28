@@ -342,7 +342,7 @@ final class GauntletStateTests: XCTestCase {
                 s.keep(card)
             } else if let run = s.run,
                       let idx = run.weakestShowcaseIndex(),
-                      run.marginalAppraisal(of: card) > contribution(of: idx, in: run) {
+                      run.marginalAura(of: card) > contribution(of: idx, in: run) {
                 s.swap(card, forShowcaseIndex: idx)
             } else {
                 s.sell(card)
@@ -350,13 +350,13 @@ final class GauntletStateTests: XCTestCase {
         }
     }
 
-    /// How much the Showcase card at `idx` currently contributes to the appraisal.
+    /// How much the Showcase card at `idx` currently contributes to the Aura.
     private func contribution(of idx: Int, in run: GauntletRun) -> Double {
         var without = run.showcase
         without.remove(at: idx)
-        let base = GauntletRun.appraise(without,
+        let base = GauntletRun.aura(without,
                                         evoLineBonus: run.evoLineBonus,
-                                        appraisalMult: run.mods.appraisalMult)
-        return run.showcaseAppraisal - base
+                                        auraMult: run.mods.auraMult)
+        return run.showcaseAura - base
     }
 }

@@ -315,7 +315,7 @@ final class GauntletState {
 
     // MARK: Flow — round resolution
 
-    /// After any action that can change the Showcase's appraisal or settle the
+    /// After any action that can change the Showcase's Aura or settle the
     /// current pull, drive the round forward (req 6): fire the win confetti the
     /// first time the bar is crossed (immediate, even mid pack-summary), and — once
     /// the pull is fully settled and we're back on the main run screen (the reveal
@@ -323,7 +323,7 @@ final class GauntletState {
     /// win, or loss). This replaces the old manual "End Round" button.
     private func evaluateRoundProgress() {
         guard let r = run, phase == .ripping else { return }
-        let reached = r.showcaseAppraisal >= r.target
+        let reached = r.showcaseAura >= r.target
         if reached && celebratedRound != r.round {
             celebratedRound = r.round
             confettiBurst &+= 1

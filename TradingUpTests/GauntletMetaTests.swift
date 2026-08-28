@@ -31,8 +31,8 @@ final class GauntletMetaTests: XCTestCase {
     }
 
     func testStipendRewardsOvershoot() {
-        let base = GauntletEconomy.roundClearStipend(.easy, round: 1, appraisal: GauntletEconomy.target(.easy, round: 1))
-        let over = GauntletEconomy.roundClearStipend(.easy, round: 1, appraisal: GauntletEconomy.target(.easy, round: 1) + 100)
+        let base = GauntletEconomy.roundClearStipend(.easy, round: 1, aura: GauntletEconomy.target(.easy, round: 1))
+        let over = GauntletEconomy.roundClearStipend(.easy, round: 1, aura: GauntletEconomy.target(.easy, round: 1) + 100)
         XCTAssertGreaterThan(over, base, "pushing past the bar pays more")
     }
 

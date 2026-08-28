@@ -72,7 +72,7 @@ extension Trainer {
 
         Trainer(id: "appraiser", name: "Appraiser",
                 blurb: "Sees value others miss. Everything scores a little higher.",
-                baseMods: { var m = RunMods.none; m.appraisalMult = 1.10; return m }(),
+                baseMods: { var m = RunMods.none; m.auraMult = 1.10; return m }(),
                 unlock: TrainerUnlock(stat: GauntletStat.bestRoundScore, threshold: 500,
                                       summary: "Reach a round Aura of 500.",
                                       noun: "best round Aura")),
