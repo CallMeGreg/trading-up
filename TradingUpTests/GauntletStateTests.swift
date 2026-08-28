@@ -246,7 +246,7 @@ final class GauntletStateTests: XCTestCase {
         s.abandonRun()
         XCTAssertEqual(s.phase, .trainerSelect)
         XCTAssertNil(s.run)
-        XCTAssertEqual(s.progress.xp(forTrainer: "neutral"), 0, "an abandoned run banks nothing")
+        XCTAssertTrue(s.progress.clearedTiers(forTrainer: "neutral").isEmpty, "an abandoned run banks nothing")
         XCTAssertFalse(s.progress.isUnlocked(.medium, forTrainer: "neutral"))
     }
 
@@ -287,14 +287,13 @@ final class GauntletStateTests: XCTestCase {
 
             let clear = s.lastClear
             XCTAssertNotNil(clear)
-            XCTAssertGreaterThan(clear!.xpGained, 0)
             XCTAssertEqual(clear!.unlockedTier, .medium, "clearing Easy unlocks Medium")
             XCTAssertTrue(s.progress.isUnlocked(.medium, forTrainer: "neutral"))
 
             // Durable: the clear is on disk in the progress file.
             let reloaded = GauntletProgressStore(directory: dir).load()
             XCTAssertTrue(reloaded.isUnlocked(.medium, forTrainer: "neutral"))
-            XCTAssertGreaterThan(reloaded.xp(forTrainer: "neutral"), 0)
+            XCTAssertTrue(reloaded.hasCleared(.easy, trainer: "neutral"))
 
             s.finish()
             XCTAssertEqual(s.phase, .trainerSelect)

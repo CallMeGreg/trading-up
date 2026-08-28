@@ -38,6 +38,7 @@ TRAINERS = [
     ("grader",    "Grader",   "Grading",       "#ffd54a", "#7a5a10"),
     ("merchant",  "Merchant", "Economy",       "#ff9f43", "#7a441a"),
     ("neutral",   "Rookie",   "Neutral start", "#8a94a6", "#3a4150"),
+    ("red",       "Red",      "???",           "#ff3b3b", "#5a1417"),
 ]
 
 
@@ -149,8 +150,21 @@ def m_rookie(uid, c, d):
     <path d="M0,-31 l10,20 l23,3 l-16,16 l4,22 l-21,-11 l-21,11 l4,-22 l-16,-16 l23,-3 Z" fill="#ffffff"/>'''
 
 
+def m_red(uid, c, d):
+    # the mystery rival: a spiky-haired man's bust in left profile, drawn as a
+    # clean cameo silhouette — forehead, nose, lips and chin read down the left
+    # edge; a real neck and shoulder anchor the base; five hair spikes up top
+    head = ("M -24,-34 "
+            "L -40,-6 L -54,9 L -42,15 L -43,21 L -38,33 L -20,47 L -22,56 "
+            "L 42,56 L 47,38 L 41,24 L 45,4 L 46,-16 "
+            "L 39,-21 L 47,-42 L 31,-30 L 29,-53 L 17,-33 "
+            "L 9,-56 L -3,-35 L -9,-53 L -19,-37 L -23,-48 Z")
+    return f'''
+    <path d="{head}" fill="url(#mot{uid})" stroke="{d}" stroke-width="3" stroke-linejoin="round"/>'''
+
+
 MOTIF = dict(ripper=m_ripper, curator=m_curator, appraiser=m_farmer,
-             grader=m_grader, merchant=m_merchant, neutral=m_rookie)
+             grader=m_grader, merchant=m_merchant, neutral=m_rookie, red=m_red)
 
 
 # --------------------------------------------------------------------- emit
@@ -192,7 +206,8 @@ def build_assets():
 
 def build_sheet():
     os.makedirs(MOCK, exist_ok=True)
-    cols, rows = 3, 2
+    cols = 3
+    rows = (len(TRAINERS) + cols - 1) // cols
     W, H, gap = 220, 260, 16
     box = 176
     SW = cols * W + (cols + 1) * gap

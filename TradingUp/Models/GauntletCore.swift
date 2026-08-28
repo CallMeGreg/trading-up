@@ -89,7 +89,7 @@ struct GauntletRun {
     init(tier: GauntletTier, trainer: Trainer) {
         self.tier = tier
         self.trainer = trainer
-        self.cash = GauntletEconomy.startingCash + trainer.activeMods.startingCashBonus
+        self.cash = GauntletEconomy.startingCash + trainer.mods.startingCashBonus
         self.maxCashReached = self.cash
         startRound()
     }
@@ -101,7 +101,7 @@ struct GauntletRun {
     init<G: RandomNumberGenerator>(tier: GauntletTier, trainer: Trainer, using rng: inout G) {
         self.tier = tier
         self.trainer = trainer
-        self.cash = GauntletEconomy.startingCash + trainer.activeMods.startingCashBonus
+        self.cash = GauntletEconomy.startingCash + trainer.mods.startingCashBonus
         self.maxCashReached = self.cash
         startRound(using: &rng)
     }
@@ -110,7 +110,7 @@ struct GauntletRun {
 
     /// Trainer advantage plus every attuned Catalyst, summed.
     var mods: RunMods {
-        var m = trainer.activeMods
+        var m = trainer.mods
         for c in attunedCatalysts { m = m + c.mods }
         return m
     }

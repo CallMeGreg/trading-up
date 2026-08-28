@@ -31,13 +31,17 @@ final class GauntletCoreTests: XCTestCase {
     }
 
     func testTrainerBonusesApplyAtStart() {
+        // Skill magnitudes are unset (a later balance pass tunes them), so today
+        // every Trainer opens at the neutral baseline — no seed-cash edge, no bonus
+        // rip. The verify harness keeps the mode winnable until they're set.
         let merchant = Trainer.byId("merchant")!
         let run = GauntletRun(tier: .easy, trainer: merchant)
-        XCTAssertEqual(run.cash, GauntletEconomy.startingCash + merchant.baseMods.startingCashBonus)
+        XCTAssertEqual(run.cash, GauntletEconomy.startingCash)
+        XCTAssertEqual(merchant.mods, .none)
 
         let ripper = Trainer.byId("ripper")!
         let ripRun = GauntletRun(tier: .easy, trainer: ripper)
-        XCTAssertEqual(ripRun.ripsLeft, GauntletEconomy.ripBudget(.easy, round: 1) + 1)
+        XCTAssertEqual(ripRun.ripsLeft, GauntletEconomy.ripBudget(.easy, round: 1))
     }
 
     // MARK: Aura engine
