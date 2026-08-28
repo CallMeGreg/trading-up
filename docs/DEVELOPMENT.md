@@ -54,11 +54,11 @@ TradingUp/
     GameState.swift          @Observable wrapper: randomness + autosave; owns the full-version entitlement gate and the Binder
     Binder.swift             All-time showcase model: best copy ever owned of each Spryte (survives New Game)
     BinderStore.swift        Versioned store for the Binder, in its own file separate from the run save
-    GauntletEconomy.swift    Gauntlet balance knobs: tier config, target curve, interest, RunMods aggregator (Gauntlet's Economy)
-    Trainer.swift            Gauntlet Trainers: per-run archetypes (only the Rookie is free; five specialists unlock on Gauntlet milestones) + cross-run XP/level that scales each advantage from a ~20% level-1 baseline to a level-10 ceiling
+    GauntletEconomy.swift    Gauntlet balance knobs: tier config, target curve, interest, RunMods aggregator + GauntletSkillTuning (Trainer skill → advantage seam)
+    Trainer.swift            Gauntlet Trainers: per-run archetypes defined by a 5-skill graph (Energy/Aura/Selling/Grading/Inventory); only the Rookie is free, five specialists unlock on milestones, and mystery Red unlocks on beating Hard with all others
     Catalyst.swift           Gauntlet Catalysts: run-long buff cards, one per element lane
     GauntletCore.swift       Deterministic Gauntlet run state machine: rip (per-element pack rail) / keep / grade / shop / round resolution
-    GauntletProgress.swift   Cross-run Gauntlet meta: per-Trainer XP/level, unlocked tiers + Trainers, lifetime stats, intro-seen flag (survives New Game)
+    GauntletProgress.swift   Cross-run Gauntlet meta: per-Trainer cleared tiers (badges + ladder + Red unlock), unlocked Trainers, lifetime stats, intro-seen flag (survives New Game)
     GauntletProgressStore.swift  Versioned store for Gauntlet progress, in its own file separate from the run save
     GauntletReward.swift     Win payout: the choose-1-of-3 Foil Extended Art reward (rarity, promotion, consolation)
     GauntletState.swift      @Observable driver: runs a GauntletRun, banks progress, routes the win reward into the Binder
@@ -86,7 +86,7 @@ tools/
   generate_cards.py          Regenerates data/cards.json AND Generated/CardData.swift
   generate_art.py            Regenerates the 250 card illustrations (needs rsvg-convert)
   generate_icon.py           Regenerates the app icon (needs rsvg-convert)
-  generate_trainer_art.py    Regenerates the 6 Gauntlet Trainer emblems (needs rsvg-convert)
+  generate_trainer_art.py    Regenerates the 7 Gauntlet Trainer emblems (needs rsvg-convert)
   generate_iap_promo.py      Regenerates the IAP promo image (needs rsvg-convert)
   generate_sfx.py            Regenerates the 3 sound effects (stdlib only)
   generate_screenshots.py    Renders framed marketing scenes (needs rsvg-convert)
@@ -112,12 +112,15 @@ correctness.
 
 **Gauntlet Mode has its own knobs, kept out of `Economy.swift`.** Tier configs, the
 target-Aura curve, interest rate/ceiling, stipend curve, and the `RunMods` aggregator
-live in `TradingUp/Models/GauntletEconomy.swift`; the Trainer roster and its unlock
-thresholds live in `TradingUp/Models/Trainer.swift`; Catalyst effects in `Catalyst.swift`.
-The pack rail (which element sets start unlocked and what unlocking a set costs mid-round)
-is driven from `GauntletCore.swift`. Gauntlet has its **own** `tools/verify` checks
-(§14.8) — a level-0 Rookie must still clear Hard — so re‑run the harness after any Gauntlet
-balance change too; trainer-unlock thresholds are meta pacing and don't affect the win-rate
+live in `TradingUp/Models/GauntletEconomy.swift` — which also holds `GauntletSkillTuning`,
+the seam that turns a Trainer's five-skill graph into its advantage (its per-pip magnitudes
+are `TODO(balance)` zeros today, so every Trainer is currently neutral). The Trainer roster,
+skill profiles and unlock thresholds live in `TradingUp/Models/Trainer.swift`; Catalyst
+effects in `Catalyst.swift`. The pack rail (which element sets start unlocked and what
+unlocking a set costs mid-round) is driven from `GauntletCore.swift`. Gauntlet has its **own**
+`tools/verify` checks (§14.8) — a neutral Rookie must still clear Hard, and no Trainer may
+trivialise it — so re‑run the harness after any Gauntlet balance change too, especially when
+setting the skill magnitudes; trainer-unlock thresholds are meta pacing and don't affect the win-rate
 assertions.
 
 ## Feature flags
@@ -237,14 +240,15 @@ the card art — no third‑party art, licence or attribution:
 
 ```bash
 brew install librsvg                         # one-time: provides rsvg-convert
-python3 tools/generate_trainer_art.py assets # 6 emblems -> Assets.xcassets/TrainerArt
+python3 tools/generate_trainer_art.py assets # 7 emblems -> Assets.xcassets/TrainerArt
 python3 tools/generate_trainer_art.py sheet  # labelled contact sheet -> docs/mockups/trainers
 ```
 
 Emblems are keyed by Trainer `id` as `trainer-<id>` (so Farmer's asset is
 `trainer-appraiser`, matching its persisted id) and loaded via
 `UIImage(named:)`; `TrainerEmblem` grays a locked Trainer's badge the same way
-the shop fades an unaffordable item. To restyle a Trainer, edit the motif in
+the shop fades an unaffordable item, and hides the mystery Trainer (Red) behind a
+"?" plate until it's earned. To restyle a Trainer, edit the motif in
 `generate_trainer_art.py` and re‑run — never hand‑edit the `TrainerArt` PNGs.
 
 ### In-app purchase promo image

@@ -70,36 +70,10 @@ struct RunMods: Codable, Hashable {
         return r
     }
 
-    /// Linearly interpolate between two bundles at `t` in 0…1 — the seam Trainer
-    /// levels scale along (`a` = level 1 / base, `b` = level 10 / ceiling). Rate and
-    /// probability fields (and the multipliers, by value) interpolate smoothly.
-    /// Integer fields step up only as a whole unit is *fully* reached, so a +1 delta
-    /// lands as an end-of-track capstone rather than a mid-level power spike — this
-    /// assumes those fields are non-decreasing with level, which the roster keeps.
-    static func lerp(_ a: RunMods, _ b: RunMods, _ t: Double) -> RunMods {
-        let t = min(max(t, 0), 1)
-        func d(_ x: Double, _ y: Double) -> Double { x + (y - x) * t }
-        func i(_ x: Int, _ y: Int) -> Int { x + Int((Double(y - x) * t + 1e-9).rounded(.down)) }
-        var r = RunMods()
-        r.extraRipsPerRound  = i(a.extraRipsPerRound, b.extraRipsPerRound)
-        r.bonusRipChance     = d(a.bonusRipChance, b.bonusRipChance)
-        r.extraSlots         = i(a.extraSlots, b.extraSlots)
-        r.extraCatalystSlots = i(a.extraCatalystSlots, b.extraCatalystSlots)
-        r.auraMult           = d(a.auraMult, b.auraMult)
-        r.evoLineBonusBonus  = d(a.evoLineBonusBonus, b.evoLineBonusBonus)
-        r.foilChanceBonus    = d(a.foilChanceBonus, b.foilChanceBonus)
-        r.ultraChanceBonus   = d(a.ultraChanceBonus, b.ultraChanceBonus)
-        r.sellbackBonus      = d(a.sellbackBonus, b.sellbackBonus)
-        r.gradeLuckBonus     = d(a.gradeLuckBonus, b.gradeLuckBonus)
-        r.gradeFeeMult       = d(a.gradeFeeMult, b.gradeFeeMult)
-        r.startingCashBonus  = d(a.startingCashBonus, b.startingCashBonus)
-        r.stipendMult        = d(a.stipendMult, b.stipendMult)
-        return r
-    }
-
     /// A concise, mechanical description of what this bundle does, derived straight
-    /// from its fields so displayed text always matches the real effect. Shared by
-    /// Catalysts and (level-scaled) Trainers. Empty when the bundle is neutral.
+    /// from its fields so displayed text always matches the real effect. Used by
+    /// Catalysts (Trainers show a skill graph instead). Empty when the bundle is
+    /// neutral.
     var effectSummary: String {
         func pct(_ v: Double) -> String { "\(Int((v * 100).rounded()))%" }
         var parts: [String] = []
@@ -123,6 +97,68 @@ struct RunMods: Codable, Hashable {
         if stipendMult != 1 { parts.append("+\(pct(stipendMult - 1)) round payout") }
         if startingCashBonus != 0 { parts.append("+" + String(format: "$%.0f", startingCashBonus) + " seed cash") }
         return parts.joined(separator: " · ")
+    }
+}
+
+// MARK: - Trainer skills → run advantage (docs/DESIGN.md §14.3)
+
+/// Turns a Trainer's five-skill profile into the `RunMods` it plays with. The
+/// model is **symmetric**: a score of 3 is neutral (identical to `RunMods.none`),
+/// each pip above 3 grants a bonus and each pip below 3 an equal-shaped penalty —
+/// so a spiky Trainer trades strength in its specialty for real weakness
+/// elsewhere, never a strict upgrade. *Which* lever each skill drives is fixed
+/// here; the per-pip magnitudes are the balance knobs.
+///
+/// - TODO(balance): every per-pip step below is intentionally `0`, so today every
+///   Trainer resolves to `RunMods.none` (mechanically the Rookie). The graphs are
+///   wired but unmagnituded. A dedicated tuning pass sets these numbers and
+///   re-runs `tools/verify` to keep the intended Hard curve — a spiky Trainer must
+///   stay a sidegrade, never a gate — plus, where the design calls for it, two new
+///   downside levers (low Energy risking a lost rip, low Grading rolling with
+///   disadvantage). Until then the wiring is real and honest; only the numbers are
+///   pending.
+enum GauntletSkillTuning {
+    /// The pivot score: a flat 3 confers no advantage and no penalty.
+    static let neutralScore = 3
+
+    /// Whole pips a score sits above (+) or below (−) neutral.
+    static func steps(_ score: Int) -> Int { score - neutralScore }
+
+    /// A symmetric per-pip delta: `steps` scaled by `up` above neutral, `down`
+    /// below. With both magnitudes 0 this is 0 everywhere (the current state).
+    static func delta(_ score: Int, up: Double, down: Double) -> Double {
+        let s = steps(score)
+        return s >= 0 ? Double(s) * up : Double(s) * down
+    }
+
+    // Per-pip magnitudes — all 0 pending the balance pass (see the note above).
+    // Energy → chance of a bonus rip (a guaranteed extra rip is a future capstone).
+    static let bonusRipUp = 0.0,  bonusRipDown = 0.0
+    // Aura → global score multiplier, symmetric around ×1.
+    static let auraUp = 0.0,      auraDown = 0.0
+    // Selling → sell-back rate, round stipend, and seed cash.
+    static let sellbackUp = 0.0,  sellbackDown = 0.0
+    static let stipendUp = 0.0,   stipendDown = 0.0
+    static let seedCashUp = 0.0,  seedCashDown = 0.0
+    // Grading → luck (roll-with-advantage chance) and fee multiplier.
+    static let gradeLuckUp = 0.0, gradeLuckDown = 0.0
+    static let gradeFeeUp = 0.0,  gradeFeeDown = 0.0
+    // Inventory → Showcase slots (a Catalyst slot is a future capstone).
+    static let slotStep = 0
+
+    /// Assemble the run advantage for a profile. Each skill drives its lever(s)
+    /// symmetrically around the neutral 3.
+    static func runMods(for s: TrainerSkills) -> RunMods {
+        var m = RunMods.none
+        m.bonusRipChance    = delta(s.energy,  up: bonusRipUp,  down: bonusRipDown)
+        m.auraMult          = 1 + delta(s.aura, up: auraUp,     down: auraDown)
+        m.sellbackBonus     = delta(s.selling, up: sellbackUp,  down: sellbackDown)
+        m.stipendMult       = 1 + delta(s.selling, up: stipendUp, down: stipendDown)
+        m.startingCashBonus = delta(s.selling, up: seedCashUp,  down: seedCashDown)
+        m.gradeLuckBonus    = delta(s.grading, up: gradeLuckUp, down: gradeLuckDown)
+        m.gradeFeeMult      = 1 + delta(s.grading, up: gradeFeeUp, down: gradeFeeDown)
+        m.extraSlots        = steps(s.inventory) * slotStep
+        return m
     }
 }
 
@@ -314,71 +350,6 @@ enum GauntletEconomy {
 
     /// Chance an individual rip also surfaces a Catalyst card to attune or sell.
     static let catalystDropChance = 0.14
-
-    // MARK: Meta progression — Trainer XP & levels (docs/DESIGN.md §14.3)
-
-    /// Trainers cap at 10 levels. XP is earned per cleared run and scales with tier
-    /// (Hard pays the most), so a Trainer matures over a handful of wins rather than
-    /// a grind. These magnitudes are tunable; the *shape* — perks are sidegrades and
-    /// a level-0 Trainer can already clear Hard — is the guardrail the harness holds.
-    static let maxTrainerLevel = 10
-
-    /// XP granted per round cleared, by tier (Hard pays the most). Every cleared
-    /// round is banked — even on a run that later busts — so partial progress still
-    /// matures a Trainer. See `runXP`.
-    static func roundClearXP(_ tier: GauntletTier) -> Int {
-        switch tier {
-        case .easy: return 2
-        case .medium: return 3
-        case .hard: return 5
-        }
-    }
-
-    /// A one-off bonus for actually *winning* the whole Gauntlet at a tier, on top
-    /// of the per-round XP.
-    static func completionBonus(_ tier: GauntletTier) -> Int {
-        switch tier {
-        case .easy: return 3
-        case .medium: return 6
-        case .hard: return 10
-        }
-    }
-
-    /// XP a finished run banks: `roundsCleared` per-round XP plus a completion bonus
-    /// on a win. A run that doesn't get past round 1 (0 rounds cleared) banks
-    /// nothing, so XP always reflects real progress.
-    static func runXP(tier: GauntletTier, roundsCleared: Int, won: Bool) -> Int {
-        guard roundsCleared >= 1 else { return 0 }
-        return roundsCleared * roundClearXP(tier) + (won ? completionBonus(tier) : 0)
-    }
-
-    /// XP for a full clear (win) at each tier — every round plus the completion
-    /// bonus. Hard pays the most. This is the headline number the results screen
-    /// and tests speak in.
-    static func clearXP(_ tier: GauntletTier) -> Int {
-        runXP(tier: tier, roundsCleared: rounds(tier), won: true)
-    }
-
-    /// Cumulative XP required to *reach* each level (index 0 = level 1 = 0 XP). The
-    /// gaps grow ~1.4× per level, so each level is meaningfully harder to earn than
-    /// the last — a Trainer climbs fast early and matures over many runs. Partial
-    /// runs feed the same pool, so progress is always moving. Reaching the cap is a
-    /// real commitment (≈8 Hard wins), not a formality.
-    static let trainerLevelThresholds: [Int] = [0, 10, 24, 44, 72, 110, 160, 225, 320, 460]
-
-    /// The level a Trainer is at for a given lifetime XP total (clamped to the cap).
-    static func trainerLevel(forXP xp: Int) -> Int {
-        var level = 1
-        for (i, need) in trainerLevelThresholds.enumerated() where xp >= need { level = i + 1 }
-        return min(level, maxTrainerLevel)
-    }
-
-    /// XP still needed to reach the next level, or nil once a Trainer is maxed.
-    static func xpToNextLevel(fromXP xp: Int) -> Int? {
-        let lvl = trainerLevel(forXP: xp)
-        guard lvl < maxTrainerLevel, lvl < trainerLevelThresholds.count else { return nil }
-        return trainerLevelThresholds[lvl] - xp
-    }
 
     // MARK: Win reward (docs/DESIGN.md §14.6)
 

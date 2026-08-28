@@ -124,10 +124,11 @@ final class GauntletState {
         progress.unlockProgress(for: trainer)
     }
 
-    func level(for trainer: Trainer) -> Int { progress.level(forTrainer: trainer.id) }
-    func xp(for trainer: Trainer) -> Int { progress.xp(forTrainer: trainer.id) }
-    func xpToNext(for trainer: Trainer) -> Int? { progress.xpToNextLevel(forTrainer: trainer.id) }
-    var maxTrainerLevel: Int { GauntletEconomy.maxTrainerLevel }
+    /// The difficulty tiers a Trainer has cleared — the data behind its card's
+    /// accomplishment badges.
+    func clearedTiers(for trainer: Trainer) -> Set<GauntletTier> {
+        progress.clearedTiers(forTrainer: trainer.id)
+    }
 
     /// Whether every card's Extended Art has been earned (future wins pay a
     /// consolation instead of art).
@@ -164,10 +165,7 @@ final class GauntletState {
     /// unlocked *for that Trainer* or no Trainer is selected.
     func startRun(tier: GauntletTier) {
         guard let trainer = selectedTrainer, progress.isUnlocked(tier, forTrainer: trainer.id) else { return }
-        var t = trainer
-        t.level = progress.level(forTrainer: trainer.id)
-        t.xp = progress.xp(forTrainer: trainer.id)
-        run = GauntletRun(tier: tier, trainer: t, using: &rng)
+        run = GauntletRun(tier: tier, trainer: trainer, using: &rng)
         pendingCards = []
         pendingCatalyst = nil
         revealActive = false
@@ -359,10 +357,10 @@ final class GauntletState {
         case .won:
             rollReward()
         case .lost:
-            // Bank XP for any rounds cleared before the bust (none if the player
-            // didn't get past round 1); losses never unlock a tier. (req 3)
-            let roundsCleared = max(0, r.round - 1)
-            lastClear = progress.recordLoss(trainerId: r.trainer.id, tier: r.tier, roundsCleared: roundsCleared)
+            // Losses bank no per-Trainer progress and never unlock a tier (req 3),
+            // but the run's lifetime stats still count toward stat-milestone Trainer
+            // unlocks.
+            lastClear = nil
             ingestRunStats()
             store.save(progress)
             phase = .lost

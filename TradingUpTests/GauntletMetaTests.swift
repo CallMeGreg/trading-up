@@ -2,7 +2,8 @@ import XCTest
 @testable import TradingUp
 
 /// Gauntlet meta progression and rewards: the tunable economy knobs (target curve,
-/// interest, XP), the cross-run `GauntletProgress` (tier unlocks + Trainer levels)
+/// interest, stipends), the cross-run `GauntletProgress` (per-Trainer tier unlocks,
+/// accomplishment badges, the roster-earning milestones and the mystery Trainer)
 /// and its store, the choose-1-of-3 Extended-Art win reward, and the Binder's
 /// cosmetic Extended-Art layer. See docs/DESIGN.md §14.3/§14.6/§14.8.
 final class GauntletMetaTests: XCTestCase {
@@ -36,125 +37,40 @@ final class GauntletMetaTests: XCTestCase {
         XCTAssertGreaterThan(over, base, "pushing past the bar pays more")
     }
 
-    // MARK: XP / level curve
+    // MARK: Trainer skill profiles (docs/DESIGN.md §14.3)
 
-    func testTrainerLevelCurveIsMonotonicAndCapped() {
-        var last = 0
-        for xp in 0...200 {
-            let l = GauntletEconomy.trainerLevel(forXP: xp)
-            XCTAssertGreaterThanOrEqual(l, last)
-            last = l
+    /// The shipped roster's skill graphs — the source of truth the cards draw and
+    /// the run mods derive from. Locked here so a casual reshuffle can't silently
+    /// rebalance the mode.
+    func testTrainerSkillProfilesMatchTheDesign() {
+        func expect(_ id: String, _ e: Int, _ a: Int, _ s: Int, _ g: Int, _ i: Int) {
+            guard let t = Trainer.byId(id) else { return XCTFail("missing \(id)") }
+            XCTAssertEqual([t.skills.energy, t.skills.aura, t.skills.selling, t.skills.grading, t.skills.inventory],
+                           [e, a, s, g, i], "\(t.name)'s profile drifted")
         }
-        XCTAssertEqual(GauntletEconomy.trainerLevel(forXP: 0), 1)
-        XCTAssertEqual(GauntletEconomy.trainerLevel(forXP: 1_000_000), GauntletEconomy.maxTrainerLevel)
-        XCTAssertNil(GauntletEconomy.xpToNextLevel(fromXP: 1_000_000))
+        expect("neutral",   3, 3, 3, 3, 3)
+        expect("ripper",    5, 2, 2, 1, 4)
+        expect("curator",   2, 4, 1, 3, 5)
+        expect("appraiser", 2, 5, 2, 2, 3)
+        expect("grader",    2, 3, 2, 5, 3)
+        expect("merchant",  3, 2, 5, 2, 3)
+        expect("red",       5, 5, 1, 1, 1)   // the mystery glass cannon
     }
 
-    func testHardClearPaysTheMostXP() {
-        XCTAssertGreaterThan(GauntletEconomy.clearXP(.hard), GauntletEconomy.clearXP(.medium))
-        XCTAssertGreaterThan(GauntletEconomy.clearXP(.medium), GauntletEconomy.clearXP(.easy))
+    /// `3` is the neutral pivot: a flat-3 profile confers exactly no edge.
+    func testNeutralProfileConfersNoEdge() {
+        XCTAssertEqual(TrainerSkills.neutral.runMods, .none)
+        XCTAssertEqual(Trainer.neutral.mods, .none)
     }
 
-    // MARK: Trainer level scaling (docs/DESIGN.md §14.3)
-
-    /// A freshly-unlocked Trainer plays at its shipped level-1 values, and levels
-    /// below 1 (how the harness constructs a roster Trainer) read as that same floor
-    /// — so scaling is a pure upgrade layered on top of the base advantage.
-    func testTrainerAdvantageStartsAtBaseline() {
-        for base in Trainer.roster {
-            var lvl1 = base; lvl1.level = 1
-            XCTAssertEqual(lvl1.activeMods, base.baseMods, "\(base.name) at level 1 should equal its base advantage")
-            var lvl0 = base; lvl0.level = 0
-            XCTAssertEqual(lvl0.activeMods, base.baseMods, "\(base.name) below level 1 clamps to the base advantage")
+    /// Skill *magnitudes* are deliberately unset — a later balance pass tunes them —
+    /// so today every Trainer resolves to the neutral baseline, and the verify
+    /// harness proves the mode stays winnable meanwhile. This guards that intent:
+    /// wiring up a magnitude must update this test and re-run the harness.
+    func testSkillMagnitudesAreUnsetSoEveryTrainerIsNeutral() {
+        for t in [Trainer.neutral] + Trainer.roster {
+            XCTAssertEqual(t.mods, .none, "\(t.name) should confer no edge until magnitudes are tuned")
         }
-    }
-
-    /// Scaling climbs monotonically and lands on the exact levers we tuned — a
-    /// likelihood or a rate, from a ~20% level-1 baseline to its full ceiling.
-    func testTrainerScalingClimbsToItsCeiling() {
-        let cap = GauntletEconomy.maxTrainerLevel
-
-        // Ripper: a per-round *chance* of a bonus rip, 0.12 → 0.60; the flat +1 stays.
-        let ripper = Trainer.byId("ripper")!
-        func ripChance(_ l: Int) -> Double { var t = ripper; t.level = l; return t.activeMods.bonusRipChance }
-        XCTAssertEqual(ripChance(1), 0.12, accuracy: 1e-9)
-        XCTAssertEqual(ripChance(cap), 0.60, accuracy: 1e-9)
-        XCTAssertGreaterThan(ripChance(6), ripChance(3))
-        XCTAssertEqual(ripper.baseMods.extraRipsPerRound, 1)
-        XCTAssertEqual({ var t = ripper; t.level = cap; return t.activeMods.extraRipsPerRound }(), 1)
-
-        // Farmer (id "appraiser"): global Aura multiplier, ×1.06 → ×1.30.
-        let appraiser = Trainer.byId("appraiser")!
-        func aura(_ l: Int) -> Double { var t = appraiser; t.level = l; return t.activeMods.auraMult }
-        XCTAssertEqual(aura(1), 1.06, accuracy: 1e-9)
-        XCTAssertEqual(aura(cap), 1.30, accuracy: 1e-9)
-        XCTAssertGreaterThan(aura(cap), aura(1))
-
-        // Grader: grade *luck* 0.09 → 0.45 and a fee that drops 0.86 → 0.3.
-        let grader = Trainer.byId("grader")!
-        func luck(_ l: Int) -> Double { var t = grader; t.level = l; return t.activeMods.gradeLuckBonus }
-        func fee(_ l: Int) -> Double { var t = grader; t.level = l; return t.activeMods.gradeFeeMult }
-        XCTAssertEqual(luck(1), 0.09, accuracy: 1e-9)
-        XCTAssertEqual(luck(cap), 0.45, accuracy: 1e-9)
-        XCTAssertEqual(fee(cap), 0.30, accuracy: 1e-9)
-        XCTAssertGreaterThan(luck(cap), luck(1))
-        XCTAssertLessThan(fee(cap), fee(1))
-
-        // Merchant: economy rates all grow toward their ceiling.
-        let merchant = Trainer.byId("merchant")!
-        var mMax = merchant; mMax.level = cap
-        XCTAssertEqual(mMax.activeMods.sellbackBonus, 0.16, accuracy: 1e-9)
-        XCTAssertEqual(mMax.activeMods.stipendMult, 1.60, accuracy: 1e-9)
-        XCTAssertEqual(mMax.activeMods.startingCashBonus, 50, accuracy: 1e-9)
-
-        // Curator: evolution-line bonus rate grows +0.12 → +0.60.
-        let curator = Trainer.byId("curator")!
-        func evo(_ l: Int) -> Double { var t = curator; t.level = l; return t.activeMods.evoLineBonusBonus }
-        XCTAssertEqual(evo(1), 0.12, accuracy: 1e-9)
-        XCTAssertEqual(evo(cap), 0.60, accuracy: 1e-9)
-        XCTAssertGreaterThan(evo(cap), evo(1))
-    }
-
-    /// Every specialist opens level 1 at `baselineFraction` (~20%) of its max
-    /// potential on the continuous levers — a reasonable baseline with real room to
-    /// grow — and reaches 100% at the cap. Integer identity floors are exempt (you
-    /// can't own a fifth of a Showcase slot).
-    func testEveryTrainerStartsAtItsBaselineFractionOfMax() {
-        let f = Trainer.baselineFraction
-        XCTAssertEqual(f, 0.20, accuracy: 1e-9)
-        for tr in Trainer.roster {
-            guard let maxM = tr.maxMods else { continue }
-            var lvl1 = tr; lvl1.level = 1
-            let a = lvl1.activeMods
-            func frac(_ name: String, _ v: Double, _ vmax: Double) {
-                XCTAssertEqual(v, vmax * f, accuracy: 1e-9,
-                               "\(tr.name) \(name) should open at \(Int(f * 100))% of its max")
-            }
-            frac("bonus-rip chance", a.bonusRipChance, maxM.bonusRipChance)
-            frac("evolution bonus", a.evoLineBonusBonus, maxM.evoLineBonusBonus)
-            frac("grade luck", a.gradeLuckBonus, maxM.gradeLuckBonus)
-            frac("sell-back", a.sellbackBonus, maxM.sellbackBonus)
-            frac("seed cash", a.startingCashBonus, maxM.startingCashBonus)
-            frac("Aura bonus", a.auraMult - 1, maxM.auraMult - 1)
-            frac("payout bonus", a.stipendMult - 1, maxM.stipendMult - 1)
-            frac("grade-fee cut", 1 - a.gradeFeeMult, 1 - maxM.gradeFeeMult)
-        }
-    }
-
-    /// The Curator's second Showcase slot is an end-of-track capstone — an integer
-    /// lever must not spike mid-track, so it appears only at the very cap.
-    func testCuratorSecondSlotIsACapstone() {
-        let curator = Trainer.byId("curator")!
-        func slots(_ l: Int) -> Int { var t = curator; t.level = l; return t.activeMods.extraSlots }
-        XCTAssertEqual(slots(1), 1)
-        XCTAssertEqual(slots(GauntletEconomy.maxTrainerLevel - 1), 1, "the second slot must not arrive before the cap")
-        XCTAssertEqual(slots(GauntletEconomy.maxTrainerLevel), 2)
-    }
-
-    /// The Rookie never scales — it stays the harness's neutral, no-edge baseline.
-    func testNeutralTrainerNeverScales() {
-        var maxed = Trainer.neutral; maxed.level = GauntletEconomy.maxTrainerLevel
-        XCTAssertEqual(maxed.activeMods, .none)
     }
 
     // MARK: Progress — unlock ladder
@@ -167,11 +83,10 @@ final class GauntletMetaTests: XCTestCase {
         XCTAssertEqual(p.unlockedTiers(forTrainer: "ripper"), [.easy])
     }
 
-    func testClearingUnlocksTheNextTierAndBanksXP() {
+    func testClearingUnlocksTheNextTierForThatTrainer() {
         var p = GauntletProgress()
         let r1 = p.recordClear(trainerId: "ripper", tier: .easy)
         XCTAssertEqual(r1.unlockedTier, .medium)
-        XCTAssertEqual(r1.xpGained, GauntletEconomy.clearXP(.easy))
         XCTAssertTrue(p.isUnlocked(.medium, forTrainer: "ripper"))
         XCTAssertFalse(p.isUnlocked(.hard, forTrainer: "ripper"))
 
@@ -179,38 +94,10 @@ final class GauntletMetaTests: XCTestCase {
         XCTAssertEqual(r2.unlockedTier, .hard)
         XCTAssertTrue(p.isUnlocked(.hard, forTrainer: "ripper"))
 
-        // Clearing Hard unlocks nothing further, but still banks XP.
-        let r3 = p.recordClear(trainerId: "ripper", tier: .hard)
-        XCTAssertNil(r3.unlockedTier)
-        XCTAssertEqual(p.xp(forTrainer: "ripper"),
-                       GauntletEconomy.clearXP(.easy) + GauntletEconomy.clearXP(.medium) + GauntletEconomy.clearXP(.hard))
-        XCTAssertEqual(p.level(forTrainer: "ripper"), GauntletEconomy.trainerLevel(forXP: p.xp(forTrainer: "ripper")))
-    }
-
-    func testLevelUpIsReported() {
-        var p = GauntletProgress()
-        var leveledUpAtLeastOnce = false
-        for _ in 0..<12 {
-            let r = p.recordClear(trainerId: "grader", tier: .hard)
-            if r.leveledUp { leveledUpAtLeastOnce = true }
-        }
-        XCTAssertTrue(leveledUpAtLeastOnce)
-        XCTAssertGreaterThan(p.level(forTrainer: "grader"), 1)
-    }
-
-    // MARK: Progress — partial runs (req 3)
-
-    func testPartialRunBanksPerRoundXPButUnlocksNothing() {
-        var p = GauntletProgress()
-        let r = p.recordLoss(trainerId: "ripper", tier: .medium, roundsCleared: 3)
-        XCTAssertEqual(r.xpGained, 3 * GauntletEconomy.roundClearXP(.medium))
-        XCTAssertNil(r.unlockedTier)
-        // A loss on Easy must never open Medium — only a win does.
-        let r2 = p.recordLoss(trainerId: "ripper", tier: .easy, roundsCleared: 4)
-        XCTAssertNil(r2.unlockedTier)
-        XCTAssertFalse(p.isUnlocked(.medium, forTrainer: "ripper"))
-        XCTAssertEqual(p.xp(forTrainer: "ripper"),
-                       3 * GauntletEconomy.roundClearXP(.medium) + 4 * GauntletEconomy.roundClearXP(.easy))
+        // Clearing Hard opens nothing further; re-clearing a tier announces nothing.
+        XCTAssertNil(p.recordClear(trainerId: "ripper", tier: .hard).unlockedTier)
+        XCTAssertNil(p.recordClear(trainerId: "ripper", tier: .easy).unlockedTier)
+        XCTAssertEqual(p.clearedTiers(forTrainer: "ripper"), [.easy, .medium, .hard])
     }
 
     // The ladder is walked once per Trainer (req 4): a clear with one Trainer must
@@ -225,40 +112,57 @@ final class GauntletMetaTests: XCTestCase {
         XCTAssertEqual(p.unlockedTiers(forTrainer: "grader"), [.easy])
     }
 
-    func testRoundOneLossBanksNoXP() {
+    /// A Trainer's cleared-tier set is exactly the accomplishment-badge data its
+    /// card renders — one entry per difficulty beaten with that Trainer, isolated
+    /// per Trainer.
+    func testAccomplishmentBadgesTrackClearedTiers() {
         var p = GauntletProgress()
-        let r = p.recordLoss(trainerId: "ripper", tier: .hard, roundsCleared: 0)
-        XCTAssertEqual(r.xpGained, 0)
-        XCTAssertFalse(r.leveledUp)
-        XCTAssertEqual(p.xp(forTrainer: "ripper"), 0)
+        XCTAssertTrue(p.clearedTiers(forTrainer: "grader").isEmpty)
+        p.recordClear(trainerId: "grader", tier: .easy)
+        p.recordClear(trainerId: "grader", tier: .medium)
+        XCTAssertEqual(p.clearedTiers(forTrainer: "grader"), [.easy, .medium])
+        XCTAssertFalse(p.hasCleared(.hard, trainer: "grader"))
+        XCTAssertTrue(p.clearedTiers(forTrainer: "ripper").isEmpty, "badges don't bleed across Trainers")
     }
 
-    func testWinningBeatsLosingWithTheSameRoundsCleared() {
-        let tier = GauntletTier.hard
-        let rounds = GauntletEconomy.rounds(tier)
-        let won = GauntletEconomy.runXP(tier: tier, roundsCleared: rounds, won: true)
-        let lost = GauntletEconomy.runXP(tier: tier, roundsCleared: rounds, won: false)
-        XCTAssertEqual(won - lost, GauntletEconomy.completionBonus(tier))
-        XCTAssertEqual(won, GauntletEconomy.clearXP(tier))
+    // MARK: Progress — the mystery Trainer (Red)
+
+    /// Red stays locked until every *other* Trainer has cleared Hard; the final
+    /// Hard clear reveals it, announced exactly once through `ingest`.
+    func testMysteryTrainerRevealsOnlyAfterEveryTrainerClearsHard() {
+        var p = GauntletProgress()
+        let others = ([Trainer.neutral] + Trainer.roster.filter { !$0.mysteryUntilUnlocked }).map(\.id)
+
+        for id in others.dropLast() { p.recordClear(trainerId: id, tier: .hard) }
+        XCTAssertFalse(p.isMysteryTrainerEarned)
+        XCTAssertTrue(p.ingest(GauntletRunReport()).isEmpty)
+        XCTAssertFalse(p.isTrainerUnlocked("red"))
+
+        p.recordClear(trainerId: others.last!, tier: .hard)
+        XCTAssertTrue(p.isMysteryTrainerEarned)
+        XCTAssertEqual(p.ingest(GauntletRunReport()), ["red"], "the final Hard clear reveals Red, once")
+        XCTAssertTrue(p.isTrainerUnlocked("red"))
+        XCTAssertFalse(p.ingest(GauntletRunReport()).contains("red"), "never re-announced")
     }
 
-    func testLevelThresholdGapsStrictlyGrow() {
-        let t = GauntletEconomy.trainerLevelThresholds
-        XCTAssertEqual(t.first, 0)
-        XCTAssertEqual(t.count, GauntletEconomy.maxTrainerLevel)
-        var lastGap = Int.min
-        for i in 1..<t.count {
-            let gap = t[i] - t[i - 1]
-            XCTAssertGreaterThan(gap, lastGap, "level \(i) gap should exceed the previous")
-            lastGap = gap
-        }
+    /// A concealed Red card counts how many other Trainers have cleared Hard — the
+    /// "beat Hard with everyone" progress line.
+    func testMysteryUnlockProgressCountsHardClears() {
+        var p = GauntletProgress()
+        let red = Trainer.byId("red")!
+        let need = ([Trainer.neutral] + Trainer.roster.filter { !$0.mysteryUntilUnlocked }).count
+        XCTAssertEqual(p.unlockProgress(for: red)?.need, need)
+        XCTAssertEqual(p.unlockProgress(for: red)?.have, 0)
+        p.recordClear(trainerId: "ripper", tier: .hard)
+        XCTAssertEqual(p.unlockProgress(for: red)?.have, 1)
     }
 
-    func testProgressSanitizeDropsUnknownTrainers() {
-        var p = GauntletProgress(xpByTrainer: ["ripper": 5, "ghost_trainer": 99])
+    func testProgressSanitizeDropsUnknownClearedTiers() {
+        var p = GauntletProgress(clearedTiersByTrainer: ["ripper": ["easy"],
+                                                         "ghost_trainer": ["easy", "hard"]])
         p.sanitize()
-        XCTAssertEqual(p.xp(forTrainer: "ripper"), 5)
-        XCTAssertEqual(p.xp(forTrainer: "ghost_trainer"), 0)
+        XCTAssertEqual(p.clearedTiers(forTrainer: "ripper"), [.easy])
+        XCTAssertTrue(p.clearedTiers(forTrainer: "ghost_trainer").isEmpty, "a dead Trainer id is dropped on load")
     }
 
     // MARK: Trainer unlocks (earning the roster)
@@ -423,7 +327,7 @@ final class GauntletMetaTests: XCTestCase {
 
 /// The Gauntlet progress store, held to the same never-destroy-on-failure bar as
 /// `BinderStore`: a transient decode hiccup or a newer-schema file must never wipe
-/// a player's unlocked tiers or Trainer XP.
+/// a player's unlocked tiers or cleared-tier badges.
 final class GauntletProgressStoreTests: XCTestCase {
     var dir: URL!
     var store: GauntletProgressStore!
@@ -449,17 +353,17 @@ final class GauntletProgressStoreTests: XCTestCase {
 
     func testSaveAndReloadRoundTrips() {
         var p = GauntletProgress()
-        p.recordClear(trainerId: "ripper", tier: .easy)   // unlock medium + xp
+        p.recordClear(trainerId: "ripper", tier: .easy)   // unlock medium + bank the clear
         XCTAssertTrue(store.save(p))
         let back = store.load()
         XCTAssertTrue(back.isUnlocked(.medium, forTrainer: "ripper"))
-        XCTAssertEqual(back.xp(forTrainer: "ripper"), GauntletEconomy.clearXP(.easy))
+        XCTAssertTrue(back.hasCleared(.easy, trainer: "ripper"))
     }
 
     func testNewerSchemaFileIsNotClobbered() {
         // A file written by a hypothetical future build.
         let futuristic = """
-        {"schemaVersion": \(GauntletProgressFile.currentVersion + 1), "progress": {"xpByTrainer": {"ripper": 42}, "unlockedTierKeys": ["easy","medium","hard"]}}
+        {"schemaVersion": \(GauntletProgressFile.currentVersion + 1), "progress": {"clearedTiersByTrainer": {"ripper": ["easy","medium","hard"]}, "unlockedTrainerKeys": ["ripper"]}}
         """
         let url = dir.appendingPathComponent("tradingup_gauntlet.json")
         try! futuristic.data(using: .utf8)!.write(to: url)
@@ -473,6 +377,6 @@ final class GauntletProgressStoreTests: XCTestCase {
 
         // The original bytes are still on disk untouched.
         let onDisk = try! String(contentsOf: url)
-        XCTAssertTrue(onDisk.contains("\"ripper\": 42"))
+        XCTAssertTrue(onDisk.contains("\"ripper\": [\"easy\",\"medium\",\"hard\"]"))
     }
 }

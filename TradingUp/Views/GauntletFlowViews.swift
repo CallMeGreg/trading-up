@@ -19,17 +19,26 @@ private struct GauntletHeader: View {
     }
 }
 
-/// A compact "Lv N" pill with the mode's gold accent. Even a maxed Trainer shows
-/// its number rather than "MAX" — the cap is surfaced in the XP row instead. (req 3)
-private struct LevelPill: View {
-    let level: Int
-    var body: some View {
-        Text("Lv \(level)")
-            .font(.system(size: 11, weight: .black, design: .rounded))
-            .foregroundStyle(Color(hex: "1a0d2e"))
-            .padding(.horizontal, 8).padding(.vertical, 3)
-            .background(Capsule().fill(
-                LinearGradient(colors: GauntletTheme.gold, startPoint: .leading, endPoint: .trailing)))
+/// A Trainer's signature accent, matching the colour its emblem is drawn in by
+/// tools/generate_trainer_art.py — used to tint its skill graph.
+func trainerSignatureColor(_ id: String) -> Color {
+    switch id {
+    case "ripper":    return Color(hex: "ff6b9d")
+    case "curator":   return Color(hex: "9b6cf7")
+    case "appraiser": return Color(hex: "74d680")
+    case "grader":    return Color(hex: "ffd54a")
+    case "merchant":  return Color(hex: "ff9f43")
+    case "red":       return Color(hex: "ff3b3b")
+    default:           return Color(hex: "8a94a6")   // Rookie / unknown
+    }
+}
+
+/// The colour and one-letter tag for a difficulty's accomplishment badge.
+private func tierBadge(_ tier: GauntletTier) -> (letter: String, color: Color) {
+    switch tier {
+    case .easy:   return ("E", Color(hex: "5be08a"))
+    case .medium: return ("M", Color(hex: "ffd54a"))
+    case .hard:   return ("H", Color(hex: "ff5e6c"))
     }
 }
 
@@ -77,10 +86,7 @@ struct TrainerSelectScreen: View {
                             trainer: trainer,
                             unlocked: state.isTrainerUnlocked(trainer),
                             unlockProgress: state.unlockProgress(for: trainer),
-                            level: state.level(for: trainer),
-                            maxLevel: state.maxTrainerLevel,
-                            xp: state.xp(for: trainer),
-                            xpToNext: state.xpToNext(for: trainer)
+                            clearedTiers: state.clearedTiers(for: trainer)
                         ) { state.chooseTrainer(trainer) }
                     }
                 }
@@ -94,85 +100,51 @@ private struct TrainerCard: View {
     let trainer: Trainer
     let unlocked: Bool
     let unlockProgress: (have: Int, need: Int)?
-    let level: Int
-    let maxLevel: Int
-    let xp: Int
-    let xpToNext: Int?
+    let clearedTiers: Set<GauntletTier>
     let action: () -> Void
 
-    /// The advantage in force at this Trainer's *current* level, in mechanical terms
-    /// — so the card shows how levelling has strengthened it, not just the blurb.
-    private var effectLine: String {
-        var t = trainer; t.level = level
-        return t.effectSummary
-    }
+    /// A locked *mystery* Trainer (Red) hides its name and skills behind "???"
+    /// until it's earned; ordinary locked specialists show theirs.
+    private var concealed: Bool { !unlocked && trainer.mysteryUntilUnlocked }
+    private var accent: Color { trainerSignatureColor(trainer.id) }
 
     var body: some View {
         Button(action: action) {
             HStack(alignment: .top, spacing: 12) {
-                TrainerEmblem(trainer: trainer, unlocked: unlocked)
+                TrainerEmblem(trainer: trainer, unlocked: unlocked, concealed: concealed)
                 VStack(alignment: .leading, spacing: 10) {
-                    HStack {
-                        Text(trainer.name)
+                    HStack(spacing: 8) {
+                        Text(concealed ? "???" : trainer.name)
                             .font(.system(size: 19, weight: .heavy, design: .rounded))
                             .foregroundStyle(unlocked ? .white : Palette.subtle)
                         Spacer()
                         if unlocked {
-                            LevelPill(level: level)
+                            TierBadges(cleared: clearedTiers)
                         } else {
                             Image(systemName: "lock.fill")
                                 .font(.system(size: 14, weight: .bold))
                                 .foregroundStyle(Palette.subtle)
                         }
                     }
-                    Text(trainer.blurb)
+                    Text(concealed
+                         ? "A hidden challenger — earn the right to see them."
+                         : trainer.blurb)
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(Palette.subtle)
                         .fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                    if unlocked, !effectLine.isEmpty {
-                        Text(effectLine)
-                            .font(.system(size: 11, weight: .bold, design: .rounded))
-                            .foregroundStyle(Color(hex: "b06cf7"))
-                            .fixedSize(horizontal: false, vertical: true)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                    if unlocked {
-                        if let xpToNext {
-                            let span = xp + xpToNext
-                            ProgressBar(value: Double(xp), total: Double(max(span, 1)),
-                                        tint: Color(hex: "b06cf7"), height: 6)
-                            Text("\(xp) / \(span) XP to next level")
-                                .font(.system(size: 10, weight: .semibold))
-                                .foregroundStyle(Palette.subtle)
-                        } else {
-                            // Maxed: a full gold bar and the cap shown where XP-to-next
-                            // normally lives. (req 3)
-                            ProgressBar(value: 1, total: 1,
-                                        tint: Color(hex: "ffd54a"), height: 6)
-                            Text("MAX LEVEL \(maxLevel) · \(xp) XP")
-                                .font(.system(size: 10, weight: .black))
-                                .foregroundStyle(Color(hex: "ffd54a"))
-                        }
-                    } else if let u = trainer.unlock {
+
+                    SkillGraph(skills: trainer.skills, accent: accent, concealed: concealed)
+
+                    if concealed, let p = unlockProgress {
                         Divider().overlay(Palette.stroke)
-                        HStack(spacing: 6) {
-                            Image(systemName: "target")
-                                .font(.system(size: 11, weight: .bold))
-                                .foregroundStyle(Color(hex: "ffd54a"))
-                            Text(u.summary)
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundStyle(.white.opacity(0.85))
-                                .fixedSize(horizontal: false, vertical: true)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                        if let p = unlockProgress {
-                            ProgressBar(value: Double(p.have), total: Double(max(p.need, 1)),
-                                        tint: Color(hex: "ffd54a"), height: 6)
-                            Text("\(p.have) / \(p.need) \(u.noun)")
-                                .font(.system(size: 10, weight: .semibold))
-                                .foregroundStyle(Palette.subtle)
-                        }
+                        UnlockRequirement(icon: "flame.fill",
+                                          text: "Beat Hard mode with every other Trainer.",
+                                          have: p.have, need: p.need, noun: "Trainers")
+                    } else if !unlocked, let u = trainer.unlock {
+                        Divider().overlay(Palette.stroke)
+                        UnlockRequirement(icon: "target", text: u.summary,
+                                          have: unlockProgress?.have, need: unlockProgress?.need, noun: u.noun)
                     }
                 }
             }
@@ -187,6 +159,116 @@ private struct TrainerCard: View {
     }
 }
 
+/// The Madden-style five-skill dot ladder — one row per skill (icon, name, 1–5
+/// pips) in the Trainer's signature colour. Concealed rows hide the pip counts
+/// behind hollow dots for the mystery Trainer.
+private struct SkillGraph: View {
+    let skills: TrainerSkills
+    let accent: Color
+    var concealed: Bool = false
+
+    var body: some View {
+        VStack(spacing: 5) {
+            ForEach(TrainerSkillAxis.allCases, id: \.self) { axis in
+                HStack(spacing: 8) {
+                    Image(systemName: axis.symbol)
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(concealed ? Palette.subtle : accent)
+                        .frame(width: 16)
+                    Text(axis.title)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(concealed ? Palette.subtle : .white.opacity(0.9))
+                        .frame(width: 72, alignment: .leading)
+                    PipRow(score: skills.score(axis), accent: accent, concealed: concealed)
+                    Spacer(minLength: 0)
+                }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(concealed ? "\(axis.title): hidden"
+                                              : "\(axis.title): \(skills.score(axis)) of 5")
+            }
+        }
+    }
+}
+
+/// A row of five pips: the first `score` filled in the accent colour, the rest
+/// hollow. Fully hollow when concealed.
+private struct PipRow: View {
+    let score: Int
+    let accent: Color
+    var concealed: Bool = false
+
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(1...5, id: \.self) { i in
+                let filled = !concealed && i <= score
+                Circle()
+                    .fill(filled ? accent : Color.clear)
+                    .frame(width: 9, height: 9)
+                    .overlay(Circle().strokeBorder(
+                        filled ? Color.clear
+                               : (concealed ? Palette.subtle.opacity(0.5) : accent.opacity(0.35)),
+                        lineWidth: 1.2))
+            }
+        }
+    }
+}
+
+/// The three difficulty badges, lit for tiers this Trainer has cleared and dimmed
+/// for those it hasn't — a compact accomplishment track.
+private struct TierBadges: View {
+    let cleared: Set<GauntletTier>
+
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(GauntletTier.allCases.sorted { $0.order < $1.order }, id: \.self) { tier in
+                let badge = tierBadge(tier)
+                let on = cleared.contains(tier)
+                Text(badge.letter)
+                    .font(.system(size: 10, weight: .black, design: .rounded))
+                    .foregroundStyle(on ? Color(hex: "0b0e14") : Palette.subtle)
+                    .frame(width: 18, height: 18)
+                    .background(Circle().fill(on ? badge.color : Palette.stroke.opacity(0.35)))
+                    .overlay(Circle().strokeBorder(on ? Color.clear : Palette.stroke, lineWidth: 1))
+                    .opacity(on ? 1 : 0.5)
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(cleared.isEmpty ? "No tiers cleared"
+            : "Cleared " + GauntletTier.allCases.filter { cleared.contains($0) }
+                .sorted { $0.order < $1.order }.map(\.display).joined(separator: ", "))
+    }
+}
+
+/// The locked-card requirement line plus its progress bar, shared by stat
+/// specialists and the mystery Trainer.
+private struct UnlockRequirement: View {
+    let icon: String
+    let text: String
+    let have: Int?
+    let need: Int?
+    let noun: String
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(Color(hex: "ffd54a"))
+            Text(text)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.85))
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        if let have, let need {
+            ProgressBar(value: Double(have), total: Double(max(need, 1)),
+                        tint: Color(hex: "ffd54a"), height: 6)
+            Text("\(have) / \(need) \(noun)")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(Palette.subtle)
+        }
+    }
+}
+
 /// A Trainer's signature emblem — a bespoke flat-vector badge rendered by
 /// tools/generate_trainer_art.py and shipped in Assets.xcassets/TrainerArt.
 /// Grayed and dimmed while the Trainer is still locked, matching the Gauntlet
@@ -194,10 +276,18 @@ private struct TrainerCard: View {
 private struct TrainerEmblem: View {
     let trainer: Trainer
     let unlocked: Bool
+    var concealed: Bool = false
 
     var body: some View {
         Group {
-            if let art = UIImage(named: "trainer-\(trainer.id)") {
+            if concealed {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Palette.stroke.opacity(0.5))
+                    .overlay(
+                        Text("?")
+                            .font(.system(size: 26, weight: .black, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.7)))
+            } else if let art = UIImage(named: "trainer-\(trainer.id)") {
                 Image(uiImage: art).resizable().scaledToFit()
             } else {
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
@@ -323,20 +413,8 @@ struct ResultsScreen: View {
                 .shadow(color: Color(hex: "ffd54a").opacity(0.5), radius: 16)
             GauntletHeader(eyebrow: "Run Cleared", title: "Gauntlet Complete")
 
-            if let clear = state.lastClear {
+            if let clear = state.lastClear, clear.unlockedTier != nil || state.rewardWasConsolation {
                 VStack(spacing: 12) {
-                    HStack {
-                        Text("XP Earned").foregroundStyle(Palette.subtle)
-                        Spacer()
-                        Text("+\(clear.xpGained)").foregroundStyle(Palette.money)
-                    }
-                    .font(.system(size: 15, weight: .bold))
-
-                    if clear.leveledUp {
-                        Text("LEVEL UP → Lv \(clear.newLevel)")
-                            .font(.system(size: 15, weight: .black, design: .rounded))
-                            .foregroundStyle(Color(hex: "b06cf7"))
-                    }
                     if let unlocked = clear.unlockedTier {
                         Text("Unlocked \(unlocked.display) Gauntlet!")
                             .font(.system(size: 15, weight: .black, design: .rounded))
@@ -386,23 +464,6 @@ struct LostScreen: View {
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.horizontal, 8)
-            }
-            if let clear = state.lastClear, clear.xpGained > 0 {
-                // Partial runs still bank XP for the rounds cleared. (req 3)
-                VStack(spacing: 12) {
-                    HStack {
-                        Text("XP Earned").foregroundStyle(Palette.subtle)
-                        Spacer()
-                        Text("+\(clear.xpGained)").foregroundStyle(Palette.money)
-                    }
-                    .font(.system(size: 15, weight: .bold))
-                    if clear.leveledUp {
-                        Text("LEVEL UP → Lv \(clear.newLevel)")
-                            .font(.system(size: 15, weight: .black, design: .rounded))
-                            .foregroundStyle(Color(hex: "b06cf7"))
-                    }
-                }
-                .panel()
             }
             UnlockedTrainersBanner(trainers: state.lastUnlockedTrainers)
             Spacer()
@@ -469,7 +530,7 @@ struct IntroScreen: View {
                              detail: "Your showcase scores on value, foils, and grades — complete an evolution line to boost its value.")
                     IntroRow(icon: "person.2.fill", tint: Color(hex: "b06cf7"),
                              title: "Trainers",
-                             detail: "Each Trainer has their own perk; level up and unlock more Trainers by hitting milestones.")
+                             detail: "Each Trainer has a five-skill profile — Energy, Aura, Selling, Grading, Inventory — that shapes your run. Unlock more Trainers by hitting milestones.")
                     IntroRow(icon: "bolt.circle.fill", tint: Color(hex: "ff9500"),
                              title: "Catalysts",
                              detail: "Some packs offer a Catalyst — attune it to buff the rest of your run.")

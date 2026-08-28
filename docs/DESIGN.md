@@ -524,70 +524,80 @@ difficulty tiers squeeze.
 ### 14.3 Trainers — the meta progression
 
 A **Trainer** is the run's starting **archetype** (like a Classic character), chosen
-before the run. Each has one always-on base advantage that biases a strategy rather than
-handing out flat stats. **Only the Rookie is free; the other five are earned** by hitting a
-lifetime Gauntlet milestone (tracked in `GauntletProgress.stats`), so meta progression is
-about *earning the roster*, not just levelling it — and each milestone is phrased to teach
-the lane it unlocks. The shipped roster (`Models/Trainer.swift`):
+before the run. Instead of a hand-written perk, each Trainer is defined by a **Madden-style
+five-skill graph** — a dot ladder of **1…5 pips** on each of five axes — and those pips *are*
+its identity: they derive the run advantage, so a Trainer's card and its mechanics can never
+drift apart. **3 is the neutral baseline** (a flat-3 profile is exactly `RunMods.none`); above
+3 is a specialty, below 3 a real weakness. The model is **symmetric**, so a spiky Trainer
+trades strength in its lane for weakness elsewhere — a *sidegrade*, never a strict upgrade.
 
-| Trainer | Leans | Base advantage (level 1 — ~20% of max) | Unlocked by |
-| --- | --- | --- | --- |
-| **Rookie** | — (neutral) | No edge — the harness's proof the mode is winnable on skill alone | Free starter |
-| **Ripper** | Tempo | +1 rip every round, +12% bonus-rip chance | Rip **100** packs across runs |
-| **Curator** | Build width | +1 Showcase slot, +0.12 evolution-line bonus | Build a **12-card** Showcase in one run |
-| **Farmer** | Value | ×1.06 Aura on everything | Reach a round Aura of **500** |
-| **Grader** | Grading | 0.86× grade fee, +0.09 grade luck | Grade **100** cards across runs |
-| **Merchant** | Economy | +0.032 sell-back, ×1.12 payout, +$10 seed cash | Hold **$250** cash at once in a run |
+The five skills and what each drives (`TrainerSkillAxis` → `GauntletSkillTuning`):
+
+| Skill | Icon | Governs |
+| --- | --- | --- |
+| **Energy** | `bolt.fill` | Pack rips per round (a bonus-rip chance) |
+| **Aura** | `sparkles` | Default Aura every card scores (global multiplier) |
+| **Selling** | `dollarsign.circle.fill` | Cash back when you sell — sell-back, round stipend, seed cash |
+| **Grading** | `checkmark.seal.fill` | Grading luck and fees |
+| **Inventory** | `square.grid.2x2.fill` | Showcase + Catalyst capacity |
+
+**Only the Rookie is free; the other five are earned** by hitting a lifetime Gauntlet
+milestone (tracked in `GauntletProgress.stats`), so meta progression is about *earning the
+roster*, and each milestone is phrased to teach the lane it unlocks. Profiles are roughly
+balanced on a **weighted** budget — Energy and Aura are worth more per pip than
+Selling/Grading/Inventory, so a strong pip there is paid for with a bigger cut elsewhere. The
+shipped roster (`Models/Trainer.swift`), as `Energy / Aura / Selling / Grading / Inventory`:
+
+| Trainer | Leans | E | A | S | G | I | Unlocked by |
+| --- | --- | :-: | :-: | :-: | :-: | :-: | --- |
+| **Rookie** | — (neutral) | 3 | 3 | 3 | 3 | 3 | Free starter |
+| **Ripper** | Energy | 5 | 2 | 2 | 1 | 4 | Rip **100** packs across runs |
+| **Curator** | Inventory/Aura | 2 | 4 | 1 | 3 | 5 | Build a **12-card** Showcase in one run |
+| **Farmer** | Aura | 2 | 5 | 2 | 2 | 3 | Reach a round Aura of **500** |
+| **Grader** | Grading | 2 | 3 | 2 | 5 | 3 | Grade **100** cards across runs |
+| **Merchant** | Selling | 3 | 2 | 5 | 2 | 3 | Hold **$250** cash at once in a run |
 
 Locked cards show the requirement and a live progress bar (e.g. "60 / 100 packs ripped"),
 and the just-unlocked Trainers are celebrated on the selection screen after a run banks its
 stats. Thresholds are meta-pacing knobs, **not** a difficulty lever — the harness still
 proves a neutral Rookie clears Hard, so the roster stays gravy rather than a gate.
 
-**Cross-run progression — the advantage *scales with level*.** Every run banks that Trainer
-**XP** — **per round cleared**, so even a run that busts still matures the Trainer *provided
-it got past round 1* (a round-1 loss banks nothing). A win adds a **completion bonus** on top,
-so full clears pay best and Hard pays the most (Easy 13 / Medium 27 / Hard 55 for a full
-clear; 2 / 3 / 5 per round on a partial). Rather than handing out pick-a-perk unlocks, each
-Trainer's advantage **grows smoothly from a reasonable level-1 baseline (~20% of its
-potential) toward a level-10 ceiling** (`RunMods.lerp` interpolates `Trainer.baseMods` →
-`Trainer.maxMods` by `t = (level − 1) / (maxTrainerLevel − 1)`, and each `baseMods` lever is
-set to `Trainer.baselineFraction` — 0.20 — of its ceiling), so meta progression is a *dial
-getting stronger* — a ~5× climb from a Trainer that's useful on day one — not a new button.
-Per the guardrail, the lever is a **likelihood or a rate**, never a raw new ability dropped
-mid-track:
+**Skill → advantage, and why the numbers are pending.** `GauntletSkillTuning` (in
+`GauntletEconomy.swift`, the balance seam) turns a profile into a `RunMods` symmetrically:
+each pip above 3 grants a per-pip bonus on that skill's lever, each pip below 3 an equal-shaped
+penalty. **The per-pip magnitudes are intentionally all `0` today** (`TODO(balance)`), so every
+Trainer currently resolves to `RunMods.none` — mechanically the Rookie. The graphs are fully
+wired but *unmagnituded*: a dedicated tuning pass sets these numbers and re-runs `tools/verify`
+to keep the intended Hard curve (a spiky Trainer must stay a sidegrade), plus, where the design
+calls for it, two new **downside** levers — low Energy risking a lost rip, low Grading rolling
+with disadvantage. Until then the wiring is real and honest; only the numbers wait.
 
-| Trainer | What scales | Level 1 (~20%) → Level 10 |
-| --- | --- | --- |
-| **Ripper** | per-round **chance** of one bonus rip (the flat +1 stays) | 12% → **60%** |
-| **Curator** | evolution-line bonus (rate); a 2nd slot lands only at the cap | +0.12 → **+0.60**, +1 → **+2** slots |
-| **Farmer** | global Aura multiplier (rate) | ×1.06 → **×1.30** |
-| **Grader** | grade **luck** (likelihood) + grading fee | 9% / 0.86-fee → **45% / 0.3-fee** |
-| **Merchant** | sell-back, round payout, seed cash (rates) | +3.2% / ×1.12 / +$10 → **+16% / ×1.60 / +$50** |
+**Accomplishment badges.** Every Trainer card carries three difficulty badges — **E / M / H** —
+lit for the tiers that Trainer has *cleared* and dimmed for the rest, read straight from
+`GauntletProgress.clearedTiersByTrainer` (the same per-Trainer record that gates its tier
+ladder). Badges are per-Trainer, so mastery is shown Trainer by Trainer, not as one global
+flag.
 
-Integer levers (Ripper's rip, Curator's second slot) are the exception the rule protects
-against: they can't open at a fraction, so they stay an always-on identity floor — rather than
-a jarring mid-track "+1", Ripper's tempo becomes a *probability* that climbs from its baseline,
-and Curator's second slot is an end-of-track capstone. *(XP, levels, partial-run banking and
-this scaling all ship today.)*
+**The mystery Trainer — Red.** A seventh Trainer sits on the roster concealed as **"???"**
+with hidden pips and a "beat Hard mode with every other Trainer" progress line. Clearing **Hard
+with all six of the others** reveals **Red** — a glass cannon with **5 Energy / 5 Aura** and the
+bare minimum (**1**) in Selling, Grading and Inventory. The reveal is evaluated in
+`GauntletProgress.ingest` right after a clear banks, so the last required Hard win unlocks Red
+immediately and announces it once on the results screen.
 
-**Meta ceiling — decided.** Each Trainer caps at **10 levels** on an **exponential curve**
-(cumulative XP-to-reach `[0, 10, 24, 44, 72, 110, 160, 225, 320, 460]`; the gap grows ~1.4×
-each level). A Trainer climbs fast early and the cap is a real commitment (≈8 Hard wins), not
-a formality — so levelling stays engaging rather than a flat 1-win-per-level march. The level
-pill always shows the number (a maxed Trainer reads **Lv 10**, with `MAX LEVEL 10` surfaced in
-the XP row rather than replacing the level), and the selection card spells out the *current*
-scaled advantage in mechanical terms so the growth is legible. New *Trainers* unlock
-separately, off lifetime milestones, not levels — see the roster above.
+> **No levels.** Trainers no longer gain XP or levels — that system was removed. A Trainer's
+> pips are fixed; progression is *earning the roster*, *earning badges*, and *unlocking Red*,
+> not dialling a single Trainer stronger. (Historic note: earlier builds scaled a Trainer's
+> advantage from a level-1 baseline to a level-10 ceiling; that meta was cut in favour of the
+> locked skill graph.)
 
-⚠️ **Guardrail — scaling is a sidegrade, never raw power.** Classic's whole thesis (§10) is
-*skill, not grinding, carries you*, so the level ceiling **deepens an identity** (a luckier
-slab, a hotter rip, a richer floor) without becoming a win button, and a Trainer's stat budget
-is capped. The Gauntlet `tools/verify` sims (§14.8) enforce this from both ends: a **level-0**
-neutral run must clear Hard with optimal play, *and* every Trainer is re-simulated **at the
-level cap** to prove even a maxed advantage never trivialises Hard (best ≤ 97%). If a maxed
-Trainer is *required* to win — or trivialises the mode — the magnitudes have overstepped and
-get retuned.
+⚠️ **Guardrail — a Trainer is a sidegrade, never raw power.** Classic's whole thesis (§10) is
+*skill, not grinding, carries you*, so a Trainer **deepens an identity** without becoming a win
+button. The Gauntlet `tools/verify` sims (§14.8) enforce this: a **neutral** run must clear Hard
+with optimal play, *and* every Trainer is re-simulated to prove none trivialises Hard (best
+≤ 97%). While magnitudes are unset the harness also asserts every Trainer tracks the neutral
+Rookie; once they're tuned, a spiky Trainer that *requires* its specialty to win — or
+trivialises the mode — has overstepped and gets retuned.
 
 ### 14.4 Catalysts — the run-long buff cards
 
