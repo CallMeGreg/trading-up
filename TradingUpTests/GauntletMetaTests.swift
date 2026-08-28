@@ -59,10 +59,10 @@ final class GauntletMetaTests: XCTestCase {
 
     func testFreshProgressHasOnlyEasy() {
         let p = GauntletProgress()
-        XCTAssertTrue(p.isUnlocked(.easy))
-        XCTAssertFalse(p.isUnlocked(.medium))
-        XCTAssertFalse(p.isUnlocked(.hard))
-        XCTAssertEqual(p.unlockedTiers, [.easy])
+        XCTAssertTrue(p.isUnlocked(.easy, forTrainer: "ripper"))
+        XCTAssertFalse(p.isUnlocked(.medium, forTrainer: "ripper"))
+        XCTAssertFalse(p.isUnlocked(.hard, forTrainer: "ripper"))
+        XCTAssertEqual(p.unlockedTiers(forTrainer: "ripper"), [.easy])
     }
 
     func testClearingUnlocksTheNextTierAndBanksXP() {
@@ -70,12 +70,12 @@ final class GauntletMetaTests: XCTestCase {
         let r1 = p.recordClear(trainerId: "ripper", tier: .easy)
         XCTAssertEqual(r1.unlockedTier, .medium)
         XCTAssertEqual(r1.xpGained, GauntletEconomy.clearXP(.easy))
-        XCTAssertTrue(p.isUnlocked(.medium))
-        XCTAssertFalse(p.isUnlocked(.hard))
+        XCTAssertTrue(p.isUnlocked(.medium, forTrainer: "ripper"))
+        XCTAssertFalse(p.isUnlocked(.hard, forTrainer: "ripper"))
 
         let r2 = p.recordClear(trainerId: "ripper", tier: .medium)
         XCTAssertEqual(r2.unlockedTier, .hard)
-        XCTAssertTrue(p.isUnlocked(.hard))
+        XCTAssertTrue(p.isUnlocked(.hard, forTrainer: "ripper"))
 
         // Clearing Hard unlocks nothing further, but still banks XP.
         let r3 = p.recordClear(trainerId: "ripper", tier: .hard)
@@ -106,9 +106,21 @@ final class GauntletMetaTests: XCTestCase {
         // A loss on Easy must never open Medium — only a win does.
         let r2 = p.recordLoss(trainerId: "ripper", tier: .easy, roundsCleared: 4)
         XCTAssertNil(r2.unlockedTier)
-        XCTAssertFalse(p.isUnlocked(.medium))
+        XCTAssertFalse(p.isUnlocked(.medium, forTrainer: "ripper"))
         XCTAssertEqual(p.xp(forTrainer: "ripper"),
                        3 * GauntletEconomy.roundClearXP(.medium) + 4 * GauntletEconomy.roundClearXP(.easy))
+    }
+
+    // The ladder is walked once per Trainer (req 4): a clear with one Trainer must
+    // not open the next tier for a different Trainer.
+    func testTierUnlocksAreIsolatedPerTrainer() {
+        var p = GauntletProgress()
+        p.recordClear(trainerId: "ripper", tier: .easy)
+
+        XCTAssertTrue(p.isUnlocked(.medium, forTrainer: "ripper"), "the clearing Trainer unlocks Medium")
+        XCTAssertFalse(p.isUnlocked(.medium, forTrainer: "grader"),
+                       "another Trainer must still earn its own Easy clear first")
+        XCTAssertEqual(p.unlockedTiers(forTrainer: "grader"), [.easy])
     }
 
     func testRoundOneLossBanksNoXP() {
@@ -179,9 +191,9 @@ final class GauntletMetaTests: XCTestCase {
         var p = GauntletProgress()
         // A single strong run trips several high-water-mark milestones at once.
         var r = GauntletRunReport()
-        r.maxShowcase = 9          // Curator
-        r.bestRoundScore = 200     // Appraiser
-        r.maxCashHeld = 120        // Merchant
+        r.maxShowcase = 12         // Curator (≥ 12)
+        r.bestRoundScore = 500     // Appraiser (≥ 500)
+        r.maxCashHeld = 250        // Merchant (≥ 250)
         let newly = Set(p.ingest(r))
         XCTAssertTrue(newly.isSuperset(of: ["curator", "appraiser", "merchant"]))
         XCTAssertFalse(p.isTrainerUnlocked("ripper"), "unrelated milestones stay locked")
@@ -329,8 +341,8 @@ final class GauntletProgressStoreTests: XCTestCase {
 
     func testMissingFileLoadsFreshProgress() {
         let p = store.load()
-        XCTAssertTrue(p.isUnlocked(.easy))
-        XCTAssertFalse(p.isUnlocked(.hard))
+        XCTAssertTrue(p.isUnlocked(.easy, forTrainer: "ripper"))
+        XCTAssertFalse(p.isUnlocked(.hard, forTrainer: "ripper"))
     }
 
     func testSaveAndReloadRoundTrips() {
@@ -338,7 +350,7 @@ final class GauntletProgressStoreTests: XCTestCase {
         p.recordClear(trainerId: "ripper", tier: .easy)   // unlock medium + xp
         XCTAssertTrue(store.save(p))
         let back = store.load()
-        XCTAssertTrue(back.isUnlocked(.medium))
+        XCTAssertTrue(back.isUnlocked(.medium, forTrainer: "ripper"))
         XCTAssertEqual(back.xp(forTrainer: "ripper"), GauntletEconomy.clearXP(.easy))
     }
 
@@ -353,7 +365,7 @@ final class GauntletProgressStoreTests: XCTestCase {
         // Load refuses it (fresh progress) and, crucially, canSave() is false so we
         // never overwrite the newer bytes.
         let loaded = store.load()
-        XCTAssertFalse(loaded.isUnlocked(.hard))
+        XCTAssertFalse(loaded.isUnlocked(.hard, forTrainer: "ripper"))
         XCTAssertFalse(store.canSave())
         XCTAssertFalse(store.save(GauntletProgress()))
 

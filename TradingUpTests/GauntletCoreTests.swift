@@ -7,10 +7,8 @@ import XCTest
 /// reproducible, exactly like the Classic `GameCore` tests. See docs/DESIGN.md §14.
 final class GauntletCoreTests: XCTestCase {
 
-    // Two fire cards (Set 1) and a water card (Set 2). Elements are set-locked, so
-    // a mixed-element pair means cards from two different sets.
+    // A couple of low-stage Set-1 cards, reused by the keep/sell/swap tests below.
     private let fireIds = CardDatabase.cards(inSet: 1).filter { $0.element == .fire }.map(\.id)
-    private var waterId: String { CardDatabase.cards(inSet: 2).first { $0.element == .water }!.id }
 
     // The catalogue's most valuable card, as a foil PSA-10 — a single copy easily
     // clears any Round-1 bar, so round-transition tests don't depend on RNG.
@@ -44,28 +42,37 @@ final class GauntletCoreTests: XCTestCase {
 
     // MARK: Appraisal engine
 
+    // A full evolution line and one of its lower stages, for the completion-bonus tests.
+    private var fullLine: [Card] { CardDatabase.evolutionLines.values.first { $0.count >= 2 }! }
+
     func testEmptyShowcaseAppraisesToZero() {
-        XCTAssertEqual(GauntletRun.appraise([], synergyPerMatch: 0.06, appraisalMult: 1), 0)
+        XCTAssertEqual(GauntletRun.appraise([], evoLineBonus: 0.90, appraisalMult: 1), 0)
     }
 
-    func testSameElementSynergyBeatsMixedPair() {
-        let fireA = CardInstance(cardId: fireIds[0])
-        let fireB = CardInstance(cardId: fireIds[1])
-        let water = CardInstance(cardId: waterId)
-        let spm = GauntletEconomy.baseSynergyPerMatch
+    func testCompleteEvolutionLineEarnsTheCompletionBonus() {
+        let line = fullLine
+        let cards = line.map { CardInstance(cardId: $0.id) }
+        let b = GauntletEconomy.baseEvoLineBonus
+        let raw = cards.reduce(0.0) { $0 + $1.currentValue }
 
-        let matched = GauntletRun.appraise([fireA, fireB], synergyPerMatch: spm, appraisalMult: 1)
-        let mixed = GauntletRun.appraise([fireA, water], synergyPerMatch: spm, appraisalMult: 1)
+        let complete = GauntletRun.appraise(cards, evoLineBonus: b, appraisalMult: 1)
+        // Every stage is present, so the whole line is lifted by the completion bonus.
+        XCTAssertEqual(complete, raw * (1 + b), accuracy: 1e-6)
+    }
 
-        // The engine formula is exact regardless of the cards' raw base values.
-        XCTAssertEqual(matched, (fireA.currentValue + fireB.currentValue) * (1 + spm), accuracy: 1e-6)
-        XCTAssertEqual(mixed, fireA.currentValue + water.currentValue, accuracy: 1e-6)
+    func testIncompleteEvolutionLineEarnsNoBonus() {
+        let line = fullLine
+        let partial = [CardInstance(cardId: line[0].id)]   // only the first stage
+        let b = GauntletEconomy.baseEvoLineBonus
+        let appraised = GauntletRun.appraise(partial, evoLineBonus: b, appraisalMult: 1)
+        XCTAssertEqual(appraised, partial[0].currentValue, accuracy: 1e-6)
     }
 
     func testAppraisalMultScalesTheWholeShowcase() {
-        let cards = [CardInstance(cardId: fireIds[0]), CardInstance(cardId: fireIds[1])]
-        let base = GauntletRun.appraise(cards, synergyPerMatch: 0.06, appraisalMult: 1)
-        let lifted = GauntletRun.appraise(cards, synergyPerMatch: 0.06, appraisalMult: 1.10)
+        let cards = fullLine.map { CardInstance(cardId: $0.id) }
+        let b = GauntletEconomy.baseEvoLineBonus
+        let base = GauntletRun.appraise(cards, evoLineBonus: b, appraisalMult: 1)
+        let lifted = GauntletRun.appraise(cards, evoLineBonus: b, appraisalMult: 1.10)
         XCTAssertEqual(lifted, base * 1.10, accuracy: 1e-6)
     }
 

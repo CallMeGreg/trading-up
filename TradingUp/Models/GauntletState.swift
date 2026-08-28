@@ -56,6 +56,12 @@ final class GauntletState {
     /// "missed" without inspecting the state machine.
     private(set) var lastOutcome: RoundOutcome?
 
+    /// Bumped the first time a round's bar is crossed, so the UI can fire a confetti
+    /// burst as an immediate "round won" cue — even mid pack-summary (req 6).
+    private(set) var confettiBurst = 0
+    /// The round already celebrated, so the burst fires once per round.
+    private var celebratedRound = 0
+
     // MARK: Reward / results
 
     private(set) var rewardOptions: [GauntletRewardOption] = []
@@ -89,10 +95,18 @@ final class GauntletState {
     /// roster (each earned via a Gauntlet milestone — see `isTrainerUnlocked`).
     var trainers: [Trainer] { [Trainer.neutral] + Trainer.roster }
 
-    /// Difficulty tiers the player may start, in ladder order.
-    var unlockedTiers: [GauntletTier] { progress.unlockedTiers }
+    /// Difficulty tiers the Trainer being set up (or the always-available Rookie,
+    /// before one is chosen) may start, in ladder order.
+    var unlockedTiers: [GauntletTier] { progress.unlockedTiers(forTrainer: tierGatingTrainerId) }
 
-    func isUnlocked(_ tier: GauntletTier) -> Bool { progress.isUnlocked(tier) }
+    func isUnlocked(_ tier: GauntletTier) -> Bool {
+        progress.isUnlocked(tier, forTrainer: tierGatingTrainerId)
+    }
+
+    /// The Trainer id the tier picker gates against: the one being set up, else the
+    /// Rookie (which only ever has Easy open until it clears it). Per-Trainer so the
+    /// ladder is walked once per character (req 4).
+    private var tierGatingTrainerId: String { selectedTrainer?.id ?? Trainer.neutral.id }
 
     /// Whether a Trainer has been earned yet (the Rookie is always available).
     func isTrainerUnlocked(_ trainer: Trainer) -> Bool { progress.isTrainerUnlocked(trainer.id) }
@@ -140,9 +154,9 @@ final class GauntletState {
     }
 
     /// Start a run with the chosen Trainer at `tier`. No-ops if the tier isn't
-    /// unlocked or no Trainer is selected.
+    /// unlocked *for that Trainer* or no Trainer is selected.
     func startRun(tier: GauntletTier) {
-        guard progress.isUnlocked(tier), let trainer = selectedTrainer else { return }
+        guard let trainer = selectedTrainer, progress.isUnlocked(tier, forTrainer: trainer.id) else { return }
         var t = trainer
         t.level = progress.level(forTrainer: trainer.id)
         t.xp = progress.xp(forTrainer: trainer.id)
@@ -150,6 +164,7 @@ final class GauntletState {
         pendingCards = []
         pendingCatalyst = nil
         revealActive = false
+        celebratedRound = 0
         lastOutcome = nil
         rewardOptions = []
         lastClear = nil
@@ -199,6 +214,7 @@ final class GauntletState {
     func finishReveal() {
         guard pendingCards.isEmpty, pendingCatalyst == nil else { return }
         revealActive = false
+        evaluateRoundProgress()
     }
 
     // MARK: Pack rail (which element sets are rippable / unlockable this run)
@@ -224,6 +240,7 @@ final class GauntletState {
         r.keep(card)
         run = r
         removePending(card)
+        evaluateRoundProgress()
     }
 
     /// Sell a pulled card straight to cash at the run's sell-back rate.
@@ -233,6 +250,7 @@ final class GauntletState {
         let gain = r.sell(card)
         run = r
         removePending(card)
+        evaluateRoundProgress()
         return gain
     }
 
@@ -243,6 +261,7 @@ final class GauntletState {
         _ = r.swapIn(card, at: index)
         run = r
         removePending(card)
+        evaluateRoundProgress()
     }
 
     private func removePending(_ card: CardInstance) {
@@ -256,6 +275,7 @@ final class GauntletState {
         _ = r.attune(cat)
         run = r
         pendingCatalyst = nil
+        evaluateRoundProgress()
     }
 
     /// Sell the offered Catalyst for its cash value instead of attuning it.
@@ -264,6 +284,7 @@ final class GauntletState {
         r.sellCatalyst(cat)
         run = r
         pendingCatalyst = nil
+        evaluateRoundProgress()
     }
 
     var canAttunePending: Bool {
@@ -281,6 +302,7 @@ final class GauntletState {
         if g != nil, r.showcase.indices.contains(index) {
             game.recordGauntletCards([r.showcase[index]])
         }
+        evaluateRoundProgress()
         return g
     }
 
@@ -291,6 +313,24 @@ final class GauntletState {
     }
 
     // MARK: Flow — round resolution
+
+    /// After any action that can change the Showcase's appraisal or settle the
+    /// current pull, drive the round forward (req 6): fire the win confetti the
+    /// first time the bar is crossed (immediate, even mid pack-summary), and — once
+    /// the pull is fully settled and we're back on the main run screen (the reveal
+    /// cover down) — auto-resolve. A round out of rips resolves too (into a clear,
+    /// win, or loss). This replaces the old manual "End Round" button.
+    private func evaluateRoundProgress() {
+        guard let r = run, phase == .ripping else { return }
+        let reached = r.showcaseAppraisal >= r.target
+        if reached && celebratedRound != r.round {
+            celebratedRound = r.round
+            confettiBurst &+= 1
+        }
+        if !revealActive && canEndRound && (reached || r.ripsLeft == 0) {
+            endRound()
+        }
+    }
 
     /// Whether the round can be resolved yet: the current pull must be settled.
     var canEndRound: Bool {
@@ -322,10 +362,12 @@ final class GauntletState {
     }
 
     /// Leave the between-round shop and begin the next round (already primed by the
-    /// clear).
+    /// clear). If the standing Showcase already clears the next bar, it resolves at
+    /// once — banking the round's rips (req 5/6).
     func continueFromShop() {
         guard run != nil else { return }
         phase = .ripping
+        evaluateRoundProgress()
     }
 
     // MARK: Shop (between rounds)

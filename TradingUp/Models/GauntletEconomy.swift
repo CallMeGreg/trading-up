@@ -40,7 +40,7 @@ struct RunMods: Codable, Hashable {
     var extraSlots = 0
     var extraCatalystSlots = 0
     var appraisalMult = 1.0        // global score multiplier
-    var synergyPerMatchBonus = 0.0 // adds to the per-element synergy step
+    var evoLineBonusBonus = 0.0    // adds to the completed-evolution-line bonus
     var foilChanceBonus = 0.0      // added to Economy.foilChance on rips
     var ultraChanceBonus = 0.0     // added to Economy.ultraHitChance on rips
     var sellbackBonus = 0.0        // added to Economy.sellbackRate (capped)
@@ -57,7 +57,7 @@ struct RunMods: Codable, Hashable {
         r.extraSlots            = a.extraSlots + b.extraSlots
         r.extraCatalystSlots    = a.extraCatalystSlots + b.extraCatalystSlots
         r.appraisalMult         = a.appraisalMult * b.appraisalMult
-        r.synergyPerMatchBonus  = a.synergyPerMatchBonus + b.synergyPerMatchBonus
+        r.evoLineBonusBonus     = a.evoLineBonusBonus + b.evoLineBonusBonus
         r.foilChanceBonus       = a.foilChanceBonus + b.foilChanceBonus
         r.ultraChanceBonus      = a.ultraChanceBonus + b.ultraChanceBonus
         r.sellbackBonus         = a.sellbackBonus + b.sellbackBonus
@@ -126,13 +126,20 @@ enum GauntletEconomy {
     // dial. The Gauntlet strategy sims in `tools/verify` peg the neutral, level-0
     // curve at roughly:
     //
-    //     Easy    optimized 100% / careless 100%   (a forgiving, unlosable-if-you-try tutorial)
-    //     Medium  optimized  79% / careless  43%   (skill gap ~36 pts)
-    //     Hard    optimized  59% / careless   4%   (skill gap ~55 pts; boss round is the filter)
+    //     Easy    optimized ~99% / careless ~99%   (a forgiving, unlosable-if-you-try tutorial)
+    //     Medium  optimized ~66% / careless ~37%   (skill gap ~29 pts)
+    //     Hard    optimized ~56% / careless ~11%   (skill gap ~45 pts; boss round is the filter)
+    //
+    // (These sit lower than the old synergy-era curve on purpose: batch-4 replaced the
+    // reliable same-element synergy multiplier with an evolution-line completion bonus,
+    // which is RNG-gated — you have to pull a line's whole chain — so it can't prop up
+    // optimised appraisal every round the way synergy did. Medium/Hard optimised win
+    // rates fell ~13/~3 pts as a result; the skill *gap* is preserved by grading and
+    // shop play, which is where an optimised run really separates from a careless one.)
     //
     // Rounds are single-life — a missed bar ends the run at any tier (no reprints).
     // Medium leans on an extra rip/round rather than a retry to stay winnable.
-    // The guardrail: a *neutral* Trainer clears Hard with optimal play (~59% > 50%),
+    // The guardrail: a *neutral* Trainer clears Hard with optimal play (~56% > 45%),
     // so Trainers and Catalysts are gravy, never a requirement (docs/DESIGN.md §14.3).
     // Growth is steep because the appraisal engine snowballs ~3× per pack-tier jump;
     // a gentle curve lets an optimised build run away and kills the tension. Retune
@@ -143,7 +150,7 @@ enum GauntletEconomy {
     /// opening is survivable; the ramp (below) is what makes a tier hard.
     static func baseTarget(_ tier: GauntletTier) -> Double {
         switch tier {
-        case .easy: return 22
+        case .easy: return 20
         case .medium: return 26
         case .hard: return 18
         }
@@ -155,8 +162,8 @@ enum GauntletEconomy {
     static func targetGrowth(_ tier: GauntletTier) -> Double {
         switch tier {
         case .easy: return 1.60
-        case .medium: return 1.90
-        case .hard: return 1.75
+        case .medium: return 1.88
+        case .hard: return 1.67
         }
     }
 
@@ -185,18 +192,31 @@ enum GauntletEconomy {
     /// Interest on unspent cash, paid at each round clear — the reward for *not*
     /// spending (the third force alongside keeping and selling). Capped so banking
     /// is a lever, not a runaway engine.
-    static let interestRate = 0.10
+    static let interestRate = 0.20
     static let interestCap: Double = 40
 
     static func interest(on cash: Double) -> Double {
         min(cash * interestRate, interestCap)
     }
 
+    /// Unused rips don't evaporate at a clear — they're cashed out. Each rip left
+    /// on the table is worth `leftoverRipRate × round`, so a rip banked in a later
+    /// (richer) round is worth more, and clearing a round *early* with rips to spare
+    /// is rewarded rather than wasted (docs/DESIGN.md §14). This is why the round
+    /// auto-resolves the instant the bar is met — the leftover rips pay out.
+    static let leftoverRipRate: Double = 5
+
+    static func leftoverRipValue(round: Int, rips: Int) -> Double {
+        Double(max(0, rips)) * leftoverRipRate * Double(round)
+    }
+
     // MARK: Appraisal engine
 
-    /// How much each same-element card already in the Showcase lifts a card's
-    /// appraisal. Concentrating one element is the core build axis.
-    static let baseSynergyPerMatch = 0.06
+    /// How much *completing a full evolution line* in the Showcase lifts the value
+    /// of that line's cards. Chasing a line to its final stage — not just hoarding
+    /// singles — is the core build axis (docs/DESIGN.md §14.4). A line counts as
+    /// complete when every one of its stages is present in the Showcase.
+    static let baseEvoLineBonus = 1.25
 
     /// Sell-back can be nudged up by Catalysts/Trainers but never becomes free money.
     static let maxSellbackRate = 0.95

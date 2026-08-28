@@ -235,7 +235,7 @@ private struct TierCard: View {
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(Palette.subtle)
                 } else if let req = tier.requires {
-                    Text("Clear \(req.display) once to unlock.")
+                    Text("Clear \(req.display) with this Trainer to unlock.")
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(Palette.subtle)
                 }
@@ -413,23 +413,20 @@ struct IntroScreen: View {
                              title: "Hit the round's bar",
                              detail: "Clear each round's target appraisal before your rips run out. Miss it and the run ends.")
                     IntroRow(icon: "square.stack.3d.up.fill", tint: Color(hex: "6d5cf7"),
-                             title: "Score & synergy",
-                             detail: "Showcases score on value, foils, and grades — matching elements add a synergy bonus.")
-                    IntroRow(icon: "rectangle.on.rectangle.angled", tint: Color(hex: "e0663b"),
-                             title: "Five element packs",
-                             detail: "Start with one element pack; unlock the other four for cash, in any order.")
+                             title: "Score & evolutions",
+                             detail: "Showcases score on value, foils, and grades — complete an evolution line to boost its value.")
+                    IntroRow(icon: "person.2.fill", tint: Color(hex: "b06cf7"),
+                             title: "Trainers",
+                             detail: "Pick a Trainer for a run-long perk; unlock and level more by hitting milestones.")
                     IntroRow(icon: "bolt.circle.fill", tint: Color(hex: "ffd54a"),
                              title: "Catalysts",
-                             detail: "Some rips offer a Catalyst — attune it to buff the rest of your run.")
+                             detail: "Some packs offer a Catalyst — attune it to buff the rest of your run.")
                     IntroRow(icon: "cart.fill", tint: Color(hex: "5be08a"),
                              title: "The shop, between rounds",
                              detail: "Clear a round to open the shop and buy extra Showcase and Catalyst slots.")
-                    IntroRow(icon: "banknote.fill", tint: Palette.money,
-                             title: "Interest rewards restraint",
-                             detail: "Each clear pays a payout plus 10% interest on banked cash — saving compounds.")
-                    IntroRow(icon: "person.2.fill", tint: Color(hex: "b06cf7"),
-                             title: "Trainers & prizes",
-                             detail: "Unlock and level Trainers by hitting milestones; each win earns a Foil Extended Art card.")
+                    IntroRow(icon: "trophy.fill", tint: Palette.money,
+                             title: "Prizes",
+                             detail: "Win a run to earn a Foil Extended Art card for your Binder.")
                 }
                 .padding(.bottom, 8)
             }

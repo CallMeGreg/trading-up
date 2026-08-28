@@ -18,10 +18,13 @@ struct GauntletProgress: Codable, Equatable {
     /// truth and no way for the two to drift out of sync.
     private(set) var xpByTrainer: [String: Int]
 
-    /// The difficulty tiers the player has unlocked. Easy is *always* available
-    /// (enforced in `isUnlocked`), so it need not be stored; Medium and Hard are
-    /// each earned by clearing the tier before them once.
-    private(set) var unlockedTierKeys: Set<String>
+    /// Which difficulty tiers each Trainer has *cleared*, keyed by Trainer id →
+    /// the set of tier rawValues won with that Trainer. The ladder is per-Trainer
+    /// (req 4): a Trainer unlocks Medium only once *it* has cleared Easy, and Hard
+    /// once *it* has cleared Medium. Easy is always available, so it need not be
+    /// stored. Additive: an old file with no entry simply starts every Trainer at
+    /// Easy. See docs/DESIGN.md §14.5.
+    private(set) var clearedTiersByTrainer: [String: Set<String>]
 
     /// The specialist Trainers the player has earned. The "Rookie" (neutral) is
     /// *always* available (enforced in `isTrainerUnlocked`) as the starter, so it
@@ -38,12 +41,12 @@ struct GauntletProgress: Codable, Equatable {
     private(set) var hasSeenIntro: Bool
 
     init(xpByTrainer: [String: Int] = [:],
-         unlockedTierKeys: Set<String> = [GauntletTier.easy.rawValue],
+         clearedTiersByTrainer: [String: Set<String>] = [:],
          unlockedTrainerKeys: Set<String> = [],
          stats: [String: Int] = [:],
          hasSeenIntro: Bool = false) {
         self.xpByTrainer = xpByTrainer
-        self.unlockedTierKeys = unlockedTierKeys
+        self.clearedTiersByTrainer = clearedTiersByTrainer
         self.unlockedTrainerKeys = unlockedTrainerKeys
         self.stats = stats
         self.hasSeenIntro = hasSeenIntro
@@ -55,8 +58,7 @@ struct GauntletProgress: Codable, Equatable {
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         xpByTrainer = try c.decodeIfPresent([String: Int].self, forKey: .xpByTrainer) ?? [:]
-        unlockedTierKeys = try c.decodeIfPresent(Set<String>.self, forKey: .unlockedTierKeys)
-            ?? [GauntletTier.easy.rawValue]
+        clearedTiersByTrainer = try c.decodeIfPresent([String: Set<String>].self, forKey: .clearedTiersByTrainer) ?? [:]
         unlockedTrainerKeys = try c.decodeIfPresent(Set<String>.self, forKey: .unlockedTrainerKeys) ?? []
         stats = try c.decodeIfPresent([String: Int].self, forKey: .stats) ?? [:]
         hasSeenIntro = try c.decodeIfPresent(Bool.self, forKey: .hasSeenIntro) ?? false
@@ -77,18 +79,28 @@ struct GauntletProgress: Codable, Equatable {
         GauntletEconomy.xpToNextLevel(fromXP: xp(forTrainer: id))
     }
 
-    /// Whether a tier is playable. Easy is always unlocked; the rest are earned.
-    func isUnlocked(_ tier: GauntletTier) -> Bool {
-        tier == .easy || unlockedTierKeys.contains(tier.rawValue)
+    /// Whether a Trainer has already cleared (won) a given tier.
+    func hasCleared(_ tier: GauntletTier, trainer id: String) -> Bool {
+        clearedTiersByTrainer[id]?.contains(tier.rawValue) ?? false
     }
 
-    /// The unlocked tiers, in ladder order — what the tier picker offers.
-    var unlockedTiers: [GauntletTier] {
-        GauntletTier.allCases.filter { isUnlocked($0) }.sorted { $0.order < $1.order }
+    /// Whether a tier is playable *with a given Trainer*. Easy is always unlocked;
+    /// Medium and Hard require that same Trainer to have cleared the tier below —
+    /// the ladder is walked once per Trainer (req 4).
+    func isUnlocked(_ tier: GauntletTier, forTrainer id: String) -> Bool {
+        guard let required = tier.requires else { return true }   // Easy: always open
+        return hasCleared(required, trainer: id)
     }
 
-    /// The highest tier the player has unlocked so far.
-    var highestUnlocked: GauntletTier { unlockedTiers.last ?? .easy }
+    /// The tiers a Trainer may start, in ladder order — what its tier picker offers.
+    func unlockedTiers(forTrainer id: String) -> [GauntletTier] {
+        GauntletTier.allCases.filter { isUnlocked($0, forTrainer: id) }.sorted { $0.order < $1.order }
+    }
+
+    /// The highest tier this Trainer has opened so far.
+    func highestUnlocked(forTrainer id: String) -> GauntletTier {
+        unlockedTiers(forTrainer: id).last ?? .easy
+    }
 
     // MARK: Trainers & stats
 
@@ -109,14 +121,6 @@ struct GauntletProgress: Codable, Equatable {
     }
 
     // MARK: Mutation
-
-    /// Unlock a tier. Returns `true` if this newly unlocked it (so the caller knows
-    /// to persist and can celebrate a first unlock).
-    @discardableResult
-    mutating func unlock(_ tier: GauntletTier) -> Bool {
-        guard !isUnlocked(tier) else { return false }
-        return unlockedTierKeys.insert(tier.rawValue).inserted
-    }
 
     /// Mark the how-to explainer as seen. Returns `true` the first time (so the
     /// caller knows to persist).
@@ -163,8 +167,9 @@ struct GauntletProgress: Codable, Equatable {
         var unlockedTier: GauntletTier?
     }
 
-    /// Bank a run clear: grant the tier's XP to the Trainer and unlock the next
-    /// tier up the ladder. Returns a summary of what changed.
+    /// Bank a run clear: grant the tier's XP to the Trainer and record that this
+    /// Trainer cleared this tier, which opens the next tier *for that Trainer*.
+    /// Returns a summary of what changed (the newly opened tier, if any).
     @discardableResult
     mutating func recordClear(trainerId: String, tier: GauntletTier) -> ClearResult {
         let levelBefore = level(forTrainer: trainerId)
@@ -172,8 +177,12 @@ struct GauntletProgress: Codable, Equatable {
         xpByTrainer[trainerId, default: 0] += gained
         let levelAfter = level(forTrainer: trainerId)
 
+        // Record the clear for this Trainer; note whether it *newly* opens the next
+        // tier up the ladder (so the results screen can celebrate a first unlock).
+        let alreadyCleared = hasCleared(tier, trainer: trainerId)
+        clearedTiersByTrainer[trainerId, default: []].insert(tier.rawValue)
         var newlyUnlocked: GauntletTier? = nil
-        if let next = GauntletTier.allCases.first(where: { $0.requires == tier }), unlock(next) {
+        if !alreadyCleared, let next = GauntletTier.allCases.first(where: { $0.requires == tier }) {
             newlyUnlocked = next
         }
 
@@ -207,9 +216,12 @@ struct GauntletProgress: Codable, Equatable {
         let before = xpByTrainer.count
         let known = Set(Trainer.roster.map(\.id) + [Trainer.neutral.id])
         xpByTrainer = xpByTrainer.filter { known.contains($0.key) }
-        // Only keep tier keys that name a real tier.
+        // Keep only cleared-tier entries for known Trainers, naming real tiers.
         let tierKeys = Set(GauntletTier.allCases.map(\.rawValue))
-        unlockedTierKeys = unlockedTierKeys.filter { tierKeys.contains($0) }
+        clearedTiersByTrainer = clearedTiersByTrainer
+            .filter { known.contains($0.key) }
+            .mapValues { $0.filter { tierKeys.contains($0) } }
+            .filter { !$0.value.isEmpty }
         // Drop unlock entries for Trainers no longer in the roster (the Rookie is
         // implicit, never stored here).
         let specialistIds = Set(Trainer.roster.map(\.id))

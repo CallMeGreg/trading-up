@@ -20,6 +20,7 @@ struct GauntletSimResult {
     var finalAppraisal = 0.0
     var finalCash = 0.0
     var catalystsAttuned = 0
+    var finalCompleteLines = 0   // complete evolution lines standing in the final Showcase
     var capped = false   // hit the safety iteration cap (should never happen)
 }
 
@@ -38,24 +39,71 @@ enum GauntletSim {
         return wi
     }
 
+    /// How many complete evolution lines stand in `cards` — a diagnostic the harness
+    /// prints so we can see how often the optimised policy *completes* a line (vs
+    /// hoarding singles), given line-completion is the core skill lever.
+    static func completeLines(_ cards: [CardInstance]) -> Int {
+        let byLine = Dictionary(grouping: cards.filter { $0.card.stageCount > 1 }, by: { $0.card.lineId })
+        return byLine.values.reduce(0) { acc, group in
+            acc + (Set(group.map { $0.card.stage }).count == group[0].card.stageCount ? 1 : 0)
+        }
+    }
+
+    /// How aggressively the optimised policy speculatively holds a *partial* line —
+    /// credit toward a completion it hasn't landed yet, so a cheap common isn't
+    /// dumped for sticker value while its chain is still assembling. 0 = ignore
+    /// partial lines (purely value-greedy); higher = chase completions harder.
+    static let lineOptionWeight = 0.75
+
+    /// The optimised policy's private valuation of a *whole* Showcase: the exact
+    /// appraisal engine (which already pays the completion bonus for finished lines)
+    /// plus a smaller "option value" for lines still assembling — weighted by how
+    /// close they are. Because it scores the entire Showcase, evicting a linemate
+    /// lowers the score on its own, so the argmax below never breaks a line it's
+    /// trying to build.
+    static func showcaseScore(_ sc: [CardInstance], evoLineBonus: Double, appraisalMult: Double) -> Double {
+        var s = GauntletRun.appraise(sc, evoLineBonus: evoLineBonus, appraisalMult: appraisalMult)
+        guard evoLineBonus > 0 else { return s }
+        let byLine = Dictionary(grouping: sc.filter { $0.card.stageCount > 1 }, by: { $0.card.lineId })
+        for (_, g) in byLine {
+            let stageCount = g[0].card.stageCount
+            let present = Set(g.map { $0.card.stage }).count
+            if present >= 1 && present < stageCount {
+                let lineVal = g.reduce(0.0) { $0 + $1.currentValue }
+                let progress = Double(present) / Double(stageCount)
+                s += evoLineBonus * lineVal * lineOptionWeight * progress * appraisalMult
+            }
+        }
+        return s
+    }
+
     // MARK: Per-pull curation
 
     static func handleCards<G: RandomNumberGenerator>(_ cards: [CardInstance], style: GauntletStyle, run: inout GauntletRun, rng: inout G) {
         switch style {
         case .optimized:
-            // Best cards claim slots first, then swap only when it lifts appraisal.
+            // Curate for value *and* evolution lines. Each incoming card either fills
+            // an empty slot or is placed where it lifts the Showcase's strategic score
+            // the most — a score that credits both finished lines (exactly) and lines
+            // still assembling (option value), so the policy will hold a cheap common
+            // toward a completion instead of dumping it for a pricier single.
+            let elb = run.evoLineBonus
+            let am = run.mods.appraisalMult
             for inst in cards.sorted(by: { $0.currentValue > $1.currentValue }) {
                 if run.canKeep {
                     run.keep(inst)
-                } else if let wi = run.weakestShowcaseIndex() {
-                    let cur = run.showcaseAppraisal
-                    var trial = run.showcase
-                    trial[wi] = inst
-                    let after = GauntletRun.appraise(trial, synergyPerMatch: run.synergyPerMatch, appraisalMult: run.mods.appraisalMult)
-                    if after > cur { run.swapIn(inst, at: wi) } else { run.sell(inst) }
-                } else {
-                    run.sell(inst)
+                    continue
                 }
+                // "Sell" keeps the Showcase as-is; each swap trials inst into a slot.
+                var bestScore = showcaseScore(run.showcase, evoLineBonus: elb, appraisalMult: am)
+                var bestSlot: Int? = nil
+                for j in run.showcase.indices {
+                    var trial = run.showcase
+                    trial[j] = inst
+                    let sc = showcaseScore(trial, evoLineBonus: elb, appraisalMult: am)
+                    if sc > bestScore { bestScore = sc; bestSlot = j }
+                }
+                if let j = bestSlot { run.swapIn(inst, at: j) } else { run.sell(inst) }
             }
         case .careless:
             // Fill slots as they come; later only swap on raw sticker value.
@@ -175,12 +223,14 @@ enum GauntletSim {
         result.finalAppraisal = run.showcaseAppraisal
         result.finalCash = run.cash
         result.catalystsAttuned = run.attunedCatalysts.count
+        result.finalCompleteLines = completeLines(run.showcase)
         return result
     }
 
     /// Aggregate win/bust rates over many seeded runs.
-    static func winRate(tier: GauntletTier, trainer: Trainer, style: GauntletStyle, trials: Int, seed0: UInt64) -> (win: Double, bust: Double, capped: Int, avgCleared: Double) {
+    static func winRate(tier: GauntletTier, trainer: Trainer, style: GauntletStyle, trials: Int, seed0: UInt64) -> (win: Double, bust: Double, capped: Int, avgCleared: Double, avgLines: Double) {
         var wins = 0, busts = 0, capped = 0, clearedTotal = 0
+        var linesTotal = 0
         for s in 0..<trials {
             var rng = SeededRNG(seed0 &+ UInt64(s))
             let r = simulate(tier: tier, trainer: trainer, style: style, rng: &rng)
@@ -188,10 +238,12 @@ enum GauntletSim {
             else if r.won { wins += 1 }
             else if r.lost { busts += 1 }
             clearedTotal += r.clearedRounds
+            linesTotal += r.finalCompleteLines
         }
         return (Double(wins) / Double(trials) * 100,
                 Double(busts) / Double(trials) * 100,
                 capped,
-                Double(clearedTotal) / Double(trials))
+                Double(clearedTotal) / Double(trials),
+                Double(linesTotal) / Double(trials))
     }
 }

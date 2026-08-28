@@ -247,7 +247,7 @@ final class GauntletStateTests: XCTestCase {
         XCTAssertEqual(s.phase, .trainerSelect)
         XCTAssertNil(s.run)
         XCTAssertEqual(s.progress.xp(forTrainer: "neutral"), 0, "an abandoned run banks nothing")
-        XCTAssertFalse(s.progress.isUnlocked(.medium))
+        XCTAssertFalse(s.progress.isUnlocked(.medium, forTrainer: "neutral"))
     }
 
     // MARK: GameState reward hook
@@ -289,11 +289,11 @@ final class GauntletStateTests: XCTestCase {
             XCTAssertNotNil(clear)
             XCTAssertGreaterThan(clear!.xpGained, 0)
             XCTAssertEqual(clear!.unlockedTier, .medium, "clearing Easy unlocks Medium")
-            XCTAssertTrue(s.progress.isUnlocked(.medium))
+            XCTAssertTrue(s.progress.isUnlocked(.medium, forTrainer: "neutral"))
 
             // Durable: the clear is on disk in the progress file.
             let reloaded = GauntletProgressStore(directory: dir).load()
-            XCTAssertTrue(reloaded.isUnlocked(.medium))
+            XCTAssertTrue(reloaded.isUnlocked(.medium, forTrainer: "neutral"))
             XCTAssertGreaterThan(reloaded.xp(forTrainer: "neutral"), 0)
 
             s.finish()
@@ -355,7 +355,7 @@ final class GauntletStateTests: XCTestCase {
         var without = run.showcase
         without.remove(at: idx)
         let base = GauntletRun.appraise(without,
-                                        synergyPerMatch: run.synergyPerMatch,
+                                        evoLineBonus: run.evoLineBonus,
                                         appraisalMult: run.mods.appraisalMult)
         return run.showcaseAppraisal - base
     }

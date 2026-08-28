@@ -469,8 +469,8 @@ so optimisation becomes *mandatory* on the higher tiers rather than optional.
 creates tempo pressure, cash creates the economy. A single blended currency was considered
 and rejected as mushier — it collapses two distinct decisions into one.)
 
-**Banking.** Cash you *don't* spend in the shop earns **interest** between rounds — a small,
-capped return on what you've banked — so saving toward a pricier set's packs or a
+**Banking.** Cash you *don't* spend in the shop earns **20% interest** between rounds — a
+compounding return on what you've banked — so saving toward a pricier set's packs or a
 booster-box splurge (§14.7) is a live alternative to spending now. It's a deliberate third
 force: the appraisal engine pushes you to *keep* cards, the sell-back spread punishes
 *selling* them, and interest rewards *not spending* the cash you do raise. Three pulls
@@ -480,11 +480,14 @@ is tuned by the Gauntlet harness (§14.8) alongside targets and rip counts.
 **Targets & faucets.** A round's Target is a **cumulative** bar: it measures your whole
 standing Showcase's appraisal, not just what you added this round, so *selling a keeper
 drops you back toward the line* — the sacrifice that keeps selling honest. Bars rise each
-round and spike on the Hard **boss** round (§14.5). Cash for the shop comes from two
-faucets: **selling** pulls mid-round (at the spread), and a **round-clear stipend that
+round and spike on the Hard **boss** round (§14.5). The round **auto-clears the moment the
+Target is met** — no "end round" button to press — firing a confetti cue and, once the
+current pack is resolved, advancing to the shop. Cash for the shop comes from three
+faucets: **selling** pulls mid-round (at the spread), a **round-clear payout that
 scales with how far you overshoot** the Target — so pushing *past* the bar, not stopping
-exactly on it, is the keep-heavy player's way to fund Catalysts. Per-tier counts (rounds,
-rips, starting slots) live in §14.5.
+exactly on it, is the keep-heavy player's way to fund Catalysts — and **leftover rips**,
+each banked at **$5 × the cleared round number** so unused tempo isn't simply wasted.
+Per-tier counts (rounds, rips, starting slots) live in §14.5.
 
 ### 14.2 The appraisal engine (where the strategy lives)
 
@@ -492,19 +495,22 @@ For a run to reward **builds** rather than luck, kept cards must **multiply each
 Gauntlet extends Classic's value formula — `Economy.value(base × foil × grade)` — into a
 scoring engine you assemble mid-run:
 
-> **appraisal(card) = base × foil × grade × _synergy_ , then × _run multipliers_**
+> **appraisal(card) = base × foil × grade , then × _evolution-line bonus_ × _run multipliers_**
 
 The two new terms are what a build is *made of*:
 
-- **synergy(card)** — element stacking (each kept Fire Spryte lifts other Fire
-  appraisals), a spotlighted set scoring extra, a completed evolution line or set as a
-  multiplier (reusing the existing `checkBonuses` hooks, but paying *score* rather than
-  only cash).
+- **evolution-line bonus** — completing a full evolution line held in the Showcase (every
+  stage of a `lineId` present) lifts *that line's* whole appraisal by a bonus factor
+  (`baseEvoLineBonus`, plus any Trainer/Catalyst boost). Partial lines pay nothing, so the
+  build goal is to *finish chains*, not just hoard high-value singles — a knapsack pull
+  against limited slots. (This replaced the earlier same-element "synergy" multiplier: a
+  completion bonus is RNG-gated on pulling a line's whole chain, which rewards planning over
+  passively stacking one element.)
 - **run multipliers** — global effects from Catalysts (§14.4) and your Trainer (§14.3).
 
-This yields replayable identities — mono-element aggro, foil-chaser, grade-gambler,
-completionist — the reason to replay. Surface the build-up on screen
-(base → ×foil → ×grade → ×synergy) so players *learn* the engine; it doubles as the
+This yields replayable identities — line-completionist, foil-chaser, grade-gambler,
+value-singles — the reason to replay. Surface the build-up on screen
+(base → ×foil → ×grade → ×line bonus) so players *learn* the engine; it doubles as the
 reveal dopamine.
 
 **Keep-slots.** The Showcase holds a **run-long capacity** of *N* cards (a starting count
@@ -527,10 +533,10 @@ the lane it unlocks. The shipped roster (`Models/Trainer.swift`):
 | --- | --- | --- | --- |
 | **Rookie** | — (neutral) | No edge — the harness's proof the mode is winnable on skill alone | Free starter |
 | **Ripper** | Tempo | +1 rip every round | Rip **100** packs across runs |
-| **Curator** | Build width | +1 Showcase slot, +0.05 synergy per element match | Build a **9-card** Showcase in one run |
-| **Appraiser** | Value | ×1.10 appraisal on everything | Reach a round score of **200** |
-| **Grader** | Grading | ½ grade fee, +0.12 grade luck | Grade **12** cards across runs |
-| **Merchant** | Economy | +0.08 sell-back, ×1.25 stipend, +$20 seed cash | Hold **$120** cash at once in a run |
+| **Curator** | Build width | +1 Showcase slot, +0.20 evolution-line bonus | Build a **12-card** Showcase in one run |
+| **Appraiser** | Value | ×1.10 appraisal on everything | Reach a round score of **500** |
+| **Grader** | Grading | ½ grade fee, +0.12 grade luck | Grade **40** cards across runs |
+| **Merchant** | Economy | +0.08 sell-back, ×1.25 payout, +$20 seed cash | Hold **$250** cash at once in a run |
 
 Locked cards show the requirement and a live progress bar (e.g. "60 / 100 packs ripped"),
 and the just-unlocked Trainers are celebrated on the selection screen after a run banks its
@@ -598,9 +604,12 @@ survives above only as a note of what the concept was first sketched as.
 
 ### 14.5 Difficulty tiers
 
-Each tier **adds a mechanic**, not just bigger numbers, and each is unlocked by clearing
-the previous one once (Easy → Medium → Hard). The counts below are **starting points for
-the harness** (§14.8) — the shape is fixed, the magnitudes get tuned:
+Each tier **adds a mechanic**, not just bigger numbers, and each is unlocked **per Trainer**
+by clearing the previous one *with that same Trainer* (Easy → Medium → Hard). The ladder is
+walked once per Trainer — clearing Easy with the Ripper unlocks Medium for the Ripper, but a
+different Trainer still starts at Easy — so switching archetypes means re-earning the climb.
+The counts below are **starting points for the harness** (§14.8) — the shape is fixed, the
+magnitudes get tuned:
 
 | Tier | Rounds | Rips / round | Showcase slots (start) |
 | --- | --- | --- | --- |
@@ -616,8 +625,8 @@ rather than a retry, to stay winnable with focused play. What each tier *adds* o
 | Tier | Adds | Win reward (§14.6) |
 | --- | --- | --- |
 | **Easy** | The gentle tier: the fewest rounds, the lowest target ramp, and the widest Showcase soften the loop while it's being learned. | Foil Extended Art **common** |
-| **Medium** | Steeper targets + a **rotation**: a different set is spotlighted each round; off-set cards score less, so you must adapt. | Foil Extended Art **uncommon** |
-| **Hard** | Aggressive targets + a random **curse per round** (e.g. "foils off," "spread 60%") and a **boss appraisal** finale. | Foil Extended Art **rare / ultra** |
+| **Medium** | A steeper target ramp and a tighter Showcase (6 slots), leaning on the extra rip each round rather than a retry — you must build more efficiently to keep pace. | Foil Extended Art **uncommon** |
+| **Hard** | The most aggressive target ramp, the fewest rips, the narrowest Showcase, and a **boss appraisal** spike on the final round. | Foil Extended Art **rare / ultra** |
 
 ### 14.6 Rewards & the Binder
 
@@ -712,7 +721,7 @@ The **shape** of the mode is now decided; what's left is numeric tuning the harn
 
 1. **Naming** — ✅ Catalysts + Shadow (never "Energy" / "Dark"), for the Guideline 5.2
    reason (§14.4).
-2. **Interest** — ✅ banking between rounds (§14.1); rate + ceiling 🔧 harness-tuned.
+2. **Interest** — ✅ banking between rounds at a **20% rate** (§14.1); the ceiling 🔧 harness-tuned.
 3. **Run length** — ✅ Easy 5 / Medium 7 / Hard 9-with-boss rounds; 6 / 6 / 4 rips a round;
    **single-life at every tier — no reprints** (§14.5). Absolute target-dollar bars 🔧 harness-tuned.
 4. **Rip model** — ✅ a hard **rip count per round + cash in the shop** (two currencies); the
@@ -731,11 +740,12 @@ The **shape** of the mode is now decided; what's left is numeric tuning the harn
    bought open mid-round with cash, **independently priced and in any order** (not a forced
    ladder). Replaced the single rip button and the shop's pack upgrade (§14.7).
 10. **First-run explainer** — ✅ a one-time intro screen (re-openable from the ⓘ button)
-    walks scoring, the shop, and interest before the first run, so the loop is legible
-    without a tutorial mode. Gated on a `hasSeenIntro` flag in `GauntletProgress`.
+    walks the target, scoring & evolution lines, Trainers, Catalysts, the shop, and prizes
+    before the first run, so the loop is legible without a tutorial mode. Gated on a
+    `hasSeenIntro` flag in `GauntletProgress`.
 
 🔧 **Left for the harness** (§14.8): the magnitudes — target-dollar bars per round, the
-interest rate/ceiling, the round-clear stipend curve, and each perk's stat budget — tuned so
+interest ceiling, the round-clear payout curve, and each perk's stat budget — tuned so
 an optimised build clears Hard, careless play busts, and grinding is never required.
 
 ---

@@ -159,7 +159,15 @@ struct RunScreen: View {
                     }
                     .padding(.bottom, 4)
                 }
-                actionBar(run)
+                PackRail(state: state, run: run)
+            }
+            .overlay {
+                if state.confettiBurst > 0 {
+                    ParticleBurst(colors: [Palette.money, Color(hex: "ffd54a"),
+                                           Color(hex: "6d5cf7"), Color(hex: "b06cf7")])
+                        .id(state.confettiBurst)
+                        .allowsHitTesting(false)
+                }
             }
             .fullScreenCover(isPresented: revealBinding) {
                 GauntletRevealView(state: state, set: state.lastRippedSet)
@@ -173,21 +181,6 @@ struct RunScreen: View {
     private var revealBinding: Binding<Bool> {
         Binding(get: { state.revealActive }, set: { state.revealActive = $0 })
     }
-
-    private func actionBar(_ run: GauntletRun) -> some View {
-        VStack(spacing: 8) {
-            PackRail(state: state, run: run)
-            BigButton(title: "End Round",
-                      subtitle: "Score \(fmt(run.showcaseAppraisal)) vs \(fmt(run.target)) needed",
-                      systemImage: "flag.checkered",
-                      tint: GauntletTheme.tint,
-                      enabled: state.canEndRound) {
-                let willClear = run.showcaseAppraisal >= run.target
-                Haptics.play(willClear ? .success : .warning)
-                state.endRound()
-            }
-        }
-    }
 }
 
 private func fmt(_ v: Double) -> String { String(format: "%.0f", v) }
@@ -197,7 +190,7 @@ private func fmt(_ v: Double) -> String { String(format: "%.0f", v) }
 /// Replaces the single "Rip a Pack" button. Each of the five element sets is a
 /// tile: rippable once unlocked, buy-to-unlock when it's next in line, or greyed
 /// out further up the rail. The player picks which unlocked element to rip, so
-/// they can chase a set for Showcase synergy.
+/// they can chase a set to complete its evolution lines.
 private struct PackRail: View {
     let state: GauntletState
     let run: GauntletRun
@@ -754,8 +747,10 @@ private struct RoundClearedHero: View {
     @State private var appeared = false
 
     private var clearedRound: Int { max(1, run.round - 1) }
-    /// Cash carried into the clear, before interest + payout were banked.
-    private var carried: Double { max(0, run.cash - run.lastInterest - run.lastStipend) }
+    /// Cash carried into the clear, before interest + payout + banked rips were added.
+    private var carried: Double {
+        max(0, run.cash - run.lastInterest - run.lastStipend - run.lastRipBank)
+    }
 
     var body: some View {
         VStack(spacing: 12) {
@@ -778,6 +773,10 @@ private struct RoundClearedHero: View {
                           style: .add, tint: Color(hex: "ffd54a"), dim: run.lastInterest <= 0)
                 LedgerRow(label: "Round Payout", amount: run.lastStipend,
                           style: .add, tint: Palette.money)
+                if run.lastRipBank > 0 {
+                    LedgerRow(label: "Rips Banked", amount: run.lastRipBank,
+                              style: .add, tint: Color(hex: "b06cf7"))
+                }
                 Rectangle().fill(Palette.stroke).frame(height: 1).padding(.vertical, 1)
                 LedgerRow(label: "Cash", amount: run.cash, style: .total, tint: Palette.money)
             }
@@ -950,6 +949,14 @@ struct GauntletRevealView: View {
             case .sealed:          SealedPackView(set: set, isBox: false) { advance() }
             case .revealing(let i): revealingView(i)
             case .summary:          summaryView
+            }
+        }
+        .overlay {
+            if state.confettiBurst > 0 {
+                ParticleBurst(colors: [Palette.money, Color(hex: "ffd54a"),
+                                       Color(hex: "6d5cf7"), Color(hex: "b06cf7")])
+                    .id(state.confettiBurst)
+                    .allowsHitTesting(false)
             }
         }
         .onAppear(perform: snapshot)
