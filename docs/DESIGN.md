@@ -423,27 +423,27 @@ roll‑ups.
 
 ## 14. Gauntlet Mode
 
-> **Status:** the **core mode now ships** — the run loop, rounds/rips/appraisal engine,
+> **Status:** the **core mode now ships** — the run loop, rounds/rips/Aura engine,
 > Catalysts, the Trainer roster with meta-unlocks, the three tiers, interest banking, the
 > pack rail, and the choose-1-of-3 Extended-Art reward are all live in
 > `Models/Gauntlet*` and `Views/Gauntlet*`, balance-verified by the Gauntlet `tools/verify`
 > harness (§14.8) and covered by XCTest. What remains design-only are the §14.7 "other
-> levers" (bounties, event nodes, the booster-box splurge, damaged/sealed pulls) and the
-> per-Trainer level perks (§14.3), which are noted inline where they aren't built yet.
-> Gauntlet is gated behind the full-game unlock (§11).
+> levers" (bounties, event nodes, the booster-box splurge, damaged/sealed pulls). The
+> per-Trainer level scaling (§14.3) now ships too. Gauntlet is gated behind the full-game
+> unlock (§11).
 
 Gauntlet distils Classic to its strategic spine. Classic is, underneath, one tension:
 **value vs. liquidity** under a completion deadline — a card is worth more kept than sold
 (the 75% sell-back spread, §6), but you need cash to keep ripping, and grading (§7) is the
 skill lever that wrings extra value from the same pulls. Gauntlet concentrates that
 tension into a short, escalating, **engine-building run**: you rip toward a rising
-appraisal target, and every pull is a live **keep-for-score vs. sell-for-fuel** decision.
+Aura target, and every pull is a live **keep-for-score vs. sell-for-fuel** decision.
 Same DNA as Classic, roguelite pacing.
 
-### 14.1 The run: rounds, rips, a rising appraisal
+### 14.1 The run: rounds, rips, a rising Aura
 
-A run is a sequence of **rounds**. Each round sets a **Target Appraisal** — a collection
-value you must reach, surfaced in-game as **Aura** — and gives you a fixed number of
+A run is a sequence of **rounds**. Each round sets a **Target Aura** — a collection
+value you must reach — and gives you a fixed number of
 **rips** (pack opens) to reach it.
 Clear it and you advance through a **shop** to a higher target; miss it and the run ends.
 The Showcase (the cards you keep) **carries across rounds and compounds**, so it's an
@@ -457,11 +457,11 @@ Three resources, each generating a *different* decision:
 | Resource | Scope | Decision it forces |
 | --- | --- | --- |
 | **Rips** | Per round; a hard count that resets each round | Tempo — is *this* rip worth spending? The "last rip, need a hit" crunch. |
-| **Appraisal** | Value of the cards you **keep**; must clear the round's Target | Which pulls to bank; whether to gamble-grade a keeper to clear the line. |
+| **Aura** | Value of the cards you **keep**; must clear the round's Target | Which pulls to bank; whether to gamble-grade a keeper to clear the line. |
 | **Cash** | Across the run; earned by selling (at the spread), spent in the **shop** between rounds | Sell now for shop power later, vs. keep for this round's target. |
 
 Because the Showcase carries over, **selling a kept card is a real sacrifice** — it drops
-appraisal you'll still need next round. That knife-edge keeps the loop strategic instead
+Aura you'll still need next round. That knife-edge keeps the loop strategic instead
 of a slot machine. Running out of rips below target with no legal play ends the run — the
 same "provably stuck" logic as Classic's `isGameOver` (§10), but per-round and escalating,
 so optimisation becomes *mandatory* on the higher tiers rather than optional.
@@ -473,13 +473,13 @@ and rejected as mushier — it collapses two distinct decisions into one.)
 **Banking.** Cash you *don't* spend in the shop earns **20% interest** between rounds — a
 compounding return on what you've banked — so saving toward a pricier set's packs or a
 booster-box splurge (§14.7) is a live alternative to spending now. It's a deliberate third
-force: the appraisal engine pushes you to *keep* cards, the sell-back spread punishes
+force: the Aura engine pushes you to *keep* cards, the sell-back spread punishes
 *selling* them, and interest rewards *not spending* the cash you do raise. Three pulls
 working against each other is where the optimisation lives — and the knob (rate + ceiling)
 is tuned by the Gauntlet harness (§14.8) alongside targets and rip counts.
 
 **Targets & faucets.** A round's Target is a **cumulative** bar: it measures your whole
-standing Showcase's appraisal, not just what you added this round, so *selling a keeper
+standing Showcase's Aura, not just what you added this round, so *selling a keeper
 drops you back toward the line* — the sacrifice that keeps selling honest. Bars rise each
 round and spike on the Hard **boss** round (§14.5). The round **auto-clears the moment the
 Target is met** — no "end round" button to press — firing a confetti cue and, once the
@@ -490,18 +490,18 @@ exactly on it, is the keep-heavy player's way to fund Catalysts — and **leftov
 each banked at **$5 × the cleared round number** so unused tempo isn't simply wasted.
 Per-tier counts (rounds, rips, starting slots) live in §14.5.
 
-### 14.2 The appraisal engine (where the strategy lives)
+### 14.2 The Aura engine (where the strategy lives)
 
 For a run to reward **builds** rather than luck, kept cards must **multiply each other**.
 Gauntlet extends Classic's value formula — `Economy.value(base × foil × grade)` — into a
 scoring engine you assemble mid-run:
 
-> **appraisal(card) = base × foil × grade , then × _evolution-line bonus_ × _run multipliers_**
+> **aura(card) = base × foil × grade , then × _evolution-line bonus_ × _run multipliers_**
 
 The two new terms are what a build is *made of*:
 
 - **evolution-line bonus** — completing a full evolution line held in the Showcase (every
-  stage of a `lineId` present) lifts *that line's* whole appraisal by a bonus factor
+  stage of a `lineId` present) lifts *that line's* whole Aura by a bonus factor
   (`baseEvoLineBonus`, plus any Trainer/Catalyst boost). Partial lines pay nothing, so the
   build goal is to *finish chains*, not just hoard high-value singles — a knapsack pull
   against limited slots. (This replaced the earlier same-element "synergy" multiplier: a
@@ -530,44 +530,64 @@ lifetime Gauntlet milestone (tracked in `GauntletProgress.stats`), so meta progr
 about *earning the roster*, not just levelling it — and each milestone is phrased to teach
 the lane it unlocks. The shipped roster (`Models/Trainer.swift`):
 
-| Trainer | Leans | Base advantage | Unlocked by |
+| Trainer | Leans | Base advantage (level 1 — ~20% of max) | Unlocked by |
 | --- | --- | --- | --- |
 | **Rookie** | — (neutral) | No edge — the harness's proof the mode is winnable on skill alone | Free starter |
-| **Ripper** | Tempo | +1 rip every round | Rip **100** packs across runs |
-| **Curator** | Build width | +1 Showcase slot, +0.20 evolution-line bonus | Build a **12-card** Showcase in one run |
-| **Appraiser** | Value | ×1.10 appraisal on everything | Reach a round Aura of **500** |
-| **Grader** | Grading | ½ grade fee, +0.12 grade luck | Grade **100** cards across runs |
-| **Merchant** | Economy | +0.08 sell-back, ×1.25 payout, +$20 seed cash | Hold **$250** cash at once in a run |
+| **Ripper** | Tempo | +1 rip every round, +12% bonus-rip chance | Rip **100** packs across runs |
+| **Curator** | Build width | +1 Showcase slot, +0.12 evolution-line bonus | Build a **12-card** Showcase in one run |
+| **Farmer** | Value | ×1.06 Aura on everything | Reach a round Aura of **500** |
+| **Grader** | Grading | 0.86× grade fee, +0.09 grade luck | Grade **100** cards across runs |
+| **Merchant** | Economy | +0.032 sell-back, ×1.12 payout, +$10 seed cash | Hold **$250** cash at once in a run |
 
 Locked cards show the requirement and a live progress bar (e.g. "60 / 100 packs ripped"),
 and the just-unlocked Trainers are celebrated on the selection screen after a run banks its
 stats. Thresholds are meta-pacing knobs, **not** a difficulty lever — the harness still
 proves a neutral Rookie clears Hard, so the roster stays gravy rather than a gate.
 
-**Cross-run progression:** every run banks that Trainer **XP** — **per round cleared**, so
-even a run that busts still matures the Trainer *provided it got past round 1* (a round-1
-loss banks nothing). A win adds a **completion bonus** on top, so full clears pay best and
-Hard pays the most (Easy 13 / Medium 27 / Hard 55 for a full clear; 2 / 3 / 5 per round on a
-partial). Levels award **pick-1-of-2 perks** (a small talent tree) that deepen its identity
-or patch a weakness, and can unlock new Catalysts into the pool. *(XP, levels and partial-run
-banking persist today; the perk trees themselves are not yet built.)*
+**Cross-run progression — the advantage *scales with level*.** Every run banks that Trainer
+**XP** — **per round cleared**, so even a run that busts still matures the Trainer *provided
+it got past round 1* (a round-1 loss banks nothing). A win adds a **completion bonus** on top,
+so full clears pay best and Hard pays the most (Easy 13 / Medium 27 / Hard 55 for a full
+clear; 2 / 3 / 5 per round on a partial). Rather than handing out pick-a-perk unlocks, each
+Trainer's advantage **grows smoothly from a reasonable level-1 baseline (~20% of its
+potential) toward a level-10 ceiling** (`RunMods.lerp` interpolates `Trainer.baseMods` →
+`Trainer.maxMods` by `t = (level − 1) / (maxTrainerLevel − 1)`, and each `baseMods` lever is
+set to `Trainer.baselineFraction` — 0.20 — of its ceiling), so meta progression is a *dial
+getting stronger* — a ~5× climb from a Trainer that's useful on day one — not a new button.
+Per the guardrail, the lever is a **likelihood or a rate**, never a raw new ability dropped
+mid-track:
+
+| Trainer | What scales | Level 1 (~20%) → Level 10 |
+| --- | --- | --- |
+| **Ripper** | per-round **chance** of one bonus rip (the flat +1 stays) | 12% → **60%** |
+| **Curator** | evolution-line bonus (rate); a 2nd slot lands only at the cap | +0.12 → **+0.60**, +1 → **+2** slots |
+| **Farmer** | global Aura multiplier (rate) | ×1.06 → **×1.30** |
+| **Grader** | grade **luck** (likelihood) + grading fee | 9% / 0.86-fee → **45% / 0.3-fee** |
+| **Merchant** | sell-back, round payout, seed cash (rates) | +3.2% / ×1.12 / +$10 → **+16% / ×1.60 / +$50** |
+
+Integer levers (Ripper's rip, Curator's second slot) are the exception the rule protects
+against: they can't open at a fraction, so they stay an always-on identity floor — rather than
+a jarring mid-track "+1", Ripper's tempo becomes a *probability* that climbs from its baseline,
+and Curator's second slot is an end-of-track capstone. *(XP, levels, partial-run banking and
+this scaling all ship today.)*
 
 **Meta ceiling — decided.** Each Trainer caps at **10 levels** on an **exponential curve**
 (cumulative XP-to-reach `[0, 10, 24, 44, 72, 110, 160, 225, 320, 460]`; the gap grows ~1.4×
 each level). A Trainer climbs fast early and the cap is a real commitment (≈8 Hard wins), not
 a formality — so levelling stays engaging rather than a flat 1-win-per-level march. The level
 pill always shows the number (a maxed Trainer reads **Lv 10**, with `MAX LEVEL 10` surfaced in
-the XP row rather than replacing the level). Every level offers **pick-1-of-2** perks (≈9
-choices across its life), and the last couple of levels also drop a **new Catalyst into the
-global pool** — the ceiling expands the game *sideways*, not upward. (New *Trainers* unlock
-separately, off lifetime milestones, not levels — see the roster above.)
+the XP row rather than replacing the level), and the selection card spells out the *current*
+scaled advantage in mechanical terms so the growth is legible. New *Trainers* unlock
+separately, off lifetime milestones, not levels — see the roster above.
 
-⚠️ **Guardrail — perks are sidegrades, never raw power.** Classic's whole thesis (§10) is
-*skill, not grinding, carries you*, so perks read as **tradeoffs or new build lines** (e.g.
-"+1 rip but −1 Showcase slot," "Shadow grades swing harder both ways"), never a flat
-win-rate bump, and a Trainer's total stat budget is capped. The Gauntlet `tools/verify` sims
-(§14.8) enforce this by proving a **level-0** Trainer clears Hard with optimal play — if a
-maxed Trainer is *required* to win, the perks have overstepped and get retuned.
+⚠️ **Guardrail — scaling is a sidegrade, never raw power.** Classic's whole thesis (§10) is
+*skill, not grinding, carries you*, so the level ceiling **deepens an identity** (a luckier
+slab, a hotter rip, a richer floor) without becoming a win button, and a Trainer's stat budget
+is capped. The Gauntlet `tools/verify` sims (§14.8) enforce this from both ends: a **level-0**
+neutral run must clear Hard with optimal play, *and* every Trainer is re-simulated **at the
+level cap** to prove even a maxed advantage never trivialises Hard (best ≤ 97%). If a maxed
+Trainer is *required* to win — or trivialises the mode — the magnitudes have overstepped and
+get retuned.
 
 ### 14.4 Catalysts — the run-long buff cards
 
@@ -584,7 +604,7 @@ pack-opening power, …). Two design choices turn them from a buff pile into a s
 | --- | --- | --- |
 | Fire | Variance / aggro | +ultra chance, reroll a pack, "hot streak" per new card |
 | Water | Economy | better spread, cheaper rips, dupe refunds |
-| Grass | Scaling | appraisal grows per rip, evolution-line multipliers |
+| Grass | Scaling | Aura grows per rip, evolution-line multipliers |
 | Electric | Tempo | +rips, +card per pack, chain multipliers |
 | Rock | Defence / floors | guarantee a rarity floor, protect a grade roll |
 | Shadow | Gambling | grading luck, high-roll multipliers with a downside |
@@ -618,7 +638,7 @@ magnitudes get tuned:
 | **Medium** | 7 | 6 | 6 |
 | **Hard** | 9 (last = **boss**) | 4 (boss 5) | 5 |
 
-Target-appraisal bars rise per round and spike on the boss round; absolute dollar
+Target-Aura bars rise per round and spike on the boss round; absolute dollar
 values are harness-tuned (§14.2, §14.8). **Rounds are single-life** — miss the bar at any
 tier and the run ends (there are no reprints). Medium leans on an extra rip each round,
 rather than a retry, to stay winnable with focused play. What each tier *adds* on top:
@@ -627,7 +647,7 @@ rather than a retry, to stay winnable with focused play. What each tier *adds* o
 | --- | --- | --- |
 | **Easy** | The gentle tier: the fewest rounds, the lowest target ramp, and the widest Showcase soften the loop while it's being learned. | Foil Extended Art **common** |
 | **Medium** | A steeper target ramp and a tighter Showcase (6 slots), leaning on the extra rip each round rather than a retry — you must build more efficiently to keep pace. | Foil Extended Art **uncommon** |
-| **Hard** | The most aggressive target ramp, the fewest rips, the narrowest Showcase, and a **boss appraisal** spike on the final round. | Foil Extended Art **rare / ultra** |
+| **Hard** | The most aggressive target ramp, the fewest rips, the narrowest Showcase, and a **boss Aura** spike on the final round. | Foil Extended Art **rare / ultra** |
 
 ### 14.6 Rewards & the Binder
 
@@ -732,8 +752,10 @@ The **shape** of the mode is now decided; what's left is numeric tuning the harn
 6. **Showcase carry-over** — ✅ one **compounding standing Showcase** per run, with a
    run-long capacity raisable in the shop, discarded at run's end — only the Binder reward
    persists (§14.1–§14.2).
-7. **Meta ceiling** — ✅ **10 levels**, pick-1-of-2 sidegrade perks, horizontal unlocks; a
-   level-0 Trainer must still clear Hard (§14.3).
+7. **Meta ceiling** — ✅ **10 levels** that **smoothly scale each Trainer's advantage**
+   (a ~20% level-1 baseline → level-10 ceiling, a likelihood or rate, never a raw new ability),
+   plus horizontal roster unlocks; a level-0 Trainer *and* a maxed Trainer must both stay inside
+   the Hard curve (§14.3).
 8. **Trainer roster** — ✅ **earned, not just levelled**: only the **Rookie** is free; the
    five specialists each unlock on a lifetime Gauntlet milestone shown with a live progress
    bar (§14.3). Milestone thresholds are meta pacing, not a difficulty knob.
@@ -746,8 +768,8 @@ The **shape** of the mode is now decided; what's left is numeric tuning the harn
     `hasSeenIntro` flag in `GauntletProgress`.
 
 🔧 **Left for the harness** (§14.8): the magnitudes — target-dollar bars per round, the
-interest ceiling, the round-clear payout curve, and each perk's stat budget — tuned so
-an optimised build clears Hard, careless play busts, and grinding is never required.
+interest ceiling, the round-clear payout curve, and each Trainer's per-level stat budget —
+tuned so an optimised build clears Hard, careless play busts, and grinding is never required.
 
 ---
 

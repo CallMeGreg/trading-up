@@ -1,0 +1,22 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><defs>
+  <linearGradient id="bgmerchant" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#231240"/><stop offset="100%" stop-color="#0b0e14"/>
+  </linearGradient>
+  <radialGradient id="glowmerchant" cx="50%" cy="34%" r="55%">
+    <stop offset="0%" stop-color="#ff9f43" stop-opacity="0.36"/>
+    <stop offset="100%" stop-color="#ff9f43" stop-opacity="0"/>
+  </radialGradient>
+  <linearGradient id="motmerchant" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#ff9f43"/><stop offset="100%" stop-color="#ff9f43" stop-opacity="0.72"/>
+  </linearGradient></defs>
+  <rect x="8" y="8" width="184" height="184" rx="40" fill="url(#bgmerchant)"
+        stroke="#ff9f43" stroke-opacity="0.32" stroke-width="1.6"/>
+  <rect x="8" y="8" width="184" height="184" rx="40" fill="url(#glowmerchant)"/>
+  <circle cx="100" cy="92" r="60" fill="#ff9f43" fill-opacity="0.10"/><g transform="translate(100,94) scale(0.72)">
+    <rect x="-47" y="-9" width="94" height="36" fill="url(#motmerchant)"/>
+    <ellipse cx="0" cy="27" rx="47" ry="16" fill="url(#motmerchant)" stroke="#7a441a" stroke-width="3"/><ellipse cx="0" cy="9" rx="47" ry="16" fill="url(#motmerchant)" stroke="#7a441a" stroke-width="3"/><ellipse cx="0" cy="-9" rx="47" ry="16" fill="url(#motmerchant)" stroke="#7a441a" stroke-width="3"/>
+    <ellipse cx="0" cy="-9" rx="47" ry="16" fill="#ff9f43"/>
+    <ellipse cx="0" cy="-9" rx="35" ry="10" fill="#7a441a" fill-opacity="0.5"/>
+    <text x="0" y="1" text-anchor="middle" font-family="Arial, sans-serif" font-size="30"
+          font-weight="900" fill="#ffffff">$</text>
+    <path d="M42,-46 l4,11 l11,4 l-11,4 l-4,11 l-4,-11 l-11,-4 l11,-4 Z" fill="#ff9f43"/></g></svg>

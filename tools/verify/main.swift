@@ -731,13 +731,24 @@ do {
     let n = 120
     let base = GauntletSim.winRate(tier: .hard, trainer: .neutral, style: .optimized, trials: n, seed0: 0x2C7)
     var minT = 100.0, maxT = 0.0
+    var minMax = 100.0, maxMax = 0.0
     for t in Trainer.roster {
+        // Level 1: the just-unlocked baseline (roster Trainers default to level 0,
+        // which activeMods reads as the level-1 floor).
         let r = GauntletSim.winRate(tier: .hard, trainer: t, style: .optimized, trials: n, seed0: 0x2C7)
+        // Level cap: the fully-matured advantage, to prove scaling stays a sidegrade.
+        var maxed = t; maxed.level = GauntletEconomy.maxTrainerLevel
+        let rMax = GauntletSim.winRate(tier: .hard, trainer: maxed, style: .optimized, trials: n, seed0: 0x2C7)
         minT = min(minT, r.win); maxT = max(maxT, r.win)
-        print("  \(t.name): Hard optimized win \(Int(r.win.rounded()))%  (vs neutral \(Int(base.win.rounded()))%)")
+        minMax = min(minMax, rMax.win); maxMax = max(maxMax, rMax.win)
+        print("  \(t.name): Hard optimized win Lv1 \(Int(r.win.rounded()))% → Lv\(GauntletEconomy.maxTrainerLevel) \(Int(rMax.win.rounded()))%  (vs neutral \(Int(base.win.rounded()))%)")
     }
     check(minT >= base.win - 5, "no Trainer is a downgrade on Hard (all ≥ neutral within noise)")
-    check(maxT <= 97, "no Trainer trivialises Hard (best ≤ 97%)")
+    check(maxT <= 97, "no Trainer trivialises Hard at level 1 (best ≤ 97%)")
+    // Levelling is meta progression, so a maxed Trainer should be at least as strong
+    // as its level-1 self — but still never a formality (docs/DESIGN.md §14.3).
+    check(minMax >= minT - 5, "levelling a Trainer to the cap is never a downgrade")
+    check(maxMax <= 97, "even a maxed Trainer never trivialises Hard (best ≤ 97%)")
 }
 
 print("\n\(failures == 0 ? "ALL CHECKS PASSED ✅" : "\(failures) CHECK(S) FAILED ❌")")

@@ -186,7 +186,7 @@ enum GauntletSim {
     // MARK: Full run
 
     static func simulate<G: RandomNumberGenerator>(tier: GauntletTier, trainer: Trainer, style: GauntletStyle, rng: inout G, trace: Bool = false) -> GauntletSimResult {
-        var run = GauntletRun(tier: tier, trainer: trainer)
+        var run = GauntletRun(tier: tier, trainer: trainer, using: &rng)
         var guardCounter = 0
         var result = GauntletSimResult()
 

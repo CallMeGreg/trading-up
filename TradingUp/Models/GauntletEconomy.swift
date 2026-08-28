@@ -37,6 +37,7 @@ enum GauntletTier: String, Codable, CaseIterable, Hashable {
 /// the seam the balance harness tunes against — see docs/DESIGN.md §14.2.
 struct RunMods: Codable, Hashable {
     var extraRipsPerRound = 0
+    var bonusRipChance = 0.0  // 0…1 chance of one *additional* rip, rolled per round
     var extraSlots = 0
     var extraCatalystSlots = 0
     var auraMult = 1.0        // global score multiplier
@@ -54,6 +55,7 @@ struct RunMods: Codable, Hashable {
     static func + (a: RunMods, b: RunMods) -> RunMods {
         var r = RunMods()
         r.extraRipsPerRound     = a.extraRipsPerRound + b.extraRipsPerRound
+        r.bonusRipChance        = a.bonusRipChance + b.bonusRipChance
         r.extraSlots            = a.extraSlots + b.extraSlots
         r.extraCatalystSlots    = a.extraCatalystSlots + b.extraCatalystSlots
         r.auraMult         = a.auraMult * b.auraMult
@@ -66,6 +68,61 @@ struct RunMods: Codable, Hashable {
         r.startingCashBonus     = a.startingCashBonus + b.startingCashBonus
         r.stipendMult           = a.stipendMult * b.stipendMult
         return r
+    }
+
+    /// Linearly interpolate between two bundles at `t` in 0…1 — the seam Trainer
+    /// levels scale along (`a` = level 1 / base, `b` = level 10 / ceiling). Rate and
+    /// probability fields (and the multipliers, by value) interpolate smoothly.
+    /// Integer fields step up only as a whole unit is *fully* reached, so a +1 delta
+    /// lands as an end-of-track capstone rather than a mid-level power spike — this
+    /// assumes those fields are non-decreasing with level, which the roster keeps.
+    static func lerp(_ a: RunMods, _ b: RunMods, _ t: Double) -> RunMods {
+        let t = min(max(t, 0), 1)
+        func d(_ x: Double, _ y: Double) -> Double { x + (y - x) * t }
+        func i(_ x: Int, _ y: Int) -> Int { x + Int((Double(y - x) * t + 1e-9).rounded(.down)) }
+        var r = RunMods()
+        r.extraRipsPerRound  = i(a.extraRipsPerRound, b.extraRipsPerRound)
+        r.bonusRipChance     = d(a.bonusRipChance, b.bonusRipChance)
+        r.extraSlots         = i(a.extraSlots, b.extraSlots)
+        r.extraCatalystSlots = i(a.extraCatalystSlots, b.extraCatalystSlots)
+        r.auraMult           = d(a.auraMult, b.auraMult)
+        r.evoLineBonusBonus  = d(a.evoLineBonusBonus, b.evoLineBonusBonus)
+        r.foilChanceBonus    = d(a.foilChanceBonus, b.foilChanceBonus)
+        r.ultraChanceBonus   = d(a.ultraChanceBonus, b.ultraChanceBonus)
+        r.sellbackBonus      = d(a.sellbackBonus, b.sellbackBonus)
+        r.gradeLuckBonus     = d(a.gradeLuckBonus, b.gradeLuckBonus)
+        r.gradeFeeMult       = d(a.gradeFeeMult, b.gradeFeeMult)
+        r.startingCashBonus  = d(a.startingCashBonus, b.startingCashBonus)
+        r.stipendMult        = d(a.stipendMult, b.stipendMult)
+        return r
+    }
+
+    /// A concise, mechanical description of what this bundle does, derived straight
+    /// from its fields so displayed text always matches the real effect. Shared by
+    /// Catalysts and (level-scaled) Trainers. Empty when the bundle is neutral.
+    var effectSummary: String {
+        func pct(_ v: Double) -> String { "\(Int((v * 100).rounded()))%" }
+        var parts: [String] = []
+        if extraRipsPerRound != 0 {
+            parts.append("+\(extraRipsPerRound) rip\(extraRipsPerRound == 1 ? "" : "s") every round")
+        }
+        if bonusRipChance != 0 { parts.append("\(pct(bonusRipChance)) chance of a bonus rip") }
+        if extraSlots != 0 {
+            parts.append("+\(extraSlots) showcase slot\(extraSlots == 1 ? "" : "s")")
+        }
+        if extraCatalystSlots != 0 {
+            parts.append("+\(extraCatalystSlots) catalyst slot\(extraCatalystSlots == 1 ? "" : "s")")
+        }
+        if foilChanceBonus != 0 { parts.append("+\(pct(foilChanceBonus)) foil chance") }
+        if ultraChanceBonus != 0 { parts.append("+\(pct(ultraChanceBonus)) ultra chance") }
+        if gradeLuckBonus != 0 { parts.append("+\(pct(gradeLuckBonus)) grading luck") }
+        if sellbackBonus != 0 { parts.append("+\(pct(sellbackBonus)) sell-back") }
+        if auraMult != 1 { parts.append("+\(pct(auraMult - 1)) Aura") }
+        if evoLineBonusBonus != 0 { parts.append("+\(pct(evoLineBonusBonus)) evolution bonus") }
+        if gradeFeeMult != 1 { parts.append("\(pct(gradeFeeMult))-cost grading") }
+        if stipendMult != 1 { parts.append("+\(pct(stipendMult - 1)) round payout") }
+        if startingCashBonus != 0 { parts.append("+" + String(format: "$%.0f", startingCashBonus) + " seed cash") }
+        return parts.joined(separator: " · ")
     }
 }
 

@@ -55,6 +55,108 @@ final class GauntletMetaTests: XCTestCase {
         XCTAssertGreaterThan(GauntletEconomy.clearXP(.medium), GauntletEconomy.clearXP(.easy))
     }
 
+    // MARK: Trainer level scaling (docs/DESIGN.md §14.3)
+
+    /// A freshly-unlocked Trainer plays at its shipped level-1 values, and levels
+    /// below 1 (how the harness constructs a roster Trainer) read as that same floor
+    /// — so scaling is a pure upgrade layered on top of the base advantage.
+    func testTrainerAdvantageStartsAtBaseline() {
+        for base in Trainer.roster {
+            var lvl1 = base; lvl1.level = 1
+            XCTAssertEqual(lvl1.activeMods, base.baseMods, "\(base.name) at level 1 should equal its base advantage")
+            var lvl0 = base; lvl0.level = 0
+            XCTAssertEqual(lvl0.activeMods, base.baseMods, "\(base.name) below level 1 clamps to the base advantage")
+        }
+    }
+
+    /// Scaling climbs monotonically and lands on the exact levers we tuned — a
+    /// likelihood or a rate, from a ~20% level-1 baseline to its full ceiling.
+    func testTrainerScalingClimbsToItsCeiling() {
+        let cap = GauntletEconomy.maxTrainerLevel
+
+        // Ripper: a per-round *chance* of a bonus rip, 0.12 → 0.60; the flat +1 stays.
+        let ripper = Trainer.byId("ripper")!
+        func ripChance(_ l: Int) -> Double { var t = ripper; t.level = l; return t.activeMods.bonusRipChance }
+        XCTAssertEqual(ripChance(1), 0.12, accuracy: 1e-9)
+        XCTAssertEqual(ripChance(cap), 0.60, accuracy: 1e-9)
+        XCTAssertGreaterThan(ripChance(6), ripChance(3))
+        XCTAssertEqual(ripper.baseMods.extraRipsPerRound, 1)
+        XCTAssertEqual({ var t = ripper; t.level = cap; return t.activeMods.extraRipsPerRound }(), 1)
+
+        // Farmer (id "appraiser"): global Aura multiplier, ×1.06 → ×1.30.
+        let appraiser = Trainer.byId("appraiser")!
+        func aura(_ l: Int) -> Double { var t = appraiser; t.level = l; return t.activeMods.auraMult }
+        XCTAssertEqual(aura(1), 1.06, accuracy: 1e-9)
+        XCTAssertEqual(aura(cap), 1.30, accuracy: 1e-9)
+        XCTAssertGreaterThan(aura(cap), aura(1))
+
+        // Grader: grade *luck* 0.09 → 0.45 and a fee that drops 0.86 → 0.3.
+        let grader = Trainer.byId("grader")!
+        func luck(_ l: Int) -> Double { var t = grader; t.level = l; return t.activeMods.gradeLuckBonus }
+        func fee(_ l: Int) -> Double { var t = grader; t.level = l; return t.activeMods.gradeFeeMult }
+        XCTAssertEqual(luck(1), 0.09, accuracy: 1e-9)
+        XCTAssertEqual(luck(cap), 0.45, accuracy: 1e-9)
+        XCTAssertEqual(fee(cap), 0.30, accuracy: 1e-9)
+        XCTAssertGreaterThan(luck(cap), luck(1))
+        XCTAssertLessThan(fee(cap), fee(1))
+
+        // Merchant: economy rates all grow toward their ceiling.
+        let merchant = Trainer.byId("merchant")!
+        var mMax = merchant; mMax.level = cap
+        XCTAssertEqual(mMax.activeMods.sellbackBonus, 0.16, accuracy: 1e-9)
+        XCTAssertEqual(mMax.activeMods.stipendMult, 1.60, accuracy: 1e-9)
+        XCTAssertEqual(mMax.activeMods.startingCashBonus, 50, accuracy: 1e-9)
+
+        // Curator: evolution-line bonus rate grows +0.12 → +0.60.
+        let curator = Trainer.byId("curator")!
+        func evo(_ l: Int) -> Double { var t = curator; t.level = l; return t.activeMods.evoLineBonusBonus }
+        XCTAssertEqual(evo(1), 0.12, accuracy: 1e-9)
+        XCTAssertEqual(evo(cap), 0.60, accuracy: 1e-9)
+        XCTAssertGreaterThan(evo(cap), evo(1))
+    }
+
+    /// Every specialist opens level 1 at `baselineFraction` (~20%) of its max
+    /// potential on the continuous levers — a reasonable baseline with real room to
+    /// grow — and reaches 100% at the cap. Integer identity floors are exempt (you
+    /// can't own a fifth of a Showcase slot).
+    func testEveryTrainerStartsAtItsBaselineFractionOfMax() {
+        let f = Trainer.baselineFraction
+        XCTAssertEqual(f, 0.20, accuracy: 1e-9)
+        for tr in Trainer.roster {
+            guard let maxM = tr.maxMods else { continue }
+            var lvl1 = tr; lvl1.level = 1
+            let a = lvl1.activeMods
+            func frac(_ name: String, _ v: Double, _ vmax: Double) {
+                XCTAssertEqual(v, vmax * f, accuracy: 1e-9,
+                               "\(tr.name) \(name) should open at \(Int(f * 100))% of its max")
+            }
+            frac("bonus-rip chance", a.bonusRipChance, maxM.bonusRipChance)
+            frac("evolution bonus", a.evoLineBonusBonus, maxM.evoLineBonusBonus)
+            frac("grade luck", a.gradeLuckBonus, maxM.gradeLuckBonus)
+            frac("sell-back", a.sellbackBonus, maxM.sellbackBonus)
+            frac("seed cash", a.startingCashBonus, maxM.startingCashBonus)
+            frac("Aura bonus", a.auraMult - 1, maxM.auraMult - 1)
+            frac("payout bonus", a.stipendMult - 1, maxM.stipendMult - 1)
+            frac("grade-fee cut", 1 - a.gradeFeeMult, 1 - maxM.gradeFeeMult)
+        }
+    }
+
+    /// The Curator's second Showcase slot is an end-of-track capstone — an integer
+    /// lever must not spike mid-track, so it appears only at the very cap.
+    func testCuratorSecondSlotIsACapstone() {
+        let curator = Trainer.byId("curator")!
+        func slots(_ l: Int) -> Int { var t = curator; t.level = l; return t.activeMods.extraSlots }
+        XCTAssertEqual(slots(1), 1)
+        XCTAssertEqual(slots(GauntletEconomy.maxTrainerLevel - 1), 1, "the second slot must not arrive before the cap")
+        XCTAssertEqual(slots(GauntletEconomy.maxTrainerLevel), 2)
+    }
+
+    /// The Rookie never scales — it stays the harness's neutral, no-edge baseline.
+    func testNeutralTrainerNeverScales() {
+        var maxed = Trainer.neutral; maxed.level = GauntletEconomy.maxTrainerLevel
+        XCTAssertEqual(maxed.activeMods, .none)
+    }
+
     // MARK: Progress — unlock ladder
 
     func testFreshProgressHasOnlyEasy() {
@@ -192,7 +294,7 @@ final class GauntletMetaTests: XCTestCase {
         // A single strong run trips several high-water-mark milestones at once.
         var r = GauntletRunReport()
         r.maxShowcase = 12         // Curator (≥ 12)
-        r.bestRoundScore = 500     // Appraiser (≥ 500)
+        r.bestRoundScore = 500     // Farmer (≥ 500)
         r.maxCashHeld = 250        // Merchant (≥ 250)
         let newly = Set(p.ingest(r))
         XCTAssertTrue(newly.isSuperset(of: ["curator", "appraiser", "merchant"]))

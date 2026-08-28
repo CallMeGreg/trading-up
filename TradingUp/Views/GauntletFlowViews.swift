@@ -100,62 +100,79 @@ private struct TrainerCard: View {
     let xpToNext: Int?
     let action: () -> Void
 
+    /// The advantage in force at this Trainer's *current* level, in mechanical terms
+    /// — so the card shows how levelling has strengthened it, not just the blurb.
+    private var effectLine: String {
+        var t = trainer; t.level = level
+        return t.effectSummary
+    }
+
     var body: some View {
         Button(action: action) {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack {
-                    Text(trainer.name)
-                        .font(.system(size: 19, weight: .heavy, design: .rounded))
-                        .foregroundStyle(unlocked ? .white : Palette.subtle)
-                    Spacer()
-                    if unlocked {
-                        LevelPill(level: level)
-                    } else {
-                        Image(systemName: "lock.fill")
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundStyle(Palette.subtle)
+            HStack(alignment: .top, spacing: 12) {
+                TrainerEmblem(trainer: trainer, unlocked: unlocked)
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        Text(trainer.name)
+                            .font(.system(size: 19, weight: .heavy, design: .rounded))
+                            .foregroundStyle(unlocked ? .white : Palette.subtle)
+                        Spacer()
+                        if unlocked {
+                            LevelPill(level: level)
+                        } else {
+                            Image(systemName: "lock.fill")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundStyle(Palette.subtle)
+                        }
                     }
-                }
-                Text(trainer.blurb)
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(Palette.subtle)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                if unlocked {
-                    if let xpToNext {
-                        let span = xp + xpToNext
-                        ProgressBar(value: Double(xp), total: Double(max(span, 1)),
-                                    tint: Color(hex: "b06cf7"), height: 6)
-                        Text("\(xp) / \(span) XP to next level")
-                            .font(.system(size: 10, weight: .semibold))
-                            .foregroundStyle(Palette.subtle)
-                    } else {
-                        // Maxed: a full gold bar and the cap shown where XP-to-next
-                        // normally lives. (req 3)
-                        ProgressBar(value: 1, total: 1,
-                                    tint: Color(hex: "ffd54a"), height: 6)
-                        Text("MAX LEVEL \(maxLevel) · \(xp) XP")
-                            .font(.system(size: 10, weight: .black))
-                            .foregroundStyle(Color(hex: "ffd54a"))
-                    }
-                } else if let u = trainer.unlock {
-                    Divider().overlay(Palette.stroke)
-                    HStack(spacing: 6) {
-                        Image(systemName: "target")
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundStyle(Color(hex: "ffd54a"))
-                        Text(u.summary)
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(.white.opacity(0.85))
+                    Text(trainer.blurb)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(Palette.subtle)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    if unlocked, !effectLine.isEmpty {
+                        Text(effectLine)
+                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                            .foregroundStyle(Color(hex: "b06cf7"))
                             .fixedSize(horizontal: false, vertical: true)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    if let p = unlockProgress {
-                        ProgressBar(value: Double(p.have), total: Double(max(p.need, 1)),
-                                    tint: Color(hex: "ffd54a"), height: 6)
-                        Text("\(p.have) / \(p.need) \(u.noun)")
-                            .font(.system(size: 10, weight: .semibold))
-                            .foregroundStyle(Palette.subtle)
+                    if unlocked {
+                        if let xpToNext {
+                            let span = xp + xpToNext
+                            ProgressBar(value: Double(xp), total: Double(max(span, 1)),
+                                        tint: Color(hex: "b06cf7"), height: 6)
+                            Text("\(xp) / \(span) XP to next level")
+                                .font(.system(size: 10, weight: .semibold))
+                                .foregroundStyle(Palette.subtle)
+                        } else {
+                            // Maxed: a full gold bar and the cap shown where XP-to-next
+                            // normally lives. (req 3)
+                            ProgressBar(value: 1, total: 1,
+                                        tint: Color(hex: "ffd54a"), height: 6)
+                            Text("MAX LEVEL \(maxLevel) · \(xp) XP")
+                                .font(.system(size: 10, weight: .black))
+                                .foregroundStyle(Color(hex: "ffd54a"))
+                        }
+                    } else if let u = trainer.unlock {
+                        Divider().overlay(Palette.stroke)
+                        HStack(spacing: 6) {
+                            Image(systemName: "target")
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundStyle(Color(hex: "ffd54a"))
+                            Text(u.summary)
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(.white.opacity(0.85))
+                                .fixedSize(horizontal: false, vertical: true)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        if let p = unlockProgress {
+                            ProgressBar(value: Double(p.have), total: Double(max(p.need, 1)),
+                                        tint: Color(hex: "ffd54a"), height: 6)
+                            Text("\(p.have) / \(p.need) \(u.noun)")
+                                .font(.system(size: 10, weight: .semibold))
+                                .foregroundStyle(Palette.subtle)
+                        }
                     }
                 }
             }
@@ -167,6 +184,34 @@ private struct TrainerCard: View {
         }
         .buttonStyle(.plain)
         .disabled(!unlocked)
+    }
+}
+
+/// A Trainer's signature emblem — a bespoke flat-vector badge rendered by
+/// tools/generate_trainer_art.py and shipped in Assets.xcassets/TrainerArt.
+/// Grayed and dimmed while the Trainer is still locked, matching the Gauntlet
+/// shop's "faded until you can afford it" treatment.
+private struct TrainerEmblem: View {
+    let trainer: Trainer
+    let unlocked: Bool
+
+    var body: some View {
+        Group {
+            if let art = UIImage(named: "trainer-\(trainer.id)") {
+                Image(uiImage: art).resizable().scaledToFit()
+            } else {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Palette.stroke.opacity(0.5))
+                    .overlay(
+                        Text(trainer.name.prefix(1))
+                            .font(.system(size: 22, weight: .black, design: .rounded))
+                            .foregroundStyle(.white))
+            }
+        }
+        .frame(width: 56, height: 56)
+        .saturation(unlocked ? 1 : 0.12)
+        .opacity(unlocked ? 1 : 0.5)
+        .accessibilityHidden(true)
     }
 }
 
