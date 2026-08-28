@@ -84,7 +84,14 @@ final class GauntletState {
         self.game = game
         self.store = store
         self.progress = store.load()
+        #if DEBUG
+        // A fixed seed pins the RNG for deterministic tests; the seeded
+        // initializer is DEBUG-only, so release builds always use system
+        // randomness (matching `GameState`).
         self.rng = seed.map { AppRNG(seed: $0) } ?? AppRNG()
+        #else
+        self.rng = AppRNG()
+        #endif
         // Show the how-to once, the first time Gauntlet is ever opened.
         self.phase = progress.hasSeenIntro ? .trainerSelect : .intro
     }
