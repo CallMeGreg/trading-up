@@ -74,14 +74,14 @@ extension Trainer {
                 blurb: "Sees value others miss. Everything scores a little higher.",
                 baseMods: { var m = RunMods.none; m.appraisalMult = 1.10; return m }(),
                 unlock: TrainerUnlock(stat: GauntletStat.bestRoundScore, threshold: 500,
-                                      summary: "Reach a round score of 500.",
-                                      noun: "best round score")),
+                                      summary: "Reach a round Aura of 500.",
+                                      noun: "best round Aura")),
 
         Trainer(id: "grader", name: "Grader",
                 blurb: "Steady hands at the slab. Cheaper, luckier grading.",
                 baseMods: { var m = RunMods.none; m.gradeFeeMult = 0.5; m.gradeLuckBonus = 0.12; return m }(),
-                unlock: TrainerUnlock(stat: GauntletStat.cardsGraded, threshold: 40,
-                                      summary: "Grade 40 cards across your Gauntlet runs.",
+                unlock: TrainerUnlock(stat: GauntletStat.cardsGraded, threshold: 100,
+                                      summary: "Grade 100 cards across your Gauntlet runs.",
                                       noun: "cards graded")),
 
         Trainer(id: "merchant", name: "Merchant",

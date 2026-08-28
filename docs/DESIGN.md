@@ -443,7 +443,8 @@ Same DNA as Classic, roguelite pacing.
 ### 14.1 The run: rounds, rips, a rising appraisal
 
 A run is a sequence of **rounds**. Each round sets a **Target Appraisal** — a collection
-value you must reach — and gives you a fixed number of **rips** (pack opens) to reach it.
+value you must reach, surfaced in-game as **Aura** — and gives you a fixed number of
+**rips** (pack opens) to reach it.
 Clear it and you advance through a **shop** to a higher target; miss it and the run ends.
 The Showcase (the cards you keep) **carries across rounds and compounds**, so it's an
 engine you grow, not a fresh hand each round. It's a **per-run** construct — like a Classic
@@ -534,8 +535,8 @@ the lane it unlocks. The shipped roster (`Models/Trainer.swift`):
 | **Rookie** | — (neutral) | No edge — the harness's proof the mode is winnable on skill alone | Free starter |
 | **Ripper** | Tempo | +1 rip every round | Rip **100** packs across runs |
 | **Curator** | Build width | +1 Showcase slot, +0.20 evolution-line bonus | Build a **12-card** Showcase in one run |
-| **Appraiser** | Value | ×1.10 appraisal on everything | Reach a round score of **500** |
-| **Grader** | Grading | ½ grade fee, +0.12 grade luck | Grade **40** cards across runs |
+| **Appraiser** | Value | ×1.10 appraisal on everything | Reach a round Aura of **500** |
+| **Grader** | Grading | ½ grade fee, +0.12 grade luck | Grade **100** cards across runs |
 | **Merchant** | Economy | +0.08 sell-back, ×1.25 payout, +$20 seed cash | Hold **$250** cash at once in a run |
 
 Locked cards show the requirement and a live progress bar (e.g. "60 / 100 packs ripped"),

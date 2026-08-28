@@ -273,7 +273,7 @@ private struct PackTile: View {
                 ZStack {
                     Circle().fill(.black.opacity(0.55))
                         .frame(width: packWidth * 0.5, height: packWidth * 0.5)
-                    Image(systemName: affordable ? "lock.open.fill" : "lock.fill")
+                    Image(systemName: "lock.fill")
                         .font(.system(size: packWidth * 0.24, weight: .bold))
                         .foregroundStyle(.white.opacity(0.92))
                 }
@@ -335,13 +335,10 @@ private struct HUDPanel: View {
                 ProgressBar(value: run.showcaseAppraisal, total: run.target,
                             tint: run.showcaseAppraisal >= run.target ? Palette.money : Color(hex: "b06cf7"),
                             height: 10)
-                HStack {
-                    Text("Score \(fmt(run.showcaseAppraisal))")
-                        .foregroundStyle(run.showcaseAppraisal >= run.target ? Palette.money : Palette.text)
-                    Spacer()
-                    Text("Target \(fmt(run.target))").foregroundStyle(Palette.subtle)
-                }
-                .font(.system(size: 12, weight: .bold))
+                Text("\(fmt(run.showcaseAppraisal)) / \(fmt(run.target)) Aura")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(run.showcaseAppraisal >= run.target ? Palette.money : Palette.text)
+                    .frame(maxWidth: .infinity, alignment: .center)
             }
         }
         .panel()
@@ -392,7 +389,7 @@ private struct PullRow: View {
                         .font(.system(size: 13, weight: .heavy, design: .rounded))
                         .foregroundStyle(Palette.money)
                 }
-                Text("+\(fmt(max(0, run.marginalAppraisal(of: inst)))) score if kept")
+                Text("+\(fmt(max(0, run.marginalAppraisal(of: inst)))) Aura if kept")
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(Palette.subtle)
                 HStack(spacing: 8) {
@@ -481,7 +478,7 @@ private struct ShowcasePanel: View {
         VStack(alignment: .leading, spacing: 10) {
             SectionTitle(text: "\(titlePrefix) \(run.showcase.count)/\(run.effectiveSlots)")
             if run.showcase.isEmpty {
-                Text("Rip a pack, then keep cards here to build your appraisal. Same-element cards score higher together.")
+                Text("Rip packs and grow your Showcase to meet the round's goal.")
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(Palette.subtle)
                     .fixedSize(horizontal: false, vertical: true)
@@ -706,6 +703,10 @@ private struct ShowcaseCardDetail: View {
 struct ShopScreen: View {
     let state: GauntletState
 
+    /// Element sets still locked this run — offered for purchase in the shop so
+    /// they can be opened between rounds as well as mid-round on the rail. (req 10)
+    private var lockedPacks: [Int] { state.packTiers.filter { !state.isPackUnlocked($0) } }
+
     var body: some View {
         if let run = state.run {
             VStack(spacing: 14) {
@@ -719,17 +720,31 @@ struct ShopScreen: View {
                                 cost: run.nextSlotCost, affordable: run.cash >= run.nextSlotCost) {
                             Haptics.play(.light); state.buySlot()
                         }
-                        ShopRow(icon: "bolt.badge.plus",
+                        ShopRow(icon: "bolt.circle.fill",
                                 title: "Add Catalyst Slot",
                                 subtitle: "Now \(run.effectiveCatalystSlots) → \(run.effectiveCatalystSlots + 1)",
                                 cost: run.nextCatalystSlotCost, affordable: run.cash >= run.nextCatalystSlotCost) {
                             Haptics.play(.light); state.buyCatalystSlot()
                         }
+                        if !lockedPacks.isEmpty {
+                            SectionTitle(text: "Unlock packs")
+                                .padding(.top, 4)
+                        }
+                        ForEach(lockedPacks, id: \.self) { set in
+                            if let cost = state.packUnlockCost(set) {
+                                ShopRow(icon: "lock.fill",
+                                        title: "Unlock \(CardDatabase.setName(set)) Packs",
+                                        subtitle: "Adds this set to your pack rail",
+                                        cost: cost, affordable: state.canUnlockPack(set)) {
+                                    Haptics.play(.light); state.unlockPack(set)
+                                }
+                            }
+                        }
                     }
                 }
 
                 BigButton(title: "Start Round \(run.round)",
-                          subtitle: "Target \(fmt(run.target))",
+                          subtitle: "Goal \(fmt(run.target)) Aura",
                           systemImage: "play.fill", tint: GauntletTheme.tint) {
                     Haptics.play(.medium); state.continueFromShop()
                 }
@@ -1046,20 +1061,16 @@ struct GauntletRevealView: View {
         VStack(spacing: 0) {
             ScrollView {
                 VStack(spacing: 14) {
-                    Text("Pack Opened")
+                    Text("Your Showcase")
                         .font(.system(size: 22, weight: .black, design: .rounded))
                         .foregroundStyle(.white)
                         .padding(.top, 16)
 
                     if let run = state.run {
-                        if resolved {
-                            Text("Pull resolved — here's your showcase.")
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundStyle(Palette.subtle)
-                        } else {
+                        if !resolved {
                             PullPanel(state: state, run: run) { card in swapCandidate = card }
                         }
-                        ShowcasePanel(run: run, interactive: false, titlePrefix: "Your Showcase") { _ in }
+                        ShowcasePanel(run: run, interactive: false, titlePrefix: "Showcase") { _ in }
                         if !run.attunedCatalysts.isEmpty { AttunedPanel(run: run) }
                     }
                 }

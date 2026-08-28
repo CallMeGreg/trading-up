@@ -165,6 +165,7 @@ final class GauntletState {
         pendingCatalyst = nil
         revealActive = false
         celebratedRound = 0
+        confettiBurst = 0
         lastOutcome = nil
         rewardOptions = []
         lastClear = nil
@@ -366,6 +367,9 @@ final class GauntletState {
     /// once — banking the round's rips (req 5/6).
     func continueFromShop() {
         guard run != nil else { return }
+        // Clear any lingering win-confetti so it never re-fires when the next
+        // round's run screen (or its first pack reveal) mounts. (req 13)
+        confettiBurst = 0
         phase = .ripping
         evaluateRoundProgress()
     }

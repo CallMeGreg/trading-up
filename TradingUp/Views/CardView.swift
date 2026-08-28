@@ -132,7 +132,7 @@ struct CardView: View {
     private var metaRow: some View {
         HStack {
             HStack(spacing: 4 * s) {
-                Circle().fill(card.rarity.gemGradient).frame(width: 9 * s, height: 9 * s)
+                Circle().fill(Element.theme(forSet: card.set).badgeTint).frame(width: 9 * s, height: 9 * s)
                 Text(CardDatabase.setName(card.set))
                     .font(.system(size: 10 * s, weight: .semibold))
                     .foregroundStyle(Palette.subtle)

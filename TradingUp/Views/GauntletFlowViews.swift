@@ -47,6 +47,13 @@ private func rewardBlurb(for tier: GauntletTier) -> String {
 struct TrainerSelectScreen: View {
     let state: GauntletState
 
+    /// Unlocked Trainers first (in roster order), then locked ones — so the
+    /// playable roster always sits up top. (req 12)
+    private var orderedTrainers: [Trainer] {
+        state.trainers.filter { state.isTrainerUnlocked($0) }
+            + state.trainers.filter { !state.isTrainerUnlocked($0) }
+    }
+
     var body: some View {
         VStack(spacing: 16) {
             ZStack {
@@ -65,7 +72,7 @@ struct TrainerSelectScreen: View {
             }
             ScrollView {
                 VStack(spacing: 12) {
-                    ForEach(state.trainers) { trainer in
+                    ForEach(orderedTrainers) { trainer in
                         TrainerCard(
                             trainer: trainer,
                             unlocked: state.isTrainerUnlocked(trainer),
@@ -119,7 +126,7 @@ private struct TrainerCard: View {
                         let span = xp + xpToNext
                         ProgressBar(value: Double(xp), total: Double(max(span, 1)),
                                     tint: Color(hex: "b06cf7"), height: 6)
-                        Text("\(xp) XP · \(xpToNext) to next level")
+                        Text("\(xp) / \(span) XP to next level")
                             .font(.system(size: 10, weight: .semibold))
                             .foregroundStyle(Palette.subtle)
                     } else {
@@ -411,20 +418,20 @@ struct IntroScreen: View {
                 VStack(spacing: 10) {
                     IntroRow(icon: "target", tint: Color(hex: "ff8ad6"),
                              title: "Hit the round's bar",
-                             detail: "Clear each round's target appraisal before your rips run out. Miss it and the run ends.")
+                             detail: "Clear each round's target Aura before your rips run out. Miss it and the run ends.")
                     IntroRow(icon: "square.stack.3d.up.fill", tint: Color(hex: "6d5cf7"),
-                             title: "Score & evolutions",
-                             detail: "Showcases score on value, foils, and grades — complete an evolution line to boost its value.")
+                             title: "Aura & evolutions",
+                             detail: "Your showcase scores on value, foils, and grades — complete an evolution line to boost its value.")
                     IntroRow(icon: "person.2.fill", tint: Color(hex: "b06cf7"),
                              title: "Trainers",
-                             detail: "Pick a Trainer for a run-long perk; unlock and level more by hitting milestones.")
-                    IntroRow(icon: "bolt.circle.fill", tint: Color(hex: "ffd54a"),
+                             detail: "Each Trainer has their own perk; level up and unlock more Trainers by hitting milestones.")
+                    IntroRow(icon: "bolt.circle.fill", tint: Color(hex: "ff9500"),
                              title: "Catalysts",
                              detail: "Some packs offer a Catalyst — attune it to buff the rest of your run.")
                     IntroRow(icon: "cart.fill", tint: Color(hex: "5be08a"),
                              title: "The shop, between rounds",
                              detail: "Clear a round to open the shop and buy extra Showcase and Catalyst slots.")
-                    IntroRow(icon: "trophy.fill", tint: Palette.money,
+                    IntroRow(icon: "trophy.fill", tint: Color(hex: "ffd54a"),
                              title: "Prizes",
                              detail: "Win a run to earn a Foil Extended Art card for your Binder.")
                 }

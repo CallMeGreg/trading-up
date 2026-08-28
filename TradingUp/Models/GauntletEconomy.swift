@@ -104,8 +104,9 @@ enum GauntletEconomy {
         }
     }
 
-    /// Attunement capacity for Catalysts at the start of a run.
-    static let baseCatalystSlots = 3
+    /// Attunement capacity for Catalysts at the start of a run. Extra slots are
+    /// bought in the shop or granted by Trainer mods. (req 4)
+    static let baseCatalystSlots = 1
 
     /// The Hard finale is a boss round: fewer normal rips but a spiked target.
     static func isBossRound(_ tier: GauntletTier, round: Int) -> Bool {
