@@ -34,7 +34,7 @@ extension Catalyst {
                  saleValue: 18),
 
         Catalyst(id: "bloom", element: .grass, name: "Bloom",
-                 blurb: "Everything reads richer. A global appraisal lift.",
+                 blurb: "Everything reads richer. A global Aura lift.",
                  mods: { var m = RunMods.none; m.appraisalMult = 1.12; return m }(),
                  saleValue: 20),
 
@@ -74,7 +74,7 @@ extension Catalyst {
         if mods.ultraChanceBonus != 0 { parts.append("+\(pct(mods.ultraChanceBonus)) ultra chance") }
         if mods.gradeLuckBonus != 0 { parts.append("+\(pct(mods.gradeLuckBonus)) grading luck") }
         if mods.sellbackBonus != 0 { parts.append("+\(pct(mods.sellbackBonus)) sell-back") }
-        if mods.appraisalMult != 1 { parts.append("+\(pct(mods.appraisalMult - 1)) appraisal") }
+        if mods.appraisalMult != 1 { parts.append("+\(pct(mods.appraisalMult - 1)) Aura") }
         if mods.evoLineBonusBonus != 0 { parts.append("+\(pct(mods.evoLineBonusBonus)) evolution bonus") }
         if mods.stipendMult != 1 { parts.append("+\(pct(mods.stipendMult - 1)) round payout") }
         if mods.startingCashBonus != 0 { parts.append("+" + String(format: "$%.0f", mods.startingCashBonus) + " seed cash") }
