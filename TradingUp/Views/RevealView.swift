@@ -13,6 +13,10 @@ struct RevealView: View {
     @State private var packIndex = 0
     /// The pack currently being revealed. For a box, the next pack's result.
     @State private var current: OpenResult? = nil
+    /// A short-lived "Evolution Complete!" toast, shown on the exact card that
+    /// finishes a line during the reveal. The permanent banner still lives on the
+    /// summary; this is just the in-the-moment celebration (req 2).
+    @State private var evoPopup: BonusEvent? = nil
 
     private enum Phase: Equatable {
         case sealed
@@ -56,6 +60,47 @@ struct RevealView: View {
                 }
             }
         }
+        .overlay(alignment: .top) {
+            if let evoPopup {
+                EvolutionPopupBanner(bonus: evoPopup)
+                    .padding(.horizontal, 20)
+                    .padding(.top, 10)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
+        }
+        .animation(.spring(response: 0.45, dampingFraction: 0.82), value: evoPopup?.id)
+        .onChange(of: phase) { _, newPhase in updateEvoPopup(for: newPhase) }
+        // Auto-dismiss the toast a beat after it appears; advancing swaps the id
+        // and cancels this early, so it never lingers onto the next card.
+        .task(id: evoPopup?.id) {
+            guard evoPopup != nil else { return }
+            try? await Task.sleep(nanoseconds: 2_400_000_000)
+            withAnimation(.easeOut(duration: 0.3)) { evoPopup = nil }
+        }
+    }
+
+    /// Show the evolution toast only while the card that completes a line is the
+    /// one on screen; clear it for every other card and non-revealing phase.
+    private func updateEvoPopup(for phase: Phase) {
+        guard case .revealing(let i) = phase, let result = current,
+              let bonus = evoCompletion(at: i, in: result) else {
+            if evoPopup != nil { evoPopup = nil }
+            return
+        }
+        evoPopup = bonus
+    }
+
+    /// The evolution bonus (if any) that this pack finishes on the card at
+    /// `index` — i.e. the last of the line's cards to appear in the pulled order.
+    private func evoCompletion(at index: Int, in result: OpenResult) -> BonusEvent? {
+        for bonus in result.bonuses where bonus.kind == .evolution {
+            guard let lineId = bonus.lineId,
+                  let lineCards = CardDatabase.evolutionLines[lineId] else { continue }
+            let lineIds = Set(lineCards.map(\.id))
+            let idxs = result.pulled.indices.filter { lineIds.contains(result.pulled[$0].cardId) }
+            if let last = idxs.max(), last == index { return bonus }
+        }
+        return nil
     }
 
     // MARK: Sealed
@@ -622,6 +667,50 @@ struct BonusBanner: View {
         .padding(12)
         .background(RoundedRectangle(cornerRadius: 14).fill(Palette.money.opacity(0.12)))
         .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Palette.money.opacity(0.4), lineWidth: 1))
+    }
+}
+
+/// The transient "Evolution Complete!" toast that drops in on the card that
+/// finishes a line mid-reveal. Deliberately louder than `BonusBanner` (a floating
+/// card with a glow) since it's on screen only for a beat.
+struct EvolutionPopupBanner: View {
+    let bonus: BonusEvent
+
+    /// The line names without the "Evolution complete: " prefix baked into `title`.
+    private var lineNames: String {
+        bonus.title.replacingOccurrences(of: "Evolution complete: ", with: "")
+    }
+
+    var body: some View {
+        HStack(spacing: 11) {
+            Text("🧬").font(.system(size: 24))
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Evolution Complete!")
+                    .font(.system(size: 14, weight: .black, design: .rounded))
+                    .foregroundStyle(.white)
+                Text(lineNames)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.85))
+                    .lineLimit(1).minimumScaleFactor(0.7)
+            }
+            Spacer(minLength: 6)
+            Text("+\(bonus.amount.money)")
+                .font(.system(size: 16, weight: .heavy, design: .rounded))
+                .foregroundStyle(Palette.money)
+        }
+        .padding(.horizontal, 15).padding(.vertical, 12)
+        .frame(maxWidth: .infinity)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Palette.bg1.opacity(0.97))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .strokeBorder(Palette.money.opacity(0.6), lineWidth: 1.5)
+        )
+        .shadow(color: Palette.money.opacity(0.35), radius: 14, y: 6)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Evolution complete. \(lineNames). Bonus \(bonus.amount.money)")
     }
 }
 

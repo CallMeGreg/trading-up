@@ -3,6 +3,9 @@ import SwiftUI
 struct ShopView: View {
     @Environment(GameState.self) var game: GameState
     @Environment(PurchaseStore.self) private var purchases: PurchaseStore
+    /// Sends the player back to the main menu. Provided by `ClassicModeView`; the
+    /// Shop's wallet header hosts the only home button in Classic mode.
+    var onHome: (() -> Void)? = nil
     @State private var pending: PendingOpen?
     /// Collection counts captured at purchase time. While a reveal is on screen
     /// the shop shows these frozen values so the fullScreenCover sliding in/out
@@ -14,7 +17,7 @@ struct ShopView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                WalletHeader(freeze: freeze)
+                WalletHeader(freeze: freeze, onHome: onHome)
                 ScrollView {
                     LazyVStack(spacing: 12) {
                         ForEach(1...CardDatabase.setCount, id: \.self) { set in
@@ -137,61 +140,77 @@ struct ShopFreeze {
 struct WalletHeader: View {
     @Environment(GameState.self) var game: GameState
     var freeze: ShopFreeze? = nil
+    /// When set, a home button is shown at the leading edge that returns to the
+    /// main menu. The wallet rows shift right to make room for it.
+    var onHome: (() -> Void)? = nil
 
     private var cash: Double { freeze?.cash ?? game.cash }
     private var netWorth: Double { freeze?.netWorth ?? game.netWorth }
     private var uniqueCount: Int { freeze?.uniqueCount ?? game.uniqueCount }
 
     var body: some View {
-        VStack(spacing: 9) {
-            HStack(alignment: .center, spacing: 10) {
-                HStack(spacing: 8) {
-                    Text("$")
-                        .font(.system(size: 15, weight: .black, design: .rounded))
-                        .foregroundStyle(Color(hex: "06301b"))
-                        .frame(width: 30, height: 30)
-                        .background(
-                            Circle().fill(
-                                RadialGradient(colors: [Color(hex: "b8ffd6"), Palette.money, Color(hex: "2c9c5c")],
-                                               center: UnitPoint(x: 0.35, y: 0.3), startRadius: 1, endRadius: 26)
-                            )
-                        )
-                        .shadow(color: Palette.money.opacity(0.35), radius: 3, y: 2)
-                    Text(cash.money)
-                        .font(.system(size: 26, weight: .black, design: .rounded))
-                        .foregroundStyle(Palette.money)
-                        .contentTransition(.numericText())
-                        .lineLimit(1).minimumScaleFactor(0.6)
-                }
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel("Cash \(cash.money)")
-
-                Spacer(minLength: 0)
-
-                VStack(alignment: .trailing, spacing: 1) {
-                    Text("NET WORTH")
-                        .font(.system(size: 10, weight: .heavy)).tracking(0.8)
-                        .foregroundStyle(Palette.subtle)
-                    Text(netWorth.moneyShort)
-                        .font(.system(size: 15, weight: .bold, design: .rounded))
+        HStack(spacing: 12) {
+            if let onHome {
+                Button(action: onHome) {
+                    Image(systemName: "house.fill")
+                        .font(.system(size: 16, weight: .bold))
                         .foregroundStyle(Palette.text)
+                        .frame(width: 38, height: 38)
+                        .background(Circle().fill(Palette.panelHi))
+                        .overlay(Circle().stroke(.white.opacity(0.08), lineWidth: 1))
+                }
+                .accessibilityLabel("Home")
+            }
+            VStack(spacing: 9) {
+                HStack(alignment: .center, spacing: 10) {
+                    HStack(spacing: 8) {
+                        Text("$")
+                            .font(.system(size: 15, weight: .black, design: .rounded))
+                            .foregroundStyle(Color(hex: "06301b"))
+                            .frame(width: 30, height: 30)
+                            .background(
+                                Circle().fill(
+                                    RadialGradient(colors: [Color(hex: "b8ffd6"), Palette.money, Color(hex: "2c9c5c")],
+                                                   center: UnitPoint(x: 0.35, y: 0.3), startRadius: 1, endRadius: 26)
+                                )
+                            )
+                            .shadow(color: Palette.money.opacity(0.35), radius: 3, y: 2)
+                        Text(cash.money)
+                            .font(.system(size: 26, weight: .black, design: .rounded))
+                            .foregroundStyle(Palette.money)
+                            .contentTransition(.numericText())
+                            .lineLimit(1).minimumScaleFactor(0.6)
+                    }
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("Cash \(cash.money)")
+
+                    Spacer(minLength: 0)
+
+                    VStack(alignment: .trailing, spacing: 1) {
+                        Text("NET WORTH")
+                            .font(.system(size: 10, weight: .heavy)).tracking(0.8)
+                            .foregroundStyle(Palette.subtle)
+                        Text(netWorth.moneyShort)
+                            .font(.system(size: 15, weight: .bold, design: .rounded))
+                            .foregroundStyle(Palette.text)
+                    }
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("Net worth \(netWorth.money)")
+                }
+
+                HStack(spacing: 8) {
+                    Text("BINDER")
+                        .font(.system(size: 11, weight: .bold)).tracking(0.3)
+                        .foregroundStyle(Palette.subtle)
+                    ProgressBar(value: Double(uniqueCount), total: Double(game.totalCards),
+                                tint: Palette.money, height: 6)
+                    Text("\(uniqueCount)/\(game.totalCards)")
+                        .font(.system(size: 11, weight: .bold, design: .monospaced))
+                        .foregroundStyle(Palette.subtle)
                 }
                 .accessibilityElement(children: .ignore)
-                .accessibilityLabel("Net worth \(netWorth.money)")
+                .accessibilityLabel("Collection \(uniqueCount) of \(game.totalCards)")
             }
-
-            HStack(spacing: 8) {
-                Text("BINDER")
-                    .font(.system(size: 11, weight: .bold)).tracking(0.3)
-                    .foregroundStyle(Palette.subtle)
-                ProgressBar(value: Double(uniqueCount), total: Double(game.totalCards),
-                            tint: Palette.money, height: 6)
-                Text("\(uniqueCount)/\(game.totalCards)")
-                    .font(.system(size: 11, weight: .bold, design: .monospaced))
-                    .foregroundStyle(Palette.subtle)
-            }
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel("Collection \(uniqueCount) of \(game.totalCards)")
         }
         .padding(.horizontal, 18)
         .padding(.top, 6)

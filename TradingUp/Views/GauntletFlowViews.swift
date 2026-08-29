@@ -103,10 +103,20 @@ private struct TrainerCard: View {
     let clearedTiers: Set<GauntletTier>
     let action: () -> Void
 
-    /// A locked *mystery* Trainer (Red) hides its name and skills behind "???"
-    /// until it's earned; ordinary locked specialists show theirs.
+    /// A locked *mystery* Trainer (Gary) hides its name behind "???" until it's
+    /// earned; ordinary locked specialists still show their name.
     private var concealed: Bool { !unlocked && trainer.mysteryUntilUnlocked }
+    /// Every locked Trainer hides its skills and blurb until unlocked; only the
+    /// name (for non-mystery) and the unlock requirement stay visible. (req 1)
+    private var statsHidden: Bool { !unlocked }
     private var accent: Color { trainerSignatureColor(trainer.id) }
+
+    /// The blurb slot: real flavour once unlocked, a teaser while locked.
+    private var descriptionText: String {
+        if concealed { return "A hidden challenger — earn the right to see them." }
+        if !unlocked { return "Unlock this Trainer to reveal their style and skills." }
+        return trainer.blurb
+    }
 
     var body: some View {
         Button(action: action) {
@@ -126,15 +136,13 @@ private struct TrainerCard: View {
                                 .foregroundStyle(Palette.subtle)
                         }
                     }
-                    Text(concealed
-                         ? "A hidden challenger — earn the right to see them."
-                         : trainer.blurb)
+                    Text(descriptionText)
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(Palette.subtle)
                         .fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity, alignment: .leading)
 
-                    SkillGraph(skills: trainer.skills, accent: accent, concealed: concealed)
+                    SkillGraph(skills: trainer.skills, accent: accent, concealed: statsHidden)
 
                     if concealed, let p = unlockProgress {
                         Divider().overlay(Palette.stroke)
@@ -161,7 +169,7 @@ private struct TrainerCard: View {
 
 /// The Madden-style five-skill dot ladder — one row per skill (icon, name, 1–5
 /// pips) in the Trainer's signature colour. Concealed rows hide the pip counts
-/// behind hollow dots for the mystery Trainer.
+/// behind hollow dots for any locked Trainer.
 private struct SkillGraph: View {
     let skills: TrainerSkills
     let accent: Color
@@ -404,6 +412,9 @@ struct ResultsScreen: View {
     let state: GauntletState
     let onExit: () -> Void
 
+    /// Rendered snapshot of the finished run + prize, shared as an image (req 7).
+    @State private var shareImage: Image?
+
     var body: some View {
         VStack(spacing: 20) {
             Spacer()
@@ -434,6 +445,7 @@ struct ResultsScreen: View {
             UnlockedTrainersBanner(trainers: state.lastUnlockedTrainers)
 
             Spacer()
+            shareButton
             BigButton(title: "Play Again", systemImage: "arrow.clockwise", tint: GauntletTheme.tint) {
                 Haptics.play(.light); state.finish()
             }
@@ -441,6 +453,41 @@ struct ResultsScreen: View {
                 .font(.system(size: 14, weight: .bold))
                 .foregroundStyle(Palette.subtle)
         }
+        .onAppear(perform: renderShareImage)
+    }
+
+    @ViewBuilder private var shareButton: some View {
+        let label = BigButtonLabel(title: "Share your run",
+                                   subtitle: "Trainer, showcase, catalysts & prize",
+                                   systemImage: "square.and.arrow.up",
+                                   tint: [Color(hex: "3b82f6"), Color(hex: "6d5cf7")])
+        if let shareImage {
+            ShareLink(item: shareImage,
+                      preview: SharePreview("Trading Up — Gauntlet", image: shareImage)) {
+                label
+            }
+            .buttonStyle(.plain)
+        } else {
+            label
+        }
+    }
+
+    /// Rasterize `GauntletShareCard` from the just-finished run so the share sheet
+    /// can attach it. No-op if the run is gone (defensive: results keep it around).
+    @MainActor private func renderShareImage() {
+        guard let run = state.run else { return }
+        let card = GauntletShareCard(
+            trainer: run.trainer,
+            tier: run.tier,
+            showcase: run.showcase,
+            attuned: run.attunedCatalysts,
+            showcaseAura: run.showcaseAura,
+            prize: state.lastPrize
+        )
+        let renderer = ImageRenderer(content: card)
+        renderer.scale = 3
+        guard let ui = renderer.uiImage else { return }
+        shareImage = Image(uiImage: ui)
     }
 }
 
@@ -450,6 +497,9 @@ struct LostScreen: View {
     let state: GauntletState
     let onExit: () -> Void
 
+    /// A stable, inspirational send-off, chosen once per appearance of this screen.
+    @State private var quote: String = GauntletQuotes.pool.randomElement() ?? ""
+
     var body: some View {
         VStack(spacing: 20) {
             Spacer()
@@ -458,12 +508,21 @@ struct LostScreen: View {
                 .foregroundStyle(Color(hex: "e0663b"))
             GauntletHeader(eyebrow: "Gauntlet", title: "Run Over")
             if let run = state.run {
-                Text("You reached round \(run.round) of \(run.roundsTotal), short of the bar. Every round is single-life in the Gauntlet.")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(Palette.subtle)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.horizontal, 8)
+                VStack(spacing: 12) {
+                    Text("You reached round \(run.round) of \(run.roundsTotal), short of the bar.")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(Palette.subtle)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal, 8)
+                    Text("“\(quote)”")
+                        .font(.system(size: 15, weight: .semibold, design: .rounded))
+                        .italic()
+                        .foregroundStyle(Color(hex: "ffd54a"))
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal, 20)
+                }
             }
             UnlockedTrainersBanner(trainers: state.lastUnlockedTrainers)
             Spacer()
@@ -475,6 +534,23 @@ struct LostScreen: View {
                 .foregroundStyle(Palette.subtle)
         }
     }
+}
+
+/// The pool of ten "keep going" send-offs shown on the Gauntlet loss screen. One
+/// is picked at random each time a run ends — a small nudge back to the rail.
+enum GauntletQuotes {
+    static let pool: [String] = [
+        "Every champion has a stack of runs that ended right here.",
+        "The next pack could be the one. Rip again.",
+        "A lost run is tuition — go spend what it taught you.",
+        "Grit beats luck when you come back for another round.",
+        "You found the bar. Next time, clear it.",
+        "Dust off the binder. The Gauntlet isn't done with you.",
+        "Comebacks are just runs that started with a loss.",
+        "Fortune favors the collector who shuffles up again.",
+        "Every great Showcase began with a run that fell short.",
+        "Setback today, Showcase tomorrow. Keep ripping.",
+    ]
 }
 
 /// Celebrates any Trainers a just-finished run unlocked (win or loss). Renders

@@ -26,7 +26,7 @@ struct GauntletProgress: Codable, Equatable {
     /// Trainer at Easy. See docs/DESIGN.md §14.5.
     private(set) var clearedTiersByTrainer: [String: Set<String>]
 
-    /// The specialist Trainers the player has earned. The "Rookie" (neutral) is
+    /// The specialist Trainers the player has earned. The starter Joe (neutral) is
     /// *always* available (enforced in `isTrainerUnlocked`) as the starter, so it
     /// need not be stored; every other Trainer is unlocked by a Gauntlet milestone
     /// (or, for the mystery Trainer, by beating Hard with all the rest).

@@ -29,16 +29,16 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TRAINERART = os.path.join(ROOT, "TradingUp", "Assets.xcassets", "TrainerArt")
 MOCK = os.path.join(ROOT, "docs", "mockups", "trainers")
 
-# id is the persistence + asset key (Farmer keeps the legacy id "appraiser").
+# id is the persistence + asset key (Fred keeps the legacy id "appraiser").
 # (id, display name, role tag, signature colour, deep shade)
 TRAINERS = [
-    ("ripper",    "Ripper",   "Tempo",         "#ff6b9d", "#7a1f45"),
-    ("curator",   "Curator",  "Build width",   "#9b6cf7", "#3d2778"),
-    ("appraiser", "Farmer",   "Value",         "#74d680", "#1f6b34"),
-    ("grader",    "Grader",   "Grading",       "#ffd54a", "#7a5a10"),
-    ("merchant",  "Merchant", "Economy",       "#ff9f43", "#7a441a"),
-    ("neutral",   "Rookie",   "Neutral start", "#8a94a6", "#3a4150"),
-    ("red",       "Red",      "???",           "#ff3b3b", "#5a1417"),
+    ("ripper",    "Jack",     "Tempo",         "#ff6b9d", "#7a1f45"),
+    ("curator",   "Curtis",   "Build width",   "#9b6cf7", "#3d2778"),
+    ("appraiser", "Fred",     "Value",         "#74d680", "#1f6b34"),
+    ("grader",    "Lucy",     "Grading",       "#ffd54a", "#7a5a10"),
+    ("merchant",  "Sally",    "Economy",       "#ff9f43", "#7a441a"),
+    ("neutral",   "Joe",      "Neutral start", "#8a94a6", "#3a4150"),
+    ("red",       "Gary",     "???",           "#ff3b3b", "#5a1417"),
 ]
 
 

@@ -40,15 +40,21 @@ struct GauntletView: View {
     }
 
     private var closeButton: some View {
-        Button { dismiss() } label: {
-            Image(systemName: "xmark.circle.fill")
-                .font(.system(size: 26))
-                .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(Palette.subtle)
+        Button {
+            Haptics.play(.light)
+            state?.persistForExit()   // resume this run next time (req 11)
+            dismiss()
+        } label: {
+            Image(systemName: "house.fill")
+                .font(.system(size: 18, weight: .bold))
+                .foregroundStyle(Palette.text)
+                .frame(width: 38, height: 38)
+                .background(Circle().fill(.black.opacity(0.30)))
+                .overlay(Circle().strokeBorder(.white.opacity(0.12), lineWidth: 1))
         }
         .buttonStyle(.plain)
-        .padding(12)
-        .accessibilityLabel("Close Gauntlet")
+        .padding(10)
+        .accessibilityLabel("Home")
     }
 }
 

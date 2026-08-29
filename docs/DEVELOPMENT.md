@@ -62,6 +62,7 @@ TradingUp/
     GauntletProgressStore.swift  Versioned store for Gauntlet progress, in its own file separate from the run save
     GauntletReward.swift     Win payout: the choose-1-of-3 Foil Extended Art reward (rarity, promotion, consolation)
     GauntletState.swift      @Observable driver: runs a GauntletRun, banks progress, routes the win reward into the Binder
+    GauntletRunStore.swift   Versioned store for an in-progress run so leaving mid-run saves it to resume (separate from progress + Binder)
     FeatureFlags.swift       Build-time switches (see "Feature flags" below)
   Generated/
     CardData.swift           The 250 cards (auto-generated — do not edit by hand)
@@ -303,8 +304,9 @@ python3 tools/generate_sfx.py                # 7 .wav files -> TradingUp/Audio/S
 ```
 
 The file‑system‑synchronized Xcode target picks the `.wav` files up automatically.
-`SoundManager` preloads them at launch and honors the in‑app mute toggle (Stats →
-Settings). The reveal fires each sound at its moment in
+`SoundManager` preloads them at launch and honors the in‑app mute toggle (the
+home‑screen **gear → Settings** sheet, which also carries the **Haptics** toggle).
+The reveal fires each sound at its moment in
 `TradingUp/Views/RevealAnimation.swift` (`RevealingCardView.run` for the flip/foil/
 rare/ultra stings, `SealedPackView.open` for the tear), so no extra wiring is
 needed after regenerating.

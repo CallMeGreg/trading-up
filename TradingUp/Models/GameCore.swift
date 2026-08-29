@@ -168,6 +168,9 @@ struct BonusEvent: Identifiable {
     let kind: BonusKind
     let title: String
     let amount: Double
+    /// For evolution bonuses, the completed line's id, so the reveal can pop a
+    /// temporary banner on the exact card that finishes the line. `nil` for sets.
+    var lineId: String? = nil
 }
 
 struct OpenResult {
@@ -577,7 +580,7 @@ struct GameCore: Codable {
                 cash += amount
                 stats.moneyEarned += amount
                 let names = cards.map { $0.name }.joined(separator: " → ")
-                events.append(BonusEvent(kind: .evolution, title: "Evolution complete: \(names)", amount: amount))
+                events.append(BonusEvent(kind: .evolution, title: "Evolution complete: \(names)", amount: amount, lineId: lineId))
             }
         }
 

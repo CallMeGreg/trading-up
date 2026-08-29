@@ -129,7 +129,7 @@ extension Trainer {
     /// uses it to prove the mode is winnable on pure skill, so real Trainers stay
     /// gravy rather than gates.
     static let neutral = Trainer(
-        id: "neutral", name: "Rookie",
+        id: "neutral", name: "Joe",
         blurb: "No specialty and no weakness — a balanced three across the board.",
         skills: .neutral)
 
@@ -138,7 +138,7 @@ extension Trainer {
     /// everywhere else — a glass cannon. Kept out of `roster` iteration order below
     /// only by convention; it *is* included so it renders (concealed) and unlocks.
     static let red = Trainer(
-        id: "red", name: "Red",
+        id: "red", name: "Gary",
         blurb: "A silent challenger. Overwhelming Energy and Aura — and nothing else.",
         skills: TrainerSkills(energy: 5, aura: 5, selling: 1, grading: 1, inventory: 1),
         mysteryUntilUnlocked: true)
@@ -151,37 +151,37 @@ extension Trainer {
     /// elsewhere. The Rookie is the free starter; these are earned. The mystery
     /// Red sits last and stays concealed until it's earned.
     static let roster: [Trainer] = [
-        Trainer(id: "ripper", name: "Ripper",
+        Trainer(id: "ripper", name: "Jack",
                 blurb: "Lives for the tear — boundless Energy, but no patience for the fine print.",
                 skills: TrainerSkills(energy: 5, aura: 2, selling: 2, grading: 1, inventory: 4),
                 unlock: TrainerUnlock(stat: GauntletStat.packsRipped, threshold: 100,
                                       summary: "Rip 100 packs across your Gauntlet runs.",
                                       noun: "packs ripped")),
 
-        Trainer(id: "curator", name: "Curator",
+        Trainer(id: "curator", name: "Curtis",
                 blurb: "Builds wide and deep — an unmatched Showcase and a sharp eye for Aura.",
                 skills: TrainerSkills(energy: 2, aura: 4, selling: 1, grading: 3, inventory: 5),
                 unlock: TrainerUnlock(stat: GauntletStat.maxShowcase, threshold: 12,
                                       summary: "Build a Showcase of 12 cards in a single run.",
                                       noun: "widest Showcase")),
 
-        // "Farmer" is the display name; the id stays "appraiser" so existing
+        // "Fred" is the display name; the id stays "appraiser" so existing
         // Trainer progress saves (keyed by id in GauntletProgress) survive intact.
-        Trainer(id: "appraiser", name: "Farmer",
+        Trainer(id: "appraiser", name: "Fred",
                 blurb: "Grows a richer harvest — everything radiates a little more Aura.",
                 skills: TrainerSkills(energy: 2, aura: 5, selling: 2, grading: 2, inventory: 3),
                 unlock: TrainerUnlock(stat: GauntletStat.bestRoundScore, threshold: 500,
                                       summary: "Reach a round Aura of 500.",
                                       noun: "best round Aura")),
 
-        Trainer(id: "grader", name: "Grader",
+        Trainer(id: "grader", name: "Lucy",
                 blurb: "Steady hands at the slab — grading is an art she has mastered.",
                 skills: TrainerSkills(energy: 2, aura: 3, selling: 2, grading: 5, inventory: 3),
                 unlock: TrainerUnlock(stat: GauntletStat.cardsGraded, threshold: 100,
                                       summary: "Grade 100 cards across your Gauntlet runs.",
                                       noun: "cards graded")),
 
-        Trainer(id: "merchant", name: "Merchant",
+        Trainer(id: "merchant", name: "Sally",
                 blurb: "Works the floor — nobody turns a card into cash faster.",
                 skills: TrainerSkills(energy: 3, aura: 2, selling: 5, grading: 2, inventory: 3),
                 unlock: TrainerUnlock(stat: GauntletStat.maxCashHeld, threshold: 250,
