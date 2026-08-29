@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Trading Up — Stage pips in the card header</title>
+  <link rel="stylesheet" href="evo.css" />
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <span class="brand-mark">TU</span>
+      <div>
+        <div class="brand-title">Trading Up</div>
+        <div class="brand-sub">Evolution series · stage pips in the card header</div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section class="intro">
+    <h1>Stage pips in the card header.</h1>
+    <p>
+      Put the situational pips where the <code>Fire</code> element label sits, top‑right of the card.
+      One pip per stage — <b>solid</b> for stages you already own, <b>lit</b> for the card in
+      your hand this pull, <b>hollow</b> for the ones still missing. The length of the little track tells
+      you at a glance whether you’re holding a single, a pair, or a full three‑stage line, and the lit pip
+      shows where this pull lands in it. The pips glow in the <b>set’s colour</b>, so every card in a set
+      reads as one family.
+    </p>
+    <p>
+      The pip picture never changes between modes — what changes is <b>which collection a solid pip
+      counts</b>. Flip the switch below to read the same lines as a <b>Classic run</b> (this run only), a
+      <b>Gauntlet Showcase</b>, or your <b>main‑menu Binder</b> (everything you’ve ever owned).
+    </p>
+    <p class="muted">
+      Live HTML mockup — real palette (<code>Theme.swift</code>), real Set 1 lines, real economy rules
+      (<code>GameCore</code> / <code>GauntletCore</code> / <code>Binder</code>). Nothing under
+      <code>TradingUp/</code> is modified.
+    </p>
+  </section>
+
+  <section id="pips">
+    <div class="mode-tabs" id="mode-tabs"></div>
+    <div class="scope" id="scope"></div>
+    <div id="pip-legend"></div>
+    <div class="pip-groups" id="pip-groups"></div>
+
+    <div class="notes notes-solo">
+      <h4>Why it works</h4>
+      <ul>
+        <li><b>Same slot, more meaning.</b> The element name was a static label; the pips answer “part of a
+        line? which stages? does this one help?” in the exact space it used to spend on one word.</li>
+        <li><b>Learn it once, reads everywhere.</b> The pip art is identical in Classic, Gauntlet and the
+        Binder — only the <b>scope</b> of a solid pip changes, so a player never has to relearn it per mode.</li>
+        <li><b>Colour follows the set.</b> The pips take the set’s signature colour (Emberfall = ember), so a
+        set reads as one family even where a line’s element differs. The card’s own element still shows in the
+        art and the ● meta gem, so nothing is lost.</li>
+        <li><b>One glance, three facts.</b> Track length = line type, the lit pip = this pull, the solid
+        count = how close the line is to its completed‑line bonus.</li>
+      </ul>
+      <h4>Trade‑off</h4>
+      <p>The literal element word is gone. If a mode leans on element identity — type match‑ups, filters —
+      keep a small element gem beside the pips or on the “Emberfall” meta row rather than the full label.</p>
+    </div>
+  </section>
+
+  <footer class="foot">
+    Mockup only · nothing under <code>TradingUp/</code> was modified · delete
+    <code>docs/mockups/evolution/</code> to drop it.
+  </footer>
+</main>
+
+<script src="evo.js"></script>
+</body>
+</html>

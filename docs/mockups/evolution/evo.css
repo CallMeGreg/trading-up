@@ -1,0 +1,199 @@
+/* Trading Up — stage pips in the card header (Gauntlet Mode mockup).
+   Palette mirrors TradingUp/Views/Theme.swift so the mockup reads as the real app.
+   Standalone; nothing under TradingUp/ is touched. */
+
+:root {
+  --bg0: #0b0e14;
+  --bg1: #121722;
+  --panel: #1a2130;
+  --panel-hi: #232c40;
+  --stroke: #2c3750;
+  --text: #e7ecf5;
+  --subtle: #8a94a6;
+  --money: #5be08a;
+  --tap: #4f9dff;
+  --gold: #ffd54a;
+  --violet: #b06cf7;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(1200px 700px at 20% -10%, #1b2438 0%, transparent 60%),
+    linear-gradient(180deg, var(--bg1), var(--bg0));
+  background-attachment: fixed;
+  color: var(--text);
+  font: 15px/1.6 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+code {
+  font: 12px/1 ui-monospace, "SF Mono", Menlo, monospace;
+  background: rgba(255,255,255,.06);
+  border: 1px solid var(--stroke);
+  border-radius: 5px;
+  padding: 2px 5px;
+}
+
+/* ------------------------------------------------------------------ chrome */
+
+.topbar {
+  position: sticky; top: 0; z-index: 50;
+  backdrop-filter: blur(14px);
+  background: rgba(11,14,20,.78);
+  border-bottom: 1px solid var(--stroke);
+}
+.topbar-inner {
+  max-width: 1240px; margin: 0 auto; padding: 12px 24px;
+  display: flex; align-items: center; gap: 20px;
+}
+.brand { display: flex; align-items: center; gap: 12px; }
+.brand-mark {
+  width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center;
+  font: 900 15px/1 ui-rounded, -apple-system, sans-serif; letter-spacing: .5px;
+  background: linear-gradient(140deg, #ff7a1a, #e01f1f);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 4px 14px rgba(224,31,31,.35);
+}
+.brand-title { font-weight: 800; font-size: 15px; letter-spacing: -.2px; }
+.brand-sub { font-size: 11.5px; color: var(--subtle); }
+
+.wrap { max-width: 1240px; margin: 0 auto; padding: 0 24px 100px; }
+
+.intro { padding: 56px 0 20px; max-width: 820px; }
+.intro h1 { font-size: 34px; line-height: 1.15; letter-spacing: -.8px; margin: 0 0 14px; }
+.intro p { color: #b6c0d0; margin: 0 0 14px; }
+.intro b { color: var(--text); }
+.muted { color: var(--subtle); font-size: 13px; }
+
+section { padding-top: 8px; }
+h4 { font-size: 14px; margin: 20px 0 8px; letter-spacing: .2px; }
+
+/* --------------------------------------------- mode toggle + scope panel */
+
+.mode-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 18px; }
+.mode-tab {
+  appearance: none; cursor: pointer; border: 1px solid var(--stroke);
+  background: var(--panel); color: var(--subtle);
+  font: 700 13px/1 -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif; letter-spacing: .2px;
+  padding: 10px 16px; border-radius: 999px; transition: color .15s, background .15s, border-color .15s, box-shadow .15s;
+}
+.mode-tab:hover { color: var(--text); border-color: var(--panel-hi); }
+.mode-tab.on {
+  color: #0b0e14; border-color: transparent;
+  background: linear-gradient(140deg, #ffd54a, #ff9a3c);
+  box-shadow: 0 4px 14px rgba(255,154,60,.28);
+}
+
+.scope {
+  max-width: 900px; margin-bottom: 22px; padding: 18px 22px;
+  border: 1px solid var(--stroke); border-radius: 16px; background: rgba(255,255,255,.02);
+}
+.scope h5 { margin: 0 0 10px; font-size: 14.5px; letter-spacing: -.2px; color: var(--text); }
+.scope-row { display: flex; gap: 14px; padding: 8px 0; font-size: 13px; line-height: 1.5; }
+.scope-row + .scope-row { border-top: 1px solid rgba(255,255,255,.05); }
+.scope-key {
+  flex: 0 0 92px; padding-top: 2px; color: var(--subtle);
+  font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: .1em;
+}
+.scope-val { color: #c4cdda; }
+.scope-val b { color: var(--text); }
+
+/* ----------------------------------------------------------- trading card */
+
+.tcard {
+  --s: calc(var(--w) / 230);
+  position: relative; flex: 0 0 auto;
+  width: calc(var(--w) * 1px); height: calc(var(--w) * 1.4px);
+  border-radius: calc(var(--s) * 16px);
+  padding: calc(var(--s) * 10px);
+  background: linear-gradient(180deg, var(--panel-hi), var(--panel));
+  box-shadow: 0 calc(var(--s) * 4px) calc(var(--s) * 8px) rgba(0,0,0,.45);
+  display: flex; flex-direction: column; gap: calc(var(--s) * 6px);
+  overflow: hidden;
+}
+.tcard .frame {
+  position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  border: calc(var(--s) * 2px) solid transparent;
+  background: var(--rar-frame) border-box;
+  -webkit-mask: linear-gradient(#000 0 0) padding-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+}
+
+.tc-head { display: flex; align-items: center; gap: calc(var(--s) * 4px); }
+.tc-name {
+  flex: 1 1 auto; min-width: 0;
+  font: 800 calc(var(--s) * 16px)/1.05 ui-rounded, -apple-system, sans-serif;
+  color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.tc-art {
+  position: relative; height: calc(var(--s) * 150px); border-radius: calc(var(--s) * 10px); overflow: hidden;
+  background: radial-gradient(120% 120% at 50% 40%, color-mix(in srgb, var(--el1) 55%, transparent), var(--el2) 55%, var(--el3));
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.08);
+}
+.tc-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.tc-meta {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: calc(var(--s) * 10px); font-weight: 600; color: var(--subtle);
+}
+.tc-meta .gem { width: calc(var(--s) * 9px); height: calc(var(--s) * 9px); border-radius: 50%; background: var(--el-tint); display: inline-block; margin-right: calc(var(--s) * 4px); vertical-align: -1px; }
+.tc-meta .mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+.tc-val { margin-top: auto; display: flex; align-items: center; justify-content: space-between; }
+.tc-rar {
+  font-size: calc(var(--s) * 9.5px); font-weight: 800; color: var(--rar-accent);
+  padding: calc(var(--s) * 3px) calc(var(--s) * 7px); border-radius: 999px;
+  background: color-mix(in srgb, var(--rar-accent) 16%, transparent);
+}
+.tc-money { font: 800 calc(var(--s) * 15px)/1 ui-rounded, sans-serif; color: var(--money); }
+
+/* ----------------------- header stage pips (replace element label) --------- */
+
+.tc-pips {
+  margin-left: auto; display: flex; align-items: center; gap: calc(var(--s, 1) * 3px);
+  padding: calc(var(--s, 1) * 4px) calc(var(--s, 1) * 7px); border-radius: 999px;
+  background: rgba(6,9,15,.5); box-shadow: inset 0 0 0 1px rgba(255,255,255,.07);
+}
+.pip {
+  flex: 0 0 auto; width: calc(var(--s, 1) * 9px); height: calc(var(--s, 1) * 9px); border-radius: 50%;
+  border: calc(var(--s, 1) * 1.5px) solid color-mix(in srgb, var(--set-tint, var(--el-tint)) 55%, transparent);
+  background: transparent;
+}
+.pip.have { background: var(--set-tint, var(--el-tint)); border-color: var(--set-tint, var(--el-tint)); box-shadow: 0 0 calc(var(--s, 1) * 5px) var(--set-tint, var(--el-tint)); }
+.pip.now {
+  background: #fff; border-color: #fff;
+  box-shadow: 0 0 0 calc(var(--s, 1) * 1.6px) var(--gold), 0 0 calc(var(--s, 1) * 7px) var(--gold);
+}
+.lnk { flex: 0 0 auto; width: calc(var(--s, 1) * 7px); height: calc(var(--s, 1) * 2px); border-radius: 2px; background: color-mix(in srgb, var(--set-tint, var(--el-tint)) 30%, transparent); }
+.lnk.have { background: var(--set-tint, var(--el-tint)); }
+
+/* --------------------------------------------- legend + example card grid */
+
+.pip-legend {
+  --s: 1.35; display: flex; flex-wrap: wrap; align-items: center; gap: 20px;
+  padding: 14px 20px; border-radius: 14px; background: var(--panel);
+  box-shadow: inset 0 0 0 1px var(--stroke); margin-bottom: 24px;
+  font-weight: 700; font-size: 13px; color: var(--text);
+}
+.pip-legend > span { display: inline-flex; align-items: center; gap: 9px; }
+.pip-legend-note { --s: 1; margin-left: auto; font-weight: 500; color: var(--subtle); font-size: 12.5px; }
+.pip-groups { display: flex; flex-direction: column; gap: 28px; }
+.pip-group > h4 { margin: 0 0 14px; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--subtle); }
+.pip-row { display: flex; flex-wrap: wrap; gap: 22px; }
+.pip-ex { margin: 0; display: flex; flex-direction: column; gap: 11px; width: 168px; }
+.pip-ex figcaption { display: flex; flex-direction: column; gap: 3px; }
+.pip-ex figcaption b { font-size: 13.5px; color: var(--text); }
+.pip-ex figcaption span { font-size: 12px; line-height: 1.42; color: var(--subtle); }
+.pip-ex.win figcaption b { color: var(--gold); }
+
+/* --------------------------------------------------------------- notes */
+
+.notes { padding: 24px 26px; }
+.notes ul { margin: 0; padding-left: 18px; color: #a9b4c5; font-size: 13.5px; }
+.notes li { margin-bottom: 7px; }
+.notes li b, .notes p b { color: var(--text); }
+.notes p { color: #a9b4c5; font-size: 13.5px; }
+.notes-solo { margin-top: 30px; max-width: 900px; border: 1px solid var(--stroke); border-radius: 18px; background: rgba(255,255,255,.02); }
+
+.foot { margin-top: 40px; padding-top: 22px; border-top: 1px solid var(--stroke); color: var(--subtle); font-size: 12.5px; }
