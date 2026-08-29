@@ -22,7 +22,7 @@ struct GauntletView: View {
             }
         }
         .task { if state == nil { state = GauntletState(game: game) } }
-        // The run screen carries its own inline Home square in the HUD row, so the
+        // The run screen carries its own inline Home button in the HUD row, so the
         // floating corner button steps aside during ripping (req 11).
         .overlay(alignment: .topLeading) {
             if let state, state.phase != .ripping {

@@ -97,7 +97,7 @@ final class UIImprovementScreenshots: XCTestCase {
         XCTAssertTrue(easy.waitForExistence(timeout: 5), "Easy tier card missing")
         easy.tap()
 
-        // Run screen: Home square + full-width HUD row (req 4).
+        // Run screen: Home button + full-width HUD row (req 4).
         Thread.sleep(forTimeInterval: 1.0)
         shot("05-gauntlet-run-topbar")
     }
