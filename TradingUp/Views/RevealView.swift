@@ -561,10 +561,11 @@ private struct PackCardSlot: View {
     var body: some View {
         VStack(spacing: 7 * s) {
             cardFace
-            // Pending copies get both choices; a kept copy keeps a Sell option so
-            // the player can still change their mind and liquidate it.
+            // Pending copies get both choices, stacked full-width so a long
+            // price never has to shrink to fit; a kept copy keeps a Sell option
+            // so the player can still change their mind and liquidate it.
             if slot == .pendingDup {
-                HStack(spacing: 6 * s) {
+                VStack(spacing: 6 * s) {
                     actionButton(title: "Keep", tint: Color(hex: "3b82f6"), action: onKeep)
                     actionButton(title: "Sell \(inst.sellValue.moneyShort)", tint: Palette.money, action: onSell)
                 }
@@ -591,11 +592,12 @@ private struct PackCardSlot: View {
     private func actionButton(title: String, tint: Color, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(title)
-                .font(.system(size: 11 * s, weight: .black, design: .rounded))
+                .font(.system(size: 12 * s, weight: .black, design: .rounded))
                 .foregroundStyle(.white)
                 .lineLimit(1).minimumScaleFactor(0.6)
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 6 * s)
+                .padding(.vertical, 6.5 * s)
+                .padding(.horizontal, 10 * s)
                 .background(Capsule().fill(tint))
                 .overlay(Capsule().strokeBorder(.white.opacity(0.25), lineWidth: 0.5))
         }
