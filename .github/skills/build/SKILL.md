@@ -15,7 +15,8 @@ calls when prompted.
 ## Prerequisites (verify, do not assume)
 
 - macOS with Xcode installed and a valid signing identity for team `ACPF4NWF99`
-  (the target uses `CODE_SIGN_STYLE = Automatic`).
+  (the target uses `CODE_SIGN_STYLE = Automatic`). The project file has no
+  `DEVELOPMENT_TEAM`, so Step 5 passes it to `xcodebuild` explicitly.
 - `gh` is installed and authenticated (`gh auth status`).
 - Always put Homebrew on `PATH` first: `export PATH="/opt/homebrew/bin:$PATH"`.
 - The working tree is clean. If there are uncommitted changes, stop and ask the user how to
@@ -137,6 +138,13 @@ archives directory (`~/Library/Developer/Xcode/Archives/<date>/`) so it appears 
 ```sh
 export PATH="/opt/homebrew/bin:$PATH"
 
+# The app target uses CODE_SIGN_STYLE = Automatic but the project file has NO
+# DEVELOPMENT_TEAM set (Xcode's UI normally supplies it). From the command line that
+# absence surfaces as "Signing requires a development team" and the archive fails, so
+# pass the team explicitly. This is still a real signed archive — DEVELOPMENT_TEAM is
+# an override, not a bypass.
+DEVELOPMENT_TEAM="ACPF4NWF99"
+
 ARCHIVE_ROOT="$HOME/Library/Developer/Xcode/Archives/$(date +%Y-%m-%d)"
 mkdir -p "$ARCHIVE_ROOT"
 ARCHIVE_PATH="$ARCHIVE_ROOT/TradingUp $(date +%Y-%m-%d\ %H.%M).xcarchive"
@@ -146,12 +154,16 @@ xcodebuild -project TradingUp.xcodeproj -scheme TradingUp \
   -destination 'generic/platform=iOS' \
   -archivePath "$ARCHIVE_PATH" \
   -allowProvisioningUpdates \
+  DEVELOPMENT_TEAM="$DEVELOPMENT_TEAM" \
   archive
 ```
 
 **Important:** this must be a real signed archive — do **not** pass `CODE_SIGNING_ALLOWED=NO`.
-Automatic signing with team `ACPF4NWF99` and `-allowProvisioningUpdates` lets Xcode resolve the
-signing certificate and provisioning profile.
+Because the project file carries no `DEVELOPMENT_TEAM`, you **must** pass
+`DEVELOPMENT_TEAM=ACPF4NWF99` on the `xcodebuild` line as shown; omitting it makes the archive
+fail with *"Signing requires a development team."* With the team supplied, `CODE_SIGN_STYLE =
+Automatic` plus `-allowProvisioningUpdates` lets Xcode resolve the signing certificate and
+provisioning profile.
 
 Confirm the archive landed in the Organizer location and carries build `$NEW`:
 
