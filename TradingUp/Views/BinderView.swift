@@ -50,7 +50,7 @@ struct BinderView: View {
                         Haptics.play(.light)
                         dismiss()
                     } label: {
-                        Label("Menu", systemImage: "chevron.left")
+                        Label("Home", systemImage: "house.fill")
                             .font(.system(size: 15, weight: .bold))
                     }
                     .tint(Palette.text)

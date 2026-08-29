@@ -64,7 +64,7 @@ struct GauntletShareCard: View {
             Text("PRIZE CARD")
                 .font(.system(size: 10, weight: .black)).tracking(2)
                 .foregroundStyle(Color(hex: "ffd54a"))
-            CardView(card: prize.card, instance: prize.instance, width: 150)
+            CardView(card: prize.card, instance: prize.instance, width: 150, extendedArt: true)
         }
     }
 
