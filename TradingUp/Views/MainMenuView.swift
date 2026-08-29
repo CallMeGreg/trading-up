@@ -17,6 +17,12 @@ struct MainMenuView: View {
     /// Drives the Settings sheet, opened from the gear in the top corner. Settings
     /// moved here from a Classic tab so it governs the whole app.
     @State private var showSettings = false
+    /// A mode the player picked that already has a run in progress, so the menu is
+    /// asking whether to resume it or start fresh. `nil` when no such prompt is up.
+    @State private var resumePrompt: MenuRoute?
+    /// A mode the player chose "New Run" for, pending the "lose your progress?"
+    /// confirmation. `nil` when that confirm isn't up.
+    @State private var confirmNewRun: MenuRoute?
 
     private var unlocked: Bool { game.isFullVersionUnlocked }
 
@@ -51,6 +57,46 @@ struct MainMenuView: View {
         } message: {
             Text(game.loadIssue?.message ?? "")
         }
+        // Picking a mode that already has a run asks whether to resume it or
+        // start over, in the in-theme popup instead of a standard iOS dialog
+        // (req 3). Layered above everything, including the Settings gear.
+        .overlay { runPopupOverlay }
+    }
+
+    /// The custom in-theme run-in-progress popup (req 3). Dims the menu and floats
+    /// the "Compact Rail" card over it when the player taps a mode that already has
+    /// a run going — first offering Continue vs. New Run, then a destructive
+    /// confirm. Tapping the dimmed backdrop cancels.
+    @ViewBuilder
+    private var runPopupOverlay: some View {
+        if let step = runPopupStep {
+            ZStack {
+                Color.black.opacity(0.55)
+                    .ignoresSafeArea()
+                    .contentShape(Rectangle())
+                    .onTapGesture { dismissRunPopup() }
+                    .transition(.opacity)
+
+                RunInProgressCard(
+                    step: step,
+                    onContinue: continueRun,
+                    onNewRun: promptNewRun,
+                    onConfirm: startNewRun,
+                    onCancel: dismissRunPopup
+                )
+                .frame(maxWidth: 380)
+                .padding(.horizontal, 28)
+                .transition(.scale(scale: 0.9).combined(with: .opacity))
+            }
+        }
+    }
+
+    /// Derives the popup's current step from the two run states. The destructive
+    /// confirm wins when both are somehow set.
+    private var runPopupStep: RunPopupStep? {
+        if let mode = confirmNewRun { return .confirm(mode) }
+        if let mode = resumePrompt { return .resume(mode) }
+        return nil
     }
 
     /// The gear that opens Settings, tucked into the top-trailing corner so it's
@@ -109,7 +155,7 @@ struct MainMenuView: View {
                 accent: Color(hex: "56d98a")
             ) {
                 Haptics.play(.medium)
-                route = .classic
+                chooseMode(.classic)
             }
             .accessibilityIdentifier("classicMode")
 
@@ -142,7 +188,7 @@ struct MainMenuView: View {
                 accent: Color(hex: "b98cff")
             ) {
                 Haptics.play(.medium)
-                route = .gauntlet
+                chooseMode(.gauntlet)
             }
             .accessibilityIdentifier("gauntletMode")
         } else {
@@ -199,6 +245,63 @@ struct MainMenuView: View {
         Binding(get: { game.loadIssue != nil },
                 set: { if !$0 { game.dismissLoadIssue() } })
     }
+
+    // MARK: Resume / New Run (req 3)
+
+    /// Entry point for the Classic and Gauntlet tiles. If the mode has a run
+    /// in progress, ask whether to resume or restart; otherwise just enter.
+    private func chooseMode(_ mode: MenuRoute) {
+        if hasRunInProgress(mode) {
+            withAnimation(Self.popupAnim) { resumePrompt = mode }
+        } else {
+            route = mode
+        }
+    }
+
+    private func hasRunInProgress(_ mode: MenuRoute) -> Bool {
+        switch mode {
+        case .classic:  return game.hasClassicProgress
+        case .gauntlet: return GauntletRunStore().hasSavedRun
+        case .binder:   return false
+        }
+    }
+
+    /// Resume the existing run. Deferred so the popup starts dismissing before the
+    /// full-screen cover presents.
+    private func continueRun(_ mode: MenuRoute) {
+        withAnimation(Self.popupAnim) { resumePrompt = nil }
+        DispatchQueue.main.async { route = mode }
+    }
+
+    /// "New Run" tapped — swap the resume prompt for the destructive confirm.
+    private func promptNewRun(_ mode: MenuRoute) {
+        withAnimation(Self.popupAnim) {
+            resumePrompt = nil
+            confirmNewRun = mode
+        }
+    }
+
+    /// Confirmed "New Run": throw the old run away, then enter the mode fresh.
+    private func startNewRun(_ mode: MenuRoute) {
+        withAnimation(Self.popupAnim) { confirmNewRun = nil }
+        switch mode {
+        case .classic:  game.newGame()
+        case .gauntlet: GauntletRunStore().clear()
+        case .binder:   break
+        }
+        Haptics.play(.warning)
+        DispatchQueue.main.async { route = mode }
+    }
+
+    /// Dismiss the popup without entering a mode (tap-outside or Cancel).
+    private func dismissRunPopup() {
+        withAnimation(Self.popupAnim) {
+            resumePrompt = nil
+            confirmNewRun = nil
+        }
+    }
+
+    private static let popupAnim = Animation.spring(response: 0.34, dampingFraction: 0.86)
 }
 
 // MARK: - Route

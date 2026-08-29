@@ -121,6 +121,11 @@ final class GameState {
     var runSignature: RunSignature { RunSignature.make(from: core) }
     var isGameOver: Bool { core.isGameOver }
     var shouldShowWelcome: Bool { core.shouldShowWelcome }
+    /// Whether the Classic run has meaningful progress worth confirming before a
+    /// reset — i.e. at least one pack has been opened. A brand-new game (Welcome
+    /// not yet dismissed, nothing opened) reports false, so the menu only offers
+    /// "Continue / New Run" once there's actually something to lose.
+    var hasClassicProgress: Bool { core.stats.packsOpened > 0 }
     var cheapestPackPrice: Double { Economy.cheapestPackPrice }
 
     func canAffordPack(set: Int) -> Bool { core.cash >= Economy.packPrice(set: set) }

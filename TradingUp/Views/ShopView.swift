@@ -163,26 +163,12 @@ struct WalletHeader: View {
             }
             VStack(spacing: 9) {
                 HStack(alignment: .center, spacing: 10) {
-                    HStack(spacing: 8) {
-                        Text("$")
-                            .font(.system(size: 15, weight: .black, design: .rounded))
-                            .foregroundStyle(Color(hex: "06301b"))
-                            .frame(width: 30, height: 30)
-                            .background(
-                                Circle().fill(
-                                    RadialGradient(colors: [Color(hex: "b8ffd6"), Palette.money, Color(hex: "2c9c5c")],
-                                                   center: UnitPoint(x: 0.35, y: 0.3), startRadius: 1, endRadius: 26)
-                                )
-                            )
-                            .shadow(color: Palette.money.opacity(0.35), radius: 3, y: 2)
-                        Text(cash.money)
-                            .font(.system(size: 26, weight: .black, design: .rounded))
-                            .foregroundStyle(Palette.money)
-                            .contentTransition(.numericText())
-                            .lineLimit(1).minimumScaleFactor(0.6)
-                    }
-                    .accessibilityElement(children: .ignore)
-                    .accessibilityLabel("Cash \(cash.money)")
+                    Text(cash.money)
+                        .font(.system(size: 26, weight: .black, design: .rounded))
+                        .foregroundStyle(Palette.money)
+                        .contentTransition(.numericText())
+                        .lineLimit(1).minimumScaleFactor(0.6)
+                        .accessibilityLabel("Cash \(cash.money)")
 
                     Spacer(minLength: 0)
 

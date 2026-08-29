@@ -1,18 +1,12 @@
 import SwiftUI
 
-/// The settings screen: audio and haptic feedback, plus the "start over" resets
-/// for each mode. As of the home-screen refresh this is reached from a gear on
-/// the main menu (not a Classic tab), so it governs the whole app — it can reset
-/// the Classic run *and* discard a saved Gauntlet run.
+/// The settings screen: audio and haptic feedback. As of the home-screen refresh
+/// this is reached from a gear on the main menu (not a Classic tab). Starting a
+/// fresh run for either mode is handled from the main menu's mode buttons, which
+/// offer Continue / New Run when a run is already in progress.
 struct SettingsView: View {
-    @Environment(GameState.self) var game: GameState
     @Bindable private var sound = SoundManager.shared
     @Bindable private var haptics = HapticsManager.shared
-    @State private var confirmNew = false
-    @State private var confirmResetGauntlet = false
-    /// Whether there's a resumable Gauntlet run to offer resetting. Read once when
-    /// the sheet opens so the control only appears when it does something.
-    @State private var hasGauntletRun = GauntletRunStore().hasSavedRun
 
     /// Dismisses the settings sheet. Left `nil` anywhere Settings is shown without
     /// its own dismissal affordance, which hides the Done button.
@@ -51,50 +45,6 @@ struct SettingsView: View {
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .panel()
-
-                        Button {
-                            confirmNew = true
-                        } label: {
-                            Label("New Game", systemImage: "arrow.counterclockwise")
-                                .font(.system(size: 14, weight: .bold))
-                                .foregroundStyle(Color(hex: "e0663b"))
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 12)
-                                .background(RoundedRectangle(cornerRadius: 14).strokeBorder(Color(hex: "e0663b").opacity(0.5), lineWidth: 1))
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityIdentifier("newGame")
-                        .alert("Start a new game?", isPresented: $confirmNew) {
-                            Button("Cancel", role: .cancel) {}
-                            Button("Reset", role: .destructive) { game.newGame() }
-                        } message: {
-                            Text("This erases your current Classic collection and cash, and starts over with \(Economy.startingCash.money). Your all-time record is kept.")
-                        }
-
-                        if hasGauntletRun {
-                            Button {
-                                confirmResetGauntlet = true
-                            } label: {
-                                Label("Reset Gauntlet Run", systemImage: "bolt.slash.fill")
-                                    .font(.system(size: 14, weight: .bold))
-                                    .foregroundStyle(Color(hex: "b98cff"))
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 12)
-                                    .background(RoundedRectangle(cornerRadius: 14).strokeBorder(Color(hex: "b98cff").opacity(0.5), lineWidth: 1))
-                            }
-                            .buttonStyle(.plain)
-                            .accessibilityIdentifier("resetGauntletRun")
-                            .alert("Reset your Gauntlet run?", isPresented: $confirmResetGauntlet) {
-                                Button("Cancel", role: .cancel) {}
-                                Button("Reset", role: .destructive) {
-                                    GauntletRunStore().clear()
-                                    hasGauntletRun = false
-                                    Haptics.play(.warning)
-                                }
-                            } message: {
-                                Text("This discards your in-progress Gauntlet run so it won't resume. Your unlocked trainers and difficulties are kept.")
-                            }
-                        }
                     }
                     .padding(16)
                     .readableWidth()
