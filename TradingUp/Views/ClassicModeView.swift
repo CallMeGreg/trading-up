@@ -2,8 +2,9 @@ import SwiftUI
 
 /// Classic Mode: the original Trading Up loop — buy packs, rip them, sell extras,
 /// grade rares, and race to all 250 cards. This is the tabbed game as it always
-/// was; v2.0.0 just moves it behind the main menu, so it now presents full-screen
-/// over `MainMenuView` and offers a way back from the Stats tab.
+/// was; v2.0.0 moves it behind the main menu, so it now presents full-screen
+/// over `MainMenuView` and offers a home button in the Shop's wallet header to
+/// get back. Settings now live on the main menu rather than in a tab here.
 struct ClassicModeView: View {
     @Environment(GameState.self) var game: GameState
     @Environment(\.dismiss) private var dismiss
@@ -14,7 +15,7 @@ struct ClassicModeView: View {
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            ShopView()
+            ShopView(onHome: { dismiss() })
                 .tabItem { Label("Shop", systemImage: "bag.fill") }
                 .tag(AppTab.shop)
             CollectionView()
@@ -23,9 +24,6 @@ struct ClassicModeView: View {
             StatsView()
                 .tabItem { Label("Stats", systemImage: "chart.bar.fill") }
                 .tag(AppTab.stats)
-            SettingsView(onExitToMenu: { dismiss() })
-                .tabItem { Label("Settings", systemImage: "gearshape.fill") }
-                .tag(AppTab.settings)
         }
         .tint(Palette.money)
         // "Start Collecting" is the only way out of the welcome intro, so its
@@ -72,7 +70,7 @@ enum AppOverlay: Int, Identifiable {
     var id: Int { rawValue }
 }
 
-/// The four main tabs, so `ClassicModeView` can drive selection programmatically.
+/// The main tabs, so `ClassicModeView` can drive selection programmatically.
 enum AppTab: Hashable {
-    case shop, collection, stats, settings
+    case shop, collection, stats
 }

@@ -30,7 +30,8 @@ final class GauntletStateTests: XCTestCase {
             _ = p.markIntroSeen()
             pstore.save(p)
         }
-        let state = GauntletState(game: game, store: pstore, seed: seed)
+        let state = GauntletState(game: game, store: pstore,
+                                  runStore: GauntletRunStore(directory: dir), seed: seed)
         return (state, game)
     }
 
@@ -78,7 +79,8 @@ final class GauntletStateTests: XCTestCase {
 
         // Durable: a fresh state over the same store skips straight past the intro.
         let game2 = GameState(core: GameCore(), store: SaveStore(directory: dir))
-        let s2 = GauntletState(game: game2, store: GauntletProgressStore(directory: dir), seed: 1)
+        let s2 = GauntletState(game: game2, store: GauntletProgressStore(directory: dir),
+                               runStore: GauntletRunStore(directory: dir), seed: 1)
         XCTAssertEqual(s2.phase, .trainerSelect, "the intro never re-shows once seen")
     }
 
@@ -248,6 +250,50 @@ final class GauntletStateTests: XCTestCase {
         XCTAssertNil(s.run)
         XCTAssertTrue(s.progress.clearedTiers(forTrainer: "neutral").isEmpty, "an abandoned run banks nothing")
         XCTAssertFalse(s.progress.isUnlocked(.medium, forTrainer: "neutral"))
+    }
+
+    // MARK: Resume an in-progress run (req 11)
+
+    func testLeavingMidRunResumesItOnReturn() {
+        let (s, _) = makeState(seed: 7)
+        s.chooseTrainer(.neutral)
+        s.startRun(tier: .easy)
+        s.rip()
+        resolvePending(s)
+        guard s.phase == .ripping, let run = s.run else {
+            return   // the seeded round resolved immediately; other tests cover that
+        }
+        let round = run.round
+        let cash = run.cash
+        let showcase = run.showcase.count
+        s.persistForExit()   // what the home button does
+
+        // A brand-new driver over the same stores resumes the run rather than
+        // dropping the player back on Trainer select.
+        let game2 = GameState(core: GameCore(), store: SaveStore(directory: dir))
+        let resumed = GauntletState(game: game2, store: GauntletProgressStore(directory: dir),
+                                    runStore: GauntletRunStore(directory: dir), seed: 7)
+        XCTAssertEqual(resumed.phase, .ripping, "an in-progress round resumes into the run")
+        XCTAssertEqual(resumed.run?.round, round)
+        XCTAssertEqual(resumed.run?.cash ?? -1, cash, accuracy: 0.0001)
+        XCTAssertEqual(resumed.run?.showcase.count, showcase)
+        XCTAssertEqual(resumed.selectedTrainer?.id, "neutral")
+    }
+
+    func testAbandoningARunLeavesNothingToResume() {
+        let (s, _) = makeState(seed: 3)
+        s.chooseTrainer(.neutral)
+        s.startRun(tier: .easy)
+        s.rip()
+        resolvePending(s)
+        s.abandonRun()
+        XCTAssertFalse(GauntletRunStore(directory: dir).hasSavedRun, "abandoning clears the saved run")
+
+        let game2 = GameState(core: GameCore(), store: SaveStore(directory: dir))
+        let resumed = GauntletState(game: game2, store: GauntletProgressStore(directory: dir),
+                                    runStore: GauntletRunStore(directory: dir), seed: 3)
+        XCTAssertEqual(resumed.phase, .trainerSelect, "an abandoned run is not resumed")
+        XCTAssertNil(resumed.run)
     }
 
     // MARK: GameState reward hook

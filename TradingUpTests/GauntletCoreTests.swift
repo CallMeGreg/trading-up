@@ -99,6 +99,24 @@ final class GauntletCoreTests: XCTestCase {
         XCTAssertEqual(run.effectiveCatalystSlots, GauntletEconomy.baseCatalystSlots)
     }
 
+    func testAttuningExtraRipCatalystGrantsThatRipImmediately() {
+        var run = GauntletRun(tier: .easy, trainer: .neutral)
+        let before = run.ripsLeft
+        let eclipse = Catalyst.byId("eclipse")!   // +1 rip per round
+        XCTAssertTrue(run.attune(eclipse))
+        XCTAssertEqual(run.ripsLeft, before + 1,
+                       "an extra-rip Catalyst pays off the round it's attuned in, not just later rounds")
+    }
+
+    func testAttuningNonRipCatalystLeavesCurrentRipsUnchanged() {
+        var run = GauntletRun(tier: .easy, trainer: .neutral)
+        let before = run.ripsLeft
+        let bloom = Catalyst.byId("bloom")!   // Aura mult, no rip bonus
+        XCTAssertTrue(run.attune(bloom))
+        XCTAssertEqual(run.ripsLeft, before,
+                       "a Catalyst with no rip bonus doesn't change the current round's rips")
+    }
+
     // MARK: Ripping / keeping / selling
 
     func testRipSpendsARipAndFillsAPack() {

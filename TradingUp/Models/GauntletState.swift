@@ -28,6 +28,10 @@ final class GauntletState {
     private(set) var progress: GauntletProgress
     private let store: GauntletProgressStore
 
+    /// Persists the single in-progress run so leaving Gauntlet and coming back
+    /// resumes it instead of discarding it (req 11).
+    private let runStore: GauntletRunStore
+
     /// The Binder lives on `GameState`; a Gauntlet win's prize is folded in there
     /// (and persisted) so both modes share one all-time, value-best collection.
     private let game: GameState
@@ -70,6 +74,11 @@ final class GauntletState {
     /// already earned — the UI explains there was no new art to grant.
     private(set) var rewardWasConsolation = false
 
+    /// The Extended-Art prize the player chose on the win screen, kept so the
+    /// results screen can put it on the shareable run card (req 7). `nil` on the
+    /// complete-catalogue consolation, where there's no card to choose.
+    private(set) var lastPrize: GauntletRewardOption?
+
     /// Trainers this just-finished run newly unlocked (win or loss), so the results
     /// and lost screens can celebrate them. Reset at the start of each run.
     private(set) var lastUnlockedTrainers: [Trainer] = []
@@ -80,9 +89,13 @@ final class GauntletState {
 
     /// Production wiring: share the Binder-owning `GameState`, persist progress to
     /// the default location. Tests can inject a temp-dir store and a fixed seed.
-    init(game: GameState, store: GauntletProgressStore = GauntletProgressStore(), seed: UInt64? = nil) {
+    init(game: GameState,
+         store: GauntletProgressStore = GauntletProgressStore(),
+         runStore: GauntletRunStore = GauntletRunStore(),
+         seed: UInt64? = nil) {
         self.game = game
         self.store = store
+        self.runStore = runStore
         self.progress = store.load()
         #if DEBUG
         // A fixed seed pins the RNG for deterministic tests; the seeded
@@ -92,14 +105,57 @@ final class GauntletState {
         #else
         self.rng = AppRNG()
         #endif
-        // Show the how-to once, the first time Gauntlet is ever opened.
-        self.phase = progress.hasSeenIntro ? .trainerSelect : .intro
+        // Resume an in-progress run if one was saved on the last exit (req 11);
+        // otherwise show the how-to once, the first time Gauntlet is ever opened.
+        if let snapshot = runStore.load() {
+            restore(from: snapshot)
+        } else {
+            self.phase = progress.hasSeenIntro ? .trainerSelect : .intro
+        }
     }
+
+    /// Drop back into a saved in-progress run exactly where it left off. Transient
+    /// flourish (confetti, last-outcome flashes) resets; the pull already rolled is
+    /// carried in the snapshot, so play simply continues with fresh randomness.
+    private func restore(from snapshot: GauntletRunSnapshot) {
+        run = snapshot.run
+        selectedTrainer = snapshot.run.trainer
+        pendingCards = snapshot.pendingCards
+        pendingCatalyst = snapshot.pendingCatalyst
+        lastRippedSet = snapshot.lastRippedSet
+        revealActive = snapshot.revealActive
+        celebratedRound = snapshot.celebratedRound
+        phase = snapshot.phase == .shop ? .shop : .ripping
+    }
+
+    /// Persist (or clear) the resume snapshot. An active run — ripping a round or
+    /// in the between-round shop — is written; every other phase clears the file,
+    /// so a finished, abandoned or not-yet-started run never resurrects (req 11).
+    private func autosaveRun() {
+        guard let run, phase == .ripping || phase == .shop else {
+            runStore.clear()
+            return
+        }
+        let snapshot = GauntletRunSnapshot(
+            run: run,
+            phase: phase == .shop ? .shop : .ripping,
+            pendingCards: pendingCards,
+            pendingCatalyst: pendingCatalyst,
+            lastRippedSet: lastRippedSet,
+            revealActive: revealActive,
+            celebratedRound: celebratedRound)
+        runStore.save(snapshot)
+    }
+
+    /// Flush the current run to disk. Called when the player leaves via the home
+    /// button so the exact on-screen state is captured even if the last action
+    /// didn't itself autosave.
+    func persistForExit() { autosaveRun() }
 
     // MARK: Roster / meta read-through
 
-    /// Selectable Trainers: the always-available "Rookie" first, then the flavoured
-    /// roster (each earned via a Gauntlet milestone — see `isTrainerUnlocked`).
+    /// Selectable Trainers: the always-available starter (Joe) first, then the
+    /// flavoured roster (each earned via a Gauntlet milestone — see `isTrainerUnlocked`).
     var trainers: [Trainer] { [Trainer.neutral] + Trainer.roster }
 
     /// Difficulty tiers the Trainer being set up (or the always-available Rookie,
@@ -175,8 +231,10 @@ final class GauntletState {
         rewardOptions = []
         lastClear = nil
         rewardWasConsolation = false
+        lastPrize = nil
         lastUnlockedTrainers = []
         phase = .ripping
+        autosaveRun()
     }
 
     /// Abandon the current run and return to Trainer select. Meta progression is
@@ -188,6 +246,7 @@ final class GauntletState {
         revealActive = false
         selectedTrainer = nil
         phase = .trainerSelect
+        autosaveRun()
     }
 
     // MARK: Flow — ripping
@@ -213,6 +272,7 @@ final class GauntletState {
         pendingCatalyst = result.catalyst
         lastRippedSet = opened
         revealActive = true
+        autosaveRun()
     }
 
     /// Lower the full-screen reveal cover. Only allowed once the pull is settled,
@@ -335,6 +395,8 @@ final class GauntletState {
         }
         if !revealActive && canEndRound && (reached || r.ripsLeft == 0) {
             endRound()
+        } else {
+            autosaveRun()
         }
     }
 
@@ -365,6 +427,9 @@ final class GauntletState {
             store.save(progress)
             phase = .lost
         }
+        // Save the new shop state, or clear the resume file on a terminal outcome
+        // (win → reward, or loss) so a finished run never resurrects. (req 11)
+        autosaveRun()
     }
 
     /// Leave the between-round shop and begin the next round (already primed by the
@@ -390,6 +455,7 @@ final class GauntletState {
         guard var r = run else { return false }
         let ok = body(&r)
         run = r
+        autosaveRun()
         return ok
     }
 
@@ -419,8 +485,10 @@ final class GauntletState {
     /// which owns and persists it), then bank the clear and show the summary.
     func chooseReward(_ option: GauntletRewardOption) {
         game.awardExtendedArt(option)
+        lastPrize = option
         bankClear()
         phase = .results
+        autosaveRun()
     }
 
     /// Record the run's clear into durable progress (Trainer XP + next-tier unlock)
@@ -453,7 +521,9 @@ final class GauntletState {
         selectedTrainer = nil
         rewardOptions = []
         lastOutcome = nil
+        lastPrize = nil
         lastUnlockedTrainers = []
         phase = .trainerSelect
+        autosaveRun()
     }
 }

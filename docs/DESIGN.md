@@ -550,14 +550,15 @@ shipped roster (`Models/Trainer.swift`), as `Energy / Aura / Selling / Grading /
 
 | Trainer | Leans | E | A | S | G | I | Unlocked by |
 | --- | --- | :-: | :-: | :-: | :-: | :-: | --- |
-| **Rookie** | — (neutral) | 3 | 3 | 3 | 3 | 3 | Free starter |
-| **Ripper** | Energy | 5 | 2 | 2 | 1 | 4 | Rip **100** packs across runs |
-| **Curator** | Inventory/Aura | 2 | 4 | 1 | 3 | 5 | Build a **12-card** Showcase in one run |
-| **Farmer** | Aura | 2 | 5 | 2 | 2 | 3 | Reach a round Aura of **500** |
-| **Grader** | Grading | 2 | 3 | 2 | 5 | 3 | Grade **100** cards across runs |
-| **Merchant** | Selling | 3 | 2 | 5 | 2 | 3 | Hold **$250** cash at once in a run |
+| **Joe** · Rookie | — (neutral) | 3 | 3 | 3 | 3 | 3 | Free starter |
+| **Jack** · Ripper | Energy | 5 | 2 | 2 | 1 | 4 | Rip **100** packs across runs |
+| **Curtis** · Curator | Inventory/Aura | 2 | 4 | 1 | 3 | 5 | Build a **12-card** Showcase in one run |
+| **Fred** · Farmer | Aura | 2 | 5 | 2 | 2 | 3 | Reach a round Aura of **500** |
+| **Lucy** · Grader | Grading | 2 | 3 | 2 | 5 | 3 | Grade **100** cards across runs |
+| **Sally** · Merchant | Selling | 3 | 2 | 5 | 2 | 3 | Hold **$250** cash at once in a run |
 
-Locked cards show the requirement and a live progress bar (e.g. "60 / 100 packs ripped"),
+The first name in each row is what the player sees in‑game; the role is how this
+doc refers to each Trainer. Locked cards show the requirement and a live progress bar (e.g. "60 / 100 packs ripped"),
 and the just-unlocked Trainers are celebrated on the selection screen after a run banks its
 stats. Thresholds are meta-pacing knobs, **not** a difficulty lever — the harness still
 proves a neutral Rookie clears Hard, so the roster stays gravy rather than a gate.
@@ -580,8 +581,9 @@ flag.
 
 **The mystery Trainer — Red.** A seventh Trainer sits on the roster concealed as **"???"**
 with hidden pips and a "beat Hard mode with every other Trainer" progress line. Clearing **Hard
-with all six of the others** reveals **Red** — a glass cannon with **5 Energy / 5 Aura** and the
-bare minimum (**1**) in Selling, Grading and Inventory. The reveal is evaluated in
+with all six of the others** reveals **Red** — shown in‑game as **Gary** — a glass
+cannon with **5 Energy / 5 Aura** and the bare minimum (**1**) in Selling, Grading
+and Inventory. The reveal is evaluated in
 `GauntletProgress.ingest` right after a clear banks, so the last required Hard win unlocks Red
 immediately and announces it once on the results screen.
 

@@ -44,7 +44,7 @@ extension Catalyst {
                  saleValue: 20),
 
         Catalyst(id: "eclipse", element: .shadow, name: "Eclipse",
-                 blurb: "Faster hands. One extra rip every round.",
+                 blurb: "Faster hands. One extra rip every round, starting now.",
                  mods: { var m = RunMods.none; m.extraRipsPerRound = 1; return m }(),
                  saleValue: 20),
     ]

@@ -319,6 +319,7 @@ private struct HUDPanel: View {
                 Text("Round \(run.round) / \(run.roundsTotal)")
                     .font(.system(size: 15, weight: .black, design: .rounded))
                     .foregroundStyle(.white)
+                    .lineLimit(1).minimumScaleFactor(0.8)
                 if run.isBossRound {
                     Text("BOSS").font(.system(size: 10, weight: .black)).tracking(1)
                         .foregroundStyle(Color(hex: "1a0d2e"))
@@ -330,6 +331,9 @@ private struct HUDPanel: View {
                     .font(.system(size: 18, weight: .black, design: .rounded))
                     .foregroundStyle(Palette.money)
             }
+            // Leave a gutter on the leading edge for the home button rather than
+            // letting it overlay the round/cash line (req 11).
+            .padding(.leading, 40)
 
             VStack(spacing: 4) {
                 ProgressBar(value: run.showcaseAura, total: run.target,
@@ -744,7 +748,7 @@ struct ShopScreen: View {
                 }
 
                 BigButton(title: "Start Round \(run.round)",
-                          subtitle: "Goal \(fmt(run.target)) Aura",
+                          subtitle: "Aura: \(fmt(run.showcaseAura)) · Goal: \(fmt(run.target))",
                           systemImage: "play.fill", tint: GauntletTheme.tint) {
                     Haptics.play(.medium); state.continueFromShop()
                 }

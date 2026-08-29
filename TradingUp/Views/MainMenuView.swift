@@ -14,6 +14,9 @@ struct MainMenuView: View {
     /// Drives the full-version unlock paywall (from the Unlock button, or a tap on
     /// a still-locked Gauntlet Mode).
     @State private var showPaywall = false
+    /// Drives the Settings sheet, opened from the gear in the top corner. Settings
+    /// moved here from a Classic tab so it governs the whole app.
+    @State private var showSettings = false
 
     private var unlocked: Bool { game.isFullVersionUnlocked }
 
@@ -29,6 +32,7 @@ struct MainMenuView: View {
             .readableWidth(460)
             .padding(.horizontal, 22)
         }
+        .overlay(alignment: .topTrailing) { settingsButton }
         .fullScreenCover(item: $route) { route in
             switch route {
             case .classic:  ClassicModeView()
@@ -37,6 +41,9 @@ struct MainMenuView: View {
             }
         }
         .sheet(isPresented: $showPaywall) { PaywallView() }
+        .sheet(isPresented: $showSettings) {
+            SettingsView(onExitToMenu: { showSettings = false })
+        }
         // The save-load notice is raised at launch on whatever's on screen, which
         // is the menu — so it surfaces immediately, before the player picks a mode.
         .alert(game.loadIssue?.title ?? "", isPresented: loadIssueBinding) {
@@ -44,6 +51,26 @@ struct MainMenuView: View {
         } message: {
             Text(game.loadIssue?.message ?? "")
         }
+    }
+
+    /// The gear that opens Settings, tucked into the top-trailing corner so it's
+    /// always reachable from home without competing with the mode tiles.
+    private var settingsButton: some View {
+        Button {
+            Haptics.play(.light)
+            showSettings = true
+        } label: {
+            Image(systemName: "gearshape.fill")
+                .font(.system(size: 18, weight: .bold))
+                .foregroundStyle(.white.opacity(0.85))
+                .frame(width: 42, height: 42)
+                .background(Circle().fill(.white.opacity(0.10)))
+                .overlay(Circle().strokeBorder(.white.opacity(0.14), lineWidth: 1))
+        }
+        .padding(.top, 6)
+        .padding(.trailing, 18)
+        .accessibilityIdentifier("settings")
+        .accessibilityLabel("Settings")
     }
 
     // MARK: Layout

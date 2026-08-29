@@ -51,7 +51,10 @@ enum RoundOutcome: Equatable {
 /// spent in the between-round shop) is the across-run currency. Keep-vs-sell each
 /// pull is the core decision. Pure Foundation game logic, like `GameCore`, so the
 /// balance harness can drive it headless. See docs/DESIGN.md §14.
-struct GauntletRun {
+///
+/// `Codable` so an in-progress run can be snapshotted to disk and resumed after
+/// the player leaves Gauntlet and comes back (see `GauntletRunStore`).
+struct GauntletRun: Codable {
 
     let tier: GauntletTier
     var trainer: Trainer
@@ -365,6 +368,10 @@ struct GauntletRun {
     mutating func attune(_ catalyst: Catalyst) -> Bool {
         guard canAttune else { return false }
         attunedCatalysts.append(catalyst)
+        // A per-round rip bonus normally only lands at the next `startRound`.
+        // Grant it immediately so an Eclipse attuned mid-round also pays off the
+        // round it's attuned in, not just the rounds after it. (req 6)
+        ripsLeft += catalyst.mods.extraRipsPerRound
         return true
     }
 
