@@ -22,12 +22,7 @@ permissions:
 jobs:
   analyze:
     name: Analyze (${{ matrix.language }})
-    # The Swift leg is a ~15-minute traced build (actions/python are buildless
-    # and take seconds). No required status check depends on it, so skip it on
-    # pull requests; it still runs on push to main, the weekly schedule, and
-    # manual dispatch. actions/python keep running on every push and pull request.
-    if: ${{ matrix.language != 'swift' || github.event_name != 'pull_request' }}
-    runs-on: ${{ matrix.runner }}
+    runs-on: ${{ matrix.language == 'swift' && 'macos-15' || 'ubuntu-24.04' }}
     permissions:
       security-events: write # upload code scanning results
       packages: read # fetch internal/private CodeQL packs
@@ -36,16 +31,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - language: actions
-            build-mode: none
-            runner: ubuntu-24.04
-          - language: python
-            build-mode: none
-            runner: ubuntu-24.04
-          - language: swift
-            build-mode: manual
-            runner: macos-15
+        # The Swift leg is a ~15-minute traced build (actions and python are
+        # buildless and take seconds). No required status check depends on it, so
+        # skip it on pull requests; it still runs on push to main, the weekly
+        # schedule, and manual dispatch. A job-level `if` can't gate a single
+        # matrix leg because the matrix context isn't available there, so the
+        # language list is derived from the event instead. actions and python
+        # keep running on every push and pull request.
+        language: ${{ github.event_name == 'pull_request' && fromJSON('["actions", "python"]') || fromJSON('["actions", "python", "swift"]') }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -58,7 +51,7 @@ jobs:
         uses: github/codeql-action/init@db488ddef3bf6cb639b32c2e9a7c0a7ea8271d28 # v4.37.8
         with:
           languages: ${{ matrix.language }}
-          build-mode: ${{ matrix.build-mode }}
+          build-mode: ${{ matrix.language == 'swift' && 'manual' || 'none' }}
 
       # Swift can't use autobuild: the Xcode project stores its sources in Xcode
       # 16 synchronized folder groups (PBXFileSystemSynchronizedRootGroup), which
