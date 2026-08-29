@@ -173,3 +173,37 @@ runs on the `TradingUpScreenshots` scheme (Debug config) and doubles as the pass
 tools/capture_ending.sh                 # iPhone 17 Pro -> build/ending.mov
 tools/capture_ending.sh "iPhone 17 Pro Max" build/ending.mov
 ```
+
+## Component galleries (DEBUG only)
+
+Some views are gated behind randomness or a full run — a Catalyst offer appears on
+a chance roll, and the Gauntlet share card only renders after a win — which makes
+them awkward to screenshot or eyeball. A second DEBUG‑only hook, `DebugGallery`,
+renders one such component on its own from a launch‑environment variable:
+
+| Variable | Renders |
+| --- | --- |
+| `TU_TEST_GALLERY=catalyst` | A single `CatalystCardView` on the mode backdrop |
+| `TU_TEST_GALLERY=share` | The `GauntletShareCard` with a sample showcase, prize and attuned Catalysts |
+
+Like `DebugLaunchState` it is wrapped in `#if DEBUG`, so it is compiled out of
+release builds; `ContentView` swaps in `DebugGalleryView` when the variable is set
+and otherwise shows the normal menu.
+
+`TradingUpUITests/UIImprovementScreenshots` drives these hooks (plus
+`TU_FORCE_UNLOCK` to open Gauntlet and `TU_TEST_STATE=almost-won` for a pack full
+of duplicates) to capture one PNG per screen a UI change touched — the Classic
+pack summary's inline keep/sell, the Gauntlet run HUD, the Continue / New Run
+prompts, and the two galleries — attaching each frame to the result bundle:
+
+```bash
+xcodebuild test -project TradingUp.xcodeproj -scheme TradingUpScreenshots \
+  -destination 'platform=iOS Simulator,name=iPhone 17' \
+  -only-testing:TradingUpUITests/UIImprovementScreenshots \
+  -resultBundlePath /tmp/tu_ui.xcresult CODE_SIGNING_ALLOWED=NO
+xcrun xcresulttool export attachments --path /tmp/tu_ui.xcresult \
+  --output-path /tmp/tu_ui_shots
+```
+
+Like the other UI tests it runs on the `TradingUpScreenshots` scheme and is **not**
+part of the CI test plan.

@@ -238,7 +238,6 @@ private struct SummaryView: View {
     @State private var baseKind: [UUID: BaseKind] = [:]
     @State private var soldIds: Set<UUID> = []
     @State private var keptIds: Set<UUID> = []
-    @State private var actionInst: CardInstance? = nil
 
     private let blue = [Color(hex: "3b82f6"), Color(hex: "6d5cf7")]
     private let green = [Palette.money, Color(hex: "2fae63")]
@@ -307,18 +306,6 @@ private struct SummaryView: View {
         }
         .background(Palette.bg0.ignoresSafeArea())
         .onAppear(perform: computePlan)
-        .confirmationDialog(
-            Text(actionInst.map { "Extra copy of \($0.card.name)" } ?? "Duplicate"),
-            isPresented: Binding(get: { actionInst != nil }, set: { if !$0 { actionInst = nil } }),
-            titleVisibility: .visible,
-            presenting: actionInst
-        ) { inst in
-            Button("Sell for \(inst.sellValue.money)") { decideSell(inst) }
-            Button("Keep in collection") { decideKeep(inst) }
-            Button("Cancel", role: .cancel) { }
-        } message: { _ in
-            Text("You already have a copy. The shop pays \(Int((Economy.sellbackRate * 100).rounded()))% of market value for extras — sell it for cash, or keep it in your collection.")
-        }
     }
 
     // MARK: Grids
@@ -343,16 +330,16 @@ private struct SummaryView: View {
     private func packGrid(_ m: GridMetrics) -> some View {
         VStack(spacing: 10) {
             if !pendingDuplicates.isEmpty {
-                Label("Tap a highlighted card to sell it or keep it", systemImage: "hand.tap.fill")
+                Label("Keep or sell each extra copy", systemImage: "arrow.left.arrow.right")
                     .font(.system(size: 13, weight: .bold))
                     .foregroundStyle(Palette.tapCue)
                     .multilineTextAlignment(.center)
             }
-            LazyVGrid(columns: m.columns, spacing: m.spacing + m.chipRoom) {
+            LazyVGrid(columns: m.columns, spacing: m.spacing) {
                 ForEach(result.pulled) { inst in
-                    PackCardSlot(inst: inst, slot: slot(for: inst), width: m.card) {
-                        actionInst = inst
-                    }
+                    PackCardSlot(inst: inst, slot: slot(for: inst), width: m.card,
+                                 onKeep: { decideKeep(inst) },
+                                 onSell: { decideSell(inst) })
                 }
             }
         }
@@ -518,9 +505,6 @@ private struct GridMetrics {
     let card: CGFloat
     let sectionSpacing: CGFloat
     let titleTopPad: CGFloat
-    /// Room below each card for the "sell or keep" chip that hangs off a pending
-    /// duplicate, so it never lands on top of the card's own value bar.
-    let chipRoom: CGFloat
 
     /// Three across is what a phone already fit, and it keeps a six-card pack to
     /// two tidy rows at every screen size.
@@ -537,24 +521,27 @@ private struct GridMetrics {
         let usable = min(container, contentCap) - 32          // .padding(16) on each side
         let perColumn = (usable - CGFloat(Self.columnCount - 1) * spacing) / CGFloat(Self.columnCount)
         card = min(230, max(96, perColumn))                   // 230 is CardView's native size
-        chipRoom = 26 * min(1.7, max(1, card / 104))
     }
 
     var columns: [GridItem] {
-        Array(repeating: GridItem(.flexible(), spacing: spacing), count: Self.columnCount)
+        // Top-aligned so cards line up along the top of each row even when a
+        // pending duplicate's Keep/Sell buttons make its cell taller.
+        Array(repeating: GridItem(.flexible(), spacing: spacing, alignment: .top), count: Self.columnCount)
     }
 }
 
 /// A single card on the pack summary with its NEW / duplicate / sold state.
+/// Pending duplicates carry their own Keep / Sell buttons so the choice is made
+/// right on the card, without a follow-up dialog (req 1).
 private struct PackCardSlot: View {
     let inst: CardInstance
     let slot: PackSlot
     let width: CGFloat
-    let onTap: () -> Void
+    let onKeep: () -> Void
+    let onSell: () -> Void
 
     @State private var pulse = false
 
-    private var tappable: Bool { slot == .pendingDup || slot == .keptDup }
     /// Chrome scales with the card, which is much larger on a tablet than the
     /// 104pt phone card these badges were originally sized against.
     private var s: CGFloat { min(1.7, max(1, width / 104)) }
@@ -572,47 +559,58 @@ private struct PackCardSlot: View {
     }
 
     var body: some View {
+        VStack(spacing: 7 * s) {
+            cardFace
+            // Pending copies get both choices; a kept copy keeps a Sell option so
+            // the player can still change their mind and liquidate it.
+            if slot == .pendingDup {
+                HStack(spacing: 6 * s) {
+                    actionButton(title: "Keep", tint: Color(hex: "3b82f6"), action: onKeep)
+                    actionButton(title: "Sell \(inst.sellValue.moneyShort)", tint: Palette.money, action: onSell)
+                }
+            } else if slot == .keptDup {
+                actionButton(title: "Sell \(inst.sellValue.moneyShort)", tint: Palette.money, action: onSell)
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: slot)
+        .onAppear {
+            guard slot == .pendingDup else { return }
+            withAnimation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true)) { pulse = true }
+        }
+    }
+
+    private var cardFace: some View {
         CardView(card: inst.card, instance: inst, width: width)
             .saturation(isProcessed ? 0 : 1)
             .opacity(cardOpacity)
             .overlay { if slot == .pendingDup { pendingRing } }
             .overlay(alignment: .topTrailing) { badgeView }
-            .overlay(alignment: .bottom) { if slot == .pendingDup { tapChip } }
             .overlay { if slot == .sold { soldStamp } }
-            .contentShape(Rectangle())
-            .onTapGesture { if tappable { Haptics.play(.light); onTap() } }
-            .animation(.easeInOut(duration: 0.2), value: slot)
-            .onAppear {
-                guard slot == .pendingDup else { return }
-                withAnimation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true)) { pulse = true }
-            }
+    }
+
+    private func actionButton(title: String, tint: Color, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.system(size: 11 * s, weight: .black, design: .rounded))
+                .foregroundStyle(.white)
+                .lineLimit(1).minimumScaleFactor(0.6)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 6 * s)
+                .background(Capsule().fill(tint))
+                .overlay(Capsule().strokeBorder(.white.opacity(0.25), lineWidth: 0.5))
+        }
+        .buttonStyle(.plain)
     }
 
     /// Duplicates are the only cards here that still need a decision, so they
-    /// get an unmissable cue of their own: a breathing accent ring and a tap
-    /// chip. A single line of grey hint text above the grid wasn't enough for
-    /// players to realise the cards themselves were buttons.
+    /// get an unmissable cue of their own: a breathing accent ring that draws
+    /// the eye down to the Keep / Sell buttons beneath them.
     private var pendingRing: some View {
         RoundedRectangle(cornerRadius: corner)
             .strokeBorder(Palette.tapCue, lineWidth: 2.5 * s)
             .shadow(color: Palette.tapCue.opacity(pulse ? 0.85 : 0.3), radius: 7 * s)
             .opacity(pulse ? 1 : 0.55)
             .allowsHitTesting(false)
-    }
-
-    private var tapChip: some View {
-        HStack(spacing: 3 * s) {
-            Image(systemName: "hand.tap.fill").font(.system(size: 8 * s, weight: .black))
-            Text("SELL OR KEEP").font(.system(size: 8 * s, weight: .black))
-        }
-        .foregroundStyle(.white)
-        .padding(.horizontal, 7 * s).padding(.vertical, 4 * s)
-        .background(Capsule().fill(Palette.tapCue))
-        .overlay(Capsule().strokeBorder(.white.opacity(0.4), lineWidth: 0.5))
-        .shadow(color: .black.opacity(0.5), radius: 3 * s, y: 1)
-        .scaleEffect(pulse ? 1.06 : 1)
-        .offset(y: 13 * s)
-        .allowsHitTesting(false)
     }
 
     @ViewBuilder private var badgeView: some View {

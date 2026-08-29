@@ -125,11 +125,6 @@ struct CatalystCardView: View {
 
     private var valueBar: some View {
         HStack {
-            Text("SELL")
-                .font(.system(size: 9.5 * s, weight: .heavy))
-                .foregroundStyle(element.badgeTint)
-                .padding(.horizontal, 7 * s).padding(.vertical, 3 * s)
-                .background(Capsule().fill(element.badgeTint.opacity(0.16)))
             Spacer()
             Text(catalyst.saleValue.money)
                 .font(.system(size: 15 * s, weight: .heavy, design: .rounded))
@@ -142,12 +137,23 @@ struct CatalystCardView: View {
 
 struct RunScreen: View {
     let state: GauntletState
+    var onHome: () -> Void = {}
     @State private var detail: ShowcaseSelection?
+    /// Measured height of the HUD panel, so the Home square can match it and the
+    /// two tiles read as one row (req 4).
+    @State private var hudHeight: CGFloat = 0
 
     var body: some View {
         if let run = state.run {
             VStack(spacing: 12) {
-                HUDPanel(run: run)
+                HStack(spacing: 10) {
+                    GauntletHomeSquare(side: hudHeight > 0 ? hudHeight : 76, action: onHome)
+                    HUDPanel(run: run)
+                        .background(GeometryReader { geo in
+                            Color.clear.preference(key: HUDHeightKey.self, value: geo.size.height)
+                        })
+                }
+                .onPreferenceChange(HUDHeightKey.self) { hudHeight = $0 }
                 ScrollView {
                     VStack(spacing: 12) {
                         ShowcasePanel(run: run) { idx in
@@ -331,9 +337,6 @@ private struct HUDPanel: View {
                     .font(.system(size: 18, weight: .black, design: .rounded))
                     .foregroundStyle(Palette.money)
             }
-            // Leave a gutter on the leading edge for the home button rather than
-            // letting it overlay the round/cash line (req 11).
-            .padding(.leading, 40)
 
             VStack(spacing: 4) {
                 ProgressBar(value: run.showcaseAura, total: run.target,
@@ -349,7 +352,35 @@ private struct HUDPanel: View {
     }
 }
 
-// MARK: Pull resolution
+/// The Home control on the run screen: a rounded square that matches the HUD
+/// panel's height so the two sit as one balanced row (req 4). Styled like a
+/// `.panel()` tile for cohesion with the HUD beside it.
+private struct GauntletHomeSquare: View {
+    let side: CGFloat
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "house.fill")
+                .font(.system(size: 20, weight: .bold))
+                .foregroundStyle(Palette.text)
+                .frame(width: side, height: side)
+                .background(RoundedRectangle(cornerRadius: 18).fill(Palette.panel))
+                .overlay(RoundedRectangle(cornerRadius: 18).strokeBorder(Palette.stroke, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Home")
+    }
+}
+
+/// Reports the HUD panel's measured height up to `RunScreen` so the Home square
+/// can size itself to match.
+private struct HUDHeightKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
 
 private struct PullPanel: View {
     let state: GauntletState

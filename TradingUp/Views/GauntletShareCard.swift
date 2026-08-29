@@ -33,9 +33,6 @@ struct GauntletShareCard: View {
             identityRow
             showcaseBlock
             if !attuned.isEmpty { attunedBlock }
-            Text("TRADING UP")
-                .font(.system(size: 15, weight: .black, design: .rounded)).tracking(2)
-                .foregroundStyle(.white)
         }
         .padding(24)
         .frame(width: 380)
@@ -53,10 +50,10 @@ struct GauntletShareCard: View {
 
     private var header: some View {
         VStack(spacing: 3) {
-            Text("GAUNTLET CLEARED")
+            Text("TRADING UP")
                 .font(.system(size: 13, weight: .black)).tracking(3)
                 .foregroundStyle(Color(hex: "c9a9ff"))
-            Text("\(tier.display) Gauntlet")
+            Text("Gauntlet Cleared")
                 .font(.system(size: 24, weight: .black, design: .rounded))
                 .foregroundStyle(.white)
         }
@@ -91,7 +88,7 @@ struct GauntletShareCard: View {
                 Text(trainer.name)
                     .font(.system(size: 16, weight: .black, design: .rounded))
                     .foregroundStyle(.white)
-                Text("Difficulty · \(tier.display)")
+                Text(tier.display)
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(Palette.subtle)
             }

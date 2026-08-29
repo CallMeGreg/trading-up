@@ -17,6 +17,12 @@ struct MainMenuView: View {
     /// Drives the Settings sheet, opened from the gear in the top corner. Settings
     /// moved here from a Classic tab so it governs the whole app.
     @State private var showSettings = false
+    /// A mode the player picked that already has a run in progress, so the menu is
+    /// asking whether to resume it or start fresh. `nil` when no such prompt is up.
+    @State private var resumePrompt: MenuRoute?
+    /// A mode the player chose "New Run" for, pending the "lose your progress?"
+    /// confirmation. `nil` when that confirm isn't up.
+    @State private var confirmNewRun: MenuRoute?
 
     private var unlocked: Bool { game.isFullVersionUnlocked }
 
@@ -50,6 +56,24 @@ struct MainMenuView: View {
             Button("OK", role: .cancel) { game.dismissLoadIssue() }
         } message: {
             Text(game.loadIssue?.message ?? "")
+        }
+        // Picking a mode that already has a run asks whether to resume it or start
+        // over, instead of a Settings reset button (req 3).
+        .confirmationDialog(resumeTitle, isPresented: resumeBinding, titleVisibility: .visible) {
+            if let mode = resumePrompt {
+                Button("Continue") { enter(mode) }
+                Button("New Run", role: .destructive) { promptNewRun(mode) }
+                Button("Cancel", role: .cancel) {}
+            }
+        } message: {
+            Text("Pick up where you left off, or start over.")
+        }
+        // "New Run" then has to be confirmed, because it throws the run away.
+        .alert(newRunTitle, isPresented: confirmNewRunBinding, presenting: confirmNewRun) { mode in
+            Button("Cancel", role: .cancel) {}
+            Button("Start New Run", role: .destructive) { startNewRun(mode) }
+        } message: { mode in
+            Text(newRunMessage(for: mode))
         }
     }
 
@@ -109,7 +133,7 @@ struct MainMenuView: View {
                 accent: Color(hex: "56d98a")
             ) {
                 Haptics.play(.medium)
-                route = .classic
+                chooseMode(.classic)
             }
             .accessibilityIdentifier("classicMode")
 
@@ -142,7 +166,7 @@ struct MainMenuView: View {
                 accent: Color(hex: "b98cff")
             ) {
                 Haptics.play(.medium)
-                route = .gauntlet
+                chooseMode(.gauntlet)
             }
             .accessibilityIdentifier("gauntletMode")
         } else {
@@ -198,6 +222,80 @@ struct MainMenuView: View {
     private var loadIssueBinding: Binding<Bool> {
         Binding(get: { game.loadIssue != nil },
                 set: { if !$0 { game.dismissLoadIssue() } })
+    }
+
+    // MARK: Resume / New Run (req 3)
+
+    /// Entry point for the Classic and Gauntlet tiles. If the mode has a run
+    /// in progress, ask whether to resume or restart; otherwise just enter.
+    private func chooseMode(_ mode: MenuRoute) {
+        if hasRunInProgress(mode) {
+            resumePrompt = mode
+        } else {
+            route = mode
+        }
+    }
+
+    private func hasRunInProgress(_ mode: MenuRoute) -> Bool {
+        switch mode {
+        case .classic:  return game.hasClassicProgress
+        case .gauntlet: return GauntletRunStore().hasSavedRun
+        case .binder:   return false
+        }
+    }
+
+    /// Resume the existing run. Deferred so the confirmation dialog finishes
+    /// dismissing before the full-screen cover presents.
+    private func enter(_ mode: MenuRoute) {
+        DispatchQueue.main.async { route = mode }
+    }
+
+    /// "New Run" tapped — raise the destructive confirmation. Deferred so it
+    /// doesn't collide with the dismissing confirmation dialog.
+    private func promptNewRun(_ mode: MenuRoute) {
+        DispatchQueue.main.async { confirmNewRun = mode }
+    }
+
+    /// Confirmed "New Run": throw the old run away, then enter the mode fresh.
+    private func startNewRun(_ mode: MenuRoute) {
+        switch mode {
+        case .classic:  game.newGame()
+        case .gauntlet: GauntletRunStore().clear()
+        case .binder:   break
+        }
+        Haptics.play(.warning)
+        DispatchQueue.main.async { route = mode }
+    }
+
+    private var resumeBinding: Binding<Bool> {
+        Binding(get: { resumePrompt != nil }, set: { if !$0 { resumePrompt = nil } })
+    }
+
+    private var confirmNewRunBinding: Binding<Bool> {
+        Binding(get: { confirmNewRun != nil }, set: { if !$0 { confirmNewRun = nil } })
+    }
+
+    private var resumeTitle: String {
+        switch resumePrompt {
+        case .classic:  return "Classic run in progress"
+        case .gauntlet: return "Gauntlet run in progress"
+        default:        return ""
+        }
+    }
+
+    private var newRunTitle: String {
+        confirmNewRun == .classic ? "Start a new Classic run?" : "Start a new Gauntlet run?"
+    }
+
+    private func newRunMessage(for mode: MenuRoute) -> String {
+        switch mode {
+        case .classic:
+            return "This erases your current Classic collection and cash, and starts over with \(Economy.startingCash.money). Your all-time record is kept."
+        case .gauntlet:
+            return "This discards your in-progress Gauntlet run so it won't resume. Your unlocked trainers and difficulties are kept."
+        case .binder:
+            return ""
+        }
     }
 }
 

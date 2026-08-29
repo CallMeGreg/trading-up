@@ -5,6 +5,14 @@ import SwiftUI
 /// here now lives in `ClassicModeView`.
 struct ContentView: View {
     var body: some View {
+        #if DEBUG
+        if let gallery = DebugGallery.selection {
+            DebugGalleryView(selection: gallery)
+        } else {
+            MainMenuView()
+        }
+        #else
         MainMenuView()
+        #endif
     }
 }

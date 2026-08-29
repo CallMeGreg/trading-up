@@ -65,20 +65,7 @@ struct TrainerSelectScreen: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            ZStack {
-                GauntletHeader(eyebrow: "Gauntlet", title: "Choose your Trainer")
-                HStack {
-                    Spacer()
-                    Button { Haptics.play(.light); state.showIntro() } label: {
-                        Image(systemName: "info.circle.fill")
-                            .font(.system(size: 24))
-                            .symbolRenderingMode(.hierarchical)
-                            .foregroundStyle(Color(hex: "b06cf7"))
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("How Gauntlet works")
-                }
-            }
+            GauntletHeader(eyebrow: "Gauntlet", title: "Choose your Trainer")
             ScrollView {
                 VStack(spacing: 12) {
                     ForEach(orderedTrainers) { trainer in
@@ -111,13 +98,6 @@ private struct TrainerCard: View {
     private var statsHidden: Bool { !unlocked }
     private var accent: Color { trainerSignatureColor(trainer.id) }
 
-    /// The blurb slot: real flavour once unlocked, a teaser while locked.
-    private var descriptionText: String {
-        if concealed { return "A hidden challenger — earn the right to see them." }
-        if !unlocked { return "Unlock this Trainer to reveal their style and skills." }
-        return trainer.blurb
-    }
-
     var body: some View {
         Button(action: action) {
             HStack(alignment: .top, spacing: 12) {
@@ -136,11 +116,13 @@ private struct TrainerCard: View {
                                 .foregroundStyle(Palette.subtle)
                         }
                     }
-                    Text(descriptionText)
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(Palette.subtle)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                    if unlocked {
+                        Text(trainer.blurb)
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(Palette.subtle)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
 
                     SkillGraph(skills: trainer.skills, accent: accent, concealed: statsHidden)
 
@@ -326,7 +308,7 @@ struct TierSelectScreen: View {
             ScrollView {
                 VStack(spacing: 12) {
                     ForEach(GauntletTier.allCases, id: \.self) { tier in
-                        TierCard(tier: tier, unlocked: state.isUnlocked(tier)) {
+                        TierCard(tier: tier, unlocked: state.isUnlocked(tier), trainer: state.selectedTrainer) {
                             state.startRun(tier: tier)
                         }
                     }
@@ -347,6 +329,9 @@ struct TierSelectScreen: View {
 private struct TierCard: View {
     let tier: GauntletTier
     let unlocked: Bool
+    /// The currently selected Trainer, so the rip/slot figures reflect their
+    /// skill adjustments rather than the tier's base values (req 5).
+    var trainer: Trainer?
     let action: () -> Void
 
     private var accent: Color {
@@ -400,8 +385,9 @@ private struct TierCard: View {
     }
 
     private var difficultyNote: String {
-        let rips = GauntletEconomy.ripBudget(tier, round: 1)
-        let slots = GauntletEconomy.startingSlots(tier)
+        let mods = trainer?.mods ?? .none
+        let rips = GauntletEconomy.ripBudget(tier, round: 1) + mods.extraRipsPerRound
+        let slots = GauntletEconomy.startingSlots(tier) + mods.extraSlots
         return "\(rips) rips/round · \(slots) showcase slots · \(GauntletEconomy.rounds(tier)) rounds"
     }
 }

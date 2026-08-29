@@ -22,7 +22,25 @@ struct GauntletView: View {
             }
         }
         .task { if state == nil { state = GauntletState(game: game) } }
-        .overlay(alignment: .topLeading) { closeButton }
+        // The run screen carries its own inline Home square in the HUD row, so the
+        // floating corner button steps aside during ripping (req 11).
+        .overlay(alignment: .topLeading) {
+            if let state, state.phase != .ripping {
+                GauntletCornerButton(systemImage: "house.fill", label: "Home", action: goHome)
+                    .padding(10)
+            }
+        }
+        // The Gauntlet primer lives behind an info button that mirrors the Home
+        // button's size and vertical position for a consistent look (req 2).
+        .overlay(alignment: .topTrailing) {
+            if let state, state.phase == .trainerSelect {
+                GauntletCornerButton(systemImage: "info.circle.fill", label: "How Gauntlet works") {
+                    Haptics.play(.light)
+                    state.showIntro()
+                }
+                .padding(10)
+            }
+        }
     }
 
     @ViewBuilder
@@ -31,7 +49,7 @@ struct GauntletView: View {
         case .intro:         IntroScreen(state: state)
         case .trainerSelect: TrainerSelectScreen(state: state)
         case .tierSelect:    TierSelectScreen(state: state)
-        case .ripping:       RunScreen(state: state)
+        case .ripping:       RunScreen(state: state, onHome: goHome)
         case .shop:          ShopScreen(state: state)
         case .reward:        RewardScreen(state: state)
         case .results:       ResultsScreen(state: state) { dismiss() }
@@ -39,13 +57,23 @@ struct GauntletView: View {
         }
     }
 
-    private var closeButton: some View {
-        Button {
-            Haptics.play(.light)
-            state?.persistForExit()   // resume this run next time (req 11)
-            dismiss()
-        } label: {
-            Image(systemName: "house.fill")
+    private func goHome() {
+        Haptics.play(.light)
+        state?.persistForExit()   // resume this run next time (req 11)
+        dismiss()
+    }
+}
+
+/// A round corner control shared by the Home and info buttons so they read as a
+/// matched pair — same 38pt circle, same styling, mirrored across the top row.
+struct GauntletCornerButton: View {
+    let systemImage: String
+    let label: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
                 .font(.system(size: 18, weight: .bold))
                 .foregroundStyle(Palette.text)
                 .frame(width: 38, height: 38)
@@ -53,8 +81,7 @@ struct GauntletView: View {
                 .overlay(Circle().strokeBorder(.white.opacity(0.12), lineWidth: 1))
         }
         .buttonStyle(.plain)
-        .padding(10)
-        .accessibilityLabel("Home")
+        .accessibilityLabel(label)
     }
 }
 
