@@ -57,24 +57,46 @@ struct MainMenuView: View {
         } message: {
             Text(game.loadIssue?.message ?? "")
         }
-        // Picking a mode that already has a run asks whether to resume it or start
-        // over, instead of a Settings reset button (req 3).
-        .confirmationDialog(resumeTitle, isPresented: resumeBinding, titleVisibility: .visible) {
-            if let mode = resumePrompt {
-                Button("Continue") { enter(mode) }
-                Button("New Run", role: .destructive) { promptNewRun(mode) }
-                Button("Cancel", role: .cancel) {}
+        // Picking a mode that already has a run asks whether to resume it or
+        // start over, in the in-theme popup instead of a standard iOS dialog
+        // (req 3). Layered above everything, including the Settings gear.
+        .overlay { runPopupOverlay }
+    }
+
+    /// The custom in-theme run-in-progress popup (req 3). Dims the menu and floats
+    /// the "Compact Rail" card over it when the player taps a mode that already has
+    /// a run going — first offering Continue vs. New Run, then a destructive
+    /// confirm. Tapping the dimmed backdrop cancels.
+    @ViewBuilder
+    private var runPopupOverlay: some View {
+        if let step = runPopupStep {
+            ZStack {
+                Color.black.opacity(0.55)
+                    .ignoresSafeArea()
+                    .contentShape(Rectangle())
+                    .onTapGesture { dismissRunPopup() }
+                    .transition(.opacity)
+
+                RunInProgressCard(
+                    step: step,
+                    onContinue: continueRun,
+                    onNewRun: promptNewRun,
+                    onConfirm: startNewRun,
+                    onCancel: dismissRunPopup
+                )
+                .frame(maxWidth: 380)
+                .padding(.horizontal, 28)
+                .transition(.scale(scale: 0.9).combined(with: .opacity))
             }
-        } message: {
-            Text("Pick up where you left off, or start over.")
         }
-        // "New Run" then has to be confirmed, because it throws the run away.
-        .alert(newRunTitle, isPresented: confirmNewRunBinding, presenting: confirmNewRun) { mode in
-            Button("Cancel", role: .cancel) {}
-            Button("Start New Run", role: .destructive) { startNewRun(mode) }
-        } message: { mode in
-            Text(newRunMessage(for: mode))
-        }
+    }
+
+    /// Derives the popup's current step from the two run states. The destructive
+    /// confirm wins when both are somehow set.
+    private var runPopupStep: RunPopupStep? {
+        if let mode = confirmNewRun { return .confirm(mode) }
+        if let mode = resumePrompt { return .resume(mode) }
+        return nil
     }
 
     /// The gear that opens Settings, tucked into the top-trailing corner so it's
@@ -230,7 +252,7 @@ struct MainMenuView: View {
     /// in progress, ask whether to resume or restart; otherwise just enter.
     private func chooseMode(_ mode: MenuRoute) {
         if hasRunInProgress(mode) {
-            resumePrompt = mode
+            withAnimation(Self.popupAnim) { resumePrompt = mode }
         } else {
             route = mode
         }
@@ -244,20 +266,24 @@ struct MainMenuView: View {
         }
     }
 
-    /// Resume the existing run. Deferred so the confirmation dialog finishes
-    /// dismissing before the full-screen cover presents.
-    private func enter(_ mode: MenuRoute) {
+    /// Resume the existing run. Deferred so the popup starts dismissing before the
+    /// full-screen cover presents.
+    private func continueRun(_ mode: MenuRoute) {
+        withAnimation(Self.popupAnim) { resumePrompt = nil }
         DispatchQueue.main.async { route = mode }
     }
 
-    /// "New Run" tapped — raise the destructive confirmation. Deferred so it
-    /// doesn't collide with the dismissing confirmation dialog.
+    /// "New Run" tapped — swap the resume prompt for the destructive confirm.
     private func promptNewRun(_ mode: MenuRoute) {
-        DispatchQueue.main.async { confirmNewRun = mode }
+        withAnimation(Self.popupAnim) {
+            resumePrompt = nil
+            confirmNewRun = mode
+        }
     }
 
     /// Confirmed "New Run": throw the old run away, then enter the mode fresh.
     private func startNewRun(_ mode: MenuRoute) {
+        withAnimation(Self.popupAnim) { confirmNewRun = nil }
         switch mode {
         case .classic:  game.newGame()
         case .gauntlet: GauntletRunStore().clear()
@@ -267,36 +293,15 @@ struct MainMenuView: View {
         DispatchQueue.main.async { route = mode }
     }
 
-    private var resumeBinding: Binding<Bool> {
-        Binding(get: { resumePrompt != nil }, set: { if !$0 { resumePrompt = nil } })
-    }
-
-    private var confirmNewRunBinding: Binding<Bool> {
-        Binding(get: { confirmNewRun != nil }, set: { if !$0 { confirmNewRun = nil } })
-    }
-
-    private var resumeTitle: String {
-        switch resumePrompt {
-        case .classic:  return "Classic run in progress"
-        case .gauntlet: return "Gauntlet run in progress"
-        default:        return ""
+    /// Dismiss the popup without entering a mode (tap-outside or Cancel).
+    private func dismissRunPopup() {
+        withAnimation(Self.popupAnim) {
+            resumePrompt = nil
+            confirmNewRun = nil
         }
     }
 
-    private var newRunTitle: String {
-        confirmNewRun == .classic ? "Start a new Classic run?" : "Start a new Gauntlet run?"
-    }
-
-    private func newRunMessage(for mode: MenuRoute) -> String {
-        switch mode {
-        case .classic:
-            return "This erases your current Classic collection and cash, and starts over with \(Economy.startingCash.money). Your all-time record is kept."
-        case .gauntlet:
-            return "This discards your in-progress Gauntlet run so it won't resume. Your unlocked trainers and difficulties are kept."
-        case .binder:
-            return ""
-        }
-    }
+    private static let popupAnim = Animation.spring(response: 0.34, dampingFraction: 0.86)
 }
 
 // MARK: - Route
