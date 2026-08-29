@@ -115,6 +115,8 @@ final class UIImprovementScreenshots: XCTestCase {
         // duplicates, so the summary shows the new inline Keep / Sell buttons.
         let buy = app.buttons["buyPack"]
         XCTAssertTrue(buy.waitForExistence(timeout: 15), "shop never appeared")
+        // The wallet header now shows the cash number without a "$" medallion.
+        shot("11-classic-top-bar")
         buy.tap()
 
         tapCenter()                       // tear the wrapper

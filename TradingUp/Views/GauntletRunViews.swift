@@ -338,15 +338,19 @@ private struct HUDPanel: View {
                     .foregroundStyle(Palette.money)
             }
 
-            VStack(spacing: 4) {
+            HStack(spacing: 8) {
+                Text("AURA")
+                    .font(.system(size: 11, weight: .heavy)).tracking(0.4)
+                    .foregroundStyle(Palette.subtle)
                 ProgressBar(value: run.showcaseAura, total: run.target,
                             tint: run.showcaseAura >= run.target ? Palette.money : Color(hex: "b06cf7"),
-                            height: 10)
-                Text("\(fmt(run.showcaseAura)) / \(fmt(run.target)) Aura")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(run.showcaseAura >= run.target ? Palette.money : Palette.text)
-                    .frame(maxWidth: .infinity, alignment: .center)
+                            height: 8)
+                Text("\(fmt(run.showcaseAura)) / \(fmt(run.target))")
+                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                    .foregroundStyle(run.showcaseAura >= run.target ? Palette.money : Palette.subtle)
             }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Aura \(fmt(run.showcaseAura)) of \(fmt(run.target))")
         }
         .panel()
     }
