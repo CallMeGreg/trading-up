@@ -127,7 +127,7 @@ private struct TrainerCard: View {
                     SkillGraph(skills: trainer.skills, accent: accent, concealed: statsHidden)
 
                     if unlocked {
-                        SkillEffects(skills: trainer.skills, accent: accent)
+                        SkillEffects(skills: trainer.skills)
                     }
 
                     if concealed, let p = unlockProgress {
@@ -207,33 +207,104 @@ private struct PipRow: View {
     }
 }
 
-/// The concrete run effect of every skill that sits off the neutral 3 — read
-/// straight from `GauntletSkillTuning`, the same tuning the pips derive from, so a
-/// player sees exactly what a Trainer's graph *does* (its edge and its cost), not
-/// just its shape. Empty (and so nothing shown) for the flat-3 Rookie.
+/// A Trainer's off-neutral pips, split into two colour-coded lines — its Boosts
+/// (every skill above the neutral 3) and its Nerfs (every skill below it). These
+/// are the same per-pip effects the ladder derives from, but grouped by sign,
+/// phrased tight, and with the neutral axes dropped, so a card states its edge and
+/// its cost without repeating all five skills as full sentences. Empty (nothing
+/// shown) for the flat-3 Rookie, which has neither.
 private struct SkillEffects: View {
     let skills: TrainerSkills
-    let accent: Color
+
+    private func entries(_ keep: (Int) -> Bool) -> [(axis: TrainerSkillAxis, phrase: String)] {
+        TrainerSkillAxis.allCases.compactMap { axis in
+            let s = skills.score(axis)
+            guard keep(s), let phrase = GauntletSkillTuning.compactEffect(axis, score: s) else { return nil }
+            return (axis, phrase)
+        }
+    }
+    private var boosts: [(axis: TrainerSkillAxis, phrase: String)] {
+        entries { $0 > GauntletSkillTuning.neutralScore }
+    }
+    private var nerfs: [(axis: TrainerSkillAxis, phrase: String)] {
+        entries { $0 < GauntletSkillTuning.neutralScore }
+    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            ForEach(TrainerSkillAxis.allCases, id: \.self) { axis in
-                if let text = GauntletSkillTuning.effect(axis, score: skills.score(axis)) {
-                    HStack(alignment: .firstTextBaseline, spacing: 6) {
-                        Image(systemName: axis.symbol)
-                            .font(.system(size: 9, weight: .bold))
-                            .foregroundStyle(accent.opacity(0.9))
-                            .frame(width: 14)
-                        Text(text)
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(Palette.subtle)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
+        if boosts.isEmpty && nerfs.isEmpty {
+            EmptyView()
+        } else {
+            VStack(alignment: .leading, spacing: 6) {
+                Rectangle().fill(Palette.stroke).frame(height: 1).opacity(0.6)
+                if !boosts.isEmpty {
+                    EffectGroup(label: "Boosts", symbol: "arrowtriangle.up.fill",
+                                tint: Palette.money, entries: boosts)
+                }
+                if !nerfs.isEmpty {
+                    EffectGroup(label: "Nerfs", symbol: "arrowtriangle.down.fill",
+                                tint: Palette.loss, entries: nerfs)
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// One side of the Boosts / Nerfs split: a compact tinted heading and that side's
+/// axis phrases, each led by its bolded skill name, flowing onto as many lines as
+/// the card width needs.
+private struct EffectGroup: View {
+    let label: String
+    let symbol: String
+    let tint: Color
+    let entries: [(axis: TrainerSkillAxis, phrase: String)]
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 8) {
+            HStack(spacing: 3) {
+                Image(systemName: symbol)
+                    .font(.system(size: 8, weight: .black))
+                Text(label.uppercased())
+                    .font(.system(size: 10, weight: .heavy, design: .rounded))
+                    .tracking(0.3)
+                    .lineLimit(1)
+                    .fixedSize()
+            }
+            .foregroundStyle(tint)
+            .frame(width: 66, alignment: .leading)
+            .padding(.top, 1)
+
+            Text(phrases)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
         .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(label): "
+            + entries.map { "\($0.axis.title) \($0.phrase)" }.joined(separator: ", "))
+    }
+
+    /// The side's entries as one attributed run so they wrap as flowing text: each
+    /// skill name bold, its phrase muted, separated by a dot. A non-breaking space
+    /// keeps a name glued to the start of its own phrase.
+    private var phrases: AttributedString {
+        var out = AttributedString()
+        for (i, e) in entries.enumerated() {
+            if i > 0 {
+                var sep = AttributedString("   ·   ")
+                sep.foregroundColor = Palette.subtle.opacity(0.6)
+                sep.font = .system(size: 11.5, weight: .medium)
+                out.append(sep)
+            }
+            var name = AttributedString(e.axis.title + "\u{00A0}")
+            name.foregroundColor = .white.opacity(0.92)
+            name.font = .system(size: 11.5, weight: .bold)
+            out.append(name)
+            var phrase = AttributedString(e.phrase)
+            phrase.foregroundColor = Palette.subtle
+            phrase.font = .system(size: 11.5, weight: .medium)
+            out.append(phrase)
+        }
+        return out
     }
 }
 

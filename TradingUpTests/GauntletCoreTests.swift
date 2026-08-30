@@ -36,12 +36,17 @@ final class GauntletCoreTests: XCTestCase {
     }
 
     func testTrainerSkillEdgesApplyAtStart() {
-        // Skill magnitudes are live: the Merchant's 5-Selling seeds extra starting
-        // cash, so a run opens above the base stake.
+        // Selling no longer seeds starting cash, so even the Merchant's 5-Selling opens
+        // at exactly the base stake — its edge (sell-back, round payout) is felt in play.
         let merchant = Trainer.byId("merchant")!
-        XCTAssertGreaterThan(merchant.mods.startingCashBonus, 0)
         let run = GauntletRun(tier: .easy, trainer: merchant)
-        XCTAssertEqual(run.cash, GauntletEconomy.startingCash + merchant.mods.startingCashBonus, accuracy: 1e-9)
+        XCTAssertEqual(run.cash, GauntletEconomy.startingCash, accuracy: 1e-9)
+
+        // Inventory *does* apply at start: the Curator's 5-Inventory opens with extra
+        // Showcase slots over the tier's base capacity.
+        let curator = Trainer.byId("curator")!
+        let curatorRun = GauntletRun(tier: .easy, trainer: curator)
+        XCTAssertGreaterThan(curatorRun.effectiveSlots, GauntletEconomy.startingSlots(.easy))
 
         // The Ripper's 5-Energy is a per-round *chance* of a bonus rip, rolled only by
         // the RNG-threaded init, so the deterministic init opens at the plain budget.
