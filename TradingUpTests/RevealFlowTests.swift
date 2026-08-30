@@ -121,3 +121,57 @@ final class DebugLaunchStateTests: XCTestCase {
         XCTAssertNil(DebugLaunchState.seed(environment: [DebugLaunchState.seedKey: "not-a-number"]))
     }
 }
+
+/// The evolution-line **stage pips** are the shared contract behind the "pips
+/// update as cards are kept" behaviour on both pack-summary screens: a stage
+/// counts as owned exactly when a copy of it stands in the caller's pool — the
+/// live Classic keep/sell decisions in `RevealView`, or the Gauntlet Showcase.
+/// These lock that mapping so the pips keep reflecting *what is now owned*.
+final class EvolutionPipTests: XCTestCase {
+
+    /// A real multi-stage evolution line to exercise (base = stage 1, top = last).
+    private func sampleLine() throws -> (line: [Card], base: Card, top: Card) {
+        let line = try XCTUnwrap(
+            CardDatabase.evolutionLines.values.sorted { $0[0].id < $1[0].id }.first,
+            "the card set should contain at least one multi-stage evolution line")
+        return (line, line.first!, line.last!)
+    }
+
+    func testOwnedStagesFollowTheOwnershipPool() throws {
+        let s = try sampleLine()
+        // Own only the base stage; the card in hand is the top stage.
+        let owned: Set<String> = [s.base.id]
+        let series = CardSeries(for: s.top, pull: true) { owned.contains($0.id) }
+
+        XCTAssertEqual(series.line.map(\.id), s.line.map(\.id),
+                       "the pips span the whole sorted evolution line")
+        XCTAssertTrue(series.ownedStages.contains(s.base.stage), "the owned base stage is lit")
+        XCTAssertFalse(series.ownedStages.contains(s.top.stage), "the un-owned top stage is dark…")
+        XCTAssertEqual(series.nowStage, s.top.stage, "…and flagged as the current pull (pull: true)")
+    }
+
+    func testKeepingACardLightsItsStageForTheOtherCards() throws {
+        let s = try sampleLine()
+        // A sibling (the base-stage card) looks at the line while the top stage is
+        // still undecided, then again once it's been kept into the pool.
+        var pool: Set<String> = []
+        func siblingPips() -> CardSeries { CardSeries(for: s.base, pull: true) { pool.contains($0.id) } }
+
+        XCTAssertFalse(siblingPips().ownedStages.contains(s.top.stage),
+                       "before the top-stage card is kept, its pip reads dark on the other cards")
+        pool.insert(s.top.id)          // keep it
+        XCTAssertTrue(siblingPips().ownedStages.contains(s.top.stage),
+                      "once kept it lights up in the other cards' pips — reflecting what is now owned")
+    }
+
+    func testGauntletPipsTrackTheShowcase() throws {
+        let s = try sampleLine()
+        let onlyPull = CardSeries.gauntlet(s.top, showcase: [])
+        XCTAssertTrue(onlyPull.ownedStages.isEmpty, "an empty Showcase owns no stages")
+        XCTAssertEqual(onlyPull.nowStage, s.top.stage, "the pulled card's own stage is the current pull")
+
+        let withBaseKept = CardSeries.gauntlet(s.top, showcase: [CardInstance(cardId: s.base.id)])
+        XCTAssertTrue(withBaseKept.ownedStages.contains(s.base.stage),
+                      "a card standing in the Showcase lights its stage for the new pull")
+    }
+}
