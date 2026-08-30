@@ -219,6 +219,19 @@ struct RunScreen: View {
 
 private func fmt(_ v: Double) -> String { String(format: "%.0f", v) }
 
+/// Subtitle for the Championship (Hard finale) shop CTA: current Aura, then the
+/// raised goal (gold) and the bonus rip (green) picked out against the button's
+/// gold skin. Mirrors the normal "Aura · Goal" line but flags the round's stakes.
+private func championshipSubtitle(_ run: GauntletRun) -> AttributedString {
+    let base = AttributedString("Aura \(fmt(run.showcaseAura)) · Goal ")
+    var goal = AttributedString(fmt(run.target))
+    goal.foregroundColor = Color(hex: "fff0c2")
+    let sep = AttributedString(" · ")
+    var rip = AttributedString("+1 rip")
+    rip.foregroundColor = Color(hex: "bff7d4")
+    return base + goal + sep + rip
+}
+
 // MARK: Pack rail — one tile per element set (req 5)
 
 /// Replaces the single "Rip a Pack" button. Each of the five element sets is a
@@ -355,7 +368,7 @@ private struct HUDPanel: View {
                     .foregroundStyle(.white)
                     .lineLimit(1).minimumScaleFactor(0.8)
                 if run.isBossRound {
-                    Text("BOSS").font(.system(size: 10, weight: .black)).tracking(1)
+                    Text("FINALS").font(.system(size: 10, weight: .black)).tracking(1)
                         .foregroundStyle(Color(hex: "1a0d2e"))
                         .padding(.horizontal, 6).padding(.vertical, 2)
                         .background(Capsule().fill(Color(hex: "ffd54a")))
@@ -1003,10 +1016,18 @@ struct ShopScreen: View {
                     }
                 }
 
-                BigButton(title: "Start Round \(run.round)",
-                          subtitle: "Aura: \(fmt(run.showcaseAura)) · Goal: \(fmt(run.target))",
-                          systemImage: "play.fill", tint: GauntletTheme.tint) {
-                    Haptics.play(.medium); state.continueFromShop()
+                if run.isBossRound {
+                    BigButton(title: "Enter the Championship",
+                              attributedSubtitle: championshipSubtitle(run),
+                              systemImage: "play.fill", tint: GauntletTheme.championship) {
+                        Haptics.play(.medium); state.continueFromShop()
+                    }
+                } else {
+                    BigButton(title: "Start Round \(run.round)",
+                              subtitle: "Aura: \(fmt(run.showcaseAura)) · Goal: \(fmt(run.target))",
+                              systemImage: "play.fill", tint: GauntletTheme.tint) {
+                        Haptics.play(.medium); state.continueFromShop()
+                    }
                 }
             }
         }

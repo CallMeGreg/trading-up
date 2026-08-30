@@ -104,4 +104,7 @@ struct GauntletBackdrop: View {
 enum GauntletTheme {
     static let tint = [Color(hex: "6d5cf7"), Color(hex: "b06cf7")]
     static let gold = [Color(hex: "ffd54a"), Color(hex: "ff8ad6")]
+    /// Gold treatment for the Hard finale — presented to the player as the
+    /// "Collection Championship" so its shop CTA reads as the title round.
+    static let championship = [Color(hex: "e2942f"), Color(hex: "d0701f")]
 }
