@@ -61,17 +61,21 @@ enum GauntletSim {
     /// close they are. Because it scores the entire Showcase, evicting a linemate
     /// lowers the score on its own, so the argmax below never breaks a line it's
     /// trying to build.
-    static func showcaseScore(_ sc: [CardInstance], evoLineBonus: Double, auraMult: Double) -> Double {
-        var s = GauntletRun.aura(sc, evoLineBonus: evoLineBonus, auraMult: auraMult)
-        guard evoLineBonus > 0 else { return s }
+    static func showcaseScore(_ sc: [CardInstance], evoLineBonusBonus: Double, auraMult: Double) -> Double {
+        var s = GauntletRun.aura(sc, evoLineBonusBonus: evoLineBonusBonus, auraMult: auraMult)
         let byLine = Dictionary(grouping: sc.filter { $0.card.stageCount > 1 }, by: { $0.card.lineId })
         for (_, g) in byLine {
             let stageCount = g[0].card.stageCount
             let present = Set(g.map { $0.card.stage }).count
             if present >= 1 && present < stageCount {
+                // Value a still-assembling line by the completion bonus its *set*
+                // would eventually pay, scaled by how close it is — so the policy
+                // chases scarce late-set lines proportionally harder.
+                let bonus = GauntletEconomy.evoLineBonus(set: g[0].card.set) + evoLineBonusBonus
+                guard bonus > 0 else { continue }
                 let lineVal = g.reduce(0.0) { $0 + $1.currentValue }
                 let progress = Double(present) / Double(stageCount)
-                s += evoLineBonus * lineVal * lineOptionWeight * progress * auraMult
+                s += bonus * lineVal * lineOptionWeight * progress * auraMult
             }
         }
         return s
@@ -87,7 +91,7 @@ enum GauntletSim {
             // the most — a score that credits both finished lines (exactly) and lines
             // still assembling (option value), so the policy will hold a cheap common
             // toward a completion instead of dumping it for a pricier single.
-            let elb = run.evoLineBonus
+            let elb = run.mods.evoLineBonusBonus
             let am = run.mods.auraMult
             for inst in cards.sorted(by: { $0.currentValue > $1.currentValue }) {
                 if run.canKeep {
@@ -95,12 +99,12 @@ enum GauntletSim {
                     continue
                 }
                 // "Sell" keeps the Showcase as-is; each swap trials inst into a slot.
-                var bestScore = showcaseScore(run.showcase, evoLineBonus: elb, auraMult: am)
+                var bestScore = showcaseScore(run.showcase, evoLineBonusBonus: elb, auraMult: am)
                 var bestSlot: Int? = nil
                 for j in run.showcase.indices {
                     var trial = run.showcase
                     trial[j] = inst
-                    let sc = showcaseScore(trial, evoLineBonus: elb, auraMult: am)
+                    let sc = showcaseScore(trial, evoLineBonusBonus: elb, auraMult: am)
                     if sc > bestScore { bestScore = sc; bestSlot = j }
                 }
                 if let j = bestSlot { run.swapIn(inst, at: j) } else { run.sell(inst) }

@@ -715,7 +715,7 @@ private struct ShowcaseCardCell: View {
     /// A small "×2.25" tab straddling the bottom edge — the gap between the rarity
     /// badge (leading) and value (trailing), so it covers no card content.
     private var multiplierTab: some View {
-        Text(String(format: "×%.2f", run.evoLineMultiplier))
+        Text(String(format: "×%.2f", run.evoLineMultiplier(forSet: inst.card.set)))
             .font(.system(size: 10, weight: .black, design: .rounded))
             .foregroundStyle(Palette.bg0)
             .padding(.horizontal, 6).padding(.vertical, 2)
@@ -724,7 +724,7 @@ private struct ShowcaseCardCell: View {
             .shadow(color: .black.opacity(0.45), radius: 2, y: 1)
             .offset(y: 9)
             .accessibilityLabel(
-                "Completed line, \(String(format: "%.2f", run.evoLineMultiplier)) times Aura")
+                "Completed line, \(String(format: "%.2f", run.evoLineMultiplier(forSet: inst.card.set))) times Aura")
     }
 }
 
@@ -879,7 +879,7 @@ private struct ShowcaseCardDetail: View {
                                   currentCardId: inst.card.id) { _ in true }
 
                 if run.isInCompletedLine(inst) {
-                    completedLineBanner(set: inst.card.set, mult: run.evoLineMultiplier)
+                    completedLineBanner(set: inst.card.set, mult: run.evoLineMultiplier(forSet: inst.card.set))
                 }
 
                 gradeSection(run: run, inst: inst)

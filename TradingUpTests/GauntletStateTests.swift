@@ -457,7 +457,7 @@ final class GauntletStateTests: XCTestCase {
         var without = run.showcase
         without.remove(at: idx)
         let base = GauntletRun.aura(without,
-                                        evoLineBonus: run.evoLineBonus,
+                                        evoLineBonusBonus: run.mods.evoLineBonusBonus,
                                         auraMult: run.mods.auraMult)
         return run.showcaseAura - base
     }

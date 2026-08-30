@@ -657,13 +657,20 @@ do {
     let line = CardDatabase.evolutionLines.values.first { $0.count >= 2 }!   // sorted by stage
     let fullLine = line.map { CardInstance(cardId: $0.id) }
     let partialLine = [CardInstance(cardId: line[0].id)]   // only the first stage
-    let elb = GauntletEconomy.baseEvoLineBonus
-    check(GauntletRun.aura([], evoLineBonus: elb, auraMult: 1) == 0, "empty Showcase scores 0 Aura")
-    let complete = GauntletRun.aura(fullLine, evoLineBonus: elb, auraMult: 1)
-    let incomplete = GauntletRun.aura(partialLine, evoLineBonus: elb, auraMult: 1)
+    let elb = GauntletEconomy.evoLineBonus(set: line[0].set)   // this line's set-scaled bonus
+    check(GauntletRun.aura([], evoLineBonusBonus: 0, auraMult: 1) == 0, "empty Showcase scores 0 Aura")
+    let complete = GauntletRun.aura(fullLine, evoLineBonusBonus: 0, auraMult: 1)
+    let incomplete = GauntletRun.aura(partialLine, evoLineBonusBonus: 0, auraMult: 1)
     let rawFull = fullLine.reduce(0.0) { $0 + $1.currentValue }
     check(abs(complete - rawFull * (1 + elb)) < 1e-6, "a complete evolution line earns the completion bonus")
     check(abs(incomplete - partialLine[0].currentValue) < 1e-6, "an incomplete line earns no bonus")
+
+    // The completion bonus scales up with the set: later sets pay strictly harder.
+    let bonuses = (1...GauntletEconomy.maxPackTier).map { GauntletEconomy.evoLineBonus(set: $0) }
+    check(zip(bonuses, bonuses.dropFirst()).allSatisfy { $0 < $1 },
+          "evolution-line completion bonus rises every set")
+    check(GauntletEconomy.evoLineBonus(set: 5) >= 2 * GauntletEconomy.evoLineBonus(set: 1),
+          "a late-set line completion is worth far more than an early one")
 
     // RunMods compose: additive fields add, multiplicative fields multiply.
     var a = RunMods.none; a.extraRipsPerRound = 1; a.auraMult = 1.10

@@ -307,10 +307,23 @@ enum GauntletEconomy {
     // MARK: Aura engine
 
     /// How much *completing a full evolution line* in the Showcase lifts the value
-    /// of that line's cards. Chasing a line to its final stage — not just hoarding
-    /// singles — is the core build axis (docs/DESIGN.md §14.4). A line counts as
-    /// complete when every one of its stages is present in the Showcase.
-    static let baseEvoLineBonus = 1.25
+    /// of that line's cards — **scaled by the line's set**. Later sets unlock later
+    /// in a run and cost more to open, so you have far fewer rounds to assemble one
+    /// of their lines; completing a late-set line is therefore rarer and paid off
+    /// much harder. The bonus is the fraction *added* to the line's value, so the
+    /// effective per-line multiplier is `1 + bonus` (docs/DESIGN.md §14.4):
+    ///
+    ///     set 1 → 1.25  (×2.25)   set 2 → 2.0 (×3.0)   set 3 → 3.0 (×4.0)
+    ///     set 4 → 4.5   (×5.5)    set 5 → 6.5 (×7.5)
+    ///
+    /// Set 1 keeps the original flat bonus so the calibrated early game is unchanged;
+    /// the curve only *adds* reward for the harder, later-set completions.
+    static let evoLineBonusBySet: [Double] = [1.25, 2.0, 3.0, 4.5, 6.5]
+
+    /// The completion bonus for a full evolution line in `set` (1…`maxPackTier`).
+    static func evoLineBonus(set: Int) -> Double {
+        evoLineBonusBySet[min(max(set - 1, 0), evoLineBonusBySet.count - 1)]
+    }
 
     /// Sell-back can be nudged up by Catalysts/Trainers but never becomes free money.
     static let maxSellbackRate = 0.95
