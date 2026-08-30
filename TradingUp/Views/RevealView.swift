@@ -292,6 +292,24 @@ private struct SummaryView: View {
     }
     private var pendingProceeds: Double { pendingDuplicates.reduce(0) { $0 + $1.sellValue } }
 
+    /// The card IDs that count as *owned* for the evolution-line pips right now,
+    /// given the decisions made so far on this summary: everything owned before
+    /// the pack was opened, plus every pulled card that is staying — a brand-new
+    /// keeper, an upgrade of an owned card, or a duplicate the player has kept.
+    /// Pending (undecided) and sold duplicates are deliberately excluded, so the
+    /// pips reflect what is *now* owned and light up as cards are kept — matching
+    /// Gauntlet's Showcase-based pips. Recomputes as `keptIds`/`soldIds` change.
+    private var stayingCardIds: Set<String> {
+        var ids = result.preOwnedIds
+        for inst in result.pulled {
+            switch slot(for: inst) {
+            case .newCard, .keeperExisting, .keptDup: ids.insert(inst.cardId)
+            case .pendingDup, .sold:                  break
+            }
+        }
+        return ids
+    }
+
     var body: some View {
         GeometryReader { geo in
             let metrics = GridMetrics(container: geo.size.width)
@@ -358,7 +376,7 @@ private struct SummaryView: View {
             LazyVGrid(columns: m.columns, spacing: m.spacing) {
                 ForEach(result.pulled) { inst in
                     PackCardSlot(inst: inst, slot: slot(for: inst), width: m.card,
-                                 series: CardSeries(for: inst.card, pull: true) { game.owns($0.id) },
+                                 series: CardSeries(for: inst.card, pull: true) { stayingCardIds.contains($0.id) },
                                  onKeep: { decideKeep(inst) },
                                  onSell: { decideSell(inst) })
                 }
@@ -583,16 +601,15 @@ private struct PackCardSlot: View {
     var body: some View {
         VStack(spacing: 7 * s) {
             cardFace
-            // Pending copies get both choices, stacked full-width so a long
-            // price never has to shrink to fit; a kept copy keeps a Sell option
-            // so the player can still change their mind and liquidate it.
+            // Only an undecided duplicate still needs a choice, so it carries both
+            // Keep and Sell right on the card. Once kept it shows no buttons — the
+            // copy is safely in the collection and can still be sold later from the
+            // Collection tab if the player changes their mind (req).
             if slot == .pendingDup {
                 VStack(spacing: 6 * s) {
                     actionButton(title: "Keep", tint: Color(hex: "3b82f6"), action: onKeep)
                     actionButton(title: "Sell \(inst.sellValue.moneyShort)", tint: Palette.money, action: onSell)
                 }
-            } else if slot == .keptDup {
-                actionButton(title: "Sell \(inst.sellValue.moneyShort)", tint: Palette.money, action: onSell)
             }
         }
         .animation(.easeInOut(duration: 0.2), value: slot)
