@@ -140,18 +140,18 @@ enum GauntletSkillTuning {
     static let bonusRipUp = 0.10, bonusRipDown = 0.10
     // Aura → global score multiplier, symmetric around ×1. The single strongest
     // lever (it multiplies every round's Aura), so its per-pip step is kept small.
-    static let auraUp = 0.04,     auraDown = 0.04
+    static let auraUp = 0.05,     auraDown = 0.05
     // Selling → sell-back rate and round stipend (two small levers so a Selling pip
     // is felt across the cash economy, not one number). Sized so a Selling
     // specialist's extra cash — and a Selling weakling's shortfall — is a real swing
     // on early pack/slot unlocks, the mode's true cash sink.
     static let sellbackUp = 0.05, sellbackDown = 0.05
-    static let stipendUp = 0.09,  stipendDown = 0.09
+    static let stipendUp = 0.10,  stipendDown = 0.10
     // Grading → luck (roll-with-advantage chance above neutral, disadvantage below)
     // and fee multiplier. The fee magnitudes are negative because a *higher* Grading
     // score should make grading *cheaper*: +pips lower the fee, −pips raise it.
-    static let gradeLuckUp = 0.09, gradeLuckDown = 0.09
-    static let gradeFeeUp = -0.06, gradeFeeDown = -0.06
+    static let gradeLuckUp = 0.10, gradeLuckDown = 0.10
+    static let gradeFeeUp = -0.25, gradeFeeDown = -0.25
     // Inventory → Showcase slots, one per pip (a Catalyst slot is a future capstone).
     static let slotStep = 1
 
