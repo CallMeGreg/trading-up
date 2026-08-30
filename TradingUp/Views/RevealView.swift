@@ -9,6 +9,8 @@ struct RevealView: View {
     let set: Int
     let onDone: () -> Void
 
+    @Environment(GameState.self) private var game: GameState
+
     @State private var phase: Phase = .sealed
     @State private var packIndex = 0
     /// The pack currently being revealed. For a box, the next pack's result.
@@ -155,7 +157,8 @@ struct RevealView: View {
 
                 Spacer()
 
-                RevealingCardView(inst: inst, isNew: isNew, width: cardWidth, playFlipSound: i != 0)
+                RevealingCardView(inst: inst, isNew: isNew, width: cardWidth, playFlipSound: i != 0,
+                                  series: CardSeries(for: inst.card, pull: true) { game.owns($0.id) })
                     .id(i)
                     .transition(.opacity)
 
@@ -336,7 +339,8 @@ private struct SummaryView: View {
         VStack(spacing: 10) {
             LazyVGrid(columns: [GridItem(.adaptive(minimum: m.card), spacing: m.spacing)], spacing: m.spacing) {
                 ForEach(boxHighlights) { inst in
-                    CardView(card: inst.card, instance: inst, width: m.card)
+                    CardView(card: inst.card, instance: inst, width: m.card,
+                             series: CardSeries(for: inst.card, pull: true) { game.owns($0.id) })
                 }
             }
             if boxHighlights.count < result.pulled.count {
@@ -354,6 +358,7 @@ private struct SummaryView: View {
             LazyVGrid(columns: m.columns, spacing: m.spacing) {
                 ForEach(result.pulled) { inst in
                     PackCardSlot(inst: inst, slot: slot(for: inst), width: m.card,
+                                 series: CardSeries(for: inst.card, pull: true) { game.owns($0.id) },
                                  onKeep: { decideKeep(inst) },
                                  onSell: { decideSell(inst) })
                 }
@@ -553,6 +558,7 @@ private struct PackCardSlot: View {
     let inst: CardInstance
     let slot: PackSlot
     let width: CGFloat
+    var series: CardSeries? = nil
     let onKeep: () -> Void
     let onSell: () -> Void
 
@@ -597,7 +603,7 @@ private struct PackCardSlot: View {
     }
 
     private var cardFace: some View {
-        CardView(card: inst.card, instance: inst, width: width)
+        CardView(card: inst.card, instance: inst, width: width, series: series)
             .saturation(isProcessed ? 0 : 1)
             .opacity(cardOpacity)
             .overlay { if slot == .pendingDup { pendingRing } }

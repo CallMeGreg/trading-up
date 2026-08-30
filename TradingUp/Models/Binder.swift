@@ -109,6 +109,11 @@ struct Binder: Codable, Equatable {
     /// Whether a Spryte's slot has been filled at least once.
     func hasCard(_ cardId: String) -> Bool { bestByCardId[cardId] != nil }
 
+    /// Every card with at least one copy banked — the Binder's owned set. Used to
+    /// tell a brand-new reward (a card not yet owned) from a fresh coat of art on
+    /// one already collected.
+    var ownedCardIds: Set<String> { Set(bestByCardId.keys) }
+
     /// How many of the catalogue's Spryte slots are filled.
     var filledCount: Int { bestByCardId.count }
 

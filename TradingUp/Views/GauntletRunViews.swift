@@ -413,7 +413,8 @@ private struct PullRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            CardView(card: inst.card, instance: inst, width: 76)
+            CardView(card: inst.card, instance: inst, width: 76,
+                     series: .gauntlet(inst.card, showcase: run.showcase))
             VStack(alignment: .leading, spacing: 6) {
                 Text(inst.card.name)
                     .font(.system(size: 14, weight: .heavy, design: .rounded))
@@ -526,7 +527,8 @@ private struct ShowcasePanel: View {
                 LazyVGrid(columns: cols, spacing: 10) {
                     ForEach(Array(run.showcase.enumerated()), id: \.element.id) { idx, inst in
                         Button { onTapCard(idx) } label: {
-                            CardView(card: inst.card, instance: inst, width: 92)
+                            CardView(card: inst.card, instance: inst, width: 92,
+                                     series: .gauntlet(inst.card, showcase: run.showcase))
                         }
                         .buttonStyle(.plain)
                         .disabled(!interactive)
@@ -666,7 +668,8 @@ private struct ShowcaseCardDetail: View {
     private func content(run: GauntletRun, inst: CardInstance) -> some View {
         ScrollView {
             VStack(spacing: 16) {
-                CardView(card: inst.card, instance: inst, width: 188)
+                CardView(card: inst.card, instance: inst, width: 188,
+                         series: .gauntlet(inst.card, showcase: run.showcase))
                     .padding(.top, 12)
 
                 VStack(spacing: 8) {
@@ -967,6 +970,9 @@ struct RewardScreen: View {
                             VStack(spacing: 5) {
                                 CardView(card: option.card, instance: option.instance,
                                          width: 128, extendedArt: true)
+                                    .overlay(alignment: .topTrailing) {
+                                        if state.isNewCard(option) { newFlag }
+                                    }
                                 Text("EXTENDED ART")
                                     .font(.system(size: 9, weight: .black)).tracking(1)
                                     .foregroundStyle(Color(hex: "ffd54a"))
@@ -981,6 +987,20 @@ struct RewardScreen: View {
                 .padding(.vertical, 4)
             }
         }
+    }
+
+    /// The gold "New" flag on a reward that would add a Spryte the Binder doesn't
+    /// hold yet — the same ✦ NEW treatment Classic pops onto a first-copy pull, so
+    /// a brand-new card reads the same in both modes.
+    private var newFlag: some View {
+        Text("✦ NEW")
+            .font(.system(size: 11, weight: .black))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 8).padding(.vertical, 4)
+            .background(Capsule().fill(Color(hex: "ffd54a")))
+            .overlay(Capsule().strokeBorder(.white.opacity(0.4), lineWidth: 0.8))
+            .shadow(color: .black.opacity(0.5), radius: 3, y: 1)
+            .offset(x: 6, y: -6)
     }
 }
 
@@ -1076,7 +1096,8 @@ struct GauntletRevealView: View {
 
                 Group {
                     switch item {
-                    case .card(let inst):    RevealingCardView(inst: inst, width: cardWidth, playFlipSound: i != 0)
+                    case .card(let inst):    RevealingCardView(inst: inst, width: cardWidth, playFlipSound: i != 0,
+                                                                series: state.run.map { CardSeries.gauntlet(inst.card, showcase: $0.showcase) })
                     case .catalyst(let cat): CatalystRevealCard(catalyst: cat, width: cardWidth)
                     }
                 }

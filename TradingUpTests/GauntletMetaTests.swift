@@ -284,6 +284,40 @@ final class GauntletMetaTests: XCTestCase {
         XCTAssertEqual(GauntletReward.payout(tier: .hard, earnedExtendedArt: all, using: &rng), .consolation)
     }
 
+    func testRewardGuaranteesABrandNewCardWhenOneExists() {
+        // Own every common but one, with no art earned yet: the whole rarity is
+        // eligible, but only the unowned common would be brand new. However the
+        // shuffle falls, that lone new card must always be offered.
+        let commons = CardDatabase.all.filter { $0.rarity == .common }
+        XCTAssertGreaterThan(commons.count, GauntletEconomy.rewardOptionCount)
+        let newCard = commons.first!.id
+        let owned = Set(commons.dropFirst().map(\.id))
+        for seed: UInt64 in [1, 2, 3, 7, 42, 99, 128, 512] {
+            var rng = SeededRNG(seed)
+            guard case .extendedArt(let opts) = GauntletReward.payout(
+                tier: .easy, earnedExtendedArt: [], ownedCardIds: owned, using: &rng) else {
+                return XCTFail("expected extended-art options")
+            }
+            XCTAssertTrue(opts.contains { $0.cardId == newCard },
+                          "the lone brand-new common must always be offered (seed \(seed))")
+        }
+    }
+
+    func testRewardStillFillsRowWithReArtWhenNothingNewRemains() {
+        // Own every common but earn no art: there's nothing brand new to offer, so
+        // the row falls back to a full set of re-art options on owned Sprytes.
+        let commons = CardDatabase.all.filter { $0.rarity == .common }
+        let owned = Set(commons.map(\.id))
+        var rng = SeededRNG(4)
+        guard case .extendedArt(let opts) = GauntletReward.payout(
+            tier: .easy, earnedExtendedArt: [], ownedCardIds: owned, using: &rng) else {
+            return XCTFail("expected extended-art options")
+        }
+        XCTAssertEqual(opts.count, GauntletEconomy.rewardOptionCount)
+        XCTAssertTrue(opts.allSatisfy { $0.rarity == .common })
+        XCTAssertTrue(opts.allSatisfy { owned.contains($0.cardId) }, "every option is already-owned re-art")
+    }
+
     // MARK: Binder Extended-Art layer
 
     func testExtendedArtIsCosmeticAndNeverChangesValue() {
@@ -312,6 +346,16 @@ final class GauntletMetaTests: XCTestCase {
         var binder = Binder()
         XCTAssertFalse(binder.earnExtendedArt("NOT-A-CARD"))
         XCTAssertEqual(binder.extendedArtCount, 0)
+    }
+
+    func testOwnedCardIdsTracksBankedCopiesNotArtUnlocks() {
+        var binder = Binder()
+        XCTAssertTrue(binder.ownedCardIds.isEmpty)
+        binder.record([CardInstance(cardId: "S1-001"), CardInstance(cardId: "S1-002")])
+        XCTAssertEqual(binder.ownedCardIds, ["S1-001", "S1-002"])
+        // Unlocking art without banking a copy is not ownership.
+        XCTAssertTrue(binder.earnExtendedArt("S1-003"))
+        XCTAssertFalse(binder.ownedCardIds.contains("S1-003"))
     }
 
     func testBinderExtendedArtSurvivesRoundTrip() {

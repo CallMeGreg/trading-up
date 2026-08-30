@@ -40,8 +40,15 @@ enum GauntletReward {
     /// **weighted toward cards whose Extended Art is still unearned**. If every
     /// card at that rarity is already earned the pull **promotes** to the next
     /// rarity up; if the entire catalogue is earned it returns `.consolation`.
+    ///
+    /// `ownedCardIds` are the cards already banked in the Binder. When the rolled
+    /// rarity still has an unearned card the player *doesn't own yet*, the row is
+    /// guaranteed to include at least one such **brand-new** card, so a win can
+    /// always grow the collection when there's room to — never offering only fresh
+    /// art on Sprytes already owned while a genuinely new one waits at that rarity.
     static func payout<G: RandomNumberGenerator>(tier: GauntletTier,
                                                  earnedExtendedArt earned: Set<String>,
+                                                 ownedCardIds owned: Set<String> = [],
                                                  count: Int = GauntletEconomy.rewardOptionCount,
                                                  using rng: inout G) -> Payout {
         let rolled = GauntletEconomy.rewardRarity(tier, using: &rng)
@@ -58,10 +65,21 @@ enum GauntletReward {
                 continue
             }
 
-            // Weight toward unearned: fill from the unearned pool first, then pad
-            // with earned dupes of the same rarity only if fewer than `count`
-            // unearned remain (so a near-complete rarity still offers a full row).
-            var chosen = Array(unearned.shuffled(using: &rng).prefix(count))
+            let shuffledUnearned = unearned.shuffled(using: &rng)
+            var chosen: [Card] = []
+
+            // Guarantee at least one brand-new card (one not yet in the Binder) when
+            // the unearned pool holds one, so the shuffle can't crowd it out with
+            // re-art of already-owned Sprytes.
+            if let firstNew = shuffledUnearned.first(where: { !owned.contains($0.id) }) {
+                chosen.append(firstNew)
+            }
+            // Fill the rest from the unearned pool, then pad with earned dupes of the
+            // same rarity only if fewer than `count` unearned remain (so a
+            // near-complete rarity still offers a full row).
+            for c in shuffledUnearned where chosen.count < count {
+                if !chosen.contains(where: { $0.id == c.id }) { chosen.append(c) }
+            }
             if chosen.count < count {
                 let earnedPool = pool.filter { earned.contains($0.id) }.shuffled(using: &rng)
                 chosen.append(contentsOf: earnedPool.prefix(count - chosen.count))
