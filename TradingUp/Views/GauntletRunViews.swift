@@ -219,17 +219,21 @@ struct RunScreen: View {
 
 private func fmt(_ v: Double) -> String { String(format: "%.0f", v) }
 
-/// Subtitle for the Championship (Hard finale) shop CTA: current Aura, then the
-/// raised goal (gold) and the bonus rip (green) picked out against the button's
-/// gold skin. Mirrors the normal "Aura · Goal" line but flags the round's stakes.
+/// Subtitle for the Championship (final round) shop CTA: current Aura and the
+/// goal (gold) picked out against the button's gold skin. The Hard finale also
+/// grants a bonus rip, so it appends "+1 rip" (green); Easy/Medium finales don't.
 private func championshipSubtitle(_ run: GauntletRun) -> AttributedString {
     let base = AttributedString("Aura \(fmt(run.showcaseAura)) · Goal ")
     var goal = AttributedString(fmt(run.target))
     goal.foregroundColor = Color(hex: "fff0c2")
-    let sep = AttributedString(" · ")
-    var rip = AttributedString("+1 rip")
-    rip.foregroundColor = Color(hex: "bff7d4")
-    return base + goal + sep + rip
+    var result = base + goal
+    if run.isBossRound {
+        let sep = AttributedString(" · ")
+        var rip = AttributedString("+1 rip")
+        rip.foregroundColor = Color(hex: "bff7d4")
+        result += sep + rip
+    }
+    return result
 }
 
 // MARK: Pack rail — one tile per element set (req 5)
@@ -367,7 +371,7 @@ private struct HUDPanel: View {
                     .font(.system(size: 15, weight: .black, design: .rounded))
                     .foregroundStyle(.white)
                     .lineLimit(1).minimumScaleFactor(0.8)
-                if run.isBossRound {
+                if run.isFinalRound {
                     Text("FINALS").font(.system(size: 10, weight: .black)).tracking(1)
                         .foregroundStyle(Color(hex: "1a0d2e"))
                         .padding(.horizontal, 6).padding(.vertical, 2)
@@ -1016,7 +1020,7 @@ struct ShopScreen: View {
                     }
                 }
 
-                if run.isBossRound {
+                if run.isFinalRound {
                     BigButton(title: "Enter the Championship",
                               attributedSubtitle: championshipSubtitle(run),
                               systemImage: "play.fill", tint: GauntletTheme.championship) {
