@@ -100,46 +100,40 @@ private struct TrainerCard: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(alignment: .top, spacing: 12) {
-                TrainerEmblem(trainer: trainer, unlocked: unlocked, concealed: concealed)
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack(spacing: 8) {
-                        Text(concealed ? "???" : trainer.name)
-                            .font(.system(size: 19, weight: .heavy, design: .rounded))
-                            .foregroundStyle(unlocked ? .white : Palette.subtle)
-                        Spacer()
-                        if unlocked {
-                            TierBadges(cleared: clearedTiers)
-                        } else {
-                            Image(systemName: "lock.fill")
-                                .font(.system(size: 14, weight: .bold))
-                                .foregroundStyle(Palette.subtle)
-                        }
-                    }
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 12) {
+                    TrainerEmblem(trainer: trainer, unlocked: unlocked, concealed: concealed)
+                    Text(concealed ? "???" : trainer.name)
+                        .font(.system(size: 19, weight: .heavy, design: .rounded))
+                        .foregroundStyle(unlocked ? .white : Palette.subtle)
+                    Spacer(minLength: 8)
                     if unlocked {
-                        Text(trainer.blurb)
-                            .font(.system(size: 13, weight: .medium))
+                        TierBadges(cleared: clearedTiers)
+                    } else {
+                        Image(systemName: "lock.fill")
+                            .font(.system(size: 14, weight: .bold))
                             .foregroundStyle(Palette.subtle)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
+                }
+                if unlocked {
+                    Text(trainer.blurb)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(Palette.subtle)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
 
-                    SkillGraph(skills: trainer.skills, accent: accent, concealed: statsHidden)
+                SkillGraph(skills: trainer.skills, accent: accent, concealed: statsHidden)
 
-                    if unlocked {
-                        SkillEffects(skills: trainer.skills)
-                    }
-
-                    if concealed, let p = unlockProgress {
-                        Divider().overlay(Palette.stroke)
-                        UnlockRequirement(icon: "flame.fill",
-                                          text: "Beat Hard mode with every other Trainer.",
-                                          have: p.have, need: p.need, noun: "Trainers")
-                    } else if !unlocked, let u = trainer.unlock {
-                        Divider().overlay(Palette.stroke)
-                        UnlockRequirement(icon: "target", text: u.summary,
-                                          have: unlockProgress?.have, need: unlockProgress?.need, noun: u.noun)
-                    }
+                if concealed, let p = unlockProgress {
+                    Divider().overlay(Palette.stroke)
+                    UnlockRequirement(icon: "flame.fill",
+                                      text: "Beat Hard mode with every other Trainer.",
+                                      have: p.have, need: p.need, noun: "Trainers")
+                } else if !unlocked, let u = trainer.unlock {
+                    Divider().overlay(Palette.stroke)
+                    UnlockRequirement(icon: "target", text: u.summary,
+                                      have: unlockProgress?.have, need: unlockProgress?.need, noun: u.noun)
                 }
             }
             .panel()
@@ -153,9 +147,11 @@ private struct TrainerCard: View {
     }
 }
 
-/// The Madden-style five-skill dot ladder — one row per skill (icon, name, 1–5
-/// pips) in the Trainer's signature colour. Concealed rows hide the pip counts
-/// behind hollow dots for any locked Trainer.
+/// The Madden-style five-skill dot ladder — one row per skill: icon, name, 1–5
+/// pips in the Trainer's signature colour, and, for an unlocked Trainer, the pip's
+/// concrete run effect stated in muted text to the right of the pips on every skill
+/// that sits off the neutral 3. Concealed rows hide the pip counts behind hollow
+/// dots and drop the effect text for any locked Trainer.
 private struct SkillGraph: View {
     let skills: TrainerSkills
     let accent: Color
@@ -174,13 +170,34 @@ private struct SkillGraph: View {
                         .foregroundStyle(concealed ? Palette.subtle : .white.opacity(0.9))
                         .frame(width: 72, alignment: .leading)
                     PipRow(score: skills.score(axis), accent: accent, concealed: concealed)
+                    if !concealed,
+                       let phrase = GauntletSkillTuning.compactEffect(axis, score: skills.score(axis)) {
+                        Text(phrase)
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(Palette.subtle)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                            .layoutPriority(1)
+                            .padding(.leading, 2)
+                    }
                     Spacer(minLength: 0)
                 }
                 .accessibilityElement(children: .ignore)
-                .accessibilityLabel(concealed ? "\(axis.title): hidden"
-                                              : "\(axis.title): \(skills.score(axis)) of 5")
+                .accessibilityLabel(axisLabel(axis))
             }
         }
+    }
+
+    /// The row's VoiceOver line: the score, plus the pip's full run effect for an
+    /// unlocked Trainer sitting off neutral (the fuller `effect` phrasing reads
+    /// better aloud than the abbreviated text shown on the card).
+    private func axisLabel(_ axis: TrainerSkillAxis) -> String {
+        if concealed { return "\(axis.title): hidden" }
+        let base = "\(axis.title): \(skills.score(axis)) of 5"
+        if let phrase = GauntletSkillTuning.effect(axis, score: skills.score(axis)) {
+            return "\(base). \(phrase)"
+        }
+        return base
     }
 }
 
@@ -204,107 +221,6 @@ private struct PipRow: View {
                         lineWidth: 1.2))
             }
         }
-    }
-}
-
-/// A Trainer's off-neutral pips, split into two colour-coded lines — its Boosts
-/// (every skill above the neutral 3) and its Nerfs (every skill below it). These
-/// are the same per-pip effects the ladder derives from, but grouped by sign,
-/// phrased tight, and with the neutral axes dropped, so a card states its edge and
-/// its cost without repeating all five skills as full sentences. Empty (nothing
-/// shown) for the flat-3 Rookie, which has neither.
-private struct SkillEffects: View {
-    let skills: TrainerSkills
-
-    private func entries(_ keep: (Int) -> Bool) -> [(axis: TrainerSkillAxis, phrase: String)] {
-        TrainerSkillAxis.allCases.compactMap { axis in
-            let s = skills.score(axis)
-            guard keep(s), let phrase = GauntletSkillTuning.compactEffect(axis, score: s) else { return nil }
-            return (axis, phrase)
-        }
-    }
-    private var boosts: [(axis: TrainerSkillAxis, phrase: String)] {
-        entries { $0 > GauntletSkillTuning.neutralScore }
-    }
-    private var nerfs: [(axis: TrainerSkillAxis, phrase: String)] {
-        entries { $0 < GauntletSkillTuning.neutralScore }
-    }
-
-    var body: some View {
-        if boosts.isEmpty && nerfs.isEmpty {
-            EmptyView()
-        } else {
-            VStack(alignment: .leading, spacing: 6) {
-                Rectangle().fill(Palette.stroke).frame(height: 1).opacity(0.6)
-                if !boosts.isEmpty {
-                    EffectGroup(label: "Boosts", symbol: "arrowtriangle.up.fill",
-                                tint: Palette.money, entries: boosts)
-                }
-                if !nerfs.isEmpty {
-                    EffectGroup(label: "Nerfs", symbol: "arrowtriangle.down.fill",
-                                tint: Palette.loss, entries: nerfs)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-    }
-}
-
-/// One side of the Boosts / Nerfs split: a compact tinted heading and that side's
-/// axis phrases, each led by its bolded skill name, flowing onto as many lines as
-/// the card width needs.
-private struct EffectGroup: View {
-    let label: String
-    let symbol: String
-    let tint: Color
-    let entries: [(axis: TrainerSkillAxis, phrase: String)]
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 8) {
-            HStack(spacing: 3) {
-                Image(systemName: symbol)
-                    .font(.system(size: 8, weight: .black))
-                Text(label.uppercased())
-                    .font(.system(size: 10, weight: .heavy, design: .rounded))
-                    .tracking(0.3)
-                    .lineLimit(1)
-                    .fixedSize()
-            }
-            .foregroundStyle(tint)
-            .frame(width: 66, alignment: .leading)
-            .padding(.top, 1)
-
-            Text(phrases)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(label): "
-            + entries.map { "\($0.axis.title) \($0.phrase)" }.joined(separator: ", "))
-    }
-
-    /// The side's entries as one attributed run so they wrap as flowing text: each
-    /// skill name bold, its phrase muted, separated by a dot. A non-breaking space
-    /// keeps a name glued to the start of its own phrase.
-    private var phrases: AttributedString {
-        var out = AttributedString()
-        for (i, e) in entries.enumerated() {
-            if i > 0 {
-                var sep = AttributedString("   ·   ")
-                sep.foregroundColor = Palette.subtle.opacity(0.6)
-                sep.font = .system(size: 11.5, weight: .medium)
-                out.append(sep)
-            }
-            var name = AttributedString(e.axis.title + "\u{00A0}")
-            name.foregroundColor = .white.opacity(0.92)
-            name.font = .system(size: 11.5, weight: .bold)
-            out.append(name)
-            var phrase = AttributedString(e.phrase)
-            phrase.foregroundColor = Palette.subtle
-            phrase.font = .system(size: 11.5, weight: .medium)
-            out.append(phrase)
-        }
-        return out
     }
 }
 
