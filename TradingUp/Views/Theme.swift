@@ -27,6 +27,8 @@ enum Palette {
     static let text = Color(hex: "e7ecf5")
     static let subtle = Color(hex: "8a94a6")
     static let money = Color(hex: "5be08a")
+    /// Accent for a negative figure (a net loss on the ledger).
+    static let loss = Color(hex: "ff6b6b")
     /// Accent reserved for "this is interactive" cues (e.g. the duplicates on a
     /// pack summary that are waiting for a keep-or-sell decision).
     static let tapCue = Color(hex: "4f9dff")
@@ -136,6 +138,9 @@ extension Double {
         }
         return money
     }
+    /// `moneyShort` with an explicit leading minus for negative amounts, so a
+    /// net loss reads "-$1.2k" rather than "$-1.2k".
+    var signedMoneyShort: String { self < 0 ? "-" + (-self).moneyShort : moneyShort }
 }
 
 func pad3(_ n: Int) -> String { String(format: "%03d", n) }
