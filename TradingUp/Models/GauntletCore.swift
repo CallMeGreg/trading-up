@@ -217,6 +217,10 @@ struct GauntletRun: Codable {
     var target: Double { GauntletEconomy.target(tier, round: round) }
     var isBossRound: Bool { GauntletEconomy.isBossRound(tier, round: round) }
     var roundsTotal: Int { GauntletEconomy.rounds(tier) }
+    /// The last round of the run for this tier — presented to the player as the
+    /// "Collection Championship" finale. Every tier has one; only the Hard finale
+    /// (`isBossRound`) additionally spikes the target and grants a bonus rip.
+    var isFinalRound: Bool { round == roundsTotal }
     var progress: Double { target > 0 ? showcaseAura / target : 1 }
 
     // MARK: Rounds
