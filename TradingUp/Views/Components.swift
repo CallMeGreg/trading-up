@@ -50,6 +50,7 @@ extension View {
 struct BigButton: View {
     let title: String
     var subtitle: String? = nil
+    var attributedSubtitle: AttributedString? = nil
     var systemImage: String? = nil
     var tint: [Color] = [Color(hex: "3b82f6"), Color(hex: "6d5cf7")]
     var enabled: Bool = true
@@ -57,8 +58,8 @@ struct BigButton: View {
 
     var body: some View {
         Button(action: action) {
-            BigButtonLabel(title: title, subtitle: subtitle, systemImage: systemImage,
-                           tint: tint, enabled: enabled)
+            BigButtonLabel(title: title, subtitle: subtitle, attributedSubtitle: attributedSubtitle,
+                           systemImage: systemImage, tint: tint, enabled: enabled)
         }
         .buttonStyle(.plain)
         .disabled(!enabled)
@@ -70,6 +71,7 @@ struct BigButton: View {
 struct BigButtonLabel: View {
     let title: String
     var subtitle: String? = nil
+    var attributedSubtitle: AttributedString? = nil
     var systemImage: String? = nil
     var tint: [Color] = [Color(hex: "3b82f6"), Color(hex: "6d5cf7")]
     var enabled: Bool = true
@@ -81,7 +83,9 @@ struct BigButtonLabel: View {
             }
             VStack(alignment: .leading, spacing: 1) {
                 Text(title).font(.system(size: 15, weight: .bold))
-                if let subtitle {
+                if let attributedSubtitle {
+                    Text(attributedSubtitle).font(.system(size: 11, weight: .medium)).opacity(0.9)
+                } else if let subtitle {
                     Text(subtitle).font(.system(size: 11, weight: .medium)).opacity(0.85)
                 }
             }
