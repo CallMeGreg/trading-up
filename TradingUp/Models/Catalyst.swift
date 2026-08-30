@@ -30,17 +30,17 @@ extension Catalyst {
 
         Catalyst(id: "tide", element: .water, name: "Tide",
                  blurb: "The floor buys back kinder. Better sell-back.",
-                 mods: { var m = RunMods.none; m.sellbackBonus = 0.08; return m }(),
+                 mods: { var m = RunMods.none; m.sellbackBonus = 0.25; return m }(),
                  saleValue: 20),
 
         Catalyst(id: "bloom", element: .grass, name: "Bloom",
                  blurb: "Everything reads richer. A global Aura lift.",
-                 mods: { var m = RunMods.none; m.auraMult = 1.12; return m }(),
+                 mods: { var m = RunMods.none; m.auraMult = 1.10; return m }(),
                  saleValue: 20),
 
         Catalyst(id: "overload", element: .electric, name: "Overload",
                  blurb: "Fortune at the slab — grades swing your way.",
-                 mods: { var m = RunMods.none; m.gradeLuckBonus = 0.18; return m }(),
+                 mods: { var m = RunMods.none; m.gradeLuckBonus = 0.20; return m }(),
                  saleValue: 20),
 
         Catalyst(id: "eclipse", element: .shadow, name: "Eclipse",

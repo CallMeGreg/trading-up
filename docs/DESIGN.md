@@ -585,9 +585,9 @@ is exactly `RunMods.none`). The per-pip (per-step) magnitudes are **live**:
 | Skill | Lever | Per pip above 3 | Per pip below 3 |
 | --- | --- | --- | --- |
 | **Energy** | Bonus-rip roll at round start | +10% chance to *gain* a rip | 10% chance to *lose* a rip |
-| **Aura** | Global Aura multiplier | +4% Aura | −4% Aura |
-| **Selling** | Sell-back %, round payout | +5% sell-back, +9% payout | −5% / −9% |
-| **Grading** | Grade luck + grading fee | roll grade with advantage (+9%/pip luck), −6% fee | roll with disadvantage, +6% fee |
+| **Aura** | Global Aura multiplier | +5% Aura | −5% Aura |
+| **Selling** | Sell-back %, round payout | +5% sell-back, +10% payout | −5% / −10% |
+| **Grading** | Grade luck + grading fee | roll grade with advantage (+10%/pip luck), −25% fee | roll with disadvantage, +25% fee |
 | **Inventory** | Showcase slots | +1 slot | −1 slot |
 
 So a 5-pip skill is +2 steps and a 1-pip skill −2 steps of the same lever. Two of these are
@@ -626,7 +626,7 @@ the neutral pivot. A spiky Trainer that *requires* its specialty to win — or t
 mode — has overstepped and gets retuned.
 
 **Current Hard snapshot** (from `tools/verify`, seed `0x2C7`, n=120 — illustrative, will drift as
-constants are tuned): neutral **56%**; Sally 54, Jack 65, Fred 67, Lucy 67, Curtis 77, Gary 41.
+constants are tuned): neutral **57%**; Sally 50, Fred 59, Jack 62, Curtis 75, Lucy 79, Gary 41.
 Note that in optimised play cash is rarely the binding constraint, so **Selling** is a *soft*
 lever while Aura / Inventory / Grading / Energy bind harder — a Trainer strong in a binding lever
 but weak in Selling (Curtis, +2 slots) reads higher than its graph suggests. These are the
