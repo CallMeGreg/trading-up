@@ -155,6 +155,9 @@ struct RevealingCardView: View {
     /// would double up. For every later card the sound sells the motion of the
     /// next card sliding off the top of the stack.
     var playFlipSound: Bool = true
+    /// Optional evolution-series pips for the card face — the pull's own stage
+    /// lit gold, other stages owned in context solid. Nil keeps the element label.
+    var series: CardSeries? = nil
 
     @State private var rotation: Double = 180   // 180 = back showing, 0 = face-up
     @State private var flash: Double = 0
@@ -189,7 +192,7 @@ struct RevealingCardView: View {
             CardBack(set: inst.card.set, width: width)
                 .opacity(faceUp ? 0 : 1)
                 .rotation3DEffect(.degrees(180), axis: (x: 0, y: 1, z: 0))   // keep un-mirrored
-            CardView(card: inst.card, instance: inst, width: width)
+            CardView(card: inst.card, instance: inst, width: width, series: series)
                 .opacity(faceUp ? 1 : 0)
         }
         .rotation3DEffect(.degrees(rotation), axis: (x: 0, y: 1, z: 0), perspective: 0.45)

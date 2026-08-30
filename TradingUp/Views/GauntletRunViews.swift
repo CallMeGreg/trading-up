@@ -413,7 +413,8 @@ private struct PullRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            CardView(card: inst.card, instance: inst, width: 76)
+            CardView(card: inst.card, instance: inst, width: 76,
+                     series: .gauntlet(inst.card, showcase: run.showcase))
             VStack(alignment: .leading, spacing: 6) {
                 Text(inst.card.name)
                     .font(.system(size: 14, weight: .heavy, design: .rounded))
@@ -526,7 +527,8 @@ private struct ShowcasePanel: View {
                 LazyVGrid(columns: cols, spacing: 10) {
                     ForEach(Array(run.showcase.enumerated()), id: \.element.id) { idx, inst in
                         Button { onTapCard(idx) } label: {
-                            CardView(card: inst.card, instance: inst, width: 92)
+                            CardView(card: inst.card, instance: inst, width: 92,
+                                     series: .gauntlet(inst.card, showcase: run.showcase))
                         }
                         .buttonStyle(.plain)
                         .disabled(!interactive)
@@ -666,7 +668,8 @@ private struct ShowcaseCardDetail: View {
     private func content(run: GauntletRun, inst: CardInstance) -> some View {
         ScrollView {
             VStack(spacing: 16) {
-                CardView(card: inst.card, instance: inst, width: 188)
+                CardView(card: inst.card, instance: inst, width: 188,
+                         series: .gauntlet(inst.card, showcase: run.showcase))
                     .padding(.top, 12)
 
                 VStack(spacing: 8) {
@@ -942,7 +945,11 @@ private struct ShopRow: View {
 struct RewardScreen: View {
     let state: GauntletState
 
-    private let cols = [GridItem(.adaptive(minimum: 108), spacing: 12)]
+    // Space between the reward cards, and the breathing room reserved on each side
+    // so the outer cards — and the "New" badge that overhangs their top-right —
+    // never touch (or get clipped at) the container edges.
+    private let cardSpacing: CGFloat = 10
+    private let edgeInset: CGFloat = 14
 
     var body: some View {
         VStack(spacing: 16) {
@@ -958,29 +965,57 @@ struct RewardScreen: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.horizontal, 8)
             }
-            ScrollView {
-                LazyVGrid(columns: cols, spacing: 14) {
+            // Size the (always three) cards to the width actually available so all
+            // three sit fully on screen — the old fixed 128pt width overflowed the
+            // grid cells and clipped the left/right cards at the edges.
+            GeometryReader { geo in
+                let n = max(CGFloat(state.rewardOptions.count), 1)
+                let usable = geo.size.width - edgeInset * 2 - cardSpacing * (n - 1)
+                let cardW = min(140, floor(usable / n))
+                HStack(alignment: .top, spacing: cardSpacing) {
                     ForEach(state.rewardOptions) { option in
-                        Button {
-                            Haptics.play(.success); state.chooseReward(option)
-                        } label: {
-                            VStack(spacing: 5) {
-                                CardView(card: option.card, instance: option.instance,
-                                         width: 128, extendedArt: true)
-                                Text("EXTENDED ART")
-                                    .font(.system(size: 9, weight: .black)).tracking(1)
-                                    .foregroundStyle(Color(hex: "ffd54a"))
-                                Text(option.card.rarity.display.uppercased())
-                                    .font(.system(size: 10, weight: .heavy))
-                                    .foregroundStyle(option.card.rarity.accent)
-                            }
-                        }
-                        .buttonStyle(.plain)
+                        rewardCell(option, width: cardW)
                     }
                 }
-                .padding(.vertical, 4)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.top, 12)   // headroom for the overhanging "New" badge
             }
         }
+    }
+
+    private func rewardCell(_ option: GauntletRewardOption, width: CGFloat) -> some View {
+        Button {
+            Haptics.play(.success); state.chooseReward(option)
+        } label: {
+            VStack(spacing: 5) {
+                CardView(card: option.card, instance: option.instance,
+                         width: width, extendedArt: true)
+                    .overlay(alignment: .topTrailing) {
+                        if state.isNewCard(option) { newFlag }
+                    }
+                Text("EXTENDED ART")
+                    .font(.system(size: 9, weight: .black)).tracking(1)
+                    .foregroundStyle(Color(hex: "ffd54a"))
+                Text(option.card.rarity.display.uppercased())
+                    .font(.system(size: 10, weight: .heavy))
+                    .foregroundStyle(option.card.rarity.accent)
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// The gold "New" flag on a reward that would add a Spryte the Binder doesn't
+    /// hold yet — the same ✦ NEW treatment Classic pops onto a first-copy pull, so
+    /// a brand-new card reads the same in both modes.
+    private var newFlag: some View {
+        Text("✦ NEW")
+            .font(.system(size: 11, weight: .black))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 8).padding(.vertical, 4)
+            .background(Capsule().fill(Color(hex: "ffd54a")))
+            .overlay(Capsule().strokeBorder(.white.opacity(0.4), lineWidth: 0.8))
+            .shadow(color: .black.opacity(0.5), radius: 3, y: 1)
+            .offset(x: 6, y: -6)
     }
 }
 
@@ -1076,7 +1111,8 @@ struct GauntletRevealView: View {
 
                 Group {
                     switch item {
-                    case .card(let inst):    RevealingCardView(inst: inst, width: cardWidth, playFlipSound: i != 0)
+                    case .card(let inst):    RevealingCardView(inst: inst, width: cardWidth, playFlipSound: i != 0,
+                                                                series: state.run.map { CardSeries.gauntlet(inst.card, showcase: $0.showcase) })
                     case .catalyst(let cat): CatalystRevealCard(catalyst: cat, width: cardWidth)
                     }
                 }

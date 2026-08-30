@@ -108,7 +108,8 @@ struct CollectionView: View {
                 selected = card
             } label: {
                 ZStack(alignment: .topTrailing) {
-                    CardView(card: card, instance: best, width: 104)
+                    CardView(card: card, instance: best, width: 104,
+                             series: CardSeries(for: card, pull: true) { game.owns($0.id) })
                     let n = game.count(of: card.id)
                     if n > 1 {
                         Text("×\(n)")

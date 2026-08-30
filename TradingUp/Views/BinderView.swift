@@ -113,7 +113,8 @@ struct BinderView: View {
                 selected = card
             } label: {
                 CardView(card: card, instance: best, width: 104,
-                         extendedArt: binder.hasExtendedArt(card.id))
+                         extendedArt: binder.hasExtendedArt(card.id),
+                         series: CardSeries(for: card, pull: false) { binder.hasCard($0.id) })
             }
             .buttonStyle(.plain)
         } else {
@@ -140,7 +141,8 @@ private struct BinderCardDetailView: View {
             ScrollView {
                 VStack(spacing: 18) {
                     CardView(card: card, instance: best, width: 250,
-                             extendedArt: game.binder.hasExtendedArt(card.id))
+                             extendedArt: game.binder.hasExtendedArt(card.id),
+                             series: CardSeries(for: card, pull: false) { game.binder.hasCard($0.id) })
                         .padding(.top, 8)
                     valuePanel
                     if line.count > 1 {

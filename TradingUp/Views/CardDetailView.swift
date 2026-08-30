@@ -16,7 +16,8 @@ struct CardDetailView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 18) {
-                    CardView(card: card, instance: copies.first, width: 250)
+                    CardView(card: card, instance: copies.first, width: 250,
+                             series: CardSeries(for: card, pull: true) { game.owns($0.id) })
                         .padding(.top, 8)
 
                     if line.count > 1 {

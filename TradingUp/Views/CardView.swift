@@ -10,6 +10,12 @@ struct CardView: View {
     /// treatment: new artwork fills the entire card, with the title/value floated on
     /// scrims and foil/grade still layered on top. (req 4)
     var extendedArt: Bool = false
+    /// When supplied, the header's element label is replaced by the evolution-series
+    /// **stage pips** — one per stage in the card's line, scoped to the caller's
+    /// context (the current Classic run, the current Gauntlet Showcase, or the
+    /// all-time Binder). Omit it (nil) to keep the plain element label, e.g. in
+    /// contexts with no ownership pool. See docs/mockups/evolution.
+    var series: CardSeries? = nil
 
     private var s: CGFloat { width / 230 }
     private var height: CGFloat { width * 1.4 }
@@ -102,11 +108,21 @@ struct CardView: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
             Spacer(minLength: 2 * s)
-            Text(card.element.display)
-                .font(.system(size: 9 * s, weight: .bold))
-                .foregroundStyle(card.element.badgeTint)
-                .padding(.horizontal, 6 * s).padding(.vertical, 3 * s)
-                .background(Capsule().fill(card.element.badgeTint.opacity(0.14)))
+            if let series {
+                // The situational stage pips take the element label's spot, glowing
+                // in the *set's* colour so a whole set reads as one family (the
+                // card's own element still shows in the art and the meta gem).
+                SeriesPips(series: series, setTint: Element.theme(forSet: card.set).badgeTint, s: s)
+            } else if !showExtended {
+                // Extended Art is a full-bleed showcase treatment, so it drops the
+                // element "type" tag entirely — the artwork and the meta gem already
+                // carry the element, and the header stays clean over the scrim.
+                Text(card.element.display)
+                    .font(.system(size: 9 * s, weight: .bold))
+                    .foregroundStyle(card.element.badgeTint)
+                    .padding(.horizontal, 6 * s).padding(.vertical, 3 * s)
+                    .background(Capsule().fill(card.element.badgeTint.opacity(0.14)))
+            }
         }
     }
 
@@ -132,7 +148,7 @@ struct CardView: View {
     private var metaRow: some View {
         HStack {
             HStack(spacing: 4 * s) {
-                Circle().fill(Element.theme(forSet: card.set).badgeTint).frame(width: 9 * s, height: 9 * s)
+                Circle().fill(card.element.badgeTint).frame(width: 9 * s, height: 9 * s)
                 Text(CardDatabase.setName(card.set))
                     .font(.system(size: 10 * s, weight: .semibold))
                     .foregroundStyle(Palette.subtle)
@@ -177,6 +193,117 @@ struct CardView: View {
         .background(Circle().fill(color))
         .overlay(Circle().strokeBorder(.white.opacity(0.85), lineWidth: 2 * s))
         .offset(x: width * 0.34, y: -height * 0.40)
+    }
+}
+
+// MARK: - Evolution-series stage pips
+
+/// The evolution-series model behind a card header's stage pips (which replace
+/// the element label). One entry per stage in the card's line; a stage counts as
+/// "owned" when it stands in the caller's context pool — the current Classic run,
+/// the current Gauntlet Showcase, or the all-time Binder. `nowStage` lights the
+/// gold "this pull" pip in the pull modes (Classic, Gauntlet); the Binder is a
+/// browsing view with no card in hand, so it resolves with `pull: false`.
+///
+/// The pip picture is identical in every mode — only the pool a solid pip counts
+/// against changes — so a player learns it once and it reads everywhere. See
+/// docs/mockups/evolution.
+struct CardSeries {
+    /// Every card in the line, sorted by stage (length 1 for a single).
+    let line: [Card]
+    /// Stages (1-based) owned in the current context.
+    let ownedStages: Set<Int>
+    /// The stage to light as the gold "this pull" pip, or nil when browsing.
+    let nowStage: Int?
+
+    /// Resolve the pips for `card` from an ownership test over the cards in its
+    /// line. Pass `pull: true` in a mode with a card in hand (Classic, Gauntlet)
+    /// to light the card's own stage gold; `false` in the Binder, where the
+    /// current stage simply reads as owned.
+    init(for card: Card, pull: Bool, owns: (Card) -> Bool) {
+        let line = CardDatabase.line(card.lineId)
+        self.line = line
+        self.ownedStages = Set(line.filter(owns).map(\.stage))
+        self.nowStage = pull ? card.stage : nil
+    }
+
+    /// Pips scoped to the current Gauntlet Showcase: a stage counts as owned when
+    /// a copy of it stands in the Showcase this run. A pull mode, so the card in
+    /// hand lights the gold "now" pip.
+    static func gauntlet(_ card: Card, showcase: [CardInstance]) -> CardSeries {
+        let owned = Set(showcase.map(\.cardId))
+        return CardSeries(for: card, pull: true) { owned.contains($0.id) }
+    }
+}
+
+/// The stage-pip cluster shown in a card header in place of the element label:
+/// one pip per stage in the card's line, glowing in the *set's* signature colour.
+/// Solid = a stage owned in context, gold = the card in hand this pull, hollow =
+/// a stage still missing; the short connector between two adjacent pips fills once
+/// both are present. A single (one pip) draws no connector, so "not a line" reads
+/// instantly. Everything scales from `s` (= card width / 230) like the rest of the
+/// card. See docs/mockups/evolution.
+private struct SeriesPips: View {
+    let series: CardSeries
+    let setTint: Color
+    let s: CGFloat
+
+    private static let gold = Color(hex: "ffd54a")
+    private var d: CGFloat { 9 * s }
+
+    /// A stage is "present" for connector purposes if it's owned or is the card
+    /// in hand this pull.
+    private func present(_ stage: Int) -> Bool {
+        series.nowStage == stage || series.ownedStages.contains(stage)
+    }
+
+    var body: some View {
+        HStack(spacing: 3 * s) {
+            ForEach(Array(series.line.enumerated()), id: \.element.id) { idx, c in
+                if idx > 0 {
+                    connector(filled: present(series.line[idx - 1].stage) && present(c.stage))
+                }
+                pip(for: c.stage)
+            }
+        }
+        .padding(.horizontal, 7 * s)
+        .padding(.vertical, 4 * s)
+        .background(Capsule().fill(Palette.bg0.opacity(0.5)))
+        .overlay(Capsule().strokeBorder(Color.white.opacity(0.07), lineWidth: 1))
+        .accessibilityElement()
+        .accessibilityLabel(Text(accessibilityText))
+    }
+
+    @ViewBuilder
+    private func pip(for stage: Int) -> some View {
+        if series.nowStage == stage {
+            // "This pull" — a white core rimmed and haloed in gold.
+            Circle().fill(.white)
+                .frame(width: d, height: d)
+                .overlay(Circle().stroke(Self.gold, lineWidth: 1.6 * s))
+                .shadow(color: Self.gold, radius: 3.5 * s)
+        } else if series.ownedStages.contains(stage) {
+            // Owned in context — a solid set-tint pip with a soft glow.
+            Circle().fill(setTint)
+                .frame(width: d, height: d)
+                .shadow(color: setTint, radius: 2.5 * s)
+        } else {
+            // Missing — a hollow ring.
+            Circle().strokeBorder(setTint.opacity(0.55), lineWidth: 1.5 * s)
+                .frame(width: d, height: d)
+        }
+    }
+
+    private func connector(filled: Bool) -> some View {
+        Capsule()
+            .fill(filled ? setTint : setTint.opacity(0.30))
+            .frame(width: 7 * s, height: 2 * s)
+    }
+
+    private var accessibilityText: String {
+        let held = series.line.filter { present($0.stage) }.count
+        if series.line.count == 1 { return "Single card" }
+        return "Evolution line, \(held) of \(series.line.count) stages owned"
     }
 }
 

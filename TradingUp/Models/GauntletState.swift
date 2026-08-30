@@ -467,6 +467,7 @@ final class GauntletState {
         guard let r = run else { return }
         let payout = GauntletReward.payout(tier: r.tier,
                                            earnedExtendedArt: game.binder.extendedArtEarned,
+                                           ownedCardIds: game.binder.ownedCardIds,
                                            using: &rng)
         switch payout {
         case .extendedArt(let options):
@@ -479,6 +480,13 @@ final class GauntletState {
             bankClear()                // nothing to choose; record and summarise
             phase = .results
         }
+    }
+
+    /// Whether claiming `option` would add a brand-new Spryte to the Binder — no
+    /// copy owned yet, so the guaranteed Foil copy is a first. Drives the reward
+    /// picker's "New" badge, matching Classic mode's first-copy flag.
+    func isNewCard(_ option: GauntletRewardOption) -> Bool {
+        !game.binder.hasCard(option.cardId)
     }
 
     /// Apply the player's chosen Extended-Art prize to the Binder (via `GameState`,
