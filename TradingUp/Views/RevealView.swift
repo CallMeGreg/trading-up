@@ -232,12 +232,28 @@ private struct SummaryView: View {
     var packCounter: PackCounter? = nil
     let onDone: () -> Void
 
-    /// One-time classification of each pulled instance, snapshotted on appear
-    /// (before any selling) so keeper decisions don't shift as dupes are sold.
+    /// One-time classification of each pulled instance, snapshotted before any
+    /// selling so keeper decisions don't shift as dupes are sold.
     private enum BaseKind { case newCard, keeperExisting, duplicate }
-    @State private var baseKind: [UUID: BaseKind] = [:]
+
+    /// Boxed in a reference type so the plan can be computed on the first `body`
+    /// pass — before the first frame is drawn — rather than in `onAppear`.
+    /// Computing it in `onAppear` left one frame where every card was still
+    /// unclassified, which `slot(for:)` treated as a pending duplicate and
+    /// flashed Keep/Sell buttons onto brand-new cards before correcting itself.
+    private final class Plan { var kinds: [UUID: BaseKind]? = nil }
+    @State private var plan = Plan()
     @State private var soldIds: Set<UUID> = []
     @State private var keptIds: Set<UUID> = []
+
+    /// Lazily computed and cached: the first read takes the snapshot, later
+    /// reads return it, so a card's kind stays stable as the collection changes.
+    private var baseKind: [UUID: BaseKind] {
+        if let kinds = plan.kinds { return kinds }
+        let kinds = computePlan()
+        plan.kinds = kinds
+        return kinds
+    }
 
     private let blue = [Color(hex: "3b82f6"), Color(hex: "6d5cf7")]
     private let green = [Palette.money, Color(hex: "2fae63")]
@@ -305,7 +321,6 @@ private struct SummaryView: View {
             .frame(width: geo.size.width, height: geo.size.height)
         }
         .background(Palette.bg0.ignoresSafeArea())
-        .onAppear(perform: computePlan)
     }
 
     // MARK: Grids
@@ -436,19 +451,19 @@ private struct SummaryView: View {
     /// keeper of each card is its most valuable owned copy; ties prefer a
     /// pre-existing (non-pulled) copy so a plain re-pull becomes the dup, while
     /// a foil upgrade of an owned card keeps the pulled foil.
-    private func computePlan() {
-        guard baseKind.isEmpty, !result.isBox else { return }
+    private func computePlan() -> [UUID: BaseKind] {
+        guard !result.isBox else { return [:] }
         let pulledIds = Set(result.pulled.map { $0.id })
-        var plan: [UUID: BaseKind] = [:]
+        var kinds: [UUID: BaseKind] = [:]
         for inst in result.pulled {
             let keeper = keeperId(forCard: inst.cardId, pulledIds: pulledIds)
             if inst.id == keeper {
-                plan[inst.id] = result.preOwnedIds.contains(inst.cardId) ? .keeperExisting : .newCard
+                kinds[inst.id] = result.preOwnedIds.contains(inst.cardId) ? .keeperExisting : .newCard
             } else {
-                plan[inst.id] = .duplicate
+                kinds[inst.id] = .duplicate
             }
         }
-        baseKind = plan
+        return kinds
     }
 
     private func keeperId(forCard cardId: String, pulledIds: Set<UUID>) -> UUID? {
