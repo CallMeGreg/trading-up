@@ -607,7 +607,9 @@ New non-Spryte cards that grant run-long effects — the piece originally sketch
 "Energy cards" (increased foil chance, increased ultra chance, better grading luck, more
 pack-opening power, …). Two design choices turn them from a buff pile into a system:
 
-1. **Slot scarcity.** You may attune only *N* at once; a better one forces a **swap**.
+1. **Slot scarcity.** You may attune only *N* at once. When every slot is full an
+   offered Catalyst can't just be attuned — you either **swap** it in for an active
+   one (the old effect is dropped and the new one applies immediately) or sell it.
    Scarcity is what makes them a build decision, not a checklist.
 2. **Element lanes** so they combo — aligned to the game's existing six elements
    (`Element`: fire, rock, water, grass, electric, shadow), *not* a new set:

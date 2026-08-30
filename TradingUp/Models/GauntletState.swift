@@ -353,9 +353,29 @@ final class GauntletState {
         evaluateRoundProgress()
     }
 
+    /// Swap the offered Catalyst in for the attuned one at `index`, when every
+    /// Catalyst slot is full. The old effect is dropped and the new one applies
+    /// immediately; the replaced Catalyst is discarded (no cash). (req: swap)
+    func swapPendingCatalyst(replacing index: Int) {
+        guard var r = run, let cat = pendingCatalyst, r.canSwapCatalyst,
+              r.attunedCatalysts.indices.contains(index) else { return }
+        r.swapCatalyst(cat, at: index)
+        run = r
+        pendingCatalyst = nil
+        evaluateRoundProgress()
+    }
+
     var canAttunePending: Bool {
         guard let run, pendingCatalyst != nil else { return false }
         return run.canAttune
+    }
+
+    /// Whether the offered Catalyst can be swapped for an active one — the case the
+    /// swap picker is offered in: slots are full (nothing to attune into) but there
+    /// is at least one Catalyst slot to trade against.
+    var canSwapPending: Bool {
+        guard let run, pendingCatalyst != nil else { return false }
+        return run.canSwapCatalyst
     }
 
     /// Grade a Showcase card, paying the fee and gambling its score. Returns the

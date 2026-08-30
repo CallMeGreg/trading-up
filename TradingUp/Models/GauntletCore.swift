@@ -156,6 +156,32 @@ struct GauntletRun: Codable {
         Self.aura(showcase, evoLineBonus: evoLineBonus, auraMult: mods.auraMult)
     }
 
+    /// The `lineId`s of the multi-stage evolution lines standing **complete** in the
+    /// Showcase right now — every stage present. These are exactly the lines the
+    /// evolution-line bonus is paying out on, mirroring the grouping in `aura`. The
+    /// Showcase surfaces this so a completed line can flag its multiplier. (req: cue)
+    var completedShowcaseLineIds: Set<String> {
+        var out: Set<String> = []
+        let byLine = Dictionary(grouping: showcase.filter { $0.card.stageCount > 1 },
+                                by: { $0.card.lineId })
+        for (lineId, group) in byLine {
+            let stageCount = group[0].card.stageCount
+            let stagesPresent = Set(group.map { $0.card.stage })
+            if stagesPresent.count == stageCount { out.insert(lineId) }
+        }
+        return out
+    }
+
+    /// Whether the Showcase card at `index` stands in a completed evolution line.
+    func isInCompletedLine(_ inst: CardInstance) -> Bool {
+        inst.card.stageCount > 1 && completedShowcaseLineIds.contains(inst.card.lineId)
+    }
+
+    /// The Aura multiplier a completed evolution line applies to its own cards:
+    /// `1 + evoLineBonus` (base ×2.25, higher when a Trainer or Catalyst boosts the
+    /// evolution-line bonus). Drives the Showcase's "set multiplier" cue. (req: cue)
+    var evoLineMultiplier: Double { 1 + evoLineBonus }
+
     /// How much the Showcase's Aura would rise if `inst` were kept (accounts
     /// for any evolution line it completes). Negative-improving swaps use this too.
     func marginalAura(of inst: CardInstance) -> Double {
@@ -376,6 +402,28 @@ struct GauntletRun: Codable {
     }
 
     mutating func sellCatalyst(_ catalyst: Catalyst) { cash += catalyst.saleValue; noteCash() }
+
+    /// Whether an offered Catalyst can be *swapped* in: only when every Catalyst
+    /// slot is already filled (so there's nothing to attune into) and there's at
+    /// least one slot to swap against. With zero slots there's nothing to trade.
+    var canSwapCatalyst: Bool { effectiveCatalystSlots > 0 && !canAttune }
+
+    /// Replace the attuned Catalyst at `index` with `incoming`, dropping the old
+    /// one's effect and applying the new one's immediately. The outgoing Catalyst
+    /// is discarded (not sold). Mirrors `attune`'s immediate extra-rip handling so
+    /// swapping Eclipse in or out settles this round's rips correctly. (req: swap)
+    @discardableResult
+    mutating func swapCatalyst(_ incoming: Catalyst, at index: Int) -> Bool {
+        guard attunedCatalysts.indices.contains(index) else { return false }
+        let outgoing = attunedCatalysts[index]
+        // Take back the outgoing Catalyst's immediate per-round rip grant, then
+        // pay out the incoming one's, so an Eclipse-for-Eclipse swap nets to zero
+        // and a swap into (or out of) Eclipse adjusts this round's rips at once.
+        ripsLeft = max(0, ripsLeft - outgoing.mods.extraRipsPerRound)
+        attunedCatalysts[index] = incoming
+        ripsLeft += incoming.mods.extraRipsPerRound
+        return true
+    }
 
     // MARK: Shop (between rounds)
 

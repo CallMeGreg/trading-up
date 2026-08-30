@@ -88,6 +88,21 @@ extension Element {
         }
     }
 
+    /// The SF Symbol that stands for this element — a clean icon used for the
+    /// Catalyst card faces (Fire→flame, Water→droplet, Grass→leaf, Electric→bolt,
+    /// Shadow→crescent moon). Kept here beside the palette so element identity and
+    /// its glyph live together.
+    var glyphSymbol: String {
+        switch self {
+        case .fire:     return "flame.fill"
+        case .rock:     return "mountain.2.fill"
+        case .water:    return "drop.fill"
+        case .grass:    return "leaf.fill"
+        case .electric: return "bolt.fill"
+        case .shadow:   return "moon.fill"
+        }
+    }
+
     /// Background wash inside the art window.
     var artGradient: RadialGradient {
         RadialGradient(
