@@ -13,10 +13,12 @@ struct RevealView: View {
     @State private var packIndex = 0
     /// The pack currently being revealed. For a box, the next pack's result.
     @State private var current: OpenResult? = nil
-    /// A short-lived "Evolution Complete!" toast, shown on the exact card that
-    /// finishes a line during the reveal. The permanent banner still lives on the
-    /// summary; this is just the in-the-moment celebration (req 2).
-    @State private var evoPopup: BonusEvent? = nil
+    /// Short-lived "Evolution Complete!" toasts, shown on the exact card that
+    /// finishes each line during the reveal. Several can stack when multiple
+    /// lines finish in one pack, and each lingers on its own 3s timer even as the
+    /// player taps on to later cards. The permanent banners still live on the
+    /// summary; these are just the in-the-moment celebration (req 2).
+    @State private var evoBanners: [BonusEvent] = []
 
     private enum Phase: Equatable {
         case sealed
@@ -61,33 +63,46 @@ struct RevealView: View {
             }
         }
         .overlay(alignment: .top) {
-            if let evoPopup {
-                EvolutionPopupBanner(bonus: evoPopup)
-                    .padding(.horizontal, 20)
-                    .padding(.top, 10)
-                    .transition(.move(edge: .top).combined(with: .opacity))
+            VStack(spacing: 8) {
+                ForEach(evoBanners) { bonus in
+                    EvolutionPopupBanner(bonus: bonus)
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                        // Each toast lives a fixed 3s from when it appears,
+                        // independent of taps, so spam-advancing still shows what
+                        // was earned. The task is tied to this banner's identity,
+                        // so later cards neither restart nor cancel its timer.
+                        .task {
+                            try? await Task.sleep(nanoseconds: 3_000_000_000)
+                            guard !Task.isCancelled else { return }
+                            withAnimation(.easeOut(duration: 0.3)) {
+                                evoBanners.removeAll { $0.id == bonus.id }
+                            }
+                        }
+                }
             }
+            .padding(.horizontal, 20)
+            .padding(.top, 10)
         }
-        .animation(.spring(response: 0.45, dampingFraction: 0.82), value: evoPopup?.id)
-        .onChange(of: phase) { _, newPhase in updateEvoPopup(for: newPhase) }
-        // Auto-dismiss the toast a beat after it appears; advancing swaps the id
-        // and cancels this early, so it never lingers onto the next card.
-        .task(id: evoPopup?.id) {
-            guard evoPopup != nil else { return }
-            try? await Task.sleep(nanoseconds: 2_400_000_000)
-            withAnimation(.easeOut(duration: 0.3)) { evoPopup = nil }
-        }
+        .onChange(of: phase) { _, newPhase in updateEvoBanners(for: newPhase) }
     }
 
-    /// Show the evolution toast only while the card that completes a line is the
-    /// one on screen; clear it for every other card and non-revealing phase.
-    private func updateEvoPopup(for phase: Phase) {
-        guard case .revealing(let i) = phase, let result = current,
-              let bonus = evoCompletion(at: i, in: result) else {
-            if evoPopup != nil { evoPopup = nil }
+    /// Stack an evolution toast on the exact card that finishes a line, under any
+    /// still-visible earlier toasts. A card that completes no line leaves the
+    /// current toasts alone — they expire on their own 3s timers rather than when
+    /// the player advances. Leaving the reveal clears them; the summary shows its
+    /// own permanent banners.
+    private func updateEvoBanners(for phase: Phase) {
+        guard case .revealing(let i) = phase else {
+            if !evoBanners.isEmpty {
+                withAnimation(.easeOut(duration: 0.3)) { evoBanners.removeAll() }
+            }
             return
         }
-        evoPopup = bonus
+        guard let result = current, let bonus = evoCompletion(at: i, in: result),
+              !evoBanners.contains(where: { $0.id == bonus.id }) else { return }
+        withAnimation(.spring(response: 0.45, dampingFraction: 0.82)) {
+            evoBanners.append(bonus)
+        }
     }
 
     /// The evolution bonus (if any) that this pack finishes on the card at
@@ -232,12 +247,28 @@ private struct SummaryView: View {
     var packCounter: PackCounter? = nil
     let onDone: () -> Void
 
-    /// One-time classification of each pulled instance, snapshotted on appear
-    /// (before any selling) so keeper decisions don't shift as dupes are sold.
+    /// One-time classification of each pulled instance, snapshotted before any
+    /// selling so keeper decisions don't shift as dupes are sold.
     private enum BaseKind { case newCard, keeperExisting, duplicate }
-    @State private var baseKind: [UUID: BaseKind] = [:]
+
+    /// Boxed in a reference type so the plan can be computed on the first `body`
+    /// pass — before the first frame is drawn — rather than in `onAppear`.
+    /// Computing it in `onAppear` left one frame where every card was still
+    /// unclassified, which `slot(for:)` treated as a pending duplicate and
+    /// flashed Keep/Sell buttons onto brand-new cards before correcting itself.
+    private final class Plan { var kinds: [UUID: BaseKind]? = nil }
+    @State private var plan = Plan()
     @State private var soldIds: Set<UUID> = []
     @State private var keptIds: Set<UUID> = []
+
+    /// Lazily computed and cached: the first read takes the snapshot, later
+    /// reads return it, so a card's kind stays stable as the collection changes.
+    private var baseKind: [UUID: BaseKind] {
+        if let kinds = plan.kinds { return kinds }
+        let kinds = computePlan()
+        plan.kinds = kinds
+        return kinds
+    }
 
     private let blue = [Color(hex: "3b82f6"), Color(hex: "6d5cf7")]
     private let green = [Palette.money, Color(hex: "2fae63")]
@@ -245,11 +276,6 @@ private struct SummaryView: View {
     private var totalValue: Double { result.pulled.reduce(0) { $0 + $1.currentValue } }
     private var foils: [CardInstance] { result.pulled.filter { $0.foil } }
     private var ultras: [CardInstance] { result.pulled.filter { $0.card.rarity == .ultra } }
-
-    /// Distinct cards in this pull that weren't already in the collection.
-    private var newCount: Int {
-        Set(result.pulled.map { $0.cardId }).subtracting(result.preOwnedIds).count
-    }
 
     // Box highlights: show only the exciting cards (too many to list all).
     private var boxHighlights: [CardInstance] {
@@ -269,21 +295,18 @@ private struct SummaryView: View {
             VStack(spacing: 0) {
                 ScrollView {
                     VStack(spacing: metrics.sectionSpacing) {
-                        Text(result.isBox ? "Booster Box Opened!" : "Pack Opened!")
+                        Text(result.isBox ? "Booster Box Opened!" : "Pack Summary")
                             .font(.system(size: 26, weight: .black, design: .rounded))
                             .foregroundStyle(.white)
                             .padding(.top, metrics.titleTopPad)
 
-                        HStack(spacing: 10) {
-                            StatTile(label: "Cards", value: "\(result.pulled.count)")
-                            if result.isBox {
+                        if result.isBox {
+                            HStack(spacing: 10) {
+                                StatTile(label: "Cards", value: "\(result.pulled.count)")
                                 StatTile(label: "Foils", value: "\(foils.count)", tint: Color(hex: "ff8ad6"))
                                 StatTile(label: "Ultras", value: "\(ultras.count)", tint: Color(hex: "b06cf7"))
-                            } else {
-                                StatTile(label: "New", value: "\(newCount)", tint: Color(hex: "ffd54a"))
-                                StatTile(label: "Foils", value: "\(foils.count)", tint: Color(hex: "ff8ad6"))
+                                StatTile(label: "Value", value: totalValue.moneyShort, tint: Palette.money)
                             }
-                            StatTile(label: "Value", value: totalValue.moneyShort, tint: Palette.money)
                         }
 
                         ForEach(result.bonuses) { bonus in
@@ -305,7 +328,6 @@ private struct SummaryView: View {
             .frame(width: geo.size.width, height: geo.size.height)
         }
         .background(Palette.bg0.ignoresSafeArea())
-        .onAppear(perform: computePlan)
     }
 
     // MARK: Grids
@@ -329,12 +351,6 @@ private struct SummaryView: View {
 
     private func packGrid(_ m: GridMetrics) -> some View {
         VStack(spacing: 10) {
-            if !pendingDuplicates.isEmpty {
-                Label("Keep or sell each extra copy", systemImage: "arrow.left.arrow.right")
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(Palette.tapCue)
-                    .multilineTextAlignment(.center)
-            }
             LazyVGrid(columns: m.columns, spacing: m.spacing) {
                 ForEach(result.pulled) { inst in
                     PackCardSlot(inst: inst, slot: slot(for: inst), width: m.card,
@@ -436,19 +452,19 @@ private struct SummaryView: View {
     /// keeper of each card is its most valuable owned copy; ties prefer a
     /// pre-existing (non-pulled) copy so a plain re-pull becomes the dup, while
     /// a foil upgrade of an owned card keeps the pulled foil.
-    private func computePlan() {
-        guard baseKind.isEmpty, !result.isBox else { return }
+    private func computePlan() -> [UUID: BaseKind] {
+        guard !result.isBox else { return [:] }
         let pulledIds = Set(result.pulled.map { $0.id })
-        var plan: [UUID: BaseKind] = [:]
+        var kinds: [UUID: BaseKind] = [:]
         for inst in result.pulled {
             let keeper = keeperId(forCard: inst.cardId, pulledIds: pulledIds)
             if inst.id == keeper {
-                plan[inst.id] = result.preOwnedIds.contains(inst.cardId) ? .keeperExisting : .newCard
+                kinds[inst.id] = result.preOwnedIds.contains(inst.cardId) ? .keeperExisting : .newCard
             } else {
-                plan[inst.id] = .duplicate
+                kinds[inst.id] = .duplicate
             }
         }
-        baseKind = plan
+        return kinds
     }
 
     private func keeperId(forCard cardId: String, pulledIds: Set<UUID>) -> UUID? {
