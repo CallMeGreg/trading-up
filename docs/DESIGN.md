@@ -584,8 +584,8 @@ is exactly `RunMods.none`). The per-pip (per-step) magnitudes are **live**:
 
 | Skill | Lever | Per pip above 3 | Per pip below 3 |
 | --- | --- | --- | --- |
-| **Energy** | Bonus-rip roll at round start | +10% chance to *gain* a rip | 10% chance to *lose* a rip |
-| **Aura** | Global Aura multiplier | +5% Aura | −5% Aura |
+| **Energy** | Bonus-rip roll at round start | +50% chance to *gain* a rip | 50% chance to *lose* a rip |
+| **Aura** | Global Aura multiplier | +10% Aura | −10% Aura |
 | **Selling** | Sell-back %, round payout | +5% sell-back, +10% payout | −5% / −10% |
 | **Grading** | Grade luck + grading fee | roll grade with advantage (+10%/pip luck), −25% fee | roll with disadvantage, +25% fee |
 | **Inventory** | Showcase slots | +1 slot | −1 slot |
