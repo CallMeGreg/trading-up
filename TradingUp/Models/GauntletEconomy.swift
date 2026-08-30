@@ -136,11 +136,12 @@ enum GauntletSkillTuning {
     // of these move.
     //
     // Energy → chance of one bonus rip above neutral; a matching chance to *lose* a
-    // rip below it (the downside lever in `GauntletRun.startRound(using:)`).
-    static let bonusRipUp = 0.10, bonusRipDown = 0.10
-    // Aura → global score multiplier, symmetric around ×1. The single strongest
-    // lever (it multiplies every round's Aura), so its per-pip step is kept small.
-    static let auraUp = 0.05,     auraDown = 0.05
+    // rip below it (the downside lever in `GauntletRun.startRound(using:)`). At
+    // 50%/pip a one-pip swing is a coin flip and the ±2 extreme a guaranteed rip.
+    static let bonusRipUp = 0.50, bonusRipDown = 0.50
+    // Aura → global score multiplier, symmetric around ×1. It multiplies every
+    // round's Aura, so it is one of the strongest levers: 10%/pip, ±20% at the ends.
+    static let auraUp = 0.10,     auraDown = 0.10
     // Selling → sell-back rate and round stipend (two small levers so a Selling pip
     // is felt across the cash economy, not one number). Sized so a Selling
     // specialist's extra cash — and a Selling weakling's shortfall — is a real swing
@@ -198,8 +199,7 @@ enum GauntletSkillTuning {
             return "\(sb) sell-back · \(st) round payout"
         case .grading:
             let luck = delta(score, up: gradeLuckUp, down: gradeLuckDown)
-            let lp = Int((abs(luck) * 100).rounded())
-            let luckPart = luck >= 0 ? "+\(lp)% grade luck" : "\(lp)% grade disadvantage"
+            let luckPart = signedPct(luck) + " grade luck"
             let feePart = signedPct(delta(score, up: gradeFeeUp, down: gradeFeeDown)) + " grading fees"
             return "\(luckPart) · \(feePart)"
         case .inventory:
@@ -227,8 +227,7 @@ enum GauntletSkillTuning {
             return "\(sb) back · \(st) payout"
         case .grading:
             let luck = delta(score, up: gradeLuckUp, down: gradeLuckDown)
-            let lp = Int((abs(luck) * 100).rounded())
-            let luckPart = luck >= 0 ? "+\(lp)% luck" : "\(lp)% disadv."
+            let luckPart = signedPct(luck) + " luck"
             let feePart = signedPct(delta(score, up: gradeFeeUp, down: gradeFeeDown)) + " fees"
             return "\(luckPart) · \(feePart)"
         case .inventory:

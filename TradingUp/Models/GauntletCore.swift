@@ -232,8 +232,8 @@ struct GauntletRun: Codable {
     /// Round setup that also rolls the Trainer's per-round bonus-rip *chance* (the
     /// Energy lever). Above neutral Energy this is a chance at one extra rip; below
     /// neutral it flips to a matching chance of *losing* a rip — the symmetric
-    /// downside a low-Energy Trainer pays. Rolled once per round so tempo shifts
-    /// smoothly rather than jumping a whole guaranteed rip.
+    /// downside a low-Energy Trainer pays. Rolled once per round: a single pip off
+    /// neutral is a coin-flip swing, the ±2 extreme a guaranteed rip.
     mutating func startRound<G: RandomNumberGenerator>(using rng: inout G) {
         startRound()
         let chance = mods.bonusRipChance
