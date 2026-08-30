@@ -53,6 +53,16 @@ struct TrainerSkills: Codable, Hashable {
     /// The run advantage these scores confer, assembled from the symmetric per-pip
     /// model in `GauntletSkillTuning` (the balance seam, kept in `GauntletEconomy`).
     var runMods: RunMods { GauntletSkillTuning.runMods(for: self) }
+
+    /// A human phrase for every skill that sits off the neutral 3, in card order —
+    /// the concrete run effect each pip actually confers, so the card, the balance
+    /// harness, and the docs can all show a Trainer's real edge and weaknesses.
+    /// Empty for the flat-3 Rookie.
+    var effectLines: [(axis: TrainerSkillAxis, text: String)] {
+        TrainerSkillAxis.allCases.compactMap { axis in
+            GauntletSkillTuning.effect(axis, score: score(axis)).map { (axis, $0) }
+        }
+    }
 }
 
 /// The five Trainer skills, in card display order, each with the SF Symbol its
@@ -134,13 +144,13 @@ extension Trainer {
         skills: .neutral)
 
     /// The mystery Trainer, hidden as "???" until the player has beaten Hard with
-    /// every other Trainer. Overwhelming Energy and Aura, but the bare minimum
-    /// everywhere else — a glass cannon. Kept out of `roster` iteration order below
+    /// every other Trainer. Overwhelming Energy and Aura, and thin everywhere else
+    /// — a glass cannon. Kept out of `roster` iteration order below
     /// only by convention; it *is* included so it renders (concealed) and unlocks.
     static let red = Trainer(
         id: "red", name: "Gary",
-        blurb: "A silent challenger. Overwhelming Energy and Aura — and nothing else.",
-        skills: TrainerSkills(energy: 5, aura: 5, selling: 1, grading: 1, inventory: 1),
+        blurb: "A silent challenger. Overwhelming Energy and Aura — and little else.",
+        skills: TrainerSkills(energy: 5, aura: 5, selling: 2, grading: 2, inventory: 1),
         mysteryUntilUnlocked: true)
 
     /// The shipped roster. Each leans into a different pair of skills so builds

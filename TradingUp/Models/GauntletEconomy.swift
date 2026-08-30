@@ -107,16 +107,17 @@ struct RunMods: Codable, Hashable {
 /// each pip above 3 grants a bonus and each pip below 3 an equal-shaped penalty —
 /// so a spiky Trainer trades strength in its specialty for real weakness
 /// elsewhere, never a strict upgrade. *Which* lever each skill drives is fixed
-/// here; the per-pip magnitudes are the balance knobs.
+/// here; the per-pip magnitudes below are the balance knobs.
 ///
-/// - TODO(balance): every per-pip step below is intentionally `0`, so today every
-///   Trainer resolves to `RunMods.none` (mechanically the Rookie). The graphs are
-///   wired but unmagnituded. A dedicated tuning pass sets these numbers and
-///   re-runs `tools/verify` to keep the intended Hard curve — a spiky Trainer must
-///   stay a sidegrade, never a gate — plus, where the design calls for it, two new
-///   downside levers (low Energy risking a lost rip, low Grading rolling with
-///   disadvantage). Until then the wiring is real and honest; only the numbers are
-///   pending.
+/// The magnitudes are **live** (tuned against `tools/verify`, which proves a
+/// neutral Rookie still clears Hard and no Trainer trivialises it — best ≤ 97%).
+/// Two skills carry a downside lever that only bites *below* neutral, wired in
+/// `GauntletCore`: low **Energy** risks losing a rip at the start of a round
+/// (a negative `bonusRipChance`), and low **Grading** rolls a keeper's grade with
+/// *disadvantage* (a negative `gradeLuckBonus`). Everywhere else the symmetric
+/// delta shapes both directions on its own (Aura multiplier, sell-back / stipend /
+/// seed cash, grading fee, Showcase slots). Retune in small steps and re-run the
+/// harness in the same breath — see docs/DESIGN.md §14.3.
 enum GauntletSkillTuning {
     /// The pivot score: a flat 3 confers no advantage and no penalty.
     static let neutralScore = 3
@@ -125,26 +126,38 @@ enum GauntletSkillTuning {
     static func steps(_ score: Int) -> Int { score - neutralScore }
 
     /// A symmetric per-pip delta: `steps` scaled by `up` above neutral, `down`
-    /// below. With both magnitudes 0 this is 0 everywhere (the current state).
+    /// below. With both magnitudes equal (as they are here) it is a clean straight
+    /// line through the neutral 3.
     static func delta(_ score: Int, up: Double, down: Double) -> Double {
         let s = steps(score)
         return s >= 0 ? Double(s) * up : Double(s) * down
     }
 
-    // Per-pip magnitudes — all 0 pending the balance pass (see the note above).
-    // Energy → chance of a bonus rip (a guaranteed extra rip is a future capstone).
-    static let bonusRipUp = 0.0,  bonusRipDown = 0.0
-    // Aura → global score multiplier, symmetric around ×1.
-    static let auraUp = 0.0,      auraDown = 0.0
-    // Selling → sell-back rate, round stipend, and seed cash.
-    static let sellbackUp = 0.0,  sellbackDown = 0.0
-    static let stipendUp = 0.0,   stipendDown = 0.0
-    static let seedCashUp = 0.0,  seedCashDown = 0.0
-    // Grading → luck (roll-with-advantage chance) and fee multiplier.
-    static let gradeLuckUp = 0.0, gradeLuckDown = 0.0
-    static let gradeFeeUp = 0.0,  gradeFeeDown = 0.0
-    // Inventory → Showcase slots (a Catalyst slot is a future capstone).
-    static let slotStep = 0
+    // Per-pip magnitudes. Each is "per whole pip away from the neutral 3", so a
+    // score of 5 (or 1) applies twice the step. Kept symmetric (up == down) so the
+    // graph reads as one straight sidegrade line; the harness is the arbiter if any
+    // of these move.
+    //
+    // Energy → chance of one bonus rip above neutral; a matching chance to *lose* a
+    // rip below it (the downside lever in `GauntletRun.startRound(using:)`).
+    static let bonusRipUp = 0.10, bonusRipDown = 0.10
+    // Aura → global score multiplier, symmetric around ×1. The single strongest
+    // lever (it multiplies every round's Aura), so its per-pip step is kept small.
+    static let auraUp = 0.04,     auraDown = 0.04
+    // Selling → sell-back rate, round stipend, and seed cash (three small levers so
+    // a Selling pip is felt across the whole cash economy, not one number). Sized so
+    // a Selling specialist's extra cash — and a Selling weakling's shortfall — is a
+    // real swing on early pack/slot unlocks, the mode's true cash sink.
+    static let sellbackUp = 0.05, sellbackDown = 0.05
+    static let stipendUp = 0.09,  stipendDown = 0.09
+    static let seedCashUp = 2.0,  seedCashDown = 2.0
+    // Grading → luck (roll-with-advantage chance above neutral, disadvantage below)
+    // and fee multiplier. The fee magnitudes are negative because a *higher* Grading
+    // score should make grading *cheaper*: +pips lower the fee, −pips raise it.
+    static let gradeLuckUp = 0.09, gradeLuckDown = 0.09
+    static let gradeFeeUp = -0.06, gradeFeeDown = -0.06
+    // Inventory → Showcase slots, one per pip (a Catalyst slot is a future capstone).
+    static let slotStep = 1
 
     /// Assemble the run advantage for a profile. Each skill drives its lever(s)
     /// symmetrically around the neutral 3.
@@ -159,6 +172,50 @@ enum GauntletSkillTuning {
         m.gradeFeeMult      = 1 + delta(s.grading, up: gradeFeeUp, down: gradeFeeDown)
         m.extraSlots        = steps(s.inventory) * slotStep
         return m
+    }
+
+    // MARK: Human-readable effects (for the Trainer card, the harness, and docs)
+
+    private static func signedPct(_ v: Double) -> String {
+        let p = Int((v * 100).rounded())
+        return (p < 0 ? "−" : "+") + "\(abs(p))%"
+    }
+    private static func signedInt(_ v: Int) -> String { (v < 0 ? "−" : "+") + "\(abs(v))" }
+    private static func signedDollar(_ v: Double) -> String {
+        let d = Int(v.rounded())
+        return (d < 0 ? "−" : "+") + "$\(abs(d))"
+    }
+
+    /// A concise, human phrase for what a single skill at `score` actually does this
+    /// run — derived from the very same per-pip constants above, so the words can
+    /// never drift from the mechanics. `nil` at the neutral 3 (no effect). Surfaced
+    /// on the Trainer card, printed by `tools/verify`, and mirrored in docs so a
+    /// reviewer can read each pip's real effect and rebalance what feels too drastic.
+    static func effect(_ axis: TrainerSkillAxis, score: Int) -> String? {
+        guard steps(score) != 0 else { return nil }
+        switch axis {
+        case .energy:
+            let c = delta(score, up: bonusRipUp, down: bonusRipDown)
+            let pct = Int((abs(c) * 100).rounded())
+            return c >= 0 ? "+\(pct)% chance of a bonus rip each round"
+                          : "\(pct)% chance to lose a rip each round"
+        case .aura:
+            return signedPct(delta(score, up: auraUp, down: auraDown)) + " Aura on every card"
+        case .selling:
+            let sb = signedPct(delta(score, up: sellbackUp, down: sellbackDown))
+            let st = signedPct(delta(score, up: stipendUp, down: stipendDown))
+            let sc = signedDollar(delta(score, up: seedCashUp, down: seedCashDown))
+            return "\(sb) sell-back · \(st) round payout · \(sc) seed cash"
+        case .grading:
+            let luck = delta(score, up: gradeLuckUp, down: gradeLuckDown)
+            let lp = Int((abs(luck) * 100).rounded())
+            let luckPart = luck >= 0 ? "+\(lp)% grade luck" : "\(lp)% grade disadvantage"
+            let feePart = signedPct(delta(score, up: gradeFeeUp, down: gradeFeeDown)) + " grading fees"
+            return "\(luckPart) · \(feePart)"
+        case .inventory:
+            let slots = steps(score) * slotStep
+            return "\(signedInt(slots)) Showcase slot" + (abs(slots) == 1 ? "" : "s")
+        }
     }
 }
 

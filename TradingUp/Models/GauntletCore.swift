@@ -229,13 +229,19 @@ struct GauntletRun: Codable {
         ripsLeft = GauntletEconomy.ripBudget(tier, round: round) + mods.extraRipsPerRound
     }
 
-    /// Round setup that also rolls the Trainer's per-round *chance* of one extra rip
-    /// (the Ripper's level-scaling lever). Rolled once per round so tempo climbs
-    /// smoothly with level instead of jumping a whole guaranteed rip.
+    /// Round setup that also rolls the Trainer's per-round bonus-rip *chance* (the
+    /// Energy lever). Above neutral Energy this is a chance at one extra rip; below
+    /// neutral it flips to a matching chance of *losing* a rip — the symmetric
+    /// downside a low-Energy Trainer pays. Rolled once per round so tempo shifts
+    /// smoothly rather than jumping a whole guaranteed rip.
     mutating func startRound<G: RandomNumberGenerator>(using rng: inout G) {
         startRound()
         let chance = mods.bonusRipChance
-        if chance > 0, Double.random(in: 0..<1, using: &rng) < chance { ripsLeft += 1 }
+        if chance > 0 {
+            if Double.random(in: 0..<1, using: &rng) < chance { ripsLeft += 1 }
+        } else if chance < 0 {
+            if Double.random(in: 0..<1, using: &rng) < -chance { ripsLeft = max(0, ripsLeft - 1) }
+        }
     }
 
     /// Resolve the round once the player is done ripping.
@@ -375,11 +381,19 @@ struct GauntletRun: Codable {
 
     // MARK: Grading (gamble a keeper's score)
 
+    /// Roll a grade, bent by the Trainer's Grading luck. Above neutral Grading rolls
+    /// with *advantage* (roll twice, keep the more valuable) at a per-run chance;
+    /// below neutral it rolls with *disadvantage* (roll twice, keep the worse) — the
+    /// symmetric downside a low-Grading Trainer pays, alongside its higher fees.
     private mutating func rollGradeWithLuck<G: RandomNumberGenerator>(using rng: inout G) -> Int {
         let g1 = Economy.rollGrade(using: &rng)
-        if Double.random(in: 0..<1, using: &rng) < mods.gradeLuckBonus {
+        let luck = mods.gradeLuckBonus
+        if luck > 0, Double.random(in: 0..<1, using: &rng) < luck {
             let g2 = Economy.rollGrade(using: &rng)
             return Economy.gradeMultiplier(g2) > Economy.gradeMultiplier(g1) ? g2 : g1
+        } else if luck < 0, Double.random(in: 0..<1, using: &rng) < -luck {
+            let g2 = Economy.rollGrade(using: &rng)
+            return Economy.gradeMultiplier(g2) < Economy.gradeMultiplier(g1) ? g2 : g1
         }
         return g1
     }

@@ -54,7 +54,7 @@ final class GauntletMetaTests: XCTestCase {
         expect("appraiser", 2, 5, 2, 2, 3)
         expect("grader",    2, 3, 2, 5, 3)
         expect("merchant",  3, 2, 5, 2, 3)
-        expect("red",       5, 5, 1, 1, 1)   // the mystery glass cannon
+        expect("red",       5, 5, 2, 2, 1)   // the mystery glass cannon
     }
 
     /// `3` is the neutral pivot: a flat-3 profile confers exactly no edge.
@@ -63,14 +63,58 @@ final class GauntletMetaTests: XCTestCase {
         XCTAssertEqual(Trainer.neutral.mods, .none)
     }
 
-    /// Skill *magnitudes* are deliberately unset — a later balance pass tunes them —
-    /// so today every Trainer resolves to the neutral baseline, and the verify
-    /// harness proves the mode stays winnable meanwhile. This guards that intent:
-    /// wiring up a magnitude must update this test and re-run the harness.
-    func testSkillMagnitudesAreUnsetSoEveryTrainerIsNeutral() {
-        for t in [Trainer.neutral] + Trainer.roster {
-            XCTAssertEqual(t.mods, .none, "\(t.name) should confer no edge until magnitudes are tuned")
-        }
+    /// Skill *magnitudes* are live now, so every spiky Trainer derives a real,
+    /// correctly-signed edge: a specialty helps on its axis and a weakness bites an
+    /// equal amount. The verify harness proves the balance stays a sidegrade; this
+    /// guards the *shape* so a future retune can't silently flip a sign. Wiring up
+    /// or removing a lever must update this test.
+    func testSkillMagnitudesShapeEachTrainersEdge() {
+        // The Rookie stays the exact neutral pivot.
+        XCTAssertEqual(Trainer.neutral.mods, .none)
+
+        // Each specialist's high axis is a bonus of the right kind…
+        XCTAssertGreaterThan(Trainer.byId("ripper")!.mods.bonusRipChance, 0,
+                             "the Ripper's 5-Energy is a bonus-rip chance")
+        XCTAssertGreaterThan(Trainer.byId("appraiser")!.mods.auraMult, 1,
+                             "Fred's 5-Aura multiplies score above ×1")
+        let sally = Trainer.byId("merchant")!.mods
+        XCTAssertGreaterThan(sally.sellbackBonus, 0, "the Merchant's 5-Selling lifts sell-back")
+        XCTAssertGreaterThan(sally.stipendMult, 1, "…and the round stipend")
+        XCTAssertGreaterThan(sally.startingCashBonus, 0, "…and the seed cash")
+        let lucy = Trainer.byId("grader")!.mods
+        XCTAssertGreaterThan(lucy.gradeLuckBonus, 0, "the Grader's 5-Grading rolls with luck")
+        XCTAssertLessThan(lucy.gradeFeeMult, 1, "…and pays cheaper fees")
+        XCTAssertGreaterThan(Trainer.byId("curator")!.mods.extraSlots, 0,
+                             "the Curator's 5-Inventory adds Showcase slots")
+
+        // …and each low axis bites, equal and opposite.
+        let ripper = Trainer.byId("ripper")!.mods
+        XCTAssertGreaterThan(ripper.gradeFeeMult, 1, "the Ripper's 1-Grading pays pricier fees")
+        XCTAssertLessThan(ripper.gradeLuckBonus, 0, "…and rolls grades with disadvantage")
+        let curator = Trainer.byId("curator")!.mods
+        XCTAssertLessThan(curator.startingCashBonus, 0, "the Curator's 1-Selling opens with less cash")
+        XCTAssertLessThan(curator.bonusRipChance, 0, "the Curator's 2-Energy risks losing a rip")
+
+        // The model is symmetric: a flat 5 and a flat 1 are equal and opposite.
+        let hi = GauntletSkillTuning.runMods(for: TrainerSkills(energy: 5, aura: 5, selling: 5, grading: 5, inventory: 5))
+        let lo = GauntletSkillTuning.runMods(for: TrainerSkills(energy: 1, aura: 1, selling: 1, grading: 1, inventory: 1))
+        XCTAssertEqual(hi.bonusRipChance, -lo.bonusRipChance, accuracy: 1e-9)
+        XCTAssertEqual(hi.auraMult - 1, -(lo.auraMult - 1), accuracy: 1e-9)
+        XCTAssertEqual(hi.sellbackBonus, -lo.sellbackBonus, accuracy: 1e-9)
+        XCTAssertEqual(hi.startingCashBonus, -lo.startingCashBonus, accuracy: 1e-9)
+        XCTAssertEqual(hi.gradeFeeMult - 1, -(lo.gradeFeeMult - 1), accuracy: 1e-9)
+        XCTAssertEqual(hi.extraSlots, -lo.extraSlots)
+    }
+
+    /// The card / harness / docs read a Trainer's real effects off `effectLines`,
+    /// derived from the same tuning constants as the mods. Neutral lists nothing;
+    /// a spiky Trainer lists exactly the axes that sit off the neutral 3.
+    func testEffectLinesMatchOffNeutralSkills() {
+        XCTAssertTrue(TrainerSkills.neutral.effectLines.isEmpty, "a flat-3 Rookie has no effects to show")
+        let ripper = Trainer.byId("ripper")!               // E5 A2 S2 G1 I4 — every axis off neutral
+        XCTAssertEqual(ripper.skills.effectLines.map(\.axis), [.energy, .aura, .selling, .grading, .inventory])
+        let grader = Trainer.byId("grader")!               // E2 A3 S2 G5 I3 — Aura & Inventory sit at 3
+        XCTAssertEqual(grader.skills.effectLines.map(\.axis), [.energy, .selling, .grading])
     }
 
     // MARK: Progress — unlock ladder

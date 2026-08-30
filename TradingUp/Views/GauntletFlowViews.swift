@@ -126,6 +126,10 @@ private struct TrainerCard: View {
 
                     SkillGraph(skills: trainer.skills, accent: accent, concealed: statsHidden)
 
+                    if unlocked {
+                        SkillEffects(skills: trainer.skills, accent: accent)
+                    }
+
                     if concealed, let p = unlockProgress {
                         Divider().overlay(Palette.stroke)
                         UnlockRequirement(icon: "flame.fill",
@@ -200,6 +204,36 @@ private struct PipRow: View {
                         lineWidth: 1.2))
             }
         }
+    }
+}
+
+/// The concrete run effect of every skill that sits off the neutral 3 — read
+/// straight from `GauntletSkillTuning`, the same tuning the pips derive from, so a
+/// player sees exactly what a Trainer's graph *does* (its edge and its cost), not
+/// just its shape. Empty (and so nothing shown) for the flat-3 Rookie.
+private struct SkillEffects: View {
+    let skills: TrainerSkills
+    let accent: Color
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            ForEach(TrainerSkillAxis.allCases, id: \.self) { axis in
+                if let text = GauntletSkillTuning.effect(axis, score: skills.score(axis)) {
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        Image(systemName: axis.symbol)
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(accent.opacity(0.9))
+                            .frame(width: 14)
+                        Text(text)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(Palette.subtle)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
     }
 }
 
