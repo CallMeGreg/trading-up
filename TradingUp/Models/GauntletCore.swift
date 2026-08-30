@@ -92,7 +92,7 @@ struct GauntletRun: Codable {
     init(tier: GauntletTier, trainer: Trainer) {
         self.tier = tier
         self.trainer = trainer
-        self.cash = GauntletEconomy.startingCash + trainer.mods.startingCashBonus
+        self.cash = GauntletEconomy.startingCash
         self.maxCashReached = self.cash
         startRound()
     }
@@ -104,7 +104,7 @@ struct GauntletRun: Codable {
     init<G: RandomNumberGenerator>(tier: GauntletTier, trainer: Trainer, using rng: inout G) {
         self.tier = tier
         self.trainer = trainer
-        self.cash = GauntletEconomy.startingCash + trainer.mods.startingCashBonus
+        self.cash = GauntletEconomy.startingCash
         self.maxCashReached = self.cash
         startRound(using: &rng)
     }

@@ -80,7 +80,6 @@ final class GauntletMetaTests: XCTestCase {
         let sally = Trainer.byId("merchant")!.mods
         XCTAssertGreaterThan(sally.sellbackBonus, 0, "the Merchant's 5-Selling lifts sell-back")
         XCTAssertGreaterThan(sally.stipendMult, 1, "…and the round stipend")
-        XCTAssertGreaterThan(sally.startingCashBonus, 0, "…and the seed cash")
         let lucy = Trainer.byId("grader")!.mods
         XCTAssertGreaterThan(lucy.gradeLuckBonus, 0, "the Grader's 5-Grading rolls with luck")
         XCTAssertLessThan(lucy.gradeFeeMult, 1, "…and pays cheaper fees")
@@ -92,7 +91,7 @@ final class GauntletMetaTests: XCTestCase {
         XCTAssertGreaterThan(ripper.gradeFeeMult, 1, "the Ripper's 1-Grading pays pricier fees")
         XCTAssertLessThan(ripper.gradeLuckBonus, 0, "…and rolls grades with disadvantage")
         let curator = Trainer.byId("curator")!.mods
-        XCTAssertLessThan(curator.startingCashBonus, 0, "the Curator's 1-Selling opens with less cash")
+        XCTAssertLessThan(curator.sellbackBonus, 0, "the Curator's 1-Selling sells back less")
         XCTAssertLessThan(curator.bonusRipChance, 0, "the Curator's 2-Energy risks losing a rip")
 
         // The model is symmetric: a flat 5 and a flat 1 are equal and opposite.
@@ -101,7 +100,6 @@ final class GauntletMetaTests: XCTestCase {
         XCTAssertEqual(hi.bonusRipChance, -lo.bonusRipChance, accuracy: 1e-9)
         XCTAssertEqual(hi.auraMult - 1, -(lo.auraMult - 1), accuracy: 1e-9)
         XCTAssertEqual(hi.sellbackBonus, -lo.sellbackBonus, accuracy: 1e-9)
-        XCTAssertEqual(hi.startingCashBonus, -lo.startingCashBonus, accuracy: 1e-9)
         XCTAssertEqual(hi.gradeFeeMult - 1, -(lo.gradeFeeMult - 1), accuracy: 1e-9)
         XCTAssertEqual(hi.extraSlots, -lo.extraSlots)
     }

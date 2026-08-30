@@ -551,7 +551,7 @@ The five skills and what each drives (`TrainerSkillAxis` → `GauntletSkillTunin
 | --- | --- | --- |
 | **Energy** | `bolt.fill` | Pack rips per round (a bonus-rip chance) |
 | **Aura** | `sparkles` | Default Aura every card scores (global multiplier) |
-| **Selling** | `dollarsign.circle.fill` | Cash back when you sell — sell-back, round stipend, seed cash |
+| **Selling** | `dollarsign.circle.fill` | Cash back when you sell — sell-back, round stipend |
 | **Grading** | `checkmark.seal.fill` | Grading luck and fees |
 | **Inventory** | `square.grid.2x2.fill` | Showcase + Catalyst capacity |
 
@@ -586,7 +586,7 @@ is exactly `RunMods.none`). The per-pip (per-step) magnitudes are **live**:
 | --- | --- | --- | --- |
 | **Energy** | Bonus-rip roll at round start | +10% chance to *gain* a rip | 10% chance to *lose* a rip |
 | **Aura** | Global Aura multiplier | +4% Aura | −4% Aura |
-| **Selling** | Sell-back %, round payout, seed cash | +5% sell-back, +9% payout, +$2 start | −5% / −9% / −$2 |
+| **Selling** | Sell-back %, round payout | +5% sell-back, +9% payout | −5% / −9% |
 | **Grading** | Grade luck + grading fee | roll grade with advantage (+9%/pip luck), −6% fee | roll with disadvantage, +6% fee |
 | **Inventory** | Showcase slots | +1 slot | −1 slot |
 

@@ -47,7 +47,6 @@ struct RunMods: Codable, Hashable {
     var sellbackBonus = 0.0        // added to Economy.sellbackRate (capped)
     var gradeLuckBonus = 0.0       // 0…1 chance to roll a grade with advantage
     var gradeFeeMult = 1.0         // scales the grading fee
-    var startingCashBonus = 0.0
     var stipendMult = 1.0          // scales the round-clear stipend
 
     static let none = RunMods()
@@ -65,7 +64,6 @@ struct RunMods: Codable, Hashable {
         r.sellbackBonus         = a.sellbackBonus + b.sellbackBonus
         r.gradeLuckBonus        = a.gradeLuckBonus + b.gradeLuckBonus
         r.gradeFeeMult          = a.gradeFeeMult * b.gradeFeeMult
-        r.startingCashBonus     = a.startingCashBonus + b.startingCashBonus
         r.stipendMult           = a.stipendMult * b.stipendMult
         return r
     }
@@ -95,7 +93,6 @@ struct RunMods: Codable, Hashable {
         if evoLineBonusBonus != 0 { parts.append("+\(pct(evoLineBonusBonus)) evolution bonus") }
         if gradeFeeMult != 1 { parts.append("\(pct(gradeFeeMult))-cost grading") }
         if stipendMult != 1 { parts.append("+\(pct(stipendMult - 1)) round payout") }
-        if startingCashBonus != 0 { parts.append("+" + String(format: "$%.0f", startingCashBonus) + " seed cash") }
         return parts.joined(separator: " · ")
     }
 }
@@ -115,8 +112,8 @@ struct RunMods: Codable, Hashable {
 /// `GauntletCore`: low **Energy** risks losing a rip at the start of a round
 /// (a negative `bonusRipChance`), and low **Grading** rolls a keeper's grade with
 /// *disadvantage* (a negative `gradeLuckBonus`). Everywhere else the symmetric
-/// delta shapes both directions on its own (Aura multiplier, sell-back / stipend /
-/// seed cash, grading fee, Showcase slots). Retune in small steps and re-run the
+/// delta shapes both directions on its own (Aura multiplier, sell-back / stipend,
+/// grading fee, Showcase slots). Retune in small steps and re-run the
 /// harness in the same breath — see docs/DESIGN.md §14.3.
 enum GauntletSkillTuning {
     /// The pivot score: a flat 3 confers no advantage and no penalty.
@@ -144,13 +141,12 @@ enum GauntletSkillTuning {
     // Aura → global score multiplier, symmetric around ×1. The single strongest
     // lever (it multiplies every round's Aura), so its per-pip step is kept small.
     static let auraUp = 0.04,     auraDown = 0.04
-    // Selling → sell-back rate, round stipend, and seed cash (three small levers so
-    // a Selling pip is felt across the whole cash economy, not one number). Sized so
-    // a Selling specialist's extra cash — and a Selling weakling's shortfall — is a
-    // real swing on early pack/slot unlocks, the mode's true cash sink.
+    // Selling → sell-back rate and round stipend (two small levers so a Selling pip
+    // is felt across the cash economy, not one number). Sized so a Selling
+    // specialist's extra cash — and a Selling weakling's shortfall — is a real swing
+    // on early pack/slot unlocks, the mode's true cash sink.
     static let sellbackUp = 0.05, sellbackDown = 0.05
     static let stipendUp = 0.09,  stipendDown = 0.09
-    static let seedCashUp = 2.0,  seedCashDown = 2.0
     // Grading → luck (roll-with-advantage chance above neutral, disadvantage below)
     // and fee multiplier. The fee magnitudes are negative because a *higher* Grading
     // score should make grading *cheaper*: +pips lower the fee, −pips raise it.
@@ -167,7 +163,6 @@ enum GauntletSkillTuning {
         m.auraMult          = 1 + delta(s.aura, up: auraUp,     down: auraDown)
         m.sellbackBonus     = delta(s.selling, up: sellbackUp,  down: sellbackDown)
         m.stipendMult       = 1 + delta(s.selling, up: stipendUp, down: stipendDown)
-        m.startingCashBonus = delta(s.selling, up: seedCashUp,  down: seedCashDown)
         m.gradeLuckBonus    = delta(s.grading, up: gradeLuckUp, down: gradeLuckDown)
         m.gradeFeeMult      = 1 + delta(s.grading, up: gradeFeeUp, down: gradeFeeDown)
         m.extraSlots        = steps(s.inventory) * slotStep
@@ -181,10 +176,6 @@ enum GauntletSkillTuning {
         return (p < 0 ? "−" : "+") + "\(abs(p))%"
     }
     private static func signedInt(_ v: Int) -> String { (v < 0 ? "−" : "+") + "\(abs(v))" }
-    private static func signedDollar(_ v: Double) -> String {
-        let d = Int(v.rounded())
-        return (d < 0 ? "−" : "+") + "$\(abs(d))"
-    }
 
     /// A concise, human phrase for what a single skill at `score` actually does this
     /// run — derived from the very same per-pip constants above, so the words can
@@ -204,8 +195,7 @@ enum GauntletSkillTuning {
         case .selling:
             let sb = signedPct(delta(score, up: sellbackUp, down: sellbackDown))
             let st = signedPct(delta(score, up: stipendUp, down: stipendDown))
-            let sc = signedDollar(delta(score, up: seedCashUp, down: seedCashDown))
-            return "\(sb) sell-back · \(st) round payout · \(sc) seed cash"
+            return "\(sb) sell-back · \(st) round payout"
         case .grading:
             let luck = delta(score, up: gradeLuckUp, down: gradeLuckDown)
             let lp = Int((abs(luck) * 100).rounded())
@@ -215,6 +205,35 @@ enum GauntletSkillTuning {
         case .inventory:
             let slots = steps(score) * slotStep
             return "\(signedInt(slots)) Showcase slot" + (abs(slots) == 1 ? "" : "s")
+        }
+    }
+
+    /// A tighter phrasing of `effect(_:score:)` for the grouped Boosts / Nerfs card
+    /// layout — the very same per-pip constants (so the words can never drift from
+    /// the mechanics), trimmed of the sentence tail since a coloured group heading
+    /// and the bolded skill name already carry that context. `nil` at the neutral 3.
+    static func compactEffect(_ axis: TrainerSkillAxis, score: Int) -> String? {
+        guard steps(score) != 0 else { return nil }
+        switch axis {
+        case .energy:
+            let c = delta(score, up: bonusRipUp, down: bonusRipDown)
+            let pct = Int((abs(c) * 100).rounded())
+            return c >= 0 ? "+\(pct)% bonus rip" : "\(pct)% to lose a rip"
+        case .aura:
+            return signedPct(delta(score, up: auraUp, down: auraDown)) + " per card"
+        case .selling:
+            let sb = signedPct(delta(score, up: sellbackUp, down: sellbackDown))
+            let st = signedPct(delta(score, up: stipendUp, down: stipendDown))
+            return "\(sb) back · \(st) payout"
+        case .grading:
+            let luck = delta(score, up: gradeLuckUp, down: gradeLuckDown)
+            let lp = Int((abs(luck) * 100).rounded())
+            let luckPart = luck >= 0 ? "+\(lp)% luck" : "\(lp)% disadv."
+            let feePart = signedPct(delta(score, up: gradeFeeUp, down: gradeFeeDown)) + " fees"
+            return "\(luckPart) · \(feePart)"
+        case .inventory:
+            let slots = steps(score) * slotStep
+            return "\(signedInt(slots)) slot" + (abs(slots) == 1 ? "" : "s")
         }
     }
 }
