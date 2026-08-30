@@ -53,6 +53,8 @@ struct Stats: Codable {
     var peakCardValue = 0.0
     /// All-time largest proceeds from a single card sale.
     var peakSale = 0.0
+    /// All-time highest net worth (cash + collection value) reached this run.
+    var peakNetWorth = Economy.startingCash
 
     init() {}
 
@@ -72,6 +74,7 @@ struct Stats: Codable {
         peakCash      = try c.decodeIfPresent(Double.self, forKey: .peakCash)      ?? Economy.startingCash
         peakCardValue = try c.decodeIfPresent(Double.self, forKey: .peakCardValue) ?? 0
         peakSale      = try c.decodeIfPresent(Double.self, forKey: .peakSale)      ?? 0
+        peakNetWorth  = try c.decodeIfPresent(Double.self, forKey: .peakNetWorth)  ?? Economy.startingCash
     }
 }
 
@@ -104,6 +107,7 @@ struct LifetimeStats: Codable {
     var peakCash = Economy.startingCash
     var peakCardValue = 0.0
     var peakSale = 0.0
+    var peakNetWorth = Economy.startingCash
     /// Fewest packs opened in a *winning* run. `nil` until a run has been won.
     var bestRunPacks: Int? = nil
 
@@ -128,6 +132,7 @@ struct LifetimeStats: Codable {
         peakCash      = try c.decodeIfPresent(Double.self, forKey: .peakCash)      ?? Economy.startingCash
         peakCardValue = try c.decodeIfPresent(Double.self, forKey: .peakCardValue) ?? 0
         peakSale      = try c.decodeIfPresent(Double.self, forKey: .peakSale)      ?? 0
+        peakNetWorth  = try c.decodeIfPresent(Double.self, forKey: .peakNetWorth)  ?? Economy.startingCash
         bestRunPacks  = try c.decodeIfPresent(Int.self,    forKey: .bestRunPacks)
     }
 
@@ -152,6 +157,7 @@ struct LifetimeStats: Codable {
         out.peakCash = max(out.peakCash, run.peakCash)
         out.peakCardValue = max(out.peakCardValue, run.peakCardValue)
         out.peakSale = max(out.peakSale, run.peakSale)
+        out.peakNetWorth = max(out.peakNetWorth, run.peakNetWorth)
         if won {
             out.bestRunPacks = min(out.bestRunPacks ?? Int.max, run.packsOpened)
         }
@@ -333,6 +339,36 @@ struct GameCore: Codable {
         let ids = uniqueOwnedIds
         return CardDatabase.cards(inSet: set).reduce(0) { $0 + (ids.contains($1.id) ? 1 : 0) }
     }
+
+    // MARK: Collection summary (derived, for Stats)
+
+    /// Number of sets whose every card is owned.
+    var setsCompleted: Int {
+        (1...CardDatabase.setCount).reduce(0) { total, set in
+            let cards = CardDatabase.cards(inSet: set)
+            return total + (!cards.isEmpty && ownedCount(inSet: set) == cards.count ? 1 : 0)
+        }
+    }
+
+    /// Number of multi-stage evolution lines fully owned.
+    var evolutionLinesCompleted: Int {
+        let owned = uniqueOwnedIds
+        return CardDatabase.evolutionLines.values.reduce(0) {
+            $0 + ($1.allSatisfy { owned.contains($0.id) } ? 1 : 0)
+        }
+    }
+
+    /// Foil copies currently held.
+    var foilsOwned: Int { instances.reduce(0) { $0 + ($1.foil ? 1 : 0) } }
+
+    /// Graded copies currently held.
+    var gradedOwned: Int { instances.reduce(0) { $0 + ($1.grade != nil ? 1 : 0) } }
+
+    /// Spare copies held beyond the first of each card.
+    var duplicateCount: Int { instances.count - uniqueCount }
+
+    /// Market value of the single most valuable copy held (0 when empty).
+    var topCardValue: Double { instances.map { $0.currentValue }.max() ?? 0 }
 
     /// A set is playable only once enough *unique* cards have been collected.
     /// Set 1 is always unlocked; later sets gate on Economy.uniquesToUnlock(set:).
@@ -600,5 +636,8 @@ struct GameCore: Codable {
         return events
     }
 
-    private mutating func updatePeak() { stats.peakCash = max(stats.peakCash, cash) }
+    private mutating func updatePeak() {
+        stats.peakCash = max(stats.peakCash, cash)
+        stats.peakNetWorth = max(stats.peakNetWorth, netWorth)
+    }
 }

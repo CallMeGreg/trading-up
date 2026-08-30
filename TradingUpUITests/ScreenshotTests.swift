@@ -286,7 +286,7 @@ final class ScreenshotTests: XCTestCase {
     /// The stats tab — run totals, per-set progress and the all-time record.
     private func statsAndProgress() throws {
         openTab("Stats")
-        XCTAssertTrue(staticText("Unique cards").waitForExistence(timeout: 15),
+        XCTAssertTrue(staticText("Packs Opened").waitForExistence(timeout: 15),
                       "stats screen never appeared")
         shot("stats-run-summary", settle: 1.2)
         app.swipeUp()

@@ -106,6 +106,15 @@ final class GameState {
     var totalCards: Int { CardDatabase.all.count }
     var collectionValue: Double { core.collectionValue }
     var netWorth: Double { core.netWorth }
+    /// Collection summary, derived from the live binder (independent of scope).
+    var setsCompleted: Int { core.setsCompleted }
+    var setsTotal: Int { CardDatabase.setCount }
+    var evolutionLinesCompleted: Int { core.evolutionLinesCompleted }
+    var evolutionLinesTotal: Int { CardDatabase.evolutionLineCount }
+    var foilsOwned: Int { core.foilsOwned }
+    var gradedOwned: Int { core.gradedOwned }
+    var duplicateCount: Int { core.duplicateCount }
+    var topCardValue: Double { core.topCardValue }
     var hasWon: Bool { core.hasWon }
     var shouldShowWin: Bool { core.shouldShowWin }
     /// Whether the win celebration should actually be on screen *right now*.

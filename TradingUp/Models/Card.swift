@@ -105,6 +105,9 @@ enum CardDatabase {
             .mapValues { $0.sorted { $0.stage < $1.stage } }
     }()
 
+    /// How many multi-stage evolution lines exist in the shipped catalogue.
+    static var evolutionLineCount: Int { evolutionLines.count }
+
     /// The full chain a card belongs to (length 1 for singles), sorted by stage.
     static func line(_ lineId: String) -> [Card] {
         (Dictionary(grouping: all, by: { $0.lineId })[lineId] ?? []).sorted { $0.stage < $1.stage }
