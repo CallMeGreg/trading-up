@@ -113,7 +113,10 @@ struct CardView: View {
                 // in the *set's* colour so a whole set reads as one family (the
                 // card's own element still shows in the art and the meta gem).
                 SeriesPips(series: series, setTint: Element.theme(forSet: card.set).badgeTint, s: s)
-            } else {
+            } else if !showExtended {
+                // Extended Art is a full-bleed showcase treatment, so it drops the
+                // element "type" tag entirely — the artwork and the meta gem already
+                // carry the element, and the header stays clean over the scrim.
                 Text(card.element.display)
                     .font(.system(size: 9 * s, weight: .bold))
                     .foregroundStyle(card.element.badgeTint)
