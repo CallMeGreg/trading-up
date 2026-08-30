@@ -120,7 +120,9 @@ struct GauntletRun: Codable {
 
     var effectiveSlots: Int { GauntletEconomy.startingSlots(tier) + purchasedSlots + mods.extraSlots }
     var effectiveCatalystSlots: Int { GauntletEconomy.baseCatalystSlots + purchasedCatalystSlots + mods.extraCatalystSlots }
-    var evoLineBonus: Double { GauntletEconomy.baseEvoLineBonus + mods.evoLineBonusBonus }
+    /// The completion bonus a full evolution line in `set` earns this run: the set's
+    /// base curve plus any flat Trainer/Catalyst boost. Scales up for later sets.
+    func evoLineBonus(forSet set: Int) -> Double { GauntletEconomy.evoLineBonus(set: set) + mods.evoLineBonusBonus }
     var sellbackRate: Double { min(Economy.sellbackRate + mods.sellbackBonus, GauntletEconomy.maxSellbackRate) }
     var foilChance: Double { Economy.foilChance + mods.foilChanceBonus }
     var ultraChance: Double { Economy.ultraHitChance + mods.ultraChanceBonus }
@@ -132,20 +134,25 @@ struct GauntletRun: Codable {
     /// grade), lifted by a bonus for each *complete evolution line* standing in the
     /// group, then scaled by the run's global multiplier. A line is complete when
     /// every one of its stages is present — so chasing a line to its final form,
-    /// not hoarding singles, is what the engine rewards (docs/DESIGN.md §14.4).
-    static func aura(_ cards: [CardInstance], evoLineBonus: Double, auraMult: Double) -> Double {
+    /// not hoarding singles, is what the engine rewards. The completion bonus scales
+    /// with the line's **set** (`GauntletEconomy.evoLineBonus(set:)`), so finishing a
+    /// scarce late-set line pays off far harder than an early one; `evoLineBonusBonus`
+    /// (from Trainers/Catalysts) adds on top of every set (docs/DESIGN.md §14.4).
+    static func aura(_ cards: [CardInstance], evoLineBonusBonus: Double, auraMult: Double) -> Double {
         var total = cards.reduce(0.0) { $0 + $1.currentValue }
-        if evoLineBonus > 0 {
-            // Group the multi-stage cards by their line; a line whose every stage is
-            // represented lifts the value of all its cards in the group.
-            let byLine = Dictionary(grouping: cards.filter { $0.card.stageCount > 1 },
-                                    by: { $0.card.lineId })
-            for (_, group) in byLine {
-                let stageCount = group[0].card.stageCount
-                let stagesPresent = Set(group.map { $0.card.stage })
-                if stagesPresent.count == stageCount {
+        // Group the multi-stage cards by their line; a line whose every stage is
+        // represented lifts the value of all its cards in the group, by an amount
+        // set by that line's set (plus any flat mod bonus).
+        let byLine = Dictionary(grouping: cards.filter { $0.card.stageCount > 1 },
+                                by: { $0.card.lineId })
+        for (_, group) in byLine {
+            let stageCount = group[0].card.stageCount
+            let stagesPresent = Set(group.map { $0.card.stage })
+            if stagesPresent.count == stageCount {
+                let bonus = GauntletEconomy.evoLineBonus(set: group[0].card.set) + evoLineBonusBonus
+                if bonus > 0 {
                     let lineValue = group.reduce(0.0) { $0 + $1.currentValue }
-                    total += evoLineBonus * lineValue
+                    total += bonus * lineValue
                 }
             }
         }
@@ -153,13 +160,40 @@ struct GauntletRun: Codable {
     }
 
     var showcaseAura: Double {
-        Self.aura(showcase, evoLineBonus: evoLineBonus, auraMult: mods.auraMult)
+        Self.aura(showcase, evoLineBonusBonus: mods.evoLineBonusBonus, auraMult: mods.auraMult)
     }
+
+    /// The `lineId`s of the multi-stage evolution lines standing **complete** in the
+    /// Showcase right now — every stage present. These are exactly the lines the
+    /// evolution-line bonus is paying out on, mirroring the grouping in `aura`. The
+    /// Showcase surfaces this so a completed line can flag its multiplier. (req: cue)
+    var completedShowcaseLineIds: Set<String> {
+        var out: Set<String> = []
+        let byLine = Dictionary(grouping: showcase.filter { $0.card.stageCount > 1 },
+                                by: { $0.card.lineId })
+        for (lineId, group) in byLine {
+            let stageCount = group[0].card.stageCount
+            let stagesPresent = Set(group.map { $0.card.stage })
+            if stagesPresent.count == stageCount { out.insert(lineId) }
+        }
+        return out
+    }
+
+    /// Whether the Showcase card at `index` stands in a completed evolution line.
+    func isInCompletedLine(_ inst: CardInstance) -> Bool {
+        inst.card.stageCount > 1 && completedShowcaseLineIds.contains(inst.card.lineId)
+    }
+
+    /// The Aura multiplier a completed evolution line in `set` applies to its own
+    /// cards: `1 + evoLineBonus(forSet:)` (set 1 ×2.25, rising to ×7.5 for set 5, and
+    /// higher when a Trainer or Catalyst boosts the bonus). Drives the Showcase's
+    /// "set multiplier" cue, which reads it per card's set. (req: cue)
+    func evoLineMultiplier(forSet set: Int) -> Double { 1 + evoLineBonus(forSet: set) }
 
     /// How much the Showcase's Aura would rise if `inst` were kept (accounts
     /// for any evolution line it completes). Negative-improving swaps use this too.
     func marginalAura(of inst: CardInstance) -> Double {
-        let after = Self.aura(showcase + [inst], evoLineBonus: evoLineBonus, auraMult: mods.auraMult)
+        let after = Self.aura(showcase + [inst], evoLineBonusBonus: mods.evoLineBonusBonus, auraMult: mods.auraMult)
         return after - showcaseAura
     }
 
@@ -172,7 +206,7 @@ struct GauntletRun: Codable {
         for i in showcase.indices {
             var without = showcase
             without.remove(at: i)
-            let drop = base - Self.aura(without, evoLineBonus: evoLineBonus, auraMult: mods.auraMult)
+            let drop = base - Self.aura(without, evoLineBonusBonus: mods.evoLineBonusBonus, auraMult: mods.auraMult)
             if drop < worstDrop { worstDrop = drop; worst = i }
         }
         return worst
@@ -376,6 +410,28 @@ struct GauntletRun: Codable {
     }
 
     mutating func sellCatalyst(_ catalyst: Catalyst) { cash += catalyst.saleValue; noteCash() }
+
+    /// Whether an offered Catalyst can be *swapped* in: only when every Catalyst
+    /// slot is already filled (so there's nothing to attune into) and there's at
+    /// least one slot to swap against. With zero slots there's nothing to trade.
+    var canSwapCatalyst: Bool { effectiveCatalystSlots > 0 && !canAttune }
+
+    /// Replace the attuned Catalyst at `index` with `incoming`, dropping the old
+    /// one's effect and applying the new one's immediately. The outgoing Catalyst
+    /// is discarded (not sold). Mirrors `attune`'s immediate extra-rip handling so
+    /// swapping Eclipse in or out settles this round's rips correctly. (req: swap)
+    @discardableResult
+    mutating func swapCatalyst(_ incoming: Catalyst, at index: Int) -> Bool {
+        guard attunedCatalysts.indices.contains(index) else { return false }
+        let outgoing = attunedCatalysts[index]
+        // Take back the outgoing Catalyst's immediate per-round rip grant, then
+        // pay out the incoming one's, so an Eclipse-for-Eclipse swap nets to zero
+        // and a swap into (or out of) Eclipse adjusts this round's rips at once.
+        ripsLeft = max(0, ripsLeft - outgoing.mods.extraRipsPerRound)
+        attunedCatalysts[index] = incoming
+        ripsLeft += incoming.mods.extraRipsPerRound
+        return true
+    }
 
     // MARK: Shop (between rounds)
 

@@ -50,16 +50,16 @@ final class GauntletCoreTests: XCTestCase {
     private var fullLine: [Card] { CardDatabase.evolutionLines.values.first { $0.count >= 2 }! }
 
     func testEmptyShowcaseHasZeroAura() {
-        XCTAssertEqual(GauntletRun.aura([], evoLineBonus: 0.90, auraMult: 1), 0)
+        XCTAssertEqual(GauntletRun.aura([], evoLineBonusBonus: 0.90, auraMult: 1), 0)
     }
 
     func testCompleteEvolutionLineEarnsTheCompletionBonus() {
         let line = fullLine
         let cards = line.map { CardInstance(cardId: $0.id) }
-        let b = GauntletEconomy.baseEvoLineBonus
+        let b = GauntletEconomy.evoLineBonus(set: line[0].set)   // the line's set-scaled bonus
         let raw = cards.reduce(0.0) { $0 + $1.currentValue }
 
-        let complete = GauntletRun.aura(cards, evoLineBonus: b, auraMult: 1)
+        let complete = GauntletRun.aura(cards, evoLineBonusBonus: 0, auraMult: 1)
         // Every stage is present, so the whole line is lifted by the completion bonus.
         XCTAssertEqual(complete, raw * (1 + b), accuracy: 1e-6)
     }
@@ -67,17 +67,49 @@ final class GauntletCoreTests: XCTestCase {
     func testIncompleteEvolutionLineEarnsNoBonus() {
         let line = fullLine
         let partial = [CardInstance(cardId: line[0].id)]   // only the first stage
-        let b = GauntletEconomy.baseEvoLineBonus
-        let aura = GauntletRun.aura(partial, evoLineBonus: b, auraMult: 1)
+        let aura = GauntletRun.aura(partial, evoLineBonusBonus: 0, auraMult: 1)
         XCTAssertEqual(aura, partial[0].currentValue, accuracy: 1e-6)
     }
 
     func testAuraMultScalesTheWholeShowcase() {
         let cards = fullLine.map { CardInstance(cardId: $0.id) }
-        let b = GauntletEconomy.baseEvoLineBonus
-        let base = GauntletRun.aura(cards, evoLineBonus: b, auraMult: 1)
-        let lifted = GauntletRun.aura(cards, evoLineBonus: b, auraMult: 1.10)
+        let base = GauntletRun.aura(cards, evoLineBonusBonus: 0, auraMult: 1)
+        let lifted = GauntletRun.aura(cards, evoLineBonusBonus: 0, auraMult: 1.10)
         XCTAssertEqual(lifted, base * 1.10, accuracy: 1e-6)
+    }
+
+    func testEvolutionLineBonusScalesUpWithSet() {
+        let bonuses = (1...CardDatabase.setCount).map { GauntletEconomy.evoLineBonus(set: $0) }
+        for (lo, hi) in zip(bonuses, bonuses.dropFirst()) {
+            XCTAssertLessThan(lo, hi, "each later set completes a line for strictly more")
+        }
+        XCTAssertGreaterThanOrEqual(GauntletEconomy.evoLineBonus(set: 5),
+                                    2 * GauntletEconomy.evoLineBonus(set: 1),
+                                    "a set-5 line completion is worth far more than a set-1 one")
+        // Clamps out of range instead of trapping.
+        XCTAssertEqual(GauntletEconomy.evoLineBonus(set: 0), GauntletEconomy.evoLineBonus(set: 1))
+        XCTAssertEqual(GauntletEconomy.evoLineBonus(set: 99), GauntletEconomy.evoLineBonus(set: 5))
+    }
+
+    func testCompletedShowcaseLineIdsFlagsAFullLineForTheCue() {
+        var run = GauntletRun(tier: .hard, trainer: .neutral)   // 5 slots
+        let line = fullLine
+        for c in line { run.keep(CardInstance(cardId: c.id)) }
+        XCTAssertTrue(run.completedShowcaseLineIds.contains(line[0].lineId),
+                      "a Showcase holding every stage of a line reports it complete")
+        XCTAssertTrue(run.isInCompletedLine(run.showcase[0]))
+        let set = line[0].set
+        XCTAssertEqual(run.evoLineMultiplier(forSet: set), 1 + run.evoLineBonus(forSet: set), accuracy: 1e-9,
+                       "the cue's multiplier is 1 + the evolution-line bonus for that card's set")
+    }
+
+    func testIncompleteShowcaseLineIsNotFlaggedForTheCue() {
+        var run = GauntletRun(tier: .hard, trainer: .neutral)
+        let line = fullLine
+        run.keep(CardInstance(cardId: line[0].id))   // only the first stage
+        XCTAssertFalse(run.completedShowcaseLineIds.contains(line[0].lineId))
+        XCTAssertFalse(run.isInCompletedLine(run.showcase[0]),
+                       "a partial line earns no bonus, so it shows no multiplier cue")
     }
 
     // MARK: RunMods composition
@@ -115,6 +147,50 @@ final class GauntletCoreTests: XCTestCase {
         XCTAssertTrue(run.attune(bloom))
         XCTAssertEqual(run.ripsLeft, before,
                        "a Catalyst with no rip bonus doesn't change the current round's rips")
+    }
+
+    func testCanSwapCatalystOnlyWhenSlotsAreFull() {
+        var run = GauntletRun(tier: .easy, trainer: .neutral)   // 1 catalyst slot
+        XCTAssertTrue(run.canAttune)
+        XCTAssertFalse(run.canSwapCatalyst,
+                       "with a free slot the offer is Attune, not Swap")
+        XCTAssertTrue(run.attune(Catalyst.byId("bloom")!))
+        XCTAssertFalse(run.canAttune)
+        XCTAssertTrue(run.canSwapCatalyst,
+                      "with every slot full (and >0 slots) the offer becomes Swap")
+    }
+
+    func testSwapCatalystReplacesInPlaceAndKeepsSlotCount() {
+        var run = GauntletRun(tier: .easy, trainer: .neutral)
+        let bloom = Catalyst.byId("bloom")!
+        let eclipse = Catalyst.byId("eclipse")!
+        XCTAssertTrue(run.attune(bloom))
+        XCTAssertTrue(run.swapCatalyst(eclipse, at: 0))
+        XCTAssertEqual(run.attunedCatalysts.count, 1, "a swap trades one Catalyst for another")
+        XCTAssertEqual(run.attunedCatalysts[0].id, eclipse.id)
+    }
+
+    func testSwapCatalystDropsOldEffectAndAppliesNew() {
+        var run = GauntletRun(tier: .easy, trainer: .neutral)
+        let base = run.ripsLeft
+        let eclipse = Catalyst.byId("eclipse")!   // +1 rip per round
+        let bloom = Catalyst.byId("bloom")!       // Aura mult, no rip bonus
+        XCTAssertTrue(run.attune(eclipse))
+        XCTAssertEqual(run.ripsLeft, base + 1)
+        XCTAssertTrue(run.swapCatalyst(bloom, at: 0))
+        XCTAssertEqual(run.ripsLeft, base,
+                       "swapping Eclipse out takes back the extra rip it had granted")
+        XCTAssertGreaterThan(run.mods.auraMult, 1.0,
+                             "swapping Bloom in applies its Aura multiplier immediately")
+        XCTAssertEqual(run.mods.extraRipsPerRound, 0,
+                       "Eclipse's rip bonus is gone once it's swapped out")
+    }
+
+    func testSwapCatalystAtInvalidIndexIsIgnored() {
+        var run = GauntletRun(tier: .easy, trainer: .neutral)
+        XCTAssertTrue(run.attune(Catalyst.byId("bloom")!))
+        XCTAssertFalse(run.swapCatalyst(Catalyst.byId("eclipse")!, at: 3))
+        XCTAssertEqual(run.attunedCatalysts[0].id, "bloom", "an out-of-range swap changes nothing")
     }
 
     // MARK: Ripping / keeping / selling

@@ -16,6 +16,10 @@ struct CardView: View {
     /// all-time Binder). Omit it (nil) to keep the plain element label, e.g. in
     /// contexts with no ownership pool. See docs/mockups/evolution.
     var series: CardSeries? = nil
+    /// Whether the stage pips glow (the gold "this pull" halo and the soft owned-pip
+    /// glow). On while a pack is being opened; off once keep/sell is decided, where
+    /// every owned stage settles to a flat set-colour pip. (req: pips glow only on open)
+    var pipsGlow: Bool = true
 
     private var s: CGFloat { width / 230 }
     private var height: CGFloat { width * 1.4 }
@@ -112,7 +116,7 @@ struct CardView: View {
                 // The situational stage pips take the element label's spot, glowing
                 // in the *set's* colour so a whole set reads as one family (the
                 // card's own element still shows in the art and the meta gem).
-                SeriesPips(series: series, setTint: Element.theme(forSet: card.set).badgeTint, s: s)
+                SeriesPips(series: series, setTint: Element.theme(forSet: card.set).badgeTint, s: s, glow: pipsGlow)
             } else if !showExtended {
                 // Extended Art is a full-bleed showcase treatment, so it drops the
                 // element "type" tag entirely — the artwork and the meta gem already
@@ -247,6 +251,10 @@ private struct SeriesPips: View {
     let series: CardSeries
     let setTint: Color
     let s: CGFloat
+    /// While opening a pack the owned pips glow and the card in hand lights gold;
+    /// once the pull is decided this is off and every owned stage is a flat
+    /// set-colour pip. (req: pips glow only on open)
+    var glow: Bool = true
 
     private static let gold = Color(hex: "ffd54a")
     private var d: CGFloat { 9 * s }
@@ -276,17 +284,19 @@ private struct SeriesPips: View {
 
     @ViewBuilder
     private func pip(for stage: Int) -> some View {
-        if series.nowStage == stage {
-            // "This pull" — a white core rimmed and haloed in gold.
+        if glow && series.nowStage == stage {
+            // "This pull" — a white core rimmed and haloed in gold. Only while the
+            // pack is being opened; after the decision it settles to a set-tint pip.
             Circle().fill(.white)
                 .frame(width: d, height: d)
                 .overlay(Circle().stroke(Self.gold, lineWidth: 1.6 * s))
                 .shadow(color: Self.gold, radius: 3.5 * s)
-        } else if series.ownedStages.contains(stage) {
-            // Owned in context — a solid set-tint pip with a soft glow.
+        } else if present(stage) {
+            // Owned in context — a solid set-tint pip. It carries a soft glow only
+            // while opening a pack; once keep/sell is decided it reads flat.
             Circle().fill(setTint)
                 .frame(width: d, height: d)
-                .shadow(color: setTint, radius: 2.5 * s)
+                .shadow(color: glow ? setTint : .clear, radius: glow ? 2.5 * s : 0)
         } else {
             // Missing — a hollow ring.
             Circle().strokeBorder(setTint.opacity(0.55), lineWidth: 1.5 * s)

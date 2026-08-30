@@ -502,7 +502,21 @@ The two new terms are what a build is *made of*:
 
 - **evolution-line bonus** — completing a full evolution line held in the Showcase (every
   stage of a `lineId` present) lifts *that line's* whole Aura by a bonus factor
-  (`baseEvoLineBonus`, plus any Trainer/Catalyst boost). Partial lines pay nothing, so the
+  (`GauntletEconomy.evoLineBonus(set:)`, plus any Trainer/Catalyst boost). The bonus
+  **scales with the line's set**, because later sets unlock later in a run and cost more to
+  open, so you get far fewer rounds to assemble one of their lines — a scarce late-set
+  completion is paid off much harder than an early one:
+
+  | Set | Bonus | Line multiplier |
+  | --- | ----- | --------------- |
+  | 1 · Emberfall | `1.25` | **×2.25** |
+  | 2 · Tidecaller | `2.0` | **×3.0** |
+  | 3 · Verdspire | `3.0` | **×4.0** |
+  | 4 · Voltcrest | `4.5` | **×5.5** |
+  | 5 · Umbral Reach | `6.5` | **×7.5** |
+
+  Combined with the per-set value curve (a set-5 line's raw value is already ~20× a set-1
+  line's), finishing a late line is an enormous Aura swing. Partial lines pay nothing, so the
   build goal is to *finish chains*, not just hoard high-value singles — a knapsack pull
   against limited slots. (This replaced the earlier same-element "synergy" multiplier: a
   completion bonus is RNG-gated on pulling a line's whole chain, which rewards planning over
@@ -607,7 +621,9 @@ New non-Spryte cards that grant run-long effects — the piece originally sketch
 "Energy cards" (increased foil chance, increased ultra chance, better grading luck, more
 pack-opening power, …). Two design choices turn them from a buff pile into a system:
 
-1. **Slot scarcity.** You may attune only *N* at once; a better one forces a **swap**.
+1. **Slot scarcity.** You may attune only *N* at once. When every slot is full an
+   offered Catalyst can't just be attuned — you either **swap** it in for an active
+   one (the old effect is dropped and the new one applies immediately) or sell it.
    Scarcity is what makes them a build decision, not a checklist.
 2. **Element lanes** so they combo — aligned to the game's existing six elements
    (`Element`: fire, rock, water, grass, electric, shadow), *not* a new set:

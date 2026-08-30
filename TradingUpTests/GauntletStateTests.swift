@@ -241,6 +241,63 @@ final class GauntletStateTests: XCTestCase {
         }
     }
 
+    // MARK: Catalyst swap (full slots)
+
+    /// When a Catalyst is offered but every slot is full, the offer becomes a swap:
+    /// tapping a slot drops the old effect and applies the new one immediately.
+    /// Catalysts drop ~14% per rip, so a winning Easy run reliably offers a second
+    /// one; search a few seeds for the full-slots case and assert the state swap.
+    func testSwapPendingCatalystReplacesTheActiveCatalyst() {
+        for seed in UInt64(0)..<40 {
+            let (s, _) = makeState(seed: seed)
+            s.chooseTrainer(.neutral)
+            s.startRun(tier: .easy)
+
+            var attunedFirst = false
+            var guardCount = 0
+            loop: while guardCount < 5000 {
+                guardCount += 1
+                switch s.phase {
+                case .ripping:
+                    if s.pendingCatalyst != nil {
+                        if s.canAttunePending {
+                            s.attunePendingCatalyst()
+                            attunedFirst = true
+                        } else if s.canSwapPending {
+                            XCTAssertTrue(attunedFirst, "a slot had to be filled first")
+                            XCTAssertFalse(s.canAttunePending, "swap only when no slot is free")
+                            let incomingId = s.pendingCatalyst!.id
+                            s.swapPendingCatalyst(replacing: 0)
+                            XCTAssertNil(s.pendingCatalyst, "the offer is consumed by the swap")
+                            XCTAssertEqual(s.run!.attunedCatalysts.count, 1,
+                                           "a swap trades one Catalyst for another")
+                            XCTAssertEqual(s.run!.attunedCatalysts[0].id, incomingId,
+                                           "the swapped-in Catalyst is now the active one")
+                            return
+                        } else {
+                            s.sellPendingCatalyst()
+                        }
+                    }
+                    while let card = s.pendingCards.first {
+                        if s.canKeepPending { s.keep(card) } else { s.sell(card) }
+                    }
+                    if s.canRip {
+                        s.rip()
+                    } else if s.canEndRound {
+                        s.endRound()
+                    } else {
+                        break loop
+                    }
+                case .shop:
+                    s.continueFromShop()
+                default:
+                    break loop
+                }
+            }
+        }
+        XCTFail("no seed offered a second Catalyst with full slots within 40 tries")
+    }
+
     func testAbandonReturnsToTrainerSelectWithoutBanking() {
         let (s, _) = makeState(seed: 3)
         s.chooseTrainer(.neutral)
@@ -400,7 +457,7 @@ final class GauntletStateTests: XCTestCase {
         var without = run.showcase
         without.remove(at: idx)
         let base = GauntletRun.aura(without,
-                                        evoLineBonus: run.evoLineBonus,
+                                        evoLineBonusBonus: run.mods.evoLineBonusBonus,
                                         auraMult: run.mods.auraMult)
         return run.showcaseAura - base
     }

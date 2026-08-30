@@ -114,8 +114,8 @@ struct CatalystCardView: View {
     private var artWindow: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 10 * s).fill(element.artGradient)
-            SigilView(seed: catalyst.id + element.rawValue, element: element)
-                .padding(6 * s)
+            CatalystEmblem(element: element)
+                .padding(10 * s)
             RoundedRectangle(cornerRadius: 10 * s)
                 .strokeBorder(Color.white.opacity(0.08), lineWidth: 1)
         }
@@ -129,6 +129,34 @@ struct CatalystCardView: View {
             Text(catalyst.saleValue.money)
                 .font(.system(size: 15 * s, weight: .heavy, design: .rounded))
                 .foregroundStyle(Palette.money)
+        }
+    }
+}
+
+/// A Catalyst's element rendered as a clean, glowing icon (req: element icons).
+/// Style "Emblem glow": a filled SF Symbol in the element tint with a soft halo
+/// behind it, so each Catalyst reads instantly as its element — Fire (flame),
+/// Water (droplet), Grass (leaf), Electric (bolt), Shadow (crescent moon). Scales
+/// with the art window it fills, so it works from the 76pt pull row up to a full
+/// card. Replaces the old procedural sigil on Catalyst faces.
+struct CatalystEmblem: View {
+    let element: Element
+
+    var body: some View {
+        GeometryReader { geo in
+            let d = min(geo.size.width, geo.size.height)
+            ZStack {
+                Circle()
+                    .fill(RadialGradient(colors: [element.badgeTint.opacity(0.55), .clear],
+                                         center: .center, startRadius: 0, endRadius: d * 0.5))
+                    .frame(width: d, height: d)
+                    .blur(radius: d * 0.04)
+                Image(systemName: element.glyphSymbol)
+                    .font(.system(size: d * 0.46, weight: .black))
+                    .foregroundStyle(element.badgeTint)
+                    .shadow(color: .black.opacity(0.45), radius: d * 0.02, x: 0, y: d * 0.015)
+            }
+            .frame(width: geo.size.width, height: geo.size.height)
         }
     }
 }
@@ -463,6 +491,9 @@ private struct CatalystOfferRow: View {
     let state: GauntletState
     let catalyst: Catalyst
 
+    /// Presents the "replace which attuned Catalyst?" picker when slots are full.
+    @State private var swapping = false
+
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             CatalystCardView(catalyst: catalyst, width: 76)
@@ -481,17 +512,28 @@ private struct CatalystOfferRow: View {
                     .foregroundStyle(Palette.subtle)
                     .fixedSize(horizontal: false, vertical: true)
                 HStack(spacing: 8) {
-                    MiniButton(title: "Attune", systemImage: "sparkles",
-                               tint: Color(hex: "b06cf7"), enabled: state.canAttunePending) {
-                        Haptics.play(.success); state.attunePendingCatalyst()
+                    if state.canAttunePending {
+                        MiniButton(title: "Attune", systemImage: "sparkles",
+                                   tint: Color(hex: "b06cf7")) {
+                            Haptics.play(.success); state.attunePendingCatalyst()
+                        }
+                    } else if state.canSwapPending {
+                        MiniButton(title: "Swap", systemImage: "arrow.left.arrow.right",
+                                   tint: Color(hex: "b06cf7")) {
+                            Haptics.play(.light); swapping = true
+                        }
                     }
                     MiniButton(title: "Sell \(catalyst.saleValue.moneyShort)",
                                systemImage: "dollarsign.circle.fill", tint: Color(hex: "6d5cf7")) {
                         Haptics.play(.light); state.sellPendingCatalyst()
                     }
                 }
-                if !state.canAttunePending {
-                    Text("Catalyst slots full")
+                if state.canSwapPending {
+                    Text("Catalyst slots full — swap one out or sell")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(Palette.subtle)
+                } else if !state.canAttunePending {
+                    Text("No catalyst slots — sell only")
                         .font(.system(size: 10, weight: .semibold))
                         .foregroundStyle(Palette.subtle)
                 }
@@ -501,6 +543,103 @@ private struct CatalystOfferRow: View {
         .padding(12)
         .background(RoundedRectangle(cornerRadius: 14).fill(catalyst.element.badgeTint.opacity(0.10)))
         .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(catalyst.element.badgeTint.opacity(0.35), lineWidth: 1))
+        .sheet(isPresented: $swapping) {
+            CatalystSwapPicker(state: state, incoming: catalyst) { swapping = false }
+        }
+    }
+}
+
+/// The full-slots swap chooser: shows the incoming Catalyst and every attuned one,
+/// so the player can trade a live effect for the new pull. Tapping a slot drops the
+/// old effect and applies the new immediately (`swapPendingCatalyst`). (req: swap)
+private struct CatalystSwapPicker: View {
+    let state: GauntletState
+    let incoming: Catalyst
+    let onClose: () -> Void
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        SectionTitle(text: "Swapping in")
+                        HStack(alignment: .top, spacing: 12) {
+                            CatalystCardView(catalyst: incoming, width: 86)
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text(incoming.name)
+                                    .font(.system(size: 16, weight: .heavy, design: .rounded))
+                                    .foregroundStyle(.white)
+                                Text(incoming.effectSummary)
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundStyle(incoming.element.badgeTint)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            Spacer(minLength: 0)
+                        }
+                    }
+                    .panel()
+
+                    VStack(alignment: .leading, spacing: 10) {
+                        SectionTitle(text: "Replace which catalyst?")
+                        ForEach(Array((state.run?.attunedCatalysts ?? []).enumerated()), id: \.offset) { idx, cat in
+                            Button {
+                                Haptics.play(.success)
+                                state.swapPendingCatalyst(replacing: idx)
+                                onClose()
+                            } label: {
+                                CatalystSwapOption(outgoing: cat)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .panel()
+                }
+                .padding(16)
+                .readableWidth()
+            }
+            .scrollBounceBehavior(.basedOnSize)
+            .background(GauntletBackdrop().ignoresSafeArea())
+            .navigationTitle("Swap Catalyst")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { onClose() }
+                }
+            }
+        }
+    }
+}
+
+/// One replaceable slot in the swap picker: the attuned Catalyst that would be
+/// dropped, its live effect, and a clear "replace" affordance.
+private struct CatalystSwapOption: View {
+    let outgoing: Catalyst
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Circle().fill(outgoing.element.badgeTint).frame(width: 10, height: 10)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(outgoing.name)
+                    .font(.system(size: 14, weight: .heavy, design: .rounded))
+                    .foregroundStyle(.white)
+                Text(outgoing.effectSummary)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(Palette.subtle)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .multilineTextAlignment(.leading)
+            }
+            Spacer(minLength: 0)
+            HStack(spacing: 4) {
+                Image(systemName: "arrow.left.arrow.right").font(.system(size: 11, weight: .bold))
+                Text("Replace").font(.system(size: 12, weight: .bold))
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, 10).padding(.vertical, 6)
+            .background(Capsule().fill(Color(hex: "b06cf7")))
+        }
+        .padding(12)
+        .background(RoundedRectangle(cornerRadius: 14).fill(Palette.bg0.opacity(0.4)))
+        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(outgoing.element.badgeTint.opacity(0.3), lineWidth: 1))
     }
 }
 
@@ -527,8 +666,7 @@ private struct ShowcasePanel: View {
                 LazyVGrid(columns: cols, spacing: 10) {
                     ForEach(Array(run.showcase.enumerated()), id: \.element.id) { idx, inst in
                         Button { onTapCard(idx) } label: {
-                            CardView(card: inst.card, instance: inst, width: 92,
-                                     series: .gauntlet(inst.card, showcase: run.showcase))
+                            ShowcaseCardCell(run: run, inst: inst, width: 92)
                         }
                         .buttonStyle(.plain)
                         .disabled(!interactive)
@@ -542,6 +680,51 @@ private struct ShowcasePanel: View {
             }
         }
         .panel()
+    }
+}
+
+/// A Showcase card cell that flags the evolution-line ("set") multiplier when the
+/// card stands in a **completed** line: a set-colour glow frame plus a "×2.25" tab.
+/// The cue reuses the same set tint the stage pips use, so a finished line reads as
+/// one scoring unit and its Aura multiplier is legible at a glance. (req: cue)
+private struct ShowcaseCardCell: View {
+    let run: GauntletRun
+    let inst: CardInstance
+    var width: CGFloat = 92
+
+    private var completed: Bool { run.isInCompletedLine(inst) }
+    private var setTint: Color { Element.theme(forSet: inst.card.set).badgeTint }
+    private var corner: CGFloat { 16 * (width / 230) }
+
+    var body: some View {
+        CardView(card: inst.card, instance: inst, width: width,
+                 series: .gauntlet(inst.card, showcase: run.showcase),
+                 pipsGlow: false)
+            .overlay {
+                if completed {
+                    RoundedRectangle(cornerRadius: corner)
+                        .strokeBorder(setTint, lineWidth: 2)
+                        .shadow(color: setTint.opacity(0.85), radius: 6)
+                }
+            }
+            .overlay(alignment: .bottom) {
+                if completed { multiplierTab }
+            }
+    }
+
+    /// A small "×2.25" tab straddling the bottom edge — the gap between the rarity
+    /// badge (leading) and value (trailing), so it covers no card content.
+    private var multiplierTab: some View {
+        Text(String(format: "×%.2f", run.evoLineMultiplier(forSet: inst.card.set)))
+            .font(.system(size: 10, weight: .black, design: .rounded))
+            .foregroundStyle(Palette.bg0)
+            .padding(.horizontal, 6).padding(.vertical, 2)
+            .background(Capsule().fill(setTint))
+            .overlay(Capsule().strokeBorder(.white.opacity(0.35), lineWidth: 0.5))
+            .shadow(color: .black.opacity(0.45), radius: 2, y: 1)
+            .offset(y: 9)
+            .accessibilityLabel(
+                "Completed line, \(String(format: "%.2f", run.evoLineMultiplier(forSet: inst.card.set))) times Aura")
     }
 }
 
@@ -669,7 +852,8 @@ private struct ShowcaseCardDetail: View {
         ScrollView {
             VStack(spacing: 16) {
                 CardView(card: inst.card, instance: inst, width: 188,
-                         series: .gauntlet(inst.card, showcase: run.showcase))
+                         series: .gauntlet(inst.card, showcase: run.showcase),
+                         pipsGlow: false)
                     .padding(.top, 12)
 
                 VStack(spacing: 8) {
@@ -693,6 +877,10 @@ private struct ShowcaseCardDetail: View {
 
                 EvolutionLineView(line: CardDatabase.line(inst.card.lineId),
                                   currentCardId: inst.card.id) { _ in true }
+
+                if run.isInCompletedLine(inst) {
+                    completedLineBanner(set: inst.card.set, mult: run.evoLineMultiplier(forSet: inst.card.set))
+                }
 
                 gradeSection(run: run, inst: inst)
             }
@@ -737,6 +925,36 @@ private struct ShowcaseCardDetail: View {
             .foregroundStyle(tint)
             .padding(.horizontal, 8).padding(.vertical, 3)
             .background(Capsule().fill(tint.opacity(0.16)))
+    }
+
+    /// The evolution-line ("set") multiplier cue in the detail view: a set-coloured
+    /// banner that names the completed line and the Aura multiplier it earns, echoing
+    /// the glow frame + "×2.25" tab on the Showcase grid. (req: cue)
+    private func completedLineBanner(set: Int, mult: Double) -> some View {
+        let tint = Element.theme(forSet: set).badgeTint
+        return HStack(spacing: 10) {
+            Image(systemName: "link.circle.fill")
+                .font(.system(size: 20, weight: .bold))
+                .foregroundStyle(tint)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Evolution line complete")
+                    .font(.system(size: 14, weight: .heavy, design: .rounded))
+                    .foregroundStyle(.white)
+                Text("Every card in this line scores more Aura")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(Palette.subtle)
+            }
+            Spacer(minLength: 0)
+            Text(String(format: "×%.2f", mult))
+                .font(.system(size: 16, weight: .black, design: .rounded))
+                .foregroundStyle(Palette.bg0)
+                .padding(.horizontal, 10).padding(.vertical, 5)
+                .background(Capsule().fill(tint))
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity)
+        .background(RoundedRectangle(cornerRadius: 14).fill(tint.opacity(0.12)))
+        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(tint.opacity(0.5), lineWidth: 1))
     }
 }
 
