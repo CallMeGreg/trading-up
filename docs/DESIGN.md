@@ -577,15 +577,25 @@ and the just-unlocked Trainers are celebrated on the selection screen after a ru
 stats. Thresholds are meta-pacing knobs, **not** a difficulty lever — the harness still
 proves a neutral Rookie clears Hard, so the roster stays gravy rather than a gate.
 
-**Skill → advantage, and why the numbers are pending.** `GauntletSkillTuning` (in
-`GauntletEconomy.swift`, the balance seam) turns a profile into a `RunMods` symmetrically:
-each pip above 3 grants a per-pip bonus on that skill's lever, each pip below 3 an equal-shaped
-penalty. **The per-pip magnitudes are intentionally all `0` today** (`TODO(balance)`), so every
-Trainer currently resolves to `RunMods.none` — mechanically the Rookie. The graphs are fully
-wired but *unmagnituded*: a dedicated tuning pass sets these numbers and re-runs `tools/verify`
-to keep the intended Hard curve (a spiky Trainer must stay a sidegrade), plus, where the design
-calls for it, two new **downside** levers — low Energy risking a lost rip, low Grading rolling
-with disadvantage. Until then the wiring is real and honest; only the numbers wait.
+**Skill → advantage.** `GauntletSkillTuning` (in `GauntletEconomy.swift`, the balance seam)
+turns a profile into a `RunMods` symmetrically: each pip above 3 grants a per-pip bonus on that
+skill's lever, each pip below 3 an equal-shaped penalty (score 3 is neutral, so the flat-3 Rookie
+is exactly `RunMods.none`). The per-pip (per-step) magnitudes are **live**:
+
+| Skill | Lever | Per pip above 3 | Per pip below 3 |
+| --- | --- | --- | --- |
+| **Energy** | Bonus-rip roll at round start | +10% chance to *gain* a rip | 10% chance to *lose* a rip |
+| **Aura** | Global Aura multiplier | +4% Aura | −4% Aura |
+| **Selling** | Sell-back %, round payout, seed cash | +5% sell-back, +9% payout, +$2 start | −5% / −9% / −$2 |
+| **Grading** | Grade luck + grading fee | roll grade with advantage (+9%/pip luck), −6% fee | roll with disadvantage, +6% fee |
+| **Inventory** | Showcase slots | +1 slot | −1 slot |
+
+So a 5-pip skill is +2 steps and a 1-pip skill −2 steps of the same lever. Two of these are
+**downside** levers that only bite below neutral: low **Energy** risks losing a rip at round start
+(rolled by the RNG-threaded `startRound(using:)`), and low **Grading** rolls the showcase grade
+with *disadvantage* (keep the worse of two draws). `tools/verify` prints every Trainer's concrete
+effect lines and its Hard win% delta versus a neutral run, and re-tuning these constants must keep
+the intended curve (below).
 
 **Accomplishment badges.** Every Trainer card carries three difficulty badges — **E / M / H** —
 lit for the tiers that Trainer has *cleared* and dimmed for the rest, read straight from
@@ -611,9 +621,16 @@ immediately and announces it once on the results screen.
 *skill, not grinding, carries you*, so a Trainer **deepens an identity** without becoming a win
 button. The Gauntlet `tools/verify` sims (§14.8) enforce this: a **neutral** run must clear Hard
 with optimal play, *and* every Trainer is re-simulated to prove none trivialises Hard (best
-≤ 97%). While magnitudes are unset the harness also asserts every Trainer tracks the neutral
-Rookie; once they're tuned, a spiky Trainer that *requires* its specialty to win — or
-trivialises the mode — has overstepped and gets retuned.
+≤ 97%) or is left unwinnable (worst ≥ 25%), and no Trainer swings more than +25 / −35 points off
+the neutral pivot. A spiky Trainer that *requires* its specialty to win — or trivialises the
+mode — has overstepped and gets retuned.
+
+**Current Hard snapshot** (from `tools/verify`, seed `0x2C7`, n=120 — illustrative, will drift as
+constants are tuned): neutral **56%**; Sally 54, Jack 65, Fred 67, Lucy 67, Curtis 77, Gary 34.
+Note that in optimised play cash is rarely the binding constraint, so **Selling** is a *soft*
+lever while Aura / Inventory / Grading / Energy bind harder — a Trainer strong in a binding lever
+but weak in Selling (Curtis, +2 slots) reads higher than its graph suggests. These are the
+numbers to eyeball when deciding whether any pip feels too drastic.
 
 ### 14.4 Catalysts — the run-long buff cards
 

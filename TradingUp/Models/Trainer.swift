@@ -53,6 +53,16 @@ struct TrainerSkills: Codable, Hashable {
     /// The run advantage these scores confer, assembled from the symmetric per-pip
     /// model in `GauntletSkillTuning` (the balance seam, kept in `GauntletEconomy`).
     var runMods: RunMods { GauntletSkillTuning.runMods(for: self) }
+
+    /// A human phrase for every skill that sits off the neutral 3, in card order —
+    /// the concrete run effect each pip actually confers, so the card, the balance
+    /// harness, and the docs can all show a Trainer's real edge and weaknesses.
+    /// Empty for the flat-3 Rookie.
+    var effectLines: [(axis: TrainerSkillAxis, text: String)] {
+        TrainerSkillAxis.allCases.compactMap { axis in
+            GauntletSkillTuning.effect(axis, score: score(axis)).map { (axis, $0) }
+        }
+    }
 }
 
 /// The five Trainer skills, in card display order, each with the SF Symbol its

@@ -737,21 +737,28 @@ print("\n== Gauntlet: Trainers are sidegrades, never gates ==")
 do {
     let n = 120
     let base = GauntletSim.winRate(tier: .hard, trainer: .neutral, style: .optimized, trials: n, seed0: 0x2C7)
+    print("  neutral Rookie: Hard optimized win \(Int(base.win.rounded()))%  (the sidegrade pivot)")
     var minT = 100.0, maxT = 0.0
     for t in Trainer.roster {
         let r = GauntletSim.winRate(tier: .hard, trainer: t, style: .optimized, trials: n, seed0: 0x2C7)
         minT = min(minT, r.win); maxT = max(maxT, r.win)
         let s = t.skills
-        print("  \(t.name) [E\(s.energy) A\(s.aura) S\(s.selling) G\(s.grading) I\(s.inventory)]: Hard optimized win \(Int(r.win.rounded()))%  (vs neutral \(Int(base.win.rounded()))%)")
+        let delta = Int((r.win - base.win).rounded())
+        print("  \(t.name) [E\(s.energy) A\(s.aura) S\(s.selling) G\(s.grading) I\(s.inventory)]: Hard optimized win \(Int(r.win.rounded()))%  (\(delta >= 0 ? "+" : "")\(delta) vs neutral)")
+        // The concrete effect of each non-neutral pip, straight from GauntletSkillTuning
+        // so a reviewer can read what each Trainer's graph actually does and rebalance.
+        for (axis, text) in s.effectLines {
+            print("      \(axis.title): \(text)")
+        }
     }
-    // Per-pip skill magnitudes are intentionally unset (see GauntletSkillTuning):
-    // every Trainer currently resolves to the neutral advantage, so each must track
-    // the Rookie within noise and none may trivialise Hard. When a balance pass sets
-    // those magnitudes, tighten this into per-skill guardrails (a specialty helps,
-    // its weak axes hurt) and re-run.
-    check(abs(minT - base.win) <= 6 && abs(maxT - base.win) <= 6,
-          "every Trainer tracks the neutral Rookie while skill magnitudes are unset")
+    // Skill magnitudes are live. The guardrails encode the design intent: a Trainer
+    // is a *sidegrade*, so every one stays winnable on Hard and none trivialises it,
+    // and each stays within a sane band of the neutral Rookie (a specialty helps, its
+    // weak axes hurt — but never by so much that the pick makes or breaks the mode).
     check(maxT <= 97, "no Trainer trivialises Hard (best ≤ 97%)")
+    check(minT >= 25, "every Trainer stays winnable on Hard with optimal play (worst ≥ 25%)")
+    check(maxT - base.win <= 25, "no Trainer is a must-pick power spike (≤ 25 pts over neutral)")
+    check(base.win - minT <= 35, "no Trainer is a dead pick (≤ 35 pts under neutral)")
 }
 
 print("\n\(failures == 0 ? "ALL CHECKS PASSED ✅" : "\(failures) CHECK(S) FAILED ❌")")

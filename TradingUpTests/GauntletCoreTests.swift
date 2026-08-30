@@ -1,6 +1,11 @@
 import XCTest
 @testable import TradingUp
 
+/// A generator that always yields 0, so any `Double.random(in: 0..<1) < chance`
+/// gate with a non-zero `chance` fires — lets the per-round rip roll be forced
+/// deterministically in a test.
+private struct ZeroRNG: RandomNumberGenerator { mutating func next() -> UInt64 { 0 } }
+
 /// The Gauntlet run state machine (`GauntletRun`): the Aura engine, keep /
 /// sell / swap, grading, the shop, and how a round resolves into cleared / won /
 /// lost. Pure Foundation logic, driven with a seeded RNG so it's
@@ -30,18 +35,66 @@ final class GauntletCoreTests: XCTestCase {
         XCTAssertTrue(run.showcase.isEmpty)
     }
 
-    func testTrainerBonusesApplyAtStart() {
-        // Skill magnitudes are unset (a later balance pass tunes them), so today
-        // every Trainer opens at the neutral baseline — no seed-cash edge, no bonus
-        // rip. The verify harness keeps the mode winnable until they're set.
+    func testTrainerSkillEdgesApplyAtStart() {
+        // Skill magnitudes are live: the Merchant's 5-Selling seeds extra starting
+        // cash, so a run opens above the base stake.
         let merchant = Trainer.byId("merchant")!
+        XCTAssertGreaterThan(merchant.mods.startingCashBonus, 0)
         let run = GauntletRun(tier: .easy, trainer: merchant)
-        XCTAssertEqual(run.cash, GauntletEconomy.startingCash)
-        XCTAssertEqual(merchant.mods, .none)
+        XCTAssertEqual(run.cash, GauntletEconomy.startingCash + merchant.mods.startingCashBonus, accuracy: 1e-9)
 
+        // The Ripper's 5-Energy is a per-round *chance* of a bonus rip, rolled only by
+        // the RNG-threaded init, so the deterministic init opens at the plain budget.
         let ripper = Trainer.byId("ripper")!
         let ripRun = GauntletRun(tier: .easy, trainer: ripper)
         XCTAssertEqual(ripRun.ripsLeft, GauntletEconomy.ripBudget(.easy, round: 1))
+    }
+
+    // MARK: Skill downside levers (docs/DESIGN.md §14.3)
+
+    func testLowEnergyRisksLosingARipAtRoundStart() {
+        // A 1-Energy Trainer carries a negative bonus-rip chance: at round start it can
+        // *lose* a rip. Forcing the roll (ZeroRNG) drops exactly one.
+        let weak = Trainer(id: "lowE", name: "LowE", blurb: "",
+                           skills: TrainerSkills(energy: 1, aura: 3, selling: 3, grading: 3, inventory: 3))
+        var rng = ZeroRNG()
+        let run = GauntletRun(tier: .easy, trainer: weak, using: &rng)
+        XCTAssertEqual(run.ripsLeft, GauntletEconomy.ripBudget(.easy, round: 1) - 1,
+                       "a forced low-Energy roll loses a rip")
+    }
+
+    func testHighEnergyCanGainARipAtRoundStart() {
+        let strong = Trainer(id: "hiE", name: "HiE", blurb: "",
+                             skills: TrainerSkills(energy: 5, aura: 3, selling: 3, grading: 3, inventory: 3))
+        var rng = ZeroRNG()
+        let run = GauntletRun(tier: .easy, trainer: strong, using: &rng)
+        XCTAssertEqual(run.ripsLeft, GauntletEconomy.ripBudget(.easy, round: 1) + 1,
+                       "a forced high-Energy roll gains a rip")
+    }
+
+    func testGradingLuckBendsRollsUpAndDisadvantageDown() {
+        // Grade the same keeper many times under a fixed seed. Because advantage and
+        // disadvantage consume the RNG identically (draw g1, the luck check, then g2),
+        // a 5-Grading run keeps max(g1, g2) exactly where a 1-Grading run keeps the
+        // worse — so the high-Grading average strictly beats the low-Grading one.
+        func avgGradeMult(grading: Int, seed: UInt64) -> Double {
+            let t = Trainer(id: "g", name: "G", blurb: "",
+                            skills: TrainerSkills(energy: 3, aura: 3, selling: 3, grading: grading, inventory: 3))
+            var rng = SeededRNG(seed)
+            var run = GauntletRun(tier: .easy, trainer: t)
+            run.cash = 1e12
+            run.keep(CardInstance(cardId: fireIds[0]))
+            var total = 0.0
+            let n = 4000
+            for _ in 0..<n {
+                run.showcase[0].grade = nil
+                total += Economy.gradeMultiplier(run.gradeShowcaseCard(at: 0, using: &rng)!)
+            }
+            return total / Double(n)
+        }
+        let hi = avgGradeMult(grading: 5, seed: 12345)
+        let lo = avgGradeMult(grading: 1, seed: 12345)
+        XCTAssertGreaterThan(hi, lo, "grading advantage beats disadvantage on average grade value")
     }
 
     // MARK: Aura engine
