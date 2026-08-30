@@ -54,7 +54,7 @@ final class GauntletMetaTests: XCTestCase {
         expect("appraiser", 2, 5, 2, 2, 3)
         expect("grader",    2, 3, 2, 5, 3)
         expect("merchant",  3, 2, 5, 2, 3)
-        expect("red",       5, 5, 1, 1, 1)   // the mystery glass cannon
+        expect("red",       5, 5, 2, 2, 1)   // the mystery glass cannon
     }
 
     /// `3` is the neutral pivot: a flat-3 profile confers exactly no edge.

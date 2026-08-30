@@ -606,8 +606,8 @@ flag.
 **The mystery Trainer — Red.** A seventh Trainer sits on the roster concealed as **"???"**
 with hidden pips and a "beat Hard mode with every other Trainer" progress line. Clearing **Hard
 with all six of the others** reveals **Red** — shown in‑game as **Gary** — a glass
-cannon with **5 Energy / 5 Aura** and the bare minimum (**1**) in Selling, Grading
-and Inventory. The reveal is evaluated in
+cannon with **5 Energy / 5 Aura**, just **2** in Selling and Grading, and the bare
+minimum (**1**) in Inventory. The reveal is evaluated in
 `GauntletProgress.ingest` right after a clear banks, so the last required Hard win unlocks Red
 immediately and announces it once on the results screen.
 
@@ -626,7 +626,7 @@ the neutral pivot. A spiky Trainer that *requires* its specialty to win — or t
 mode — has overstepped and gets retuned.
 
 **Current Hard snapshot** (from `tools/verify`, seed `0x2C7`, n=120 — illustrative, will drift as
-constants are tuned): neutral **56%**; Sally 54, Jack 65, Fred 67, Lucy 67, Curtis 77, Gary 34.
+constants are tuned): neutral **56%**; Sally 54, Jack 65, Fred 67, Lucy 67, Curtis 77, Gary 41.
 Note that in optimised play cash is rarely the binding constraint, so **Selling** is a *soft*
 lever while Aura / Inventory / Grading / Energy bind harder — a Trainer strong in a binding lever
 but weak in Selling (Curtis, +2 slots) reads higher than its graph suggests. These are the
