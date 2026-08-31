@@ -137,9 +137,14 @@ def compose(defs, W, H, src, sb, caption, subtitle, accent, extra_top, extra_bot
                            "#ffffff", weight=900, anchor="middle"))
     sub_y = cap_y + len(lines) * cap_size * 1.12 + W * 0.012
     sub_lines = gs.wrap(subtitle, 46)
+    # `accent` is the element's deep shade (ELEMENT[..][2]) and it also tints the
+    # top of the gradient, so drawing the CTA in it reads as low-contrast same-hue
+    # text (blue-on-blue, purple-on-purple, red-on-red). Lighten it toward white
+    # for the subtitle so the CTA keeps its on-brand hue but stays legible.
+    sub_col = gs._mix(accent, "#ffffff", 0.62)
     for i, ln in enumerate(sub_lines):
         out.append(gs.text(cx, sub_y + i * (W * 0.032), ln, W * 0.028,
-                           accent, weight=600, anchor="middle", opacity=0.95))
+                           sub_col, weight=600, anchor="middle", opacity=1.0))
     caption_bottom = sub_y + len(sub_lines) * (W * 0.032)
 
     # Fit the (status-bar-cropped) screenshot into the space under the caption,

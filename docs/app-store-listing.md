@@ -321,7 +321,9 @@ The raw captures above are the honest source, but the **committed** set that goe
 on the store page is the curated one in `docs/screenshots/marketing/`, produced by
 `tools/generate_marketing_shots.py`. Each panel keeps the house style of the
 Classic renders in `docs/screenshots/0X_*.png` — a bold headline, a one-line
-call-to-action in the screen's accent colour, and the app gradient behind — but
+call-to-action in a lightened tint of the screen's accent colour (bright enough
+to stay legible over the accent-tinted gradient), and the app gradient behind —
+but
 drops the phone bezel **and** the iOS status bar so the real screenshot floats
 frameless as a rounded, soft-shadowed card. No pixels are painted over: the tool
 embeds the untouched capture and crops the status bar with an SVG clip, so what
