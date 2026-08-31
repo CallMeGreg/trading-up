@@ -219,12 +219,21 @@ struct RunScreen: View {
 
 private func fmt(_ v: Double) -> String { String(format: "%.0f", v) }
 
+/// Aura counted against the bar is shown **floored**, and the target **ceiled**, so
+/// the integer readout can only reach "n / n" once the round is genuinely won
+/// (`showcaseAura >= target`). Aura and targets are fractional (e.g. Medium round 2
+/// is 26 × 1.88 ≈ 48.9), so plain rounding let a Showcase a hair short read as full
+/// — 48.7 toward a 48.9 bar rounded to "49 / 49". Flooring the numerator keeps the
+/// count honest; ceiling the goal keeps the pair from tying before the win.
+private func fmtAura(_ v: Double) -> String { String(format: "%.0f", v.rounded(.down)) }
+private func fmtGoal(_ v: Double) -> String { String(format: "%.0f", v.rounded(.up)) }
+
 /// Subtitle for the Championship (final round) shop CTA: current Aura and the
 /// goal (gold) picked out against the button's gold skin. The Hard finale also
 /// grants a bonus rip, so it appends "+1 rip" (green); Easy/Medium finales don't.
 private func championshipSubtitle(_ run: GauntletRun) -> AttributedString {
-    let base = AttributedString("Aura \(fmt(run.showcaseAura)) · Goal ")
-    var goal = AttributedString(fmt(run.target))
+    let base = AttributedString("Aura \(fmtAura(run.showcaseAura)) · Goal ")
+    var goal = AttributedString(fmtGoal(run.target))
     goal.foregroundColor = Color(hex: "fff0c2")
     var result = base + goal
     if run.isBossRound {
@@ -390,12 +399,12 @@ private struct HUDPanel: View {
                 ProgressBar(value: run.showcaseAura, total: run.target,
                             tint: run.showcaseAura >= run.target ? Palette.money : Color(hex: "b06cf7"),
                             height: 8)
-                Text("\(fmt(run.showcaseAura)) / \(fmt(run.target))")
+                Text("\(fmtAura(run.showcaseAura)) / \(fmtGoal(run.target))")
                     .font(.system(size: 11, weight: .bold, design: .monospaced))
                     .foregroundStyle(run.showcaseAura >= run.target ? Palette.money : Palette.subtle)
             }
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel("Aura \(fmt(run.showcaseAura)) of \(fmt(run.target))")
+            .accessibilityLabel("Aura \(fmtAura(run.showcaseAura)) of \(fmtGoal(run.target))")
         }
         .panel()
     }
@@ -1028,7 +1037,7 @@ struct ShopScreen: View {
                     }
                 } else {
                     BigButton(title: "Start Round \(run.round)",
-                              subtitle: "Aura: \(fmt(run.showcaseAura)) · Goal: \(fmt(run.target))",
+                              subtitle: "Aura: \(fmtAura(run.showcaseAura)) · Goal: \(fmtGoal(run.target))",
                               systemImage: "play.fill", tint: GauntletTheme.tint) {
                         Haptics.play(.medium); state.continueFromShop()
                     }
@@ -1247,9 +1256,10 @@ struct RewardScreen: View {
         .buttonStyle(.plain)
     }
 
-    /// The gold "New" flag on a reward that would add a Spryte the Binder doesn't
-    /// hold yet — the same ✦ NEW treatment Classic pops onto a first-copy pull, so
-    /// a brand-new card reads the same in both modes.
+    /// The gold "New" flag on a reward whose **Extended Art** the Binder doesn't
+    /// hold yet — the same ✦ NEW treatment Classic pops onto a first-copy pull. It
+    /// tracks the art layer, so a Spryte already owned in standard art still reads
+    /// "New" here while its Extended Art is unearned.
     private var newFlag: some View {
         Text("✦ NEW")
             .font(.system(size: 11, weight: .black))

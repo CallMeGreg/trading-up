@@ -267,7 +267,11 @@ struct TrainerEmblemRing: View {
 
     private let size: CGFloat = 68
     private let ringWidth: CGFloat = 5
-    private let emblemDiameter: CGFloat = 54
+    // Sized so the circular emblem meets the ring's inner edge with no dead gap:
+    // the arcs sit on a circle of radius (size - ringWidth) / 2, whose inner edge is
+    // that minus ringWidth / 2 — i.e. (size - 2·ringWidth) / 2 from centre — so the
+    // emblem's radius (emblemDiameter / 2) is set to exactly that. Keep these in sync.
+    private let emblemDiameter: CGFloat = 58
     private let gapDegrees: Double = 12
 
     private var orderedTiers: [GauntletTier] {

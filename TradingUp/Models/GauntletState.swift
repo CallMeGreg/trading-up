@@ -502,11 +502,13 @@ final class GauntletState {
         }
     }
 
-    /// Whether claiming `option` would add a brand-new Spryte to the Binder — no
-    /// copy owned yet, so the guaranteed Foil copy is a first. Drives the reward
-    /// picker's "New" badge, matching Classic mode's first-copy flag.
+    /// Whether claiming `option` would add **Extended Art** the Binder doesn't hold
+    /// yet. The reward *is* the Extended-Art unlock, so "New" tracks the art layer —
+    /// not whether any plain copy of the Spryte is owned. A card already held in
+    /// standard art still earns the flag while its Extended Art is unearned, and an
+    /// already-earned re-art dupe never does. Drives the reward picker's "New" badge.
     func isNewCard(_ option: GauntletRewardOption) -> Bool {
-        !game.binder.hasCard(option.cardId)
+        !game.binder.hasExtendedArt(option.cardId)
     }
 
     /// Apply the player's chosen Extended-Art prize to the Binder (via `GameState`,

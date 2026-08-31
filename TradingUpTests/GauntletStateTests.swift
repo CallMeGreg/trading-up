@@ -369,6 +369,27 @@ final class GauntletStateTests: XCTestCase {
         XCTAssertTrue(reloaded.hasExtendedArt("S1-001"), "the unlock is persisted to the Binder file")
     }
 
+    /// The reward picker's "New" flag tracks the Extended-Art layer, not plain
+    /// ownership: a Spryte already held in standard art is still "New" until its
+    /// Extended Art is earned, and an already-earned card never flags.
+    func testIsNewCardTracksExtendedArtNotPlainOwnership() {
+        let (s, game) = makeState(seed: 7)
+        let option = GauntletRewardOption(cardId: "S1-001")
+
+        XCTAssertTrue(s.isNewCard(option), "unowned card with no Extended Art is New")
+
+        // Owning a plain copy must not clear the flag — the Extended Art is still new.
+        game.recordGauntletCards([CardInstance(cardId: "S1-001", foil: false)])
+        XCTAssertTrue(game.binder.hasCard("S1-001"))
+        XCTAssertFalse(game.binder.hasExtendedArt("S1-001"))
+        XCTAssertTrue(s.isNewCard(option), "plain copy owned but Extended Art unearned is still New")
+
+        // Once the Extended Art is earned, the same option is no longer New.
+        game.awardExtendedArt(option)
+        XCTAssertTrue(game.binder.hasExtendedArt("S1-001"))
+        XCTAssertFalse(s.isNewCard(option), "earned Extended Art is not New")
+    }
+
     // MARK: Full run — win pays out to the Binder and banks the clear
 
     func testEasyRunWinAwardsArtAndUnlocksMedium() {

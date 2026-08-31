@@ -16,10 +16,6 @@ struct GauntletShareCard: View {
     /// consolation win (nothing to pick), where the card reads as a clean sweep.
     let prize: GauntletRewardOption?
 
-    /// Cap the thumbnails so a wide Showcase never blows out the card height.
-    private var shownShowcase: [CardInstance] { Array(showcase.prefix(10)) }
-    private var overflow: Int { max(0, showcase.count - shownShowcase.count) }
-
     private var auraText: String {
         showcaseAura >= 1000
             ? String(format: "%.1fk", showcaseAura / 1000)
@@ -133,27 +129,55 @@ struct GauntletShareCard: View {
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(Palette.subtle)
             } else {
-                let rows = stride(from: 0, to: shownShowcase.count, by: 5).map {
-                    Array(shownShowcase[$0..<min($0 + 5, shownShowcase.count)])
+                let cols = showcaseColumns
+                let width = showcaseCardWidth(columns: cols)
+                let rows = stride(from: 0, to: showcase.count, by: cols).map {
+                    Array(showcase[$0..<min($0 + cols, showcase.count)])
                 }
-                VStack(spacing: 6) {
+                VStack(spacing: Self.showcaseSpacing) {
                     ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
-                        HStack(spacing: 6) {
+                        HStack(spacing: Self.showcaseSpacing) {
                             ForEach(row) { inst in
-                                CardView(card: inst.card, instance: inst, width: 56)
+                                CardView(card: inst.card, instance: inst, width: width)
                             }
-                            if row.count < 5 { Spacer(minLength: 0) }
+                            if row.count < cols { Spacer(minLength: 0) }
                         }
                     }
-                }
-                if overflow > 0 {
-                    Text("+\(overflow) more")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(Palette.subtle)
                 }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    // MARK: Showcase grid sizing
+
+    /// The share card renders *every* Showcase card — no cap, no "+N more" — so
+    /// the shared image never hides part of what the player built. To keep a wide
+    /// Showcase from growing very tall, the grid adapts: it packs more (smaller)
+    /// thumbnails per row to stay within ~2 rows, shrinking them only down to a
+    /// legible floor before it lets a third row form.
+    private var showcaseColumns: Int {
+        let count = showcase.count
+        let byTwoRows = Int((Double(count) / 2.0).rounded(.up))
+        return min(max(Self.showcaseBaseColumns, byTwoRows), Self.showcaseMaxColumns)
+    }
+
+    private func showcaseCardWidth(columns: Int) -> CGFloat {
+        let gaps = Self.showcaseSpacing * CGFloat(columns - 1)
+        let fitted = (Self.showcaseContentWidth - gaps) / CGFloat(columns)
+        return min(Self.showcaseMaxCardWidth, fitted)
+    }
+
+    /// Usable width inside the fixed 380-pt card after its 24-pt side padding.
+    private static let showcaseContentWidth: CGFloat = 380 - 24 * 2
+    private static let showcaseSpacing: CGFloat = 6
+    /// The app's standard 5-up grid at full thumbnail size for small Showcases.
+    private static let showcaseBaseColumns = 5
+    private static let showcaseMaxCardWidth: CGFloat = 56
+    /// Don't shrink thumbnails below this — beyond it, add a row instead.
+    private static let showcaseMinCardWidth: CGFloat = 42
+    private static var showcaseMaxColumns: Int {
+        Int((showcaseContentWidth + showcaseSpacing) / (showcaseMinCardWidth + showcaseSpacing))
     }
 
     private var attunedBlock: some View {

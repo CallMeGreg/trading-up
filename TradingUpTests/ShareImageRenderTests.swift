@@ -54,6 +54,29 @@ final class ShareImageRenderTests: XCTestCase {
         XCTAssertGreaterThan(image.size.height, image.size.width)
     }
 
+    func testGauntletShareCardWideShowcaseRasterizes() {
+        // A large Showcase (more than the old 10-card cap) must still render every
+        // card without collapsing the portrait layout — the adaptive grid packs
+        // more, smaller thumbnails per row instead of dropping any.
+        let showcase = Array(CardDatabase.all.prefix(13)).map { CardInstance(cardId: $0.id, foil: false) }
+        let card = GauntletShareCard(
+            trainer: Trainer.roster[0],
+            tier: .easy,
+            showcase: showcase,
+            attuned: Array(Catalyst.roster.prefix(3)),
+            showcaseAura: 512,
+            prize: GauntletRewardOption(cardId: CardDatabase.all[0].id)
+        )
+        let renderer = ImageRenderer(content: card)
+        renderer.scale = 2
+
+        let image = renderer.uiImage
+        XCTAssertNotNil(image, "a wide-Showcase gauntlet image must rasterize")
+        guard let image else { return }
+        XCTAssertGreaterThan(image.size.width, 0)
+        XCTAssertGreaterThan(image.size.height, image.size.width)
+    }
+
     func testGauntletConsolationShareCardRasterizes() {
         // The complete-catalogue win offers no prize card; the card must still render.
         let card = GauntletShareCard(

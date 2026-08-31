@@ -9,8 +9,9 @@
   <linearGradient id="motred" x1="0" y1="0" x2="0" y2="1">
     <stop offset="0%" stop-color="#ff3b3b"/><stop offset="100%" stop-color="#ff3b3b" stop-opacity="0.72"/>
   </linearGradient></defs>
-  <rect x="8" y="8" width="184" height="184" rx="40" fill="url(#bgred)"
-        stroke="#ff3b3b" stroke-opacity="0.32" stroke-width="1.6"/>
-  <rect x="8" y="8" width="184" height="184" rx="40" fill="url(#glowred)"/>
+  <circle cx="100" cy="100" r="100" fill="url(#bgred)"/>
+  <circle cx="100" cy="100" r="100" fill="url(#glowred)"/>
+  <circle cx="100" cy="100" r="98" fill="none"
+          stroke="#ff3b3b" stroke-opacity="0.32" stroke-width="2"/>
   <circle cx="100" cy="92" r="60" fill="#ff3b3b" fill-opacity="0.10"/><g transform="translate(100,94) scale(0.72)">
     <path d="M -24,-34 L -40,-6 L -54,9 L -42,15 L -43,21 L -38,33 L -20,47 L -22,56 L 42,56 L 47,38 L 41,24 L 45,4 L 46,-16 L 39,-21 L 47,-42 L 31,-30 L 29,-53 L 17,-33 L 9,-56 L -3,-35 L -9,-53 L -19,-37 L -23,-48 Z" fill="url(#motred)" stroke="#5a1417" stroke-width="3" stroke-linejoin="round"/></g></svg>

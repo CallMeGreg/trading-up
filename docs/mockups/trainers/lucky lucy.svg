@@ -9,9 +9,10 @@
   <linearGradient id="motgrader" x1="0" y1="0" x2="0" y2="1">
     <stop offset="0%" stop-color="#ffd54a"/><stop offset="100%" stop-color="#ffd54a" stop-opacity="0.72"/>
   </linearGradient></defs>
-  <rect x="8" y="8" width="184" height="184" rx="40" fill="url(#bggrader)"
-        stroke="#ffd54a" stroke-opacity="0.32" stroke-width="1.6"/>
-  <rect x="8" y="8" width="184" height="184" rx="40" fill="url(#glowgrader)"/>
+  <circle cx="100" cy="100" r="100" fill="url(#bggrader)"/>
+  <circle cx="100" cy="100" r="100" fill="url(#glowgrader)"/>
+  <circle cx="100" cy="100" r="98" fill="none"
+          stroke="#ffd54a" stroke-opacity="0.32" stroke-width="2"/>
   <circle cx="100" cy="92" r="60" fill="#ffd54a" fill-opacity="0.10"/><g transform="translate(100,94) scale(0.72)">
     <g transform="rotate(-12)">
       <rect x="-58" y="-48" width="72" height="100" rx="10" fill="#7a5a10"/>
