@@ -53,37 +53,42 @@ SIZES = [(1242, 2688), (2064, 2752)]
 
 # order, slug, caption (headline), subtitle (CTA), accent element, and optional
 # extra crop (top, bottom) in *source* px for shots with dead space to trim.
-# Nine slots spanning all current functionality: Classic Mode, Gauntlet Mode and
-# the Binder. NEW-in-v1.2.0 pillars lead in slots 2-3, then alternate through.
+# Nine slots ordered as a flow: the general pack-rip hook, then Classic Mode
+# specifics, then Gauntlet Mode, then the permanent Binder. Each accent stays
+# tied to its screen's dominant colour, and no two adjacent scenes repeat one.
 EM = "\u2014"
 SCENES = [
+    # General — the universal hook
     ("01", "pack-reveal-rare-hit", "Every pull is a thrill.",
      "Rip a fresh pack card by card and chase rares, foils and ultras.",
      "water", 0, 0),
-    ("02", "gauntlet-run-building", "Run the Gauntlet.",
-     "Pick a Trainer and push your Showcase past a rising Aura goal, rip after rip.",
-     "shadow", 0, 0),
-    ("03", "binder-emberfall", "Your best pulls, kept forever.",
-     "The Binder saves the top copy of every Spryte, across every run.",
-     "fire", 0, 0),
-    ("04", "pack-summary-new-and-dupes", "Keep it %s or cash it in." % EM,
+    # Classic Mode specifics
+    ("02", "pack-summary-new-and-dupes", "Keep it %s or cash it in." % EM,
      "Keep every pull or sell your duplicates on the buylist to fund the next pack.",
      "grass", 0, 0),
-    ("05", "gauntlet-trainer-select", "Seven Trainers, seven playstyles.",
-     "Each has a five-skill graph: rip more, grade sharper, hoard bigger.",
-     "water", 0, 0),
-    ("06", "grading-gem-mint", "Grade your best pulls.",
+    ("03", "grading-gem-mint", "Grade your best pulls.",
      "Send a card in and roll for a jackpot PSA 10 %s a five-times payday." % EM,
      "shadow", 0, 0),
-    ("07", "binder-umbral-reach", "Five sets. 250 Sprytes.",
-     "Chase every creature across five worlds, Emberfall to Umbral Reach.",
-     "shadow", 0, 0),
-    ("08", "gauntlet-share-card", "Clear it, claim the prize.",
-     "Beat a Gauntlet run and take home a Foil Extended Art card.",
-     "shadow", 0, 0),
-    ("09", "win-master-collector", "Collect them all.",
+    ("04", "win-master-collector", "Collect them all.",
      "Complete every set in Classic Mode and become a Master Collector.",
      "fire", 0, 0),
+    # Gauntlet Mode specifics
+    ("05", "gauntlet-run-building", "Run the Gauntlet.",
+     "Pick a Trainer and push your Showcase past a rising Aura goal, rip after rip.",
+     "shadow", 0, 0),
+    ("06", "gauntlet-trainer-select", "Seven Trainers, seven playstyles.",
+     "Each has a five-skill graph: rip more, grade sharper, hoard bigger.",
+     "water", 0, 0),
+    ("07", "gauntlet-share-card", "Clear it, claim the prize.",
+     "Beat a Gauntlet run and take home a Foil Extended Art card.",
+     "shadow", 0, 0),
+    # Binder details
+    ("08", "binder-emberfall", "Your best pulls, kept forever.",
+     "The Binder saves the top copy of every Spryte, across every run.",
+     "fire", 0, 0),
+    ("09", "binder-umbral-reach", "Five sets. 250 Sprytes.",
+     "Chase every creature across five worlds, Emberfall to Umbral Reach.",
+     "shadow", 0, 0),
 ]
 
 

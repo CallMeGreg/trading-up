@@ -343,21 +343,22 @@ python3 tools/generate_marketing_shots.py --list  # show scenes without renderin
 Output is 18 PNGs — the nine scenes below at **1242 × 2688** (iPhone 6.5") and
 **2064 × 2752** (iPad 13"), RGB with no alpha, ready to upload as-is:
 
-| # | Scene | Mode | Headline |
+| # | Scene | Group | Headline |
 | --- | --- | --- | --- |
-| 01 | `pack-reveal-rare-hit` | Classic | Every pull is a thrill. |
-| 02 | `gauntlet-run-building` | Gauntlet | Run the Gauntlet. |
-| 03 | `binder-emberfall` | Binder | Your best pulls, kept forever. |
-| 04 | `pack-summary-new-and-dupes` | Classic | Keep it — or cash it in. |
-| 05 | `gauntlet-trainer-select` | Gauntlet | Seven Trainers, seven playstyles. |
-| 06 | `grading-gem-mint` | Classic | Grade your best pulls. |
-| 07 | `binder-umbral-reach` | Binder | Five sets. 250 Sprytes. |
-| 08 | `gauntlet-share-card` | Gauntlet | Clear it, claim the prize. |
-| 09 | `win-master-collector` | Classic | Collect them all. |
+| 01 | `pack-reveal-rare-hit` | General | Every pull is a thrill. |
+| 02 | `pack-summary-new-and-dupes` | Classic | Keep it — or cash it in. |
+| 03 | `grading-gem-mint` | Classic | Grade your best pulls. |
+| 04 | `win-master-collector` | Classic | Collect them all. |
+| 05 | `gauntlet-run-building` | Gauntlet | Run the Gauntlet. |
+| 06 | `gauntlet-trainer-select` | Gauntlet | Seven Trainers, seven playstyles. |
+| 07 | `gauntlet-share-card` | Gauntlet | Clear it, claim the prize. |
+| 08 | `binder-emberfall` | Binder | Your best pulls, kept forever. |
+| 09 | `binder-umbral-reach` | Binder | Five sets. 250 Sprytes. |
 
-Three slots lead on Gauntlet Mode and two on the permanent Binder — the v1.2.0
-headline features — with four proven Classic shots (the pack-rip hook, the
-keep-or-sell pack summary, grading and the win) carrying the core loop.
+The set is ordered as a flow: a general pack-rip hook, then three Classic Mode
+shots (keep-or-sell summary, grading, the win), then three Gauntlet Mode shots
+(run, Trainers, prize), then the two permanent-Binder details. Each accent stays
+tied to its screen's dominant colour and no two adjacent slots repeat one.
 Captions live in the `SCENES` list at the top of the tool; edit them there, not on
 the rendered PNGs.
 
