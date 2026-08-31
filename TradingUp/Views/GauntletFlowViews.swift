@@ -83,14 +83,14 @@ struct TrainerSelectScreen: View {
     }
 }
 
-private struct TrainerCard: View {
+struct TrainerCard: View {
     let trainer: Trainer
     let unlocked: Bool
     let unlockProgress: (have: Int, need: Int)?
     let clearedTiers: Set<GauntletTier>
     let action: () -> Void
 
-    /// A locked *mystery* Trainer (Gary) hides its name behind "???" until it's
+    /// A locked *mystery* Trainer (Ash) hides its name behind "???" until it's
     /// earned; ordinary locked specialists still show their name.
     private var concealed: Bool { !unlocked && trainer.mysteryUntilUnlocked }
     /// Every locked Trainer hides its skills and blurb until unlocked; only the
@@ -102,14 +102,14 @@ private struct TrainerCard: View {
         Button(action: action) {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(spacing: 12) {
-                    TrainerEmblem(trainer: trainer, unlocked: unlocked, concealed: concealed)
+                    TrainerEmblemRing(trainer: trainer, unlocked: unlocked,
+                                      concealed: concealed, cleared: clearedTiers,
+                                      showRing: unlocked)
                     Text(concealed ? "???" : trainer.name)
                         .font(.system(size: 19, weight: .heavy, design: .rounded))
                         .foregroundStyle(unlocked ? .white : Palette.subtle)
                     Spacer(minLength: 8)
-                    if unlocked {
-                        TierBadges(cleared: clearedTiers)
-                    } else {
+                    if !unlocked {
                         Image(systemName: "lock.fill")
                             .font(.system(size: 14, weight: .bold))
                             .foregroundStyle(Palette.subtle)
@@ -226,27 +226,94 @@ private struct PipRow: View {
 
 /// The three difficulty badges, lit for tiers this Trainer has cleared and dimmed
 /// for those it hasn't — a compact accomplishment track.
-private struct TierBadges: View {
+/// One exact third of the difficulty ring — the `index`-th 120° arc stepping
+/// clockwise from just right of top-centre, inset on each side by half the gap so
+/// the three segments stay perfectly symmetric about the vertical.
+struct TierArc: Shape {
+    /// 0, 1, 2 stepping clockwise from just right of top-centre.
+    let index: Int
+    var count: Int = 3
+    var gapDegrees: Double = 12
+
+    func path(in rect: CGRect) -> Path {
+        let radius = min(rect.width, rect.height) / 2
+        let center = CGPoint(x: rect.midX, y: rect.midY)
+        let segment = 360.0 / Double(count)
+        // -90° is straight up in SwiftUI's y-down space; a half-gap on each side
+        // of every boundary keeps the whole ring symmetric about the vertical.
+        let start = -90.0 + Double(index) * segment + gapDegrees / 2
+        let end = -90.0 + Double(index + 1) * segment - gapDegrees / 2
+        var path = Path()
+        path.addArc(center: center, radius: radius,
+                    startAngle: .degrees(start), endAngle: .degrees(end),
+                    clockwise: false)
+        return path
+    }
+}
+
+/// A Trainer's emblem cropped into a circle and wrapped by a three-segment
+/// difficulty ring — one arc per tier (Easy, Medium, Hard, clockwise from the
+/// top), each lit in its badge colour once that tier is cleared. This replaces
+/// the old row of E/M/H letter chips with a single at-a-glance medallion, and
+/// blooms a soft halo in the Trainer's signature colour once all three fall.
+struct TrainerEmblemRing: View {
+    let trainer: Trainer
+    let unlocked: Bool
+    var concealed: Bool = false
     let cleared: Set<GauntletTier>
+    /// Locked Trainers show only the bare medallion (the lock lives in the name
+    /// row); the ring appears once the Trainer has been earned.
+    var showRing: Bool = true
+
+    private let size: CGFloat = 68
+    private let ringWidth: CGFloat = 5
+    private let emblemDiameter: CGFloat = 54
+    private let gapDegrees: Double = 12
+
+    private var orderedTiers: [GauntletTier] {
+        GauntletTier.allCases.sorted { $0.order < $1.order }
+    }
+    private var mastered: Bool { orderedTiers.allSatisfy(cleared.contains) }
+    private var accent: Color { trainerSignatureColor(trainer.id) }
 
     var body: some View {
-        HStack(spacing: 4) {
-            ForEach(GauntletTier.allCases.sorted { $0.order < $1.order }, id: \.self) { tier in
-                let badge = tierBadge(tier)
+        ZStack {
+            TrainerEmblem(trainer: trainer, unlocked: unlocked,
+                          concealed: concealed, diameter: emblemDiameter)
+            if showRing { ring }
+        }
+        .frame(width: size, height: size)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(accessibilityText)
+    }
+
+    private var ring: some View {
+        ZStack {
+            // A soft bloom in the Trainer's colour is the "mastered" flourish.
+            if mastered {
+                Circle()
+                    .strokeBorder(accent.opacity(0.28), lineWidth: ringWidth + 3)
+                    .blur(radius: 3)
+            }
+            ForEach(orderedTiers.indices, id: \.self) { i in
+                let tier = orderedTiers[i]
                 let on = cleared.contains(tier)
-                Text(badge.letter)
-                    .font(.system(size: 10, weight: .black, design: .rounded))
-                    .foregroundStyle(on ? Color(hex: "0b0e14") : Palette.subtle)
-                    .frame(width: 18, height: 18)
-                    .background(Circle().fill(on ? badge.color : Palette.stroke.opacity(0.35)))
-                    .overlay(Circle().strokeBorder(on ? Color.clear : Palette.stroke, lineWidth: 1))
-                    .opacity(on ? 1 : 0.5)
+                let color = tierBadge(tier).color
+                TierArc(index: i, gapDegrees: gapDegrees)
+                    .stroke(on ? color : Palette.stroke.opacity(0.6),
+                            style: StrokeStyle(lineWidth: ringWidth, lineCap: .round))
+                    .shadow(color: on ? color.opacity(0.75) : .clear, radius: on ? 3 : 0)
             }
         }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(cleared.isEmpty ? "No tiers cleared"
-            : "Cleared " + GauntletTier.allCases.filter { cleared.contains($0) }
-                .sorted { $0.order < $1.order }.map(\.display).joined(separator: ", "))
+        .padding(ringWidth / 2)
+    }
+
+    private var accessibilityText: String {
+        if concealed { return "Mystery Trainer, locked" }
+        guard unlocked else { return "\(trainer.name), locked" }
+        let done = orderedTiers.filter(cleared.contains)
+        guard !done.isEmpty else { return "\(trainer.name), no tiers cleared" }
+        return "\(trainer.name), cleared " + done.map(\.display).joined(separator: ", ")
     }
 }
 
@@ -281,35 +348,38 @@ private struct UnlockRequirement: View {
 }
 
 /// A Trainer's signature emblem — a bespoke flat-vector badge rendered by
-/// tools/generate_trainer_art.py and shipped in Assets.xcassets/TrainerArt.
-/// Grayed and dimmed while the Trainer is still locked, matching the Gauntlet
-/// shop's "faded until you can afford it" treatment.
+/// tools/generate_trainer_art.py and shipped in Assets.xcassets/TrainerArt —
+/// cropped into a circle so it fills the inside of its difficulty ring. Grayed
+/// and dimmed while the Trainer is still locked, matching the Gauntlet shop's
+/// "faded until you can afford it" treatment.
 private struct TrainerEmblem: View {
     let trainer: Trainer
     let unlocked: Bool
     var concealed: Bool = false
+    var diameter: CGFloat = 56
 
     var body: some View {
         Group {
             if concealed {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                Circle()
                     .fill(Palette.stroke.opacity(0.5))
                     .overlay(
                         Text("?")
-                            .font(.system(size: 26, weight: .black, design: .rounded))
+                            .font(.system(size: diameter * 0.46, weight: .black, design: .rounded))
                             .foregroundStyle(.white.opacity(0.7)))
             } else if let art = UIImage(named: "trainer-\(trainer.id)") {
-                Image(uiImage: art).resizable().scaledToFit()
+                Image(uiImage: art).resizable().scaledToFill()
             } else {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                Circle()
                     .fill(Palette.stroke.opacity(0.5))
                     .overlay(
                         Text(trainer.name.prefix(1))
-                            .font(.system(size: 22, weight: .black, design: .rounded))
+                            .font(.system(size: diameter * 0.4, weight: .black, design: .rounded))
                             .foregroundStyle(.white))
             }
         }
-        .frame(width: 56, height: 56)
+        .frame(width: diameter, height: diameter)
+        .clipShape(Circle())
         .saturation(unlocked ? 1 : 0.12)
         .opacity(unlocked ? 1 : 0.5)
         .accessibilityHidden(true)

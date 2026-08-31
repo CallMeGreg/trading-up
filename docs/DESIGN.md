@@ -564,12 +564,12 @@ shipped roster (`Models/Trainer.swift`), as `Energy / Aura / Selling / Grading /
 
 | Trainer | Leans | E | A | S | G | I | Unlocked by |
 | --- | --- | :-: | :-: | :-: | :-: | :-: | --- |
-| **Joe** · Rookie | — (neutral) | 3 | 3 | 3 | 3 | 3 | Free starter |
-| **Jack** · Ripper | Energy | 5 | 2 | 2 | 1 | 4 | Rip **100** packs across runs |
-| **Curtis** · Curator | Inventory/Aura | 2 | 4 | 1 | 3 | 5 | Build a **12-card** Showcase in one run |
-| **Fred** · Farmer | Aura | 2 | 5 | 2 | 2 | 3 | Reach a round Aura of **500** |
-| **Lucy** · Grader | Grading | 2 | 3 | 2 | 5 | 3 | Grade **100** cards across runs |
-| **Sally** · Merchant | Selling | 3 | 2 | 5 | 2 | 3 | Hold **$250** cash at once in a run |
+| **Average Joe** · Rookie | — (neutral) | 3 | 3 | 3 | 3 | 3 | Free starter |
+| **Jack the Ripper** · Ripper | Energy | 5 | 2 | 2 | 1 | 4 | Rip **100** packs across runs |
+| **Curator Curtis** · Curator | Inventory/Aura | 2 | 4 | 1 | 3 | 5 | Build a **12-card** Showcase in one run |
+| **Fred the Farmer** · Farmer | Aura | 2 | 5 | 2 | 2 | 3 | Reach a round Aura of **500** |
+| **Lucky Lucy** · Grader | Grading | 2 | 3 | 2 | 5 | 3 | Grade **100** cards across runs |
+| **Sally the Seller** · Merchant | Selling | 3 | 2 | 5 | 2 | 3 | Hold **$250** cash at once in a run |
 
 The first name in each row is what the player sees in‑game; the role is how this
 doc refers to each Trainer. Locked cards show the requirement and a live progress bar (e.g. "60 / 100 packs ripped"),
@@ -597,22 +597,25 @@ with *disadvantage* (keep the worse of two draws). `tools/verify` prints every T
 effect lines and its Hard win% delta versus a neutral run, and re-tuning these constants must keep
 the intended curve (below).
 
-**Accomplishment badges.** Every Trainer card carries three difficulty badges — **E / M / H** —
-lit for the tiers that Trainer has *cleared* and dimmed for the rest, read straight from
+**Accomplishment rings.** Every Trainer's emblem is cropped into a circle and wrapped in a
+three-segment **difficulty ring** — one arc each for **Easy / Medium / Hard**, exact thirds
+that begin at top-centre and fill clockwise. Each arc lights in its tier colour (green / gold /
+red) once that tier is *cleared* and stays a dim slate otherwise, read straight from
 `GauntletProgress.clearedTiersByTrainer` (the same per-Trainer record that gates its tier
-ladder). Badges are per-Trainer, so mastery is shown Trainer by Trainer, not as one global
-flag.
+ladder). Clearing all three blooms a soft halo in the Trainer's signature colour. Rings are
+per-Trainer, so mastery is shown Trainer by Trainer, not as one global flag.
 
 **The mystery Trainer — Red.** A seventh Trainer sits on the roster concealed as **"???"**
 with hidden pips and a "beat Hard mode with every other Trainer" progress line. Clearing **Hard
-with all six of the others** reveals **Red** — shown in‑game as **Gary** — a glass
+with all six of the others** reveals **Red** — shown in‑game as **Ash** — a glass
 cannon with **5 Energy / 5 Aura**, just **2** in Selling and Grading, and the bare
 minimum (**1**) in Inventory. The reveal is evaluated in
 `GauntletProgress.ingest` right after a clear banks, so the last required Hard win unlocks Red
 immediately and announces it once on the results screen.
 
 > **No levels.** Trainers no longer gain XP or levels — that system was removed. A Trainer's
-> pips are fixed; progression is *earning the roster*, *earning badges*, and *unlocking Red*,
+> pips are fixed; progression is *earning the roster*, *lighting up difficulty rings*, and
+> *unlocking Red*,
 > not dialling a single Trainer stronger. (Historic note: earlier builds scaled a Trainer's
 > advantage from a level-1 baseline to a level-10 ceiling; that meta was cut in favour of the
 > locked skill graph.)
@@ -626,7 +629,7 @@ the neutral pivot. A spiky Trainer that *requires* its specialty to win — or t
 mode — has overstepped and gets retuned.
 
 **Current Hard snapshot** (from `tools/verify`, seed `0x2C7`, n=120 — illustrative, will drift as
-constants are tuned): neutral **57%**; Sally 50, Fred 59, Jack 62, Curtis 75, Lucy 79, Gary 41.
+constants are tuned): neutral **57%**; Sally 50, Fred 59, Jack 62, Curtis 75, Lucy 79, Ash 41.
 Note that in optimised play cash is rarely the binding constraint, so **Selling** is a *soft*
 lever while Aura / Inventory / Grading / Energy bind harder — a Trainer strong in a binding lever
 but weak in Selling (Curtis, +2 slots) reads higher than its graph suggests. These are the

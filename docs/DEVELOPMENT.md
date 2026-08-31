@@ -247,7 +247,8 @@ python3 tools/generate_trainer_art.py sheet  # labelled contact sheet -> docs/mo
 
 Emblems are keyed by Trainer `id` as `trainer-<id>` (so Farmer's asset is
 `trainer-appraiser`, matching its persisted id) and loaded via
-`UIImage(named:)`; `TrainerEmblem` grays a locked Trainer's badge the same way
+`UIImage(named:)`; `TrainerEmblem` crops the art into a circle and grays a locked
+Trainer's medallion the same way
 the shop fades an unaffordable item, and hides the mystery Trainer (Red) behind a
 "?" plate until it's earned. To restyle a Trainer, edit the motif in
 `generate_trainer_art.py` and re‑run — never hand‑edit the `TrainerArt` PNGs.
