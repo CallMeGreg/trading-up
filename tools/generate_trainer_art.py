@@ -156,16 +156,23 @@ def m_rookie(uid, c, d):
 
 
 def m_red(uid, c, d):
-    # the mystery rival: a spiky-haired man's bust in left profile, drawn as a
-    # clean cameo silhouette — forehead, nose, lips and chin read down the left
-    # edge; a real neck and shoulder anchor the base; five hair spikes up top
-    head = ("M -24,-34 "
-            "L -40,-6 L -54,9 L -42,15 L -43,21 L -38,33 L -20,47 L -22,56 "
-            "L 42,56 L 47,38 L 41,24 L 45,4 L 46,-16 "
-            "L 39,-21 L 47,-42 L 31,-30 L 29,-53 L 17,-33 "
-            "L 9,-56 L -3,-35 L -9,-53 L -19,-37 L -23,-48 Z")
+    # the mystery rival, revealed as a champion: a trophy cup with side handles, a
+    # pedestal base and the roster's white star on the bowl — same bold flat-vector
+    # build as the rest of the badges (signature-colour gradient, deep-shade rim).
+    star = ('<path d="M0,-31 l10,20 l23,3 l-16,16 l4,22 l-21,-11 l-21,11 '
+            'l4,-22 l-16,-16 l23,-3 Z" transform="translate(0,-10) scale(0.44)"'
+            ' fill="#ffffff"/>')
     return f'''
-    <path d="{head}" fill="url(#mot{uid})" stroke="{d}" stroke-width="3" stroke-linejoin="round"/>'''
+    <path d="M-30,-30 q-24,3 -19,24 q3,13 17,12" fill="none" stroke="url(#mot{uid})"
+          stroke-width="8" stroke-linecap="round"/>
+    <path d="M30,-30 q24,3 19,24 q-3,13 -17,12" fill="none" stroke="url(#mot{uid})"
+          stroke-width="8" stroke-linecap="round"/>
+    <rect x="-37" y="-44" width="74" height="11" rx="5.5" fill="url(#mot{uid})" stroke="{d}" stroke-width="3"/>
+    <path d="M-32,-33 L32,-33 L26,4 Q19,28 0,30 Q-19,28 -26,4 Z" fill="url(#mot{uid})"
+          stroke="{d}" stroke-width="4" stroke-linejoin="round"/>
+    <rect x="-6" y="30" width="12" height="13" fill="{d}"/>
+    <path d="M-22,58 L22,58 L15,43 L-15,43 Z" fill="url(#mot{uid})" stroke="{d}" stroke-width="3" stroke-linejoin="round"/>
+    {star}'''
 
 
 MOTIF = dict(ripper=m_ripper, curator=m_curator, appraiser=m_farmer,
