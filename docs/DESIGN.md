@@ -607,9 +607,9 @@ per-Trainer, so mastery is shown Trainer by Trainer, not as one global flag.
 
 **The mystery Trainer — Red.** A seventh Trainer sits on the roster concealed as **"???"**
 with hidden pips and a "beat Hard mode with every other Trainer" progress line. Clearing **Hard
-with all six of the others** reveals **Red** — shown in‑game as **Ash** — a glass
-cannon with **5 Energy / 5 Aura**, just **2** in Selling and Grading, and the bare
-minimum (**1**) in Inventory. The reveal is evaluated in
+with all six of the others** reveals **Red** — shown in‑game as **Ash** — a
+powerhouse with **5 Energy / 5 Aura**, a maxed **5** in Inventory, and the bare
+minimum (**1**) in Selling and Grading. The reveal is evaluated in
 `GauntletProgress.ingest` right after a clear banks, so the last required Hard win unlocks Red
 immediately and announces it once on the results screen.
 
@@ -629,7 +629,10 @@ the neutral pivot. A spiky Trainer that *requires* its specialty to win — or t
 mode — has overstepped and gets retuned.
 
 **Current Hard snapshot** (from `tools/verify`, seed `0x2C7`, n=120 — illustrative, will drift as
-constants are tuned): neutral **57%**; Sally 50, Fred 59, Jack 62, Curtis 75, Lucy 79, Ash 41.
+constants are tuned): neutral **57%**; Sally 50, Fred 59, Jack 62, Curtis 75, Lucy 79. **Ash was
+deliberately buffed to `5 / 5 / 1 / 1 / 5` and now clears Hard ~98% (+41 vs neutral)** — an
+intentional post-game power fantasy that overshoots the sidegrade guardrails above, so
+`tools/verify` reports Ash over the `best ≤ 97%` and `≤ +25 vs neutral` caps *by design*.
 Note that in optimised play cash is rarely the binding constraint, so **Selling** is a *soft*
 lever while Aura / Inventory / Grading / Energy bind harder — a Trainer strong in a binding lever
 but weak in Selling (Curtis, +2 slots) reads higher than its graph suggests. These are the
