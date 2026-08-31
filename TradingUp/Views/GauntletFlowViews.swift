@@ -101,29 +101,36 @@ struct TrainerCard: View {
     var body: some View {
         Button(action: action) {
             VStack(alignment: .leading, spacing: 10) {
-                HStack(spacing: 12) {
-                    TrainerEmblemRing(trainer: trainer, unlocked: unlocked,
-                                      concealed: concealed, cleared: clearedTiers,
-                                      showRing: unlocked)
-                    Text(concealed ? "???" : trainer.name)
-                        .font(.system(size: 19, weight: .heavy, design: .rounded))
-                        .foregroundStyle(unlocked ? .white : Palette.subtle)
-                    Spacer(minLength: 8)
-                    if !unlocked {
-                        Image(systemName: "lock.fill")
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundStyle(Palette.subtle)
+                // The Trainer's identity and (hidden) skills carry the "locked"
+                // dimming; the unlock instructions below stay at full strength so
+                // a player can clearly read how to earn the Trainer.
+                // (req: don't gray out / diminish the unlock text)
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack(spacing: 12) {
+                        TrainerEmblemRing(trainer: trainer, unlocked: unlocked,
+                                          concealed: concealed, cleared: clearedTiers,
+                                          showRing: unlocked)
+                        Text(concealed ? "???" : trainer.name)
+                            .font(.system(size: 19, weight: .heavy, design: .rounded))
+                            .foregroundStyle(unlocked ? .white : Palette.subtle)
+                        Spacer(minLength: 8)
+                        if !unlocked {
+                            Image(systemName: "lock.fill")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundStyle(Palette.subtle)
+                        }
                     }
-                }
-                if unlocked {
-                    Text(trainer.blurb)
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(Palette.subtle)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
+                    if unlocked {
+                        Text(trainer.blurb)
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(Palette.subtle)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
 
-                SkillGraph(skills: trainer.skills, accent: accent, concealed: statsHidden)
+                    SkillGraph(skills: trainer.skills, accent: accent, concealed: statsHidden)
+                }
+                .opacity(unlocked ? 1 : 0.72)
 
                 if concealed, let p = unlockProgress {
                     Divider().overlay(Palette.stroke)
@@ -137,7 +144,6 @@ struct TrainerCard: View {
                 }
             }
             .panel()
-            .opacity(unlocked ? 1 : 0.72)
             .overlay(
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
                     .strokeBorder(unlocked ? Color.clear : Palette.stroke, lineWidth: 1))

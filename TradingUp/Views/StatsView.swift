@@ -92,19 +92,22 @@ struct StatsView: View {
 
     // MARK: Sections
 
-    /// Collection is the live binder, so it reads the same in both scopes: the
-    /// summary rows, then per-set progress bars tinted to each set's element.
+    /// Collection is the live binder, so the summary rows read the same in both
+    /// scopes. The per-set progress breakdown is a run-focused detail, so it's
+    /// shown only in the This Run scope and dropped from All Time.
     private var collectionSection: some View {
         VStack(alignment: .leading, spacing: 0) {
             sectionHeader("Collection")
             ledger(collectionItems)
-            Rectangle().fill(Palette.stroke.opacity(0.55)).frame(height: 1).padding(.top, 4)
-            Text("BY SET")
-                .font(.system(size: 10, weight: .black))
-                .foregroundStyle(Palette.subtle)
-                .tracking(0.5)
-                .padding(.top, 12).padding(.bottom, 9)
-            SetBreakdown()
+            if scope == .run {
+                Rectangle().fill(Palette.stroke.opacity(0.55)).frame(height: 1).padding(.top, 4)
+                Text("BY SET")
+                    .font(.system(size: 10, weight: .black))
+                    .foregroundStyle(Palette.subtle)
+                    .tracking(0.5)
+                    .padding(.top, 12).padding(.bottom, 9)
+                SetBreakdown()
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .panel()
