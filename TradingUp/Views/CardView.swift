@@ -60,12 +60,20 @@ struct CardView: View {
 
             RoundedRectangle(cornerRadius: corner)
                 .strokeBorder(card.rarity.gemGradient, lineWidth: card.rarity == .ultra ? 3 * s : 2 * s)
-
-            if let g = grade {
-                gradeBadge(g)
-            }
         }
         .frame(width: width, height: height)
+        // The grade slab pins to the artwork's top-right corner (captured via
+        // `ArtFrameKey`) rather than the header, so the evolution stage pips in
+        // the top-right stay visible in the Collection and Showcase grids.
+        .overlayPreferenceValue(ArtFrameKey.self) { anchor in
+            if let anchor, let g = grade {
+                GeometryReader { proxy in
+                    let art = proxy[anchor]
+                    gradeBadge(g)
+                        .position(x: art.maxX - 19 * s, y: art.minY + 19 * s)
+                }
+            }
+        }
         .shadow(color: .black.opacity(0.45), radius: 8 * s, x: 0, y: 4 * s)
     }
 
@@ -102,6 +110,7 @@ struct CardView: View {
             }
         }
         .clipShape(RoundedRectangle(cornerRadius: corner))
+        .anchorPreference(key: ArtFrameKey.self, value: .bounds) { $0 }
     }
 
     private var header: some View {
@@ -147,6 +156,7 @@ struct CardView: View {
         }
         .frame(height: 150 * s)
         .clipShape(RoundedRectangle(cornerRadius: 10 * s))
+        .anchorPreference(key: ArtFrameKey.self, value: .bounds) { $0 }
     }
 
     private var metaRow: some View {
@@ -196,7 +206,17 @@ struct CardView: View {
         .frame(width: 34 * s, height: 34 * s)
         .background(Circle().fill(color))
         .overlay(Circle().strokeBorder(.white.opacity(0.85), lineWidth: 2 * s))
-        .offset(x: width * 0.34, y: -height * 0.40)
+    }
+}
+
+/// Captures the artwork rectangle within a `CardView` so the grade slab can pin
+/// to the art's top-right corner instead of the header, which carries the
+/// evolution stage pips. In Extended-Art mode the art is full-bleed, so this is
+/// the whole card face.
+private struct ArtFrameKey: PreferenceKey {
+    static let defaultValue: Anchor<CGRect>? = nil
+    static func reduce(value: inout Anchor<CGRect>?, nextValue: () -> Anchor<CGRect>?) {
+        value = value ?? nextValue()
     }
 }
 

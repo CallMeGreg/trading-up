@@ -144,13 +144,13 @@ extension Trainer {
         skills: .neutral)
 
     /// The mystery Trainer, hidden as "???" until the player has beaten Hard with
-    /// every other Trainer. Overwhelming Energy and Aura and a maxed Showcase, but
+    /// every other Trainer. Overwhelming Energy and Aura and a roomy Showcase, but
     /// the bare minimum in Selling and Grading. Kept out of `roster` iteration order
     /// below only by convention; it *is* included so it renders (concealed) and unlocks.
     static let red = Trainer(
         id: "red", name: "Ash",
-        blurb: "A silent challenger. Overwhelming Energy and Aura and a vast Showcase — but no head for selling or grading.",
-        skills: TrainerSkills(energy: 5, aura: 5, selling: 1, grading: 1, inventory: 5),
+        blurb: "A silent challenger. Overwhelming Energy and Aura and a roomy Showcase — but no head for selling or grading.",
+        skills: TrainerSkills(energy: 5, aura: 5, selling: 1, grading: 1, inventory: 4),
         mysteryUntilUnlocked: true)
 
     /// The shipped roster. Each leans into a different pair of skills so builds
