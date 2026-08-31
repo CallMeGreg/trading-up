@@ -315,6 +315,50 @@ All were taken with the simulator status bar pinned to 9:41 / full bars /
 charged, and `tools/check_screenshots.py` verifies the dimensions and confirms
 there is no alpha channel.
 
+### Curated marketing panels (the set to actually upload)
+
+The raw captures above are the honest source, but the **committed** set that goes
+on the store page is the curated one in `docs/screenshots/marketing/`, produced by
+`tools/generate_marketing_shots.py`. Each panel keeps the house style of the
+Classic renders in `docs/screenshots/0X_*.png` — a bold headline, a one-line
+call-to-action in the screen's accent colour, and the app gradient behind — but
+drops the phone bezel **and** the iOS status bar so the real screenshot floats
+frameless as a rounded, soft-shadowed card. No pixels are painted over: the tool
+embeds the untouched capture and crops the status bar with an SVG clip, so what
+ships is the true UI.
+
+Unlike the older generator (`tools/generate_screenshots.py`, which hand-draws
+Classic screens in SVG and predates this release), this tool composites the actual
+Gauntlet and Binder captures, so all three modes are covered with pixel-accurate
+art. It reads the same gitignored capture output as the table above, so run
+`tools/capture_screenshots.sh` **first**, then:
+
+```bash
+python3 tools/generate_marketing_shots.py        # all 10 scenes × both sizes
+python3 tools/generate_marketing_shots.py --list  # show scenes without rendering
+```
+
+Output is 20 PNGs — the ten scenes below at **1242 × 2688** (iPhone 6.5") and
+**2064 × 2752** (iPad 13"), RGB with no alpha, ready to upload as-is:
+
+| # | Scene | Mode | Headline |
+| --- | --- | --- | --- |
+| 01 | `pack-reveal-rare-hit` | Classic | Every pull is a thrill. |
+| 02 | `gauntlet-run-building` | Gauntlet | Run the Gauntlet. |
+| 03 | `binder-emberfall` | Binder | Your best pulls, kept forever. |
+| 04 | `pack-summary-all-new` | Classic | Keep it — or cash it in. |
+| 05 | `gauntlet-trainer-select` | Gauntlet | Seven Trainers, seven playstyles. |
+| 06 | `grading-gem-mint` | Classic | Grade your best pulls. |
+| 07 | `gauntlet-keep-or-sell` | Gauntlet | Keep for score, or sell for cash. |
+| 08 | `binder-umbral-reach` | Binder | Five sets. 250 Sprytes. |
+| 09 | `gauntlet-share-card` | Gauntlet | Clear it, claim the prize. |
+| 10 | `win-master-collector` | Classic | Collect them all. |
+
+Four slots lead on Gauntlet Mode and two on the permanent Binder — the v1.2.0
+headline features — with four proven Classic shots carrying the core loop.
+Captions live in the `SCENES` list at the top of the tool; edit them there, not on
+the rendered PNGs.
+
 ---
 
 ## 5. App Privacy
