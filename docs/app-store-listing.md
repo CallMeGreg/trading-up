@@ -336,11 +336,11 @@ art. It reads the same gitignored capture output as the table above, so run
 `tools/capture_screenshots.sh` **first**, then:
 
 ```bash
-python3 tools/generate_marketing_shots.py        # all 9 scenes × both sizes
+python3 tools/generate_marketing_shots.py        # all 10 scenes × both sizes
 python3 tools/generate_marketing_shots.py --list  # show scenes without rendering
 ```
 
-Output is 18 PNGs — the nine scenes below at **1242 × 2688** (iPhone 6.5") and
+Output is 20 PNGs — the ten scenes below at **1242 × 2688** (iPhone 6.5") and
 **2064 × 2752** (iPad 13"), RGB with no alpha, ready to upload as-is:
 
 | # | Scene | Group | Headline |
@@ -354,13 +354,16 @@ Output is 18 PNGs — the nine scenes below at **1242 × 2688** (iPhone 6.5") an
 | 07 | `gauntlet-share-card` | Gauntlet | Clear it, claim the prize. |
 | 08 | `binder-emberfall` | Binder | Your best pulls, kept forever. |
 | 09 | `binder-umbral-reach` | Binder | Five sets. 250 Sprytes. |
+| 10 | `gauntlet-tier-select` | Closer | Do you have what it takes? |
 
 The set is ordered as a flow: a general pack-rip hook, then three Classic Mode
 shots (keep-or-sell summary, grading, the win), then three Gauntlet Mode shots
-(run, Trainers, prize), then the two permanent-Binder details. Each accent stays
-tied to its screen's dominant colour and no two adjacent slots repeat one.
-Captions live in the `SCENES` list at the top of the tool; edit them there, not on
-the rendered PNGs.
+(run, Trainers, prize), then the two permanent-Binder details, and finally a
+closing "do you have what it takes?" challenge on the Gauntlet difficulty tiers.
+Each accent stays tied to its screen's dominant colour and no two adjacent slots
+repeat one. The closer's tier menu is short on iPad, so its bottom crop is set
+per-device in the `SCENES` list. Captions live in that `SCENES` list at the top
+of the tool; edit them there, not on the rendered PNGs.
 
 ---
 

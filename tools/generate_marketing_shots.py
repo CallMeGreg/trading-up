@@ -22,7 +22,7 @@ has):
       "iPhone 11 Pro Max" "iPad Pro 13-inch (M5)"
   python3 tools/generate_marketing_shots.py
 
-Output: docs/screenshots/marketing/<NN>_<slug>_<w>x<h>.png — 9 scenes x 2 sizes.
+Output: docs/screenshots/marketing/<NN>_<slug>_<w>x<h>.png — 10 scenes x 2 sizes.
 Rendered with rsvg-convert (librsvg — `brew install librsvg`), which emits RGB
 (no alpha channel), exactly what App Store Connect requires.
 """
@@ -52,10 +52,13 @@ DEVICE = {
 SIZES = [(1242, 2688), (2064, 2752)]
 
 # order, slug, caption (headline), subtitle (CTA), accent element, and optional
-# extra crop (top, bottom) in *source* px for shots with dead space to trim.
-# Nine slots ordered as a flow: the general pack-rip hook, then Classic Mode
-# specifics, then Gauntlet Mode, then the permanent Binder. Each accent stays
-# tied to its screen's dominant colour, and no two adjacent scenes repeat one.
+# extra crop (top, bottom) to trim dead space. Each crop is *source* px, either a
+# single int (same trim on every device) or a {(W, H): px} dict when the iPhone
+# and iPad captures lay the screen out differently and need different trims.
+# Ten slots ordered as a flow: the general pack-rip hook, then Classic Mode
+# specifics, then Gauntlet Mode, then the permanent Binder, and finally a closing
+# "do you have what it takes?" challenge. Each accent stays tied to its screen's
+# dominant colour, and no two adjacent scenes repeat one.
 EM = "\u2014"
 SCENES = [
     # General — the universal hook
@@ -89,7 +92,21 @@ SCENES = [
     ("09", "binder-umbral-reach", "Five sets. 250 Sprytes.",
      "Chase every creature across five worlds, Emberfall to Umbral Reach.",
      "shadow", 0, 0),
+    # Closing challenge — the "do you have what it takes?" call to action. The
+    # tier-select screen has a tall empty band below the cards that sits at a
+    # different source row on each device, so the bottom crop is per-device.
+    ("10", "gauntlet-tier-select", "Do you have what it takes?",
+     "Clear Easy to unlock Medium, then conquer Hard.",
+     "electric", 0, {(1242, 2688): 1410, (2064, 2752): 1600}),
 ]
+
+
+def _crop_px(val, W, H):
+    """extra_top / extra_bottom may be a single source-px int (same trim on every
+    device) or a {(W, H): px} dict when the two captures need different trims."""
+    if isinstance(val, dict):
+        return val.get((W, H), 0)
+    return val
 
 
 def png_size(path):
@@ -191,7 +208,9 @@ def render(order, slug, caption, subtitle, accent_elem, extra_top, extra_bottom,
     src = find_src(folder, slug)
     defs = gs.Defs()
     accent = gs.ELEMENT[accent_elem][2]
-    body = compose(defs, W, H, src, sb, caption, subtitle, accent, extra_top, extra_bottom)
+    et = _crop_px(extra_top, W, H)
+    eb = _crop_px(extra_bottom, W, H)
+    body = compose(defs, W, H, src, sb, caption, subtitle, accent, et, eb)
     svg = ('<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" '
            'width="%d" height="%d" viewBox="0 0 %d %d">%s%s</svg>') % (
         W, H, W, H, defs.render(), body)
