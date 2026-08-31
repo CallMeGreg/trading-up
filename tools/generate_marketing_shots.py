@@ -61,7 +61,7 @@ SCENES = [
      "Rip a fresh pack card by card and chase rares, foils and ultras.",
      "water", 0, 0),
     ("02", "gauntlet-run-building", "Run the Gauntlet.",
-     "Pick a Trainer and push your Showcase past a rising Aura, rip after rip.",
+     "Pick a Trainer and push your Showcase past a rising Aura goal, rip after rip.",
      "shadow", 0, 0),
     ("03", "binder-emberfall", "Your best pulls, kept forever.",
      "The Binder saves the top copy of every Spryte, across every run.",
