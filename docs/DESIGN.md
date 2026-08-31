@@ -509,18 +509,27 @@ The two new terms are what a build is *made of*:
 
   | Set | Bonus | Line multiplier |
   | --- | ----- | --------------- |
-  | 1 · Emberfall | `1.25` | **×2.25** |
-  | 2 · Tidecaller | `2.0` | **×3.0** |
-  | 3 · Verdspire | `3.0` | **×4.0** |
-  | 4 · Voltcrest | `4.5` | **×5.5** |
-  | 5 · Umbral Reach | `6.5` | **×7.5** |
+  | 1 · Emberfall | `5.0` | **×6.0** |
+  | 2 · Tidecaller | `6.0` | **×7.0** |
+  | 3 · Verdspire | `7.5` | **×8.5** |
+  | 4 · Voltcrest | `9.5` | **×10.5** |
+  | 5 · Umbral Reach | `12.0` | **×13.0** |
 
-  Combined with the per-set value curve (a set-5 line's raw value is already ~20× a set-1
-  line's), finishing a late line is an enormous Aura swing. Partial lines pay nothing, so the
-  build goal is to *finish chains*, not just hoard high-value singles — a knapsack pull
-  against limited slots. (This replaced the earlier same-element "synergy" multiplier: a
-  completion bonus is RNG-gated on pulling a line's whole chain, which rewards planning over
-  passively stacking one element.)
+  These are sized so *finishing a chain is a real Aura play, not a footnote to hoarding
+  singles*. A 3-stage line is mostly a common + uncommon + rare, so its raw base is only ~12%
+  of the set's three ultras — reaching parity with that pure three-ultra hoard takes roughly a
+  ×8 lift. This is a deliberately **cautious** curve: a completed line already out-Auras any
+  hold that includes a rare at every set (≥1.9× vs two rares + an ultra), and it overtakes even
+  the three-ultra hoard from **set 3 on** (Emberfall ~0.73×, Tidecaller ~0.83×, Verdspire
+  ~1.07×, Voltcrest ~1.26×, Umbral ~1.56×). So Emberfall and Tidecaller stay teaching sets where
+  the top singles can still edge a line, and commitment to chains pulls clearly ahead once sets
+  get scarce and pricey. Combined with the per-set value curve (a set-5 line's raw value is
+  already ~20× a set-1 line's), finishing a late line is an enormous Aura swing. Partial lines
+  pay nothing, so the build goal is to *finish chains*, not just hoard high-value singles — a
+  knapsack pull against limited slots. (This replaced the earlier same-element "synergy"
+  multiplier: a completion bonus is RNG-gated on pulling a line's whole chain, which rewards
+  planning over passively stacking one element.) The opportunity-cost model behind these
+  numbers is reproduced by `tools/verify/evo_opportunity`.
 - **run multipliers** — global effects from Catalysts (§14.4) and your Trainer (§14.3).
 
 This yields replayable identities — line-completionist, foil-chaser, grade-gambler,

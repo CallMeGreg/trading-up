@@ -107,7 +107,7 @@ function card(c, opts = {}) {
    • Classic    → GameCore.instances (this run); one-time Economy.evolutionBonus
                   on completion; wiped by newGame(), a line re-opens on a sale.
    • Gauntlet   → GauntletRun.showcase (this run, slot-capped); GauntletCore.aura
-                  lifts a complete line by evoLineBonus (+125%) while it stands.
+                  lifts a complete line by evoLineBonus (+500% and up) while it stands.
    • Binder     → the permanent Binder: best copy ever owned, spans every run and
                   Gauntlet, only grows. A browser, so there is no "this pull". */
 const MODES = {
@@ -125,7 +125,7 @@ const MODES = {
     headline: 'Gauntlet Mode · the current run’s Showcase',
     rows: [
       ['Solid pip', 'A stage <b>standing in the Showcase</b> you’re building this run (capped by your slots).'],
-      ['Line bonus', 'A complete line lifts <b>Aura by +125%</b> for as long as every stage stays in the Showcase.'],
+      ['Line bonus', 'A complete line lifts <b>Aura by +500% and up</b> for as long as every stage stays in the Showcase.'],
       ['Resets', 'Scoped to <b>this run</b>. Drop a stage for space and the bonus <b>switches off</b> until the line is whole again.'],
     ],
   },
