@@ -263,6 +263,11 @@ private struct SummaryView: View {
     @State private var plan = Plan()
     @State private var soldIds: Set<UUID> = []
     @State private var keptIds: Set<UUID> = []
+    /// Cards graded right here on the summary — kept so their fresh slab and new
+    /// value stay on screen even though `result.pulled` is an open-time snapshot.
+    @State private var gradedInstances: [UUID: CardInstance] = [:]
+    /// The PSA reveal to show after a grade roll, mirroring the Collection flow.
+    @State private var gradeResult: GradeResult?
 
     /// Lazily computed and cached: the first read takes the snapshot, later
     /// reads return it, so a card's kind stays stable as the collection changes.
@@ -349,6 +354,11 @@ private struct SummaryView: View {
             .frame(width: geo.size.width, height: geo.size.height)
         }
         .background(Palette.bg0.ignoresSafeArea())
+        .overlay {
+            if let r = gradeResult {
+                GradeRevealOverlay(result: r) { gradeResult = nil }
+            }
+        }
     }
 
     // MARK: Grids
@@ -375,10 +385,13 @@ private struct SummaryView: View {
         VStack(spacing: 10) {
             LazyVGrid(columns: m.columns, spacing: m.spacing) {
                 ForEach(result.pulled) { inst in
-                    PackCardSlot(inst: inst, slot: slot(for: inst), width: m.card,
+                    PackCardSlot(inst: displayInstance(inst), slot: slot(for: inst), width: m.card,
                                  series: CardSeries(for: inst.card, pull: true) { stayingCardIds.contains($0.id) },
                                  onKeep: { decideKeep(inst) },
-                                 onSell: { decideSell(inst) })
+                                 onSell: { decideSell(inst) },
+                                 gradeTitle: gradeTitle(for: inst),
+                                 gradeEnabled: game.canAffordGrade(set: set),
+                                 onGrade: { decideGrade(inst) })
                 }
             }
         }
@@ -519,6 +532,41 @@ private struct SummaryView: View {
         withAnimation(.easeOut(duration: 0.2)) { _ = keptIds.insert(inst.id) }
     }
 
+    /// Grade a pulled card right on the summary. The roll (and its fee) run through
+    /// the same `game.grade` path as the Collection, then the card is auto-kept — a
+    /// freshly slabbed card is a keeper, so its Keep/Sell choice falls away — and the
+    /// reveal overlay shows the PSA result. A sold card can't reach here (no tab).
+    private func decideGrade(_ inst: CardInstance) {
+        guard let r = game.grade(inst.id) else { Haptics.play(.error); return }
+        Haptics.play(.rigid)
+        var graded = inst
+        graded.grade = r.grade
+        withAnimation(.easeOut(duration: 0.25)) {
+            gradedInstances[inst.id] = graded
+            soldIds.remove(inst.id)
+            _ = keptIds.insert(inst.id)
+        }
+        gradeResult = r
+    }
+
+    /// The live copy to draw for a pulled card: the graded version once the player
+    /// grades it here, otherwise the card as pulled. Keeps the slab and its new
+    /// value on screen even though `result.pulled` is an open-time snapshot.
+    private func displayInstance(_ inst: CardInstance) -> CardInstance {
+        gradedInstances[inst.id] ?? inst
+    }
+
+    /// The grade tab's fee label for a card, or nil to hide the tab. The tab lives
+    /// only on cards still in play, so it's hidden once a card is graded, sold, or
+    /// kept — choosing Keep resolves a duplicate as-is, and grading is the tab's own
+    /// (auto-keeping) path. Any rarity can be graded, matching the Collection.
+    private func gradeTitle(for inst: CardInstance) -> String? {
+        let state = slot(for: inst)
+        guard displayInstance(inst).grade == nil, state != .sold, state != .keptDup else { return nil }
+        let fee = Economy.gradeFee(set: set)
+        return fee == fee.rounded() ? "$\(Int(fee))" : fee.moneyShort
+    }
+
     private func sellAllPending() {
         Haptics.play(.success)
         Sound.play(.coin)
@@ -579,6 +627,13 @@ private struct PackCardSlot: View {
     var series: CardSeries? = nil
     let onKeep: () -> Void
     let onSell: () -> Void
+    /// The grade tab's fee label (e.g. "$2"), or nil to hide it — hidden once the
+    /// card is graded or sold. Boxes never pass it (they use the bulk flow).
+    var gradeTitle: String? = nil
+    /// Whether the player can currently afford to grade; a dimmed tab still shows so
+    /// the action stays discoverable, but tapping it does nothing.
+    var gradeEnabled: Bool = true
+    var onGrade: () -> Void = {}
 
     @State private var pulse = false
 
@@ -586,14 +641,17 @@ private struct PackCardSlot: View {
     /// 104pt phone card these badges were originally sized against.
     private var s: CGFloat { min(1.7, max(1, width / 104)) }
     private var corner: CGFloat { 16 * (width / 230) }
+    /// CardView's own internal scale (its `s`), used to line the grade tab up with
+    /// the art window drawn inside the card.
+    private var cs: CGFloat { width / 230 }
 
-    /// Kept and sold cards are "processed" — desaturated so it's clear which
-    /// cards still need a decision. Sold fades more and carries a stamp.
-    private var isProcessed: Bool { slot == .sold || slot == .keptDup }
+    /// Kept and sold cards are desaturated so the undecided ones stand out — but a
+    /// graded keeper stays vibrant so its fresh PSA slab is shown off, not greyed.
+    private var isProcessed: Bool { slot == .sold || (slot == .keptDup && inst.grade == nil) }
     private var cardOpacity: Double {
         switch slot {
         case .sold:    return 0.45
-        case .keptDup: return 0.65
+        case .keptDup: return inst.grade == nil ? 0.65 : 1
         default:       return 1
         }
     }
@@ -624,7 +682,8 @@ private struct PackCardSlot: View {
             .saturation(isProcessed ? 0 : 1)
             .opacity(cardOpacity)
             .overlay { if slot == .pendingDup { pendingRing } }
-            .overlay(alignment: .topTrailing) { badgeView }
+            .overlay(alignment: .topLeading) { badgeView }
+            .overlay(alignment: .topTrailing) { gradeTabView }
             .overlay { if slot == .sold { soldStamp } }
     }
 
@@ -663,11 +722,40 @@ private struct PackCardSlot: View {
                 .background(Capsule().fill(b.color))
                 .overlay(Capsule().strokeBorder(.white.opacity(0.35), lineWidth: 0.5))
                 .shadow(color: .black.opacity(0.45), radius: 2 * s, y: 1)
-                .offset(x: 5 * s, y: -7 * s)
+                .offset(x: -5 * s, y: -7 * s)
+        }
+    }
+
+    /// The grade tab (req: 4C) — a single seal-and-fee chip pinned inside the art
+    /// window's top-right, tucked just under the header's evolution pips. Grade is
+    /// the only corner action; Keep/Sell stay below the card. It disappears once the
+    /// card is graded or sold, so a slabbed or sold card offers no second roll.
+    @ViewBuilder private var gradeTabView: some View {
+        if let title = gradeTitle {
+            Button(action: onGrade) {
+                HStack(spacing: 3 * s) {
+                    Image(systemName: "seal.fill").font(.system(size: 8.5 * s, weight: .black))
+                    Text(title).font(.system(size: 9 * s, weight: .black, design: .rounded))
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, 6 * s).padding(.vertical, 3.5 * s)
+                .background(Capsule().fill(Color(hex: "6d5cf7").opacity(gradeEnabled ? 0.95 : 0.5)))
+                .overlay(Capsule().strokeBorder(.white.opacity(0.4), lineWidth: 0.5))
+                .shadow(color: .black.opacity(0.5), radius: 2 * s, y: 1)
+            }
+            .buttonStyle(.plain)
+            .disabled(!gradeEnabled)
+            // CardView draws its art window ~35·cs below the card top; the tab drops
+            // a touch below that edge and insets from the right so it reads as part
+            // of the art, clear of the pips above it.
+            .offset(x: -13 * cs, y: 40 * cs)
         }
     }
 
     private var badge: (text: String, color: Color)? {
+        // A graded card carries its PSA slab (drawn by CardView); the NEW/KEPT chip
+        // would only crowd it, so it steps aside once a grade lands.
+        if inst.grade != nil { return nil }
         switch slot {
         case .newCard:    return ("✦ NEW", Color(hex: "ffd54a"))
         case .keptDup:    return ("KEPT", Color(hex: "5b6b8a"))
