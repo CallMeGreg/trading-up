@@ -754,7 +754,7 @@ do {
     // Skill magnitudes are live. The guardrails encode the design intent: a Trainer is
     // a *sidegrade*, so every one stays winnable on Hard and stays within a symmetric
     // ±35-pt band of the neutral Rookie. The roster's one intentional standout is the
-    // champion, Ash (maxed Energy/Aura/Inventory), who is meant to be the strongest
+    // champion, Ash (maxed Energy and Aura), who is meant to be the strongest
     // pick — so the ceilings admit a champion-grade win rate while still failing any
     // Trainer that turns Hard into a guaranteed win or an even more extreme outlier.
     check(maxT <= 99, "no Trainer makes Hard a pure formality (best ≤ 99%)")
