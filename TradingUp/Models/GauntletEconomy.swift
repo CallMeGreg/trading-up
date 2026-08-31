@@ -388,12 +388,22 @@ enum GauntletEconomy {
     /// much harder. The bonus is the fraction *added* to the line's value, so the
     /// effective per-line multiplier is `1 + bonus` (docs/DESIGN.md §14.4):
     ///
-    ///     set 1 → 1.25  (×2.25)   set 2 → 2.0 (×3.0)   set 3 → 3.0 (×4.0)
-    ///     set 4 → 4.5   (×5.5)    set 5 → 6.5 (×7.5)
+    ///     set 1 → 5.0  (×6.0)    set 2 → 6.0 (×7.0)    set 3 → 7.5 (×8.5)
+    ///     set 4 → 9.5  (×10.5)   set 5 → 12.0 (×13.0)
     ///
-    /// Set 1 keeps the original flat bonus so the calibrated early game is unchanged;
-    /// the curve only *adds* reward for the harder, later-set completions.
-    static let evoLineBonusBySet: [Double] = [1.25, 2.0, 3.0, 4.5, 6.5]
+    /// These are calibrated so completing a line is an Aura play worth *making* rather
+    /// than a footnote to hoarding singles. A 3-stage line's raw base is only ~12% of
+    /// the set's three ultras (it's mostly a common + uncommon), so parity with a full
+    /// three-ultra hoard takes roughly a ×8 lift. This is the *cautious* curve: a
+    /// completed line already out-Auras any hold that includes a rare at every set
+    /// (≥1.9× vs 2 rares + an ultra), and it overtakes even the pure three-ultra hoard
+    /// from set 3 on (Emberfall ~0.73×, Tidecaller ~0.83×, Verdspire ~1.07×, Voltcrest
+    /// ~1.26×, Umbral ~1.56×) — so the two teaching sets still let top singles edge a
+    /// line, and commitment to chains pulls ahead once sets get scarce and pricey. The
+    /// curve rises every set (a scarce late completion pays hardest), and set 5 stays
+    /// ≥ 2× set 1. Verified by `tools/verify/evo_opportunity` and the difficulty
+    /// harness — retune in small steps and re-run both.
+    static let evoLineBonusBySet: [Double] = [5.0, 6.0, 7.5, 9.5, 12.0]
 
     /// The completion bonus for a full evolution line in `set` (1…`maxPackTier`).
     static func evoLineBonus(set: Int) -> Double {
