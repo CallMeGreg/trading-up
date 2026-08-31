@@ -309,6 +309,12 @@ final class ScreenshotTests: XCTestCase {
         let classic = classicModeButton
         XCTAssertTrue(classic.waitForExistence(timeout: 30), "main menu never appeared")
         classic.tap()
+        // A save that already has Classic progress — like the seeded completed
+        // collection the endgame pass uses — raises the resume popup instead of
+        // entering the mode directly. Continue the existing run so the win overlay
+        // it triggers can present; on a fresh save the popup never appears.
+        let cont = button(labeled: "Continue")
+        if cont.waitForExistence(timeout: 3) { cont.tap() }
     }
 
     @discardableResult

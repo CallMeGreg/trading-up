@@ -5,8 +5,10 @@ ready-to-paste recommendation for each field. Character limits are Apple's, and
 every suggested string below is already inside its limit.
 
 Copy is written for the app as it actually ships today: free to download with a
-single optional one-time in-app purchase that unlocks sets 2–5, no ads, no
-accounts, no network access for gameplay, 250 cards across 5 sets.
+single optional one-time in-app purchase that unlocks sets 2–5 **and Gauntlet
+Mode**, no ads, no accounts, no network access for gameplay. The app now has two
+ways to play — the Classic 250-card completion economy and the Gauntlet roguelite —
+plus a permanent **Binder** that keeps the best copy of every card across both.
 
 ---
 
@@ -104,47 +106,59 @@ in the App Review notes (§6) so the reviewer isn't surprised by it.
 ### Promotional Text (170) — editable without a new build
 
 ```
-Every pack is a fresh 1% shot at a foil. Grade your best pulls, eat the buylist spread, and see if you can finish all five sets before you go broke.
+Now with Gauntlet Mode: pick a Trainer, rip toward a rising Aura, and build a run. Every card you keep banks into a permanent Binder that remembers your best pulls.
 ```
 
-*148/170.*
+*164/170.*
 
 ### Description (4000)
 
 ```
-Start with $100. Finish with all 250.
+Start with $100. Build a 250-card collection - then run the Gauntlet.
 
-Trading Up is a collecting-and-economy game built around the best part of trading cards: tearing open a fresh pack and turning it over one card at a time.
+Trading Up is a collecting-and-economy game built around the best part of trading cards: tearing open a fresh pack and turning it over one card at a time. Two ways to play, and one permanent Binder tying them together.
 
-Buy a pack, rip it, and find out what you got. Six cards - three commons, two uncommons, and a rare or an ultra rare - with a 1% shot at a shimmering foil on any of them. New pulls go straight into your binder. Extras become cash, at the shop's price rather than yours.
+CLASSIC MODE
 
-THE LOOP
+Buy a pack, rip it, and find out what you got. Six cards - three commons, two uncommons, and a rare or an ultra rare - with a 1% shot at a shimmering foil on any of them. New pulls go into your collection; extras become cash, at the shop's price rather than yours.
 
 - Rip packs. Every pack opens card by card, and the hit slot is always saved for last.
 - Sell your extras. The shop buys duplicates back at 75% of market value, and that spread is the thing that will bankrupt you.
 - Grade your best. Pay a fee, roll a PSA score. A 10 is a 5x payday and a 1 is a freak 10x jackpot, but anything from 2 to 7 is worth less than the card you put in.
 - Cash in bonuses. Complete an evolution line for a payout; complete a whole set for a much bigger one.
 
+Collect all 250 cards across five sets and you're a Master Collector. Fall below the price of the cheapest pack with no way left to raise it and you're tapped out.
+
+GAUNTLET MODE
+
+A roguelite run built from the same DNA, distilled to its strategic spine. Pick a Trainer, then push a growing Showcase past a rising Aura target - round after round, on a limited number of rips. Keep a pull to score it or sell it to fund the next; run out of rips below the bar and the run ends.
+
+- Earn a roster of six Trainers, each an archetype with its own five-skill graph, then clear Hard with them all to reveal a hidden seventh.
+- Attune Catalysts - run-long buff cards across six element lanes that stack into real builds.
+- Finish evolution lines in your Showcase for huge Aura multipliers.
+- Climb three difficulty tiers, each unlocked per Trainer, to a boss round and a Collection Championship finale.
+- Win and choose a Foil Extended Art card - a full-bleed alternate illustration - as your prize.
+
+THE BINDER
+
+A permanent trophy case: one slot per Spryte, each holding the single most valuable copy you've ever owned - across every Classic run and every Gauntlet run. Where a run resets, the Binder only ever grows: pull a foil, land a PSA 10, complete a set, and the best copy is stamped in for good.
+
 FIVE SETS, 250 CARDS
 
-Emberfall, Tidecaller, Verdspire, Voltcrest and Umbral Reach - the world of the Sprytes. Every creature is original, with its own art, flavor text, rarity and evolution line. Later sets cost steeply more and hold far more valuable cards, and each one unlocks as your collection grows.
-
-WIN OR GO BROKE
-
-Collect all 250 cards and you're a Master Collector. Fall below the price of the cheapest pack with no way left to raise it and you're tapped out. Between those two ends is a real economy - pack odds, a buylist spread, grading variance and set bonuses - that you can actually play against instead of just watching.
+Emberfall, Tidecaller, Verdspire, Voltcrest and Umbral Reach - the world of the Sprytes. Every creature is original, with its own art, flavor text, rarity and evolution line. Later sets cost steeply more and hold far more valuable cards.
 
 NO CATCHES
 
-- Set 1 - Emberfall is free to play in full: rip, sell, grade and chase the set bonus across all 50 cards. One optional one-time purchase unlocks the other four sets and the 250-card finish - the only thing you can ever buy.
+- Set 1 - Emberfall is free to play in full in Classic Mode: rip, sell, grade and chase the set bonus across all 50 cards. One optional one-time purchase unlocks the other four sets, the 250-card finish and Gauntlet Mode - the only thing you can ever buy.
 - No ads, no tracking, no subscriptions.
 - No real-money packs and no gambling. You never spend real money on a random pull; the only currency inside the game is fictional.
 - No account, no sign-in, and no data collected. Your collection lives on your device and nowhere else.
 - Plays offline, on both iPhone and iPad.
 
-Every card, every price and every payout is already in the app the moment you download it. Rip the first pack and see where $100 gets you.
+Rip the first pack and see where $100 gets you.
 ```
 
-*2,297/4,000.* Deliberately avoids naming any real trading-card brand — putting
+*3,249/4,000.* Deliberately avoids naming any real trading-card brand — putting
 a trademark in your metadata is itself a Guideline 5.2 rejection risk.
 
 ### Keywords (100)
@@ -172,19 +186,50 @@ that used to live in §5 of this file is now the page itself — `site/privacy/i
 is the single source of truth, so it can't drift out of sync with what's
 published.
 
+### What's New (4000) — v1.2.0
+
+Shown on the product page as the "What's New in This Version" release note. Leads
+with Gauntlet Mode (the headline v1.2.0 feature), then the Binder, then Classic
+polish. Written since **v1.1.0**, which only scaffolded the Classic/Gauntlet/Binder
+main menu — v1.2.0 is where Gauntlet Mode and the permanent Binder actually ship.
+
+```
+Gauntlet Mode is here - a brand-new roguelite way to play - plus a permanent Binder that remembers your greatest pulls forever.
+
+GAUNTLET MODE
+Rip against the clock. Pick a Trainer, then push a growing Showcase past a rising Aura target - round after round, on a limited number of pack rips. Every pull is a live keep-for-score vs. sell-for-cash decision.
+- A roster of six Trainers, each an archetype with its own five-skill graph: a Ripper who tears extra packs, a Curator who hoards a huge Showcase, a grader who bends PSA luck your way, and more. Most are earned by hitting lifetime milestones; clear Hard with them all to reveal a hidden seventh.
+- Catalysts - run-long buff cards across six element lanes that stack into real builds: more foils, better grades, cheaper rips, evolution-line multipliers.
+- Finish an evolution line in your Showcase for a huge Aura swing; later sets pay off far harder.
+- Three difficulty tiers, each unlocked per Trainer, climbing to a boss round and a Collection Championship finale.
+- Win a run and choose one of three Foil Extended Art cards - a full-bleed alternate illustration - as your prize.
+
+THE BINDER
+Your permanent showcase: one slot per Spryte, each holding the single most valuable copy you've ever owned - across every Classic run and every Gauntlet run. It only ever grows, so starting a fresh run never erases your greatest hits.
+
+CLASSIC MODE POLISH
+- A redesigned Stats dashboard with This Run and All Time views.
+- Cleaner pack summaries with inline Keep / Sell and grading straight from the haul.
+- A new main menu tying Classic, Gauntlet and the Binder together.
+
+Gauntlet Mode and the four paid sets are part of the one-time Full Collection unlock. Set 1 - Emberfall and Classic Mode stay free. Still no ads, no tracking, no accounts - and it all plays offline.
+```
+
+*1,822/4,000.*
+
 ### Other version fields
 
 | Field | Recommended value |
 | --- | --- |
-| **Version** | `1.0` — must match `MARKETING_VERSION` in the project |
-| **Build** | `1` — `CURRENT_PROJECT_VERSION`; bump on every upload, it can never repeat |
+| **Version** | `1.2.0` — must match `MARKETING_VERSION` in the project |
+| **Build** | `28` — `CURRENT_PROJECT_VERSION`; bump on every upload, it can never repeat |
 | **Copyright** | `2026 Greg Mohler` — year then holder, no `©` symbol (Apple adds it) |
-| **What's New** | Not shown for a first release; leave blank |
+| **What's New** | Use the v1.2.0 block above (Gauntlet Mode + Binder + Classic polish) |
 | **Routing App Coverage File** | N/A |
 | **Version Release** | `Manually release this version` — so you pick the launch moment after approval |
-| **Phased Release for automatic updates** | Off for 1.0 |
-| **App Preview video** | Optional, skip for 1.0. Screenshots carry this listing fine. |
-| **Localizations** | English (U.S.) only for 1.0 |
+| **Phased Release for automatic updates** | On is fine for a 1.2.0 update; off if you want a hard launch |
+| **App Preview video** | Optional. Screenshots carry this listing fine. |
+| **Localizations** | English (U.S.) only |
 
 ---
 
@@ -216,20 +261,31 @@ The 6.5" slot also accepts 1284 × 2778 (and either size rotated to landscape),
 but the capture uses 1242 × 2688 because that's what the simulator shoots
 natively — don't resize a 6.9" image to fill it, the aspect ratios differ.
 
-28 numbered screenshots are available per device; App Store Connect accepts a
-maximum of **10** per size. Recommended ten, in upload order — the first three
-are what most people ever see, so they lead with the hook:
+Screenshots come from three passes (see `tools/capture_screenshots.sh`): the
+Classic **playthrough** (`01`–`24`), the Classic **endgame** (`25`–`28`: win,
+set-complete, all-sets-unlocked, gem-mint grade), and the new v1.2.0 **gauntlet**
+pass (`30`–`39`: Binder + Gauntlet Mode). That's 38 numbered shots per device;
+App Store Connect accepts a maximum of **10** per size.
 
-1. `pack-sealed` — a sealed pack, "tap to tear it open"
-2. `pack-reveal-rare-hit` — the rare flipping over
-3. `pack-summary-all-new` — the six-card haul
-4. `collection-grid` — the binder filling in
-5. `grading-gem-mint` — the PSA 10 jackpot, at ×5 the card's value
-6. `card-detail-evolution-line` — a card's detail + evolution chain
-7. `shop-fresh-start` — the shop and the $100 you start with
-8. `duplicate-keep-or-sell` — the keep-or-sell decision
-9. `stats-run-summary` — the run stats
-10. `win-master-collector` — the win screen
+**Recommended ten for v1.2.0**, in upload order. Because Gauntlet Mode and the
+permanent Binder are the headline of this release, they lead alongside the
+core pack-rip hook — the first three are what most people ever see:
+
+1. `pack-reveal-rare-hit` — the rare flipping over (the hook that sells the app)
+2. `gauntlet-run-building` (`38`) — a Gauntlet run mid-climb, Showcase vs. Aura target **(NEW)**
+3. `binder-emberfall` (`30`) — the permanent Binder, one best copy per Spryte **(NEW)**
+4. `pack-summary-all-new` — the six-card haul from a Classic rip
+5. `gauntlet-trainer-select` (`33`) — choosing a Trainer and reading the skill graph **(NEW)**
+6. `grading-gem-mint` — the PSA 10 jackpot, at ×5 the card's value
+7. `gauntlet-share-card` (`39`) — the "Gauntlet Cleared" prize card **(NEW)**
+8. `collection-grid` — the Classic collection filling in
+9. `stats-run-summary` — the run stats dashboard
+10. `win-master-collector` — the 250/250 win screen
+
+This set spends four slots on what's new (Gauntlet run, Trainer select, Gauntlet
+share card, Binder) and keeps six proven Classic shots. If you'd rather not lead
+a returning-player update with the pack hook, swap slots 1 and 2 so Gauntlet Mode
+is the first thing existing players see.
 
 `grading-gem-mint` comes from the endgame pass, which grades rares out of the
 seeded collection until a 10 rolls, so the jackpot is always in the set. The
@@ -237,10 +293,11 @@ playthrough's own `grading-psa-reveal` is whatever the run actually rolled —
 usually a PSA 8 — and is the honest fallback if you'd rather not lead with the
 best case.
 
-Filenames carry a numeric prefix recording the order they were hit in that run,
-and because each device plays its own randomised run those prefixes differ
-slightly between the two folders (`11-duplicate-keep-or-sell.png` on iPhone is
-`12-duplicate-keep-or-sell.png` on iPad). Match on the descriptive part.
+Filenames carry a numeric prefix recording the order they were hit in that run.
+The Classic **playthrough** (`01`–`24`) is unseeded, so those prefixes differ
+slightly between the two device folders — match on the descriptive part, not the
+number. The **endgame** (`25`–`28`) and **gauntlet** (`30`–`39`) passes both run
+off a seeded save on a scripted path, so their prefixes stay put across devices.
 
 **Picking the iPad ten.** The list above works as-is on iPad, but two notes from
 reviewing the captures:
@@ -248,15 +305,11 @@ reviewing the captures:
 - The **pack summary** screens (`pack-summary-*`) put all six cards in a single
   row on a 13" display and leave the bottom half of the frame empty. They read
   much better on iPhone. If you want a tighter iPad set, swap
-  `pack-summary-all-new` for `collection-set-complete` or
-  `shop-all-sets-unlocked`, both of which fill the frame.
-- Three iPad captures are byte-identical to a neighbour, because screens that
-  need scrolling on iPhone fit without it on iPad:
-  `02-shop-fresh-start` = `03-shop-locked-sets`,
-  `22-stats-run-summary` = `23-stats-set-progress`, and
-  `10-pack-summary-evolution-bonus` = `11-pack-summary-new-and-dupes` (one pack
-  happened to satisfy both conditions). 26 of the 29 iPad shots are distinct,
-  which is still more than the 10 you can upload.
+  `pack-summary-all-new` for `collection-set-complete` or `binder-umbral-reach`
+  (`31`), both of which fill the frame.
+- Some iPad captures are byte-identical to a neighbour, because screens that
+  need scrolling on iPhone fit without it on iPad. Match on the descriptive part
+  and drop exact duplicates; there are still far more than the 10 you can upload.
 
 All were taken with the simulator status bar pinned to 9:41 / full bars /
 charged, and `tools/check_screenshots.py` verifies the dimensions and confirms

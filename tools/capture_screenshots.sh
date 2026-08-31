@@ -12,9 +12,10 @@
 #   tools/capture_screenshots.sh "iPhone 17 Pro Max"   # just one device
 #   tools/capture_screenshots.sh --only endgame        # refresh shots 25-28 only
 #
-# --only takes `playthrough` (shots 01-24), `endgame` (25-28) or `all`. Use it
-# when a change only touches part of the game so the rest of the set — and its
-# place in git history — is left alone.
+# --only takes `playthrough` (shots 01-24), `endgame` (25-28), `gauntlet` (the
+# v1.2.0 Gauntlet Mode + Binder set, shots 30-39) or `all`. Use it when a change
+# only touches part of the game so the rest of the set — and its place in git
+# history — is left alone.
 #
 # Output: docs/screenshots/appstore/<slug>/NN-name.png
 #
@@ -48,8 +49,8 @@ while [ $# -gt 0 ]; do
   esac
 done
 case "$ONLY" in
-  all|playthrough|endgame) ;;
-  *) echo "--only must be all, playthrough or endgame (got '$ONLY')" >&2; exit 2 ;;
+  all|playthrough|endgame|gauntlet) ;;
+  *) echo "--only must be all, playthrough, endgame or gauntlet (got '$ONLY')" >&2; exit 2 ;;
 esac
 if [ ${#DEVICES[@]} -eq 0 ]; then
   DEVICES=("iPhone 17 Pro Max" "iPhone 11 Pro Max" "iPad Pro 13-inch (M5)")
@@ -137,8 +138,9 @@ for device in "${DEVICES[@]}"; do
 
   xcrun simctl boot "$udid" >/dev/null 2>&1 || true
   xcrun simctl bootstatus "$udid" -b >/dev/null 2>&1 || true
-  # A fresh install with no Documents folder is what "fresh save" means here.
-  if [ "$ONLY" != endgame ]; then
+  # A fresh install with no Documents folder is what "fresh save" means here. The
+  # endgame and gauntlet passes seed their own save, so they don't need the wipe.
+  if [ "$ONLY" != endgame ] && [ "$ONLY" != gauntlet ]; then
     xcrun simctl uninstall "$udid" "$BUNDLE_ID" >/dev/null 2>&1 || true
   fi
   xcrun simctl status_bar "$udid" override \
@@ -150,7 +152,7 @@ for device in "${DEVICES[@]}"; do
     -destination "platform=iOS Simulator,id=$udid" -derivedDataPath "$DERIVED" \
     -quiet
 
-  if [ "$ONLY" != endgame ]; then
+  if [ "$ONLY" = all ] || [ "$ONLY" = playthrough ]; then
     echo "--> playthrough from a fresh save"
     xcodebuild test-without-building -project "$PROJECT" -scheme "$SCHEME" \
       -destination "platform=iOS Simulator,id=$udid" -derivedDataPath "$DERIVED" \
@@ -158,13 +160,13 @@ for device in "${DEVICES[@]}"; do
       -resultBundlePath "$result" -quiet
     export_shots "$result" "$dest"
   else
-    # The playthrough normally installs the app; on its own the endgame pass
-    # needs a container to seed, so install the build we just made.
+    # The playthrough normally installs the app; the endgame and gauntlet passes
+    # on their own need a container to seed, so install the build we just made.
     xcrun simctl install "$udid" \
       "$DERIVED/Build/Products/Debug-iphonesimulator/TradingUp.app" >/dev/null
   fi
 
-  if [ "$ONLY" != playthrough ]; then
+  if [ "$ONLY" = all ] || [ "$ONLY" = endgame ]; then
     echo "--> endgame showcase from a seeded completed collection"
     seed_completed_save "$udid"
     rm -rf "$result-endgame"
@@ -173,6 +175,19 @@ for device in "${DEVICES[@]}"; do
       -only-testing:TradingUpUITests/ScreenshotTests/testEndgameShowcaseScreenshots \
       -resultBundlePath "$result-endgame" -quiet
     export_shots "$result-endgame" "$dest"
+  fi
+
+  if [ "$ONLY" = all ] || [ "$ONLY" = gauntlet ]; then
+    echo "--> gauntlet & binder showcase (full-game unlocked, seeded binder)"
+    # The same completed save the endgame uses, so the Binder loads full; the test
+    # supplies TU_FORCE_UNLOCK itself so Gauntlet Mode is reachable.
+    seed_completed_save "$udid"
+    rm -rf "$result-gauntlet"
+    xcodebuild test-without-building -project "$PROJECT" -scheme "$SCHEME" \
+      -destination "platform=iOS Simulator,id=$udid" -derivedDataPath "$DERIVED" \
+      -only-testing:TradingUpUITests/GauntletBinderScreenshots \
+      -resultBundlePath "$result-gauntlet" -quiet
+    export_shots "$result-gauntlet" "$dest"
   fi
 
   xcrun simctl status_bar "$udid" clear >/dev/null 2>&1 || true
