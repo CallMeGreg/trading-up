@@ -90,7 +90,7 @@ struct TrainerCard: View {
     let clearedTiers: Set<GauntletTier>
     let action: () -> Void
 
-    /// A locked *mystery* Trainer (Gary) hides its name behind "???" until it's
+    /// A locked *mystery* Trainer (Ash) hides its name behind "???" until it's
     /// earned; ordinary locked specialists still show their name.
     private var concealed: Bool { !unlocked && trainer.mysteryUntilUnlocked }
     /// Every locked Trainer hides its skills and blurb until unlocked; only the
