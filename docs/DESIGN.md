@@ -597,11 +597,13 @@ with *disadvantage* (keep the worse of two draws). `tools/verify` prints every T
 effect lines and its Hard win% delta versus a neutral run, and re-tuning these constants must keep
 the intended curve (below).
 
-**Accomplishment badges.** Every Trainer card carries three difficulty badges — **E / M / H** —
-lit for the tiers that Trainer has *cleared* and dimmed for the rest, read straight from
+**Accomplishment rings.** Every Trainer's emblem is cropped into a circle and wrapped in a
+three-segment **difficulty ring** — one arc each for **Easy / Medium / Hard**, exact thirds
+that begin at top-centre and fill clockwise. Each arc lights in its tier colour (green / gold /
+red) once that tier is *cleared* and stays a dim slate otherwise, read straight from
 `GauntletProgress.clearedTiersByTrainer` (the same per-Trainer record that gates its tier
-ladder). Badges are per-Trainer, so mastery is shown Trainer by Trainer, not as one global
-flag.
+ladder). Clearing all three blooms a soft halo in the Trainer's signature colour. Rings are
+per-Trainer, so mastery is shown Trainer by Trainer, not as one global flag.
 
 **The mystery Trainer — Red.** A seventh Trainer sits on the roster concealed as **"???"**
 with hidden pips and a "beat Hard mode with every other Trainer" progress line. Clearing **Hard
@@ -612,7 +614,8 @@ minimum (**1**) in Inventory. The reveal is evaluated in
 immediately and announces it once on the results screen.
 
 > **No levels.** Trainers no longer gain XP or levels — that system was removed. A Trainer's
-> pips are fixed; progression is *earning the roster*, *earning badges*, and *unlocking Red*,
+> pips are fixed; progression is *earning the roster*, *lighting up difficulty rings*, and
+> *unlocking Red*,
 > not dialling a single Trainer stronger. (Historic note: earlier builds scaled a Trainer's
 > advantage from a level-1 baseline to a level-10 ceiling; that meta was cut in favour of the
 > locked skill graph.)
