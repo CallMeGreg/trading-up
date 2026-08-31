@@ -58,13 +58,18 @@ def defs(uid, c):
   </linearGradient>'''
 
 
-def plate(uid, c, box, inset=8, radius=40):
-    """Rounded badge plate + signature ring + top glow filling a square box."""
-    s = box - 2 * inset
+def plate(uid, c, box):
+    """Circular badge plate + signature rim and top glow filling the whole square
+    box. The app crops the emblem to a circle of the same radius and seats it inside
+    a circular difficulty ring, so the plate is a full disc edge-to-edge — a rounded
+    square would leave dead corners and flat sides inside that ring. The signature
+    rim is drawn just inside the edge so it renders cleanly rather than being clipped."""
+    r = box / 2
     return f'''
-  <rect x="{inset}" y="{inset}" width="{s}" height="{s}" rx="{radius}" fill="url(#bg{uid})"
-        stroke="{c}" stroke-opacity="0.32" stroke-width="1.6"/>
-  <rect x="{inset}" y="{inset}" width="{s}" height="{s}" rx="{radius}" fill="url(#glow{uid})"/>
+  <circle cx="{r:.0f}" cy="{r:.0f}" r="{r:.0f}" fill="url(#bg{uid})"/>
+  <circle cx="{r:.0f}" cy="{r:.0f}" r="{r:.0f}" fill="url(#glow{uid})"/>
+  <circle cx="{r:.0f}" cy="{r:.0f}" r="{r - 2:.0f}" fill="none"
+          stroke="{c}" stroke-opacity="0.32" stroke-width="2"/>
   <circle cx="{box/2:.0f}" cy="{box*0.46:.0f}" r="{box*0.30:.0f}" fill="{c}" fill-opacity="0.10"/>'''
 
 

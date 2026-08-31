@@ -9,9 +9,10 @@
   <linearGradient id="motappraiser" x1="0" y1="0" x2="0" y2="1">
     <stop offset="0%" stop-color="#74d680"/><stop offset="100%" stop-color="#74d680" stop-opacity="0.72"/>
   </linearGradient></defs>
-  <rect x="8" y="8" width="184" height="184" rx="40" fill="url(#bgappraiser)"
-        stroke="#74d680" stroke-opacity="0.32" stroke-width="1.6"/>
-  <rect x="8" y="8" width="184" height="184" rx="40" fill="url(#glowappraiser)"/>
+  <circle cx="100" cy="100" r="100" fill="url(#bgappraiser)"/>
+  <circle cx="100" cy="100" r="100" fill="url(#glowappraiser)"/>
+  <circle cx="100" cy="100" r="98" fill="none"
+          stroke="#74d680" stroke-opacity="0.32" stroke-width="2"/>
   <circle cx="100" cy="92" r="60" fill="#74d680" fill-opacity="0.10"/><g transform="translate(100,94) scale(0.72)">
     <circle cx="0" cy="-8" r="34" fill="#74d680" fill-opacity="0.22"/>
     <line x1="-55.2" y1="-25.9" x2="-74.2" y2="-32.1" stroke="#74d680" stroke-width="5" stroke-linecap="round" opacity="0.5"/><line x1="-46.9" y1="-42.1" x2="-63.1" y2="-53.8" stroke="#74d680" stroke-width="5" stroke-linecap="round" opacity="0.5"/><line x1="-34.1" y1="-54.9" x2="-45.8" y2="-71.1" stroke="#74d680" stroke-width="5" stroke-linecap="round" opacity="0.5"/><line x1="-17.9" y1="-63.2" x2="-24.1" y2="-82.2" stroke="#74d680" stroke-width="5" stroke-linecap="round" opacity="0.5"/><line x1="-0.0" y1="-66.0" x2="-0.0" y2="-86.0" stroke="#74d680" stroke-width="5" stroke-linecap="round" opacity="0.5"/><line x1="17.9" y1="-63.2" x2="24.1" y2="-82.2" stroke="#74d680" stroke-width="5" stroke-linecap="round" opacity="0.5"/><line x1="34.1" y1="-54.9" x2="45.8" y2="-71.1" stroke="#74d680" stroke-width="5" stroke-linecap="round" opacity="0.5"/><line x1="46.9" y1="-42.1" x2="63.1" y2="-53.8" stroke="#74d680" stroke-width="5" stroke-linecap="round" opacity="0.5"/><line x1="55.2" y1="-25.9" x2="74.2" y2="-32.1" stroke="#74d680" stroke-width="5" stroke-linecap="round" opacity="0.5"/>

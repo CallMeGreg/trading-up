@@ -9,9 +9,10 @@
   <linearGradient id="motmerchant" x1="0" y1="0" x2="0" y2="1">
     <stop offset="0%" stop-color="#ff9f43"/><stop offset="100%" stop-color="#ff9f43" stop-opacity="0.72"/>
   </linearGradient></defs>
-  <rect x="8" y="8" width="184" height="184" rx="40" fill="url(#bgmerchant)"
-        stroke="#ff9f43" stroke-opacity="0.32" stroke-width="1.6"/>
-  <rect x="8" y="8" width="184" height="184" rx="40" fill="url(#glowmerchant)"/>
+  <circle cx="100" cy="100" r="100" fill="url(#bgmerchant)"/>
+  <circle cx="100" cy="100" r="100" fill="url(#glowmerchant)"/>
+  <circle cx="100" cy="100" r="98" fill="none"
+          stroke="#ff9f43" stroke-opacity="0.32" stroke-width="2"/>
   <circle cx="100" cy="92" r="60" fill="#ff9f43" fill-opacity="0.10"/><g transform="translate(100,94) scale(0.72)">
     <rect x="-47" y="-9" width="94" height="36" fill="url(#motmerchant)"/>
     <ellipse cx="0" cy="27" rx="47" ry="16" fill="url(#motmerchant)" stroke="#7a441a" stroke-width="3"/><ellipse cx="0" cy="9" rx="47" ry="16" fill="url(#motmerchant)" stroke="#7a441a" stroke-width="3"/><ellipse cx="0" cy="-9" rx="47" ry="16" fill="url(#motmerchant)" stroke="#7a441a" stroke-width="3"/>
