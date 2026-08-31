@@ -336,11 +336,11 @@ art. It reads the same gitignored capture output as the table above, so run
 `tools/capture_screenshots.sh` **first**, then:
 
 ```bash
-python3 tools/generate_marketing_shots.py        # all 10 scenes × both sizes
+python3 tools/generate_marketing_shots.py        # all 9 scenes × both sizes
 python3 tools/generate_marketing_shots.py --list  # show scenes without rendering
 ```
 
-Output is 20 PNGs — the ten scenes below at **1242 × 2688** (iPhone 6.5") and
+Output is 18 PNGs — the nine scenes below at **1242 × 2688** (iPhone 6.5") and
 **2064 × 2752** (iPad 13"), RGB with no alpha, ready to upload as-is:
 
 | # | Scene | Mode | Headline |
@@ -348,16 +348,16 @@ Output is 20 PNGs — the ten scenes below at **1242 × 2688** (iPhone 6.5") and
 | 01 | `pack-reveal-rare-hit` | Classic | Every pull is a thrill. |
 | 02 | `gauntlet-run-building` | Gauntlet | Run the Gauntlet. |
 | 03 | `binder-emberfall` | Binder | Your best pulls, kept forever. |
-| 04 | `pack-summary-all-new` | Classic | Keep it — or cash it in. |
+| 04 | `pack-summary-new-and-dupes` | Classic | Keep it — or cash it in. |
 | 05 | `gauntlet-trainer-select` | Gauntlet | Seven Trainers, seven playstyles. |
 | 06 | `grading-gem-mint` | Classic | Grade your best pulls. |
-| 07 | `gauntlet-keep-or-sell` | Gauntlet | Keep for score, or sell for cash. |
-| 08 | `binder-umbral-reach` | Binder | Five sets. 250 Sprytes. |
-| 09 | `gauntlet-share-card` | Gauntlet | Clear it, claim the prize. |
-| 10 | `win-master-collector` | Classic | Collect them all. |
+| 07 | `binder-umbral-reach` | Binder | Five sets. 250 Sprytes. |
+| 08 | `gauntlet-share-card` | Gauntlet | Clear it, claim the prize. |
+| 09 | `win-master-collector` | Classic | Collect them all. |
 
-Four slots lead on Gauntlet Mode and two on the permanent Binder — the v1.2.0
-headline features — with four proven Classic shots carrying the core loop.
+Three slots lead on Gauntlet Mode and two on the permanent Binder — the v1.2.0
+headline features — with four proven Classic shots (the pack-rip hook, the
+keep-or-sell pack summary, grading and the win) carrying the core loop.
 Captions live in the `SCENES` list at the top of the tool; edit them there, not on
 the rendered PNGs.
 

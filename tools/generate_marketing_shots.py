@@ -22,7 +22,7 @@ has):
       "iPhone 11 Pro Max" "iPad Pro 13-inch (M5)"
   python3 tools/generate_marketing_shots.py
 
-Output: docs/screenshots/marketing/<NN>_<slug>_<w>x<h>.png — 10 scenes x 2 sizes.
+Output: docs/screenshots/marketing/<NN>_<slug>_<w>x<h>.png — 9 scenes x 2 sizes.
 Rendered with rsvg-convert (librsvg — `brew install librsvg`), which emits RGB
 (no alpha channel), exactly what App Store Connect requires.
 """
@@ -53,7 +53,7 @@ SIZES = [(1242, 2688), (2064, 2752)]
 
 # order, slug, caption (headline), subtitle (CTA), accent element, and optional
 # extra crop (top, bottom) in *source* px for shots with dead space to trim.
-# Ten slots spanning all current functionality: Classic Mode, Gauntlet Mode and
+# Nine slots spanning all current functionality: Classic Mode, Gauntlet Mode and
 # the Binder. NEW-in-v1.2.0 pillars lead in slots 2-3, then alternate through.
 EM = "\u2014"
 SCENES = [
@@ -66,26 +66,23 @@ SCENES = [
     ("03", "binder-emberfall", "Your best pulls, kept forever.",
      "The Binder saves the top copy of every Spryte, across every run.",
      "fire", 0, 0),
-    ("04", "pack-summary-all-new", "Keep it %s or cash it in." % EM,
-     "Sell your duplicates on the buylist to fund the next pack.",
+    ("04", "pack-summary-new-and-dupes", "Keep it %s or cash it in." % EM,
+     "Keep every pull or sell your duplicates on the buylist to fund the next pack.",
      "grass", 0, 0),
     ("05", "gauntlet-trainer-select", "Seven Trainers, seven playstyles.",
      "Each has a five-skill graph: rip more, grade sharper, hoard bigger.",
      "water", 0, 0),
     ("06", "grading-gem-mint", "Grade your best pulls.",
-     "Send a rare in and roll for a jackpot PSA 10 %s a five-times payday." % EM,
+     "Send a card in and roll for a jackpot PSA 10 %s a five-times payday." % EM,
      "shadow", 0, 0),
-    ("07", "gauntlet-keep-or-sell", "Keep for score, or sell for cash.",
-     "Every Gauntlet pull builds your Showcase %s or funds the next rip." % EM,
-     "electric", 0, 0),
-    ("08", "binder-umbral-reach", "Five sets. 250 Sprytes.",
+    ("07", "binder-umbral-reach", "Five sets. 250 Sprytes.",
      "Chase every creature across five worlds, Emberfall to Umbral Reach.",
      "shadow", 0, 0),
-    ("09", "gauntlet-share-card", "Clear it, claim the prize.",
-     "Beat a run and take home a Foil Extended Art card.",
+    ("08", "gauntlet-share-card", "Clear it, claim the prize.",
+     "Beat a Gauntlet run and take home a Foil Extended Art card.",
      "shadow", 0, 0),
-    ("10", "win-master-collector", "Collect them all.",
-     "Complete every set and become a Master Collector.",
+    ("09", "win-master-collector", "Collect them all.",
+     "Complete every set in Classic Mode and become a Master Collector.",
      "fire", 0, 0),
 ]
 
