@@ -52,9 +52,13 @@ DEVICE = {
 SIZES = [(1242, 2688), (2064, 2752)]
 
 # order, slug, caption (headline), subtitle (CTA), accent element, and optional
-# extra crop (top, bottom) to trim dead space. Each crop is *source* px, either a
+# extra crop to trim dead space: extra_top, extra_bottom, and optionally
+# extra_left, extra_right (trailing, default 0). Each crop is *source* px, either a
 # single int (same trim on every device) or a {(W, H): px} dict when the iPhone
-# and iPad captures lay the screen out differently and need different trims.
+# and iPad captures lay the screen out differently and need different trims. The
+# horizontal pair lets a letterboxed screen (drawn small and centred in a big black
+# canvas, like the iPad share card) be zoomed to its real content so it fills the
+# card like every other panel.
 # Ten slots ordered as a flow: the general pack-rip hook, then Classic Mode
 # specifics, then Gauntlet Mode, then the permanent Binder, and finally a closing
 # "do you have what it takes?" challenge. Each accent stays tied to its screen's
@@ -84,7 +88,12 @@ SCENES = [
      "water", 0, 0),
     ("07", "gauntlet-share-card", "Clear it, claim the prize.",
      "Beat a Gauntlet run and take home a Foil Extended Art card.",
-     "shadow", 0, 0),
+     "shadow",
+     # The iPhone capture fills the screen, but on iPad the share card is drawn
+     # small and centred in a big black canvas, so zoom to the purple panel
+     # (x 652-1411, y 687-2040 of 2064x2752) with a little breathing room.
+     {(2064, 2752): 603}, {(2064, 2752): 692},
+     {(2064, 2752): 632}, {(2064, 2752): 633}),
     # Binder details
     ("08", "binder-emberfall", "Your best pulls, kept forever.",
      "The Binder saves the top copy of every Spryte, across every run.",
@@ -109,6 +118,16 @@ def _crop_px(val, W, H):
     return val
 
 
+def _unpack(scene):
+    """Normalise a scene tuple to (order, slug, caption, subtitle, accent, top,
+    bottom, left, right). extra_left/extra_right are optional trailing fields that
+    default to 0, so the common case (no horizontal crop) stays a clean 7-tuple."""
+    order, slug, cap, sub, accent, et, eb = scene[:7]
+    el = scene[7] if len(scene) > 7 else 0
+    er = scene[8] if len(scene) > 8 else 0
+    return order, slug, cap, sub, accent, et, eb, el, er
+
+
 def png_size(path):
     with open(path, "rb") as f:
         head = f.read(24)
@@ -125,7 +144,8 @@ def find_src(folder, slug):
     return matches[0]
 
 
-def compose(defs, W, H, src, sb, caption, subtitle, accent, extra_top, extra_bottom):
+def compose(defs, W, H, src, sb, caption, subtitle, accent, extra_top, extra_bottom,
+            extra_left, extra_right):
     """Gradient backdrop + caption + the real screenshot as a frameless card."""
     out = []
 
@@ -166,12 +186,16 @@ def compose(defs, W, H, src, sb, caption, subtitle, accent, extra_top, extra_bot
                            sub_col, weight=600, anchor="middle", opacity=1.0))
     caption_bottom = sub_y + len(sub_lines) * (W * 0.032)
 
-    # Fit the (status-bar-cropped) screenshot into the space under the caption,
-    # by width and height, then centre it — same fit logic as the phone frame.
+    # Fit the (cropped) screenshot into the space under the caption, by width and
+    # height, then centre it — same fit logic as the phone frame. The crop can trim
+    # all four sides in source px, which lets a letterboxed screen (e.g. the iPad
+    # share card, drawn small and centred in a big black canvas) be zoomed to its
+    # real content so it fills the card like every other panel.
     sw, sh = png_size(src)
     top_src = sb + extra_top
     content_h = sh - top_src - extra_bottom
-    aspect = sw / content_h
+    content_w = sw - extra_left - extra_right
+    aspect = content_w / content_h
     top = caption_bottom + H * 0.03
     bottom_margin = H * 0.05
     avail_h = H - top - bottom_margin
@@ -181,21 +205,24 @@ def compose(defs, W, H, src, sb, caption, subtitle, accent, extra_top, extra_bot
     tx = (W - tw) / 2
     ty = top + (avail_h - th) / 2
     rr = tw * 0.055
-    k = tw / sw
+    k = tw / content_w
 
     # Soft drop shadow so the frameless screen still floats off the gradient.
     blur = defs.blur(tw * 0.03)
     out.append('<g filter="url(#%s)">%s</g>' % (
         blur, gs.rrect(tx, ty + th * 0.02, tw, th, rr, fill="#000000", opacity=0.5)))
 
-    # The screenshot itself: shift it up by the cropped top and clip to the card,
-    # dropping the iOS status bar without any pixel editing.
+    # The screenshot itself: scale the full capture by k, shift it so the cropped
+    # top-left lands at the card corner, and clip to the card — dropping the status
+    # bar (and any letterbox margins) without any pixel editing.
     clip = defs.clip_rrect(tx, ty, tw, th, rr)
+    img_x = tx - extra_left * k
     img_y = ty - top_src * k
+    img_w = sw * k
     img_h = sh * k
     out.append('<g clip-path="url(#%s)"><image x="%.2f" y="%.2f" width="%.2f" '
                'height="%.2f" preserveAspectRatio="none" xlink:href="%s"/></g>' % (
-                   clip, tx, img_y, tw, img_h, gs._data_uri(src)))
+                   clip, img_x, img_y, img_w, img_h, gs._data_uri(src)))
 
     # Crisp hairline edge.
     out.append(gs.rrect(tx, ty, tw, th, rr, stroke="#ffffff",
@@ -203,14 +230,17 @@ def compose(defs, W, H, src, sb, caption, subtitle, accent, extra_top, extra_bot
     return "".join(out)
 
 
-def render(order, slug, caption, subtitle, accent_elem, extra_top, extra_bottom, W, H):
+def render(order, slug, caption, subtitle, accent_elem, extra_top, extra_bottom,
+           extra_left, extra_right, W, H):
     folder, sb = DEVICE[(W, H)]
     src = find_src(folder, slug)
     defs = gs.Defs()
     accent = gs.ELEMENT[accent_elem][2]
     et = _crop_px(extra_top, W, H)
     eb = _crop_px(extra_bottom, W, H)
-    body = compose(defs, W, H, src, sb, caption, subtitle, accent, et, eb)
+    el = _crop_px(extra_left, W, H)
+    er = _crop_px(extra_right, W, H)
+    body = compose(defs, W, H, src, sb, caption, subtitle, accent, et, eb, el, er)
     svg = ('<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" '
            'width="%d" height="%d" viewBox="0 0 %d %d">%s%s</svg>') % (
         W, H, W, H, defs.render(), body)
@@ -226,15 +256,17 @@ def render(order, slug, caption, subtitle, accent_elem, extra_top, extra_bottom,
 def main():
     if "--list" in sys.argv:
         print("Marketing scenes (frameless, from real captures):")
-        for order, slug, cap, _sub, accent, _t, _b in SCENES:
+        for scene in SCENES:
+            order, slug, cap, _sub, accent = _unpack(scene)[:5]
             print("  %s %-24s [%-8s] %s" % (order, slug, accent, cap))
         print("Sizes:", ", ".join("%dx%d" % s for s in SIZES))
         return
     os.makedirs(OUT_DIR, exist_ok=True)
     print("Rendering %d scenes x %d sizes -> %s" % (len(SCENES), len(SIZES), OUT_DIR))
-    for order, slug, cap, sub, accent, et, eb in SCENES:
+    for scene in SCENES:
+        order, slug, cap, sub, accent, et, eb, el, er = _unpack(scene)
         for (W, H) in SIZES:
-            p = render(order, slug, cap, sub, accent, et, eb, W, H)
+            p = render(order, slug, cap, sub, accent, et, eb, el, er, W, H)
             print("  %s" % os.path.relpath(p, ROOT))
     print("Done.")
 
