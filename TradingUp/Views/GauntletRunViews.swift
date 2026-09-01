@@ -1407,12 +1407,18 @@ struct GauntletRevealView: View {
 
     private var summaryView: some View {
         VStack(spacing: 0) {
+            if let run = state.run {
+                HUDPanel(run: run)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .frame(maxWidth: .infinity)
+                    .background(.ultraThinMaterial)
+            }
             ScrollView {
                 VStack(spacing: 14) {
                     Text("Your Showcase")
                         .font(.system(size: 22, weight: .black, design: .rounded))
                         .foregroundStyle(.white)
-                        .padding(.top, 16)
 
                     if let run = state.run {
                         if !resolved {
