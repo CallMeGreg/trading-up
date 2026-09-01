@@ -22,6 +22,10 @@ enum DebugGallery {
         /// stand-in for a real run, used to shoot the PSA-grade-over-artwork placement
         /// without grinding a Gauntlet to reach a graded Showcase card.
         case showcase
+        /// Graded, multi-stage **Extended-Art** cards, whose full-bleed face puts the
+        /// stage pips and the PSA grade slab in the same top-right corner — the case
+        /// the slab drops to just under the pips to serve.
+        case extended
     }
 
     static var selection: Selection? {
@@ -53,6 +57,9 @@ struct DebugGalleryView: View {
             case .showcase:
                 showcaseGrid
                     .accessibilityIdentifier("galleryShowcase")
+            case .extended:
+                extendedGrid
+                    .accessibilityIdentifier("galleryExtended")
             }
         }
     }
@@ -72,6 +79,30 @@ struct DebugGalleryView: View {
                 ForEach(showcase) { inst in
                     CardView(card: inst.card, instance: inst, width: 96,
                              series: .gauntlet(inst.card, showcase: showcase),
+                             pipsGlow: false)
+                }
+            }
+        }
+        .padding(20)
+    }
+
+    // MARK: Extended-Art (grade slab drops under the pips)
+
+    /// A pair of graded, multi-stage **Extended-Art** cards, big enough that the
+    /// full-bleed face, header stage pips, and PSA grade slab all read clearly. The
+    /// slab sits just under the pip band rather than covering it — the exact case
+    /// this placement serves. Grades and lines are fixed so the render reproduces.
+    private var extendedGrid: some View {
+        let cards = sampleGradedShowcase
+        return VStack(spacing: 16) {
+            Text("Extended Art — grade under pips")
+                .font(.system(size: 13, weight: .black))
+                .foregroundStyle(Palette.subtle)
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 16)], spacing: 16) {
+                ForEach(cards) { inst in
+                    CardView(card: inst.card, instance: inst, width: 150,
+                             extendedArt: true,
+                             series: .gauntlet(inst.card, showcase: cards),
                              pipsGlow: false)
                 }
             }

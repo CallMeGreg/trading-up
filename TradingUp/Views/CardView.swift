@@ -62,15 +62,21 @@ struct CardView: View {
                 .strokeBorder(card.rarity.gemGradient, lineWidth: card.rarity == .ultra ? 3 * s : 2 * s)
         }
         .frame(width: width, height: height)
-        // The grade slab pins to the artwork's top-right corner (captured via
-        // `ArtFrameKey`) rather than the header, so the evolution stage pips in
-        // the top-right stay visible in the Collection and Showcase grids.
+        // The grade slab pins to the artwork's top-right corner rather than the
+        // header, so the evolution stage pips in the top-right stay visible in
+        // the Collection and Showcase grids. In Extended-Art mode the art is the
+        // full card face and the stage pips ride in the header over it, so the
+        // slab drops down-and-left to sit just under the pips (placement matched
+        // to the design mock: 14.3% in from the right, 16.5% down from the top).
         .overlayPreferenceValue(ArtFrameKey.self) { anchor in
             if let anchor, let g = grade {
                 GeometryReader { proxy in
                     let art = proxy[anchor]
+                    let pos: CGPoint = showExtended
+                        ? CGPoint(x: art.maxX - 0.143 * art.width, y: art.minY + 0.165 * art.height)
+                        : CGPoint(x: art.maxX - 19 * s, y: art.minY + 19 * s)
                     gradeBadge(g)
-                        .position(x: art.maxX - 19 * s, y: art.minY + 19 * s)
+                        .position(pos)
                 }
             }
         }
@@ -110,6 +116,8 @@ struct CardView: View {
             }
         }
         .clipShape(RoundedRectangle(cornerRadius: corner))
+        // The whole card face is the artwork here, so the grade slab positions
+        // itself against these bounds (dropped under the header pips).
         .anchorPreference(key: ArtFrameKey.self, value: .bounds) { $0 }
     }
 
@@ -210,9 +218,10 @@ struct CardView: View {
 }
 
 /// Captures the artwork rectangle within a `CardView` so the grade slab can pin
-/// to the art's top-right corner instead of the header, which carries the
-/// evolution stage pips. In Extended-Art mode the art is full-bleed, so this is
-/// the whole card face.
+/// against it rather than the header, which carries the evolution stage pips. In
+/// the normal layout that's the art window (the slab sits in its top-right
+/// corner); in Extended-Art mode the art is full-bleed, so this is the whole card
+/// face and the slab drops under the header pips instead.
 private struct ArtFrameKey: PreferenceKey {
     static let defaultValue: Anchor<CGRect>? = nil
     static func reduce(value: inout Anchor<CGRect>?, nextValue: () -> Anchor<CGRect>?) {
