@@ -185,6 +185,8 @@ renders one such component on its own from a launch‑environment variable:
 | --- | --- |
 | `TU_TEST_GALLERY=catalyst` | A single `CatalystCardView` on the mode backdrop |
 | `TU_TEST_GALLERY=share` | The `GauntletShareCard` with a sample showcase, prize and attuned Catalysts |
+| `TU_TEST_GALLERY=showcase` | A Showcase grid of graded, multi‑stage cards — the PSA grade slab in the artwork corner beside the header stage pips |
+| `TU_TEST_GALLERY=extended` | Graded, multi‑stage **Extended‑Art** cards, where the grade slab drops to just under the stage pips it would otherwise cover |
 
 Like `DebugLaunchState` it is wrapped in `#if DEBUG`, so it is compiled out of
 release builds; `ContentView` swaps in `DebugGalleryView` when the variable is set

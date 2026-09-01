@@ -83,6 +83,18 @@ final class GradePlacementScreenshots: XCTestCase {
         shot("03-gauntlet-showcase-grade-over-artwork", settle: 1.2)
     }
 
+    // MARK: - 3. Extended Art: grade slab drops to just under the pips
+
+    func testExtendedArtGradePlacement() {
+        launch(["TU_TEST_GALLERY": "extended"])
+
+        // A "PSA" label proves a graded Extended-Art card drew; the shot documents
+        // the slab sitting just under the header stage pips, not over them.
+        XCTAssertTrue(app.staticTexts["PSA"].firstMatch.waitForExistence(timeout: 20),
+                      "gallery Extended Art never rendered a graded card")
+        shot("04-extended-art-grade-under-pips", settle: 1.2)
+    }
+
     // MARK: - Grading
 
     /// Opens the first few Rare+ cards in turn and grades each one through the
