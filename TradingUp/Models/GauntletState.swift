@@ -283,7 +283,7 @@ final class GauntletState {
         evaluateRoundProgress()
     }
 
-    // MARK: Pack rail (which element sets are rippable / unlockable this run)
+    // MARK: Pack rail (rippable this run) & shop unlocks (opened between rounds)
 
     /// The element sets, low→high, for the run's pack rail.
     var packTiers: [Int] { GauntletRun.allPackTiers }
@@ -293,10 +293,19 @@ final class GauntletState {
     /// Cash cost to unlock a specific locked set (nil if free/already open).
     func packUnlockCost(_ set: Int) -> Double? { run?.packUnlockCost(set) }
     /// Whether the player can afford to unlock a specific locked set right now.
-    func canUnlockPack(_ set: Int) -> Bool { run?.canUnlockPack(set) ?? false }
-    /// Buy open one specific locked set (any order, independently priced).
+    /// Only meaningful in the between-rounds shop, where unlocking is offered.
+    func canUnlockPack(_ set: Int) -> Bool {
+        guard phase == .shop else { return false }
+        return run?.canUnlockPack(set) ?? false
+    }
+    /// Buy open one specific locked set (any order, independently priced). Packs
+    /// are unlocked **only in the between-rounds shop**, never mid-round on the
+    /// rail, so this is a no-op outside the `.shop` phase.
     @discardableResult
-    func unlockPack(_ set: Int) -> Bool { mutateRun { $0.unlockPack(set) } }
+    func unlockPack(_ set: Int) -> Bool {
+        guard phase == .shop else { return false }
+        return mutateRun { $0.unlockPack(set) }
+    }
 
     var canKeepPending: Bool { run?.canKeep ?? false }
 

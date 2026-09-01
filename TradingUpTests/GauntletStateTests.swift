@@ -129,18 +129,73 @@ final class GauntletStateTests: XCTestCase {
         let (s, _) = makeState(seed: 3)
         s.chooseTrainer(.neutral)
         s.startRun(tier: .easy)
-        // Costs and gates delegate straight to the underlying run.
+        // The advertised unlock price always delegates to the run, so the rail can
+        // still label a locked set with its shop price even mid-round.
         XCTAssertNil(s.packUnlockCost(1), "the free starter has no unlock price")
         XCTAssertEqual(s.packUnlockCost(2), GauntletEconomy.packUnlockCost(set: 2))
         XCTAssertEqual(s.packUnlockCost(GauntletEconomy.maxPackTier),
                        GauntletEconomy.packUnlockCost(set: GauntletEconomy.maxPackTier))
-        // At the starting stake nothing on the rail is affordable yet, and an
-        // unaffordable unlock is a no-op that opens nothing. (Successful out-of-order
-        // unlocking is proven at the model layer in GauntletCoreTests.)
-        XCTAssertFalse(s.canUnlockPack(2))
-        XCTAssertFalse(s.unlockPack(2))
+        // But *buying* is shop-only: mid-round the unlock gate is closed and the buy
+        // is a no-op that opens nothing. (Out-of-order unlocking is proven at the
+        // model layer in GauntletCoreTests, and the shop path in the test below.)
+        XCTAssertFalse(s.canUnlockPack(2), "the unlock gate is closed outside the shop")
+        XCTAssertFalse(s.unlockPack(2), "unlocking mid-round is a no-op")
         XCTAssertFalse(s.isPackUnlocked(2))
     }
+
+    /// Packs are opened **only in the between-rounds shop**, never mid-round on the
+    /// rail. This drives a run until it can afford the cheapest paid set and proves
+    /// both halves: while a round is live the buy is refused *even though the run
+    /// holds the cash*, and once the shop opens the very same buy goes through.
+    func testPacksUnlockOnlyInTheShopNotMidRound() {
+        let cost = GauntletEconomy.packUnlockCost(set: 2)!   // cheapest paid set
+        for seed in UInt64(1)...40 {
+            let (s, _) = makeState(seed: seed)
+            s.chooseTrainer(.neutral)
+            s.startRun(tier: .easy)
+
+            var provedMidRoundRejection = false
+            var guardCount = 0
+            drive: while guardCount < 5000 {
+                guardCount += 1
+                switch s.phase {
+                case .ripping:
+                    // The moment the run can afford set 2, the mid-round gate must
+                    // still refuse it — the run has the cash, only the phase blocks it.
+                    if !provedMidRoundRejection, let r = s.run,
+                       !r.isPackUnlocked(2), r.canUnlockPack(2) {
+                        XCTAssertFalse(s.canUnlockPack(2), "mid-round the shop gate is closed")
+                        XCTAssertFalse(s.unlockPack(2), "mid-round unlock is a no-op")
+                        XCTAssertFalse(s.isPackUnlocked(2), "set 2 stays locked mid-round")
+                        provedMidRoundRejection = true
+                    }
+                    if s.canRip {
+                        s.rip(); resolvePending(s)
+                    } else if s.canEndRound {
+                        s.endRound()
+                    } else {
+                        resolvePending(s)   // safety net; shouldn't be reached
+                    }
+                case .shop:
+                    // In the shop the identical buy — same run, same cash — succeeds.
+                    if provedMidRoundRejection, let r = s.run,
+                       !r.isPackUnlocked(2), r.canUnlockPack(2) {
+                        XCTAssertTrue(s.canUnlockPack(2), "the shop opens the unlock gate")
+                        let cashBefore = r.cash
+                        XCTAssertTrue(s.unlockPack(2), "the shop opens the set")
+                        XCTAssertTrue(s.isPackUnlocked(2), "set 2 is now rippable")
+                        XCTAssertEqual(s.run!.cash, cashBefore - cost, accuracy: 1e-6)
+                        return   // both halves proven for this seed
+                    }
+                    s.continueFromShop()
+                default:
+                    break drive   // won / lost / reward — try another seed
+                }
+            }
+        }
+        XCTFail("no seed reached an affordable unlock both mid-round and in the shop in 40 tries")
+    }
+
 
     func testRippingRecordsPulledCardsIntoTheSharedBinder() {
         let (s, game) = makeState(seed: 7)

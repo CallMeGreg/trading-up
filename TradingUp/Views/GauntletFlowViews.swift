@@ -699,7 +699,7 @@ struct IntroScreen: View {
                              detail: "Some packs offer a Catalyst — attune it to buff the rest of your run.")
                     IntroRow(icon: "cart.fill", tint: Color(hex: "5be08a"),
                              title: "The shop, between rounds",
-                             detail: "Clear a round to open the shop and buy extra Showcase and Catalyst slots.")
+                             detail: "Clear a round to open the shop: unlock new element packs and buy extra Showcase and Catalyst slots.")
                     IntroRow(icon: "trophy.fill", tint: Color(hex: "ffd54a"),
                              title: "Prizes",
                              detail: "Win a run to earn a Foil Extended Art card for your Binder.")
