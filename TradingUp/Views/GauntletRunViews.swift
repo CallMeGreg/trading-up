@@ -248,9 +248,9 @@ private func championshipSubtitle(_ run: GauntletRun) -> AttributedString {
 // MARK: Pack rail — one tile per element set (req 5)
 
 /// Replaces the single "Rip a Pack" button. Each of the five element sets is a
-/// tile: rippable once unlocked, buy-to-unlock when it's next in line, or greyed
-/// out further up the rail. The player picks which unlocked element to rip, so
-/// they can chase a set to complete its evolution lines.
+/// tile: rippable once unlocked, otherwise shown locked. New sets are opened in
+/// the between-rounds shop, so the rail itself only ever rips an already-open set
+/// — the player picks which unlocked element to rip to chase its evolution lines.
 private struct PackRail: View {
     let state: GauntletState
     let run: GauntletRun
@@ -297,11 +297,9 @@ private struct PackTile: View {
 
     private var element: Element { Element.theme(forSet: set) }
     private var unlocked: Bool { state.isPackUnlocked(set) }
-    /// Cost to open this locked set (every locked set is independently buyable).
-    private var unlockCost: Double? { state.packUnlockCost(set) }
-    /// Whether the run can afford to open this locked set right now.
-    private var affordable: Bool { state.canUnlockPack(set) }
-    private var enabled: Bool { unlocked ? state.canRip : affordable }
+    /// Locked sets are opened only in the between-rounds shop, so on the mid-round
+    /// rail this tile is inert unless the set is already unlocked and rippable.
+    private var enabled: Bool { unlocked && state.canRip }
 
     var body: some View {
         Button(action: act) {
@@ -322,13 +320,13 @@ private struct PackTile: View {
     }
 
     /// A miniature of the Classic pack wrapper, dimmed and locked when it isn't
-    /// yet available this run. Affordable locked packs read a touch brighter so the
-    /// eye lands on what you can buy open.
+    /// open this run. Locked sets are unlocked in the shop between rounds, so on the
+    /// rail they always read as inert — there's no mid-round "afford to buy" state.
     private var packArt: some View {
         ZStack {
             PackWrapper(set: set, width: packWidth, detail: .mini)
                 .saturation(unlocked ? 1 : 0.12)
-                .opacity(unlocked ? (enabled ? 1 : 0.6) : (affordable ? 0.72 : 0.42))
+                .opacity(unlocked ? (enabled ? 1 : 0.6) : 0.42)
             if !unlocked {
                 ZStack {
                     Circle().fill(.black.opacity(0.55))
@@ -342,29 +340,24 @@ private struct PackTile: View {
         .shadow(color: glow, radius: glow == .clear ? 0 : 6)
     }
 
-    /// A tint halo that marks a pack you can act on right now.
+    /// A tint halo that marks a pack you can rip right now. Locked sets never glow
+    /// on the rail — they're opened in the shop, not here.
     private var glow: Color {
-        if unlocked && enabled { return element.badgeTint.opacity(0.55) }
-        if !unlocked && affordable { return Color(hex: "ffd54a").opacity(0.6) }
-        return .clear
+        unlocked && enabled ? element.badgeTint.opacity(0.55) : .clear
     }
 
     private var statusLine: String {
-        if unlocked { return "Rip" }
-        if let cost = unlockCost { return "Unlock \(cost.moneyShort)" }
-        return "Locked"
+        unlocked ? "Rip" : "Locked"
     }
     private var statusTint: Color {
         if unlocked { return enabled ? element.badgeTint : Palette.subtle }
-        return affordable ? Palette.money : Palette.subtle
+        return Palette.subtle
     }
 
     private func act() {
-        if unlocked {
-            Haptics.play(.medium); state.rip(set: set)
-        } else if affordable {
-            Haptics.play(.success); state.unlockPack(set)
-        }
+        // Locked sets are unlocked in the between-rounds shop, never mid-round.
+        guard unlocked else { return }
+        Haptics.play(.medium); state.rip(set: set)
     }
 }
 
@@ -989,8 +982,9 @@ private struct ShowcaseCardDetail: View {
 struct ShopScreen: View {
     let state: GauntletState
 
-    /// Element sets still locked this run — offered for purchase in the shop so
-    /// they can be opened between rounds as well as mid-round on the rail. (req 10)
+    /// Element sets still locked this run — opened here, in the between-rounds
+    /// shop. This is the only place a run unlocks new packs: the mid-round rail can
+    /// rip open sets but never buy them. (req 10)
     private var lockedPacks: [Int] { state.packTiers.filter { !state.isPackUnlocked($0) } }
 
     var body: some View {

@@ -118,7 +118,7 @@ the seam that turns a Trainer's five-skill graph into its advantage (its per-pip
 are `TODO(balance)` zeros today, so every Trainer is currently neutral). The Trainer roster,
 skill profiles and unlock thresholds live in `TradingUp/Models/Trainer.swift`; Catalyst
 effects in `Catalyst.swift`. The pack rail (which element sets start unlocked and what
-unlocking a set costs mid-round) is driven from `GauntletCore.swift`. Gauntlet has its **own**
+unlocking a set costs in the between-rounds shop) is driven from `GauntletCore.swift`. Gauntlet has its **own**
 `tools/verify` checks (§14.8) — a neutral Rookie must still clear Hard, and no Trainer may
 trivialise it — so re‑run the harness after any Gauntlet balance change too, especially when
 setting the skill magnitudes; trainer-unlock thresholds are meta pacing and don't affect the win-rate

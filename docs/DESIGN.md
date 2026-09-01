@@ -759,14 +759,15 @@ Two notes:
 Curated, highest-leverage first; not all need to ship in v1:
 
 - **Pack choice — ✅ shipped as the pack rail.** The run screen shows a tile per element
-  set; you rip **whichever unlocked set you like** each rip, and locked sets are **bought
-  open mid-round with cash** (a within-run tech tree — the five sets have distinct
+  set; you rip **whichever unlocked set you like** each rip. Locked sets are **opened in the
+  between-rounds shop with cash** (a within-run tech tree — the five sets have distinct
   value/rarity curves, §3, §6, so which to unlock and when is a real lever). Set 1 starts
-  unlocked; every other set shows **its own unlock price** and can be bought open **in any
-  order** — each is priced independently off its Classic pack price (`GauntletEconomy.packUnlockCost`),
+  unlocked; every other set shows **its own unlock price** in the shop and can be bought open
+  **in any order** — each is priced independently off its Classic pack price (`GauntletEconomy.packUnlockCost`),
   so a run can splurge straight to a rich set or ladder up cheaply. This replaced the old
-  single "rip a pack" button and the shop's "upgrade packs" line — packs are now a *round*
-  decision, not a *shop* one.
+  single "rip a pack" button: *which* unlocked set to rip is a **round** decision, while
+  **unlocking** a new set is a **shop** one — kept to the calm between rounds so mid-round
+  tempo stays about ripping and keep/sell, not shopping.
 - **Optional bounties** — per-round side goals ("keep 2 foils," "complete a Fire line")
   paying Catalysts or cash; rewards flexible, risky play.
 - **Event nodes** between rounds — *The Appraiser* (pay for a guaranteed minimum grade, or
@@ -820,8 +821,8 @@ The **shape** of the mode is now decided; what's left is numeric tuning the harn
    five specialists each unlock on a lifetime Gauntlet milestone shown with a live progress
    bar (§14.3). Milestone thresholds are meta pacing, not a difficulty knob.
 9. **Pack rail** — ✅ pick **which unlocked element** to rip each rip; every locked set is
-   bought open mid-round with cash, **independently priced and in any order** (not a forced
-   ladder). Replaced the single rip button and the shop's pack upgrade (§14.7).
+   opened in the **between-rounds shop** with cash, **independently priced and in any order**
+   (not a forced ladder). Replaced the single rip button (§14.7).
 10. **First-run explainer** — ✅ a one-time intro screen (re-openable from the ⓘ button)
     walks the target, scoring & evolution lines, Trainers, Catalysts, the shop, and prizes
     before the first run, so the loop is legible without a tutorial mode. Gated on a
