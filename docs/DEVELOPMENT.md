@@ -311,21 +311,30 @@ Settings**, Music and SFX have independent live sliders and one-tap speaker mute
 Zero mutes without forgetting the previous nonzero level; raising a slider
 unmutes. Haptics remain a separate toggle.
 
-The bundled choices are **Sunlit Sleeves** (Classic, about 86 BPM / 44.65 seconds)
-and **Quiet Resolve** (Gauntlet, about 106 BPM / 36.22 seconds). **Paper Lanterns**
-and **Northbound** are audition-only alternatives. The explicit scores and
-locally synthesized felt-key, nylon, mallet, bass and percussion instruments
+The bundled choices are **Sunlit Sleeves** (Classic, about 108 BPM / 35.56 seconds)
+and **Quiet Resolve** (Gauntlet, 120 BPM / 32 seconds). **Paper Lanterns**
+and **Northbound** are audition-only alternatives. All four are original,
+light turn-based challenge themes: rounded reed/soft-brass hooks, short plucked
+arpeggios, mobile bass lines and occasional muted tom fills. D major and relative
+B minor share the SFX palette; brief dominant chords supply tension without
+quoting an existing game's melody. The explicit scores and
+locally synthesized reed, brass, felt-key, nylon, mallet, bass and percussion instruments
 live in `tools/sound_lab/music.py`; no musical samples or generative-audio
 services are involved.
 
-Each score is a repeating 16-bar arrangement with an answering phrase and a
-second-half variation. Notes, echoes and room tails wrap across the boundary,
+Each score is a repeating 16-bar arrangement with quieter answering phrases
+and a second-half variation. Those passages reduce the lead, bass/arp density
+and percussion; lead notes stay below G5, and the hat pattern never becomes a
+bright sixteenth-note wash. Energy comes from the writing rather than extra
+loudness: the authored RMS target is about -24 dBFS and the in-app default remains
+28%. Sustained pads carry only notes shared by both chords, avoiding clashes
+across the brief dominant turns. Notes, echoes and room tails wrap across the boundary,
 rather than fading into silence. The exact tempo is adjusted by less than
 0.04 BPM to fit whole AAC access units. Offline FFmpeg encoding retains decoder
 pre-roll in an MP4 edit list and has no trailing padding. Keep that timing
 metadata intact: native `AVAudioPlayer` looping and the browser's looping
-`AudioBufferSourceNode` must honor the decoded period. The two 48 kHz stereo
-AAC-LC files total about 1.98 MB at 192 kbps.
+`AudioBufferSourceNode` must honor the decoded period. The two bundled files
+remain 48 kHz stereo AAC-LC at 192 kbps.
 
 `AudioPreferences` retains the existing `tradingup_sound_enabled` preference.
 Music inherits that legacy preference **once**, so an existing silent game does

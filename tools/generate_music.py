@@ -29,7 +29,7 @@ the same Python/math and ffmpeg build; a different AAC encoder build can change
 compressed bytes. Browser/app gapless playback still depends on the player
 honoring MP4 edit lists; these files cannot prevent a player scheduling a gap.
 
-These are intentionally quiet beds (approximately -23 dBFS RMS, peak ceiling
+These are intentionally quiet beds (approximately -24 dBFS RMS, peak ceiling
 -8.5 dBFS before AAC). The app starts at 28% music volume under the SFX.
 """
 

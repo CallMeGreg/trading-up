@@ -3,8 +3,9 @@
 The scores are explicit note sequences; no musical samples, pretrained audio
 models, or generative-audio services are used.
 Notes use MIDI numbers; melody entries are (beat within bar, note, held beats).
-Each sixteen-bar score has a small recurring hook, an answering phrase, and a
-second eight-bar variation. D-major extensions leave space for the game's SFX.
+Each sixteen-bar score has a challenger hook, a quieter answer, and a second
+eight-bar variation. D major and its relative B minor share the SFX palette;
+brief dominant chords add tension without turning the loop into a boss fanfare.
 
 Rendering is circular, not a song with its ends faded out: every note and echo
 wrap-adds into the period. The room receives two complete periods and we retain
@@ -66,124 +67,123 @@ class Score:
 
 D9 = Chord(38, (54, 57, 61, 64))
 D69 = Chord(38, (54, 57, 59, 64))
-DF = Chord(42, (57, 61, 62, 64))
 BM9 = Chord(35, (54, 57, 61, 62))
-G9 = Chord(43, (54, 57, 59, 62))
 G6 = Chord(43, (55, 59, 62, 64))
-EM9 = Chord(40, (55, 59, 62, 66))
-FM7 = Chord(42, (52, 57, 61, 64))
 A13 = Chord(45, (55, 59, 61, 66))
 ASUS = Chord(45, (55, 59, 62, 64))
-AC = Chord(37, (52, 57, 59, 64))
+BM7 = Chord(35, (54, 57, 59, 62))
+EM7 = Chord(40, (55, 59, 62, 64))
+FS7 = Chord(42, (58, 61, 64, 66))
+B7 = Chord(35, (51, 57, 59, 66))
 
 
 SCORES = (
     Score(
         "classic-sunlit-sleeves", "classic", "Sunlit Sleeves",
-        "Recommended Classic: a conversational felt-key hook, softly strummed "
-        "nylon, rounded bass and pocket-sized brushes. Warm major-nine voicings "
-        "open into a gentle answering phrase, then return with a new ending.",
-        86, True, "felt", (
-            D9, D9, BM9, BM9, G9, G9, ASUS, A13,
-            DF, DF, EM9, EM9, G9, G6, ASUS, A13,
+        "Recommended Classic / challenger mix: a playful rounded-reed hook, "
+        "springy bass and soft plucked arpeggios. A friendly turn-based duel "
+        "rather than a boss fight, with quieter answers and no piercing lead.",
+        108, True, "rival", (
+            D69, BM7, G6, ASUS, EM7, G6, D9, FS7,
+            BM7, G6, D69, A13, EM7, G6, ASUS, A13,
         ), (
-            ((0.5, 66, .65), (1.5, 69, .45), (2.25, 76, .6), (3.0, 74, .85)),
-            ((.75, 73, .6), (1.75, 69, 1.5)),
-            ((.5, 66, .7), (1.5, 69, .45), (2.25, 74, .6), (3.0, 73, .8)),
-            ((.75, 71, 1.0), (2.5, 66, .85)),
-            ((.25, 67, .7), (1.5, 71, .65), (2.75, 74, .85)),
-            ((.5, 71, .65), (1.5, 69, .5), (2.75, 66, 1.0)),
-            ((.5, 64, .65), (1.75, 66, .65), (3.0, 71, .7)),
-            ((.5, 73, .7), (1.75, 69, 1.25)),
-            ((.5, 66, .65), (1.5, 69, .45), (2.25, 76, .6), (3.0, 74, .85)),
-            ((.75, 73, .6), (1.75, 69, 1.0), (3.25, 66, .4)),
-            ((.5, 67, .65), (1.5, 71, .45), (2.25, 76, .65)),
-            ((.5, 74, .75), (2.0, 71, 1.3)),
-            ((.25, 69, .7), (1.5, 71, .65), (2.75, 74, .85)),
-            ((.5, 71, .65), (1.5, 69, .5), (2.75, 67, .9)),
-            ((.5, 66, .65), (1.75, 64, .75), (3.0, 69, .6)),
-            ((.5, 71, .65), (1.75, 73, .75), (3.25, 64, .5)),
+            ((0, 66, .32), (.5, 69, .32), (1.25, 71, .42), (2, 76, .4), (2.75, 74, .48), (3.5, 69, .25)),
+            ((.25, 71, .5), (1, 74, .38), (1.75, 73, .35), (2.5, 69, .65)),
+            ((0, 67, .32), (.5, 71, .32), (1.25, 74, .5), (2.25, 71, .35), (3, 69, .5)),
+            ((.25, 66, .55), (1.25, 64, .7), (3, 69, .4)),
+            ((.5, 67, .65), (1.75, 71, .65), (3, 66, .45)),
+            ((.5, 67, .55), (1.75, 64, 1.1)),
+            ((.25, 66, .45), (1.25, 69, .5), (2.5, 64, .65)),
+            ((.5, 66, .55), (2, 64, .6), (3.25, 70, .3)),
+            ((0, 71, .32), (.5, 74, .32), (1.25, 73, .42), (2, 76, .4), (2.75, 74, .48), (3.5, 66, .25)),
+            ((.25, 67, .5), (1, 71, .38), (1.75, 74, .35), (2.5, 71, .65)),
+            ((0, 66, .32), (.5, 69, .32), (1.25, 76, .5), (2.25, 74, .35), (3, 73, .5)),
+            ((.25, 71, .55), (1.25, 69, .7), (3, 64, .4)),
+            ((.5, 67, .65), (1.75, 71, .65), (3, 74, .45)),
+            ((.5, 71, .55), (1.75, 67, 1.1)),
+            ((.25, 69, .45), (1.25, 66, .5), (2.5, 64, .65)),
+            ((.5, 71, .55), (2, 69, .6), (3.25, 64, .3)),
         ), 76123,
     ),
     Score(
         "classic-paper-lanterns", "classic", "Paper Lanterns",
-        "Classic alternate: a finger-picked nylon melody with little felt-key "
-        "replies, unhurried brushed percussion and a warm walking answer in the "
-        "bass. More intimate and acoustic than Sunlit Sleeves.",
-        82, False, "nylon", (
-            D69, D69, FM7, FM7, G9, G9, EM9, ASUS,
-            BM9, BM9, G9, G6, D9, DF, EM9, A13,
+        "Classic alternate / tactical mix: a warm wooden-mallet question and "
+        "answer, nimble bass and little nylon figures. Minor-key curiosity "
+        "with a lighter, more spacious rhythm for long collecting sessions.",
+        104, False, "tactical", (
+            BM7, G6, D69, ASUS, EM7, BM7, G6, FS7,
+            BM9, G6, D9, A13, EM7, G6, ASUS, FS7,
         ), (
-            ((.25, 69, .75), (1.25, 71, .4), (2.0, 66, 1.15)),
-            ((.75, 64, .5), (1.75, 66, .6), (3.0, 69, .65)),
-            ((.25, 69, .75), (1.25, 73, .4), (2.0, 69, 1.1)),
-            ((.75, 66, .75), (2.25, 64, 1.15)),
-            ((.25, 71, .7), (1.25, 74, .45), (2.25, 69, 1.0)),
-            ((.75, 67, .5), (1.75, 66, .5), (3.0, 62, .65)),
-            ((.25, 64, .75), (1.5, 66, .45), (2.5, 71, .85)),
-            ((.75, 69, .9), (2.5, 64, .85)),
-            ((.25, 69, .75), (1.25, 71, .4), (2.0, 66, 1.15)),
-            ((.75, 62, .5), (1.75, 66, .6), (3.0, 69, .65)),
-            ((.25, 71, .75), (1.25, 74, .4), (2.0, 69, 1.1)),
-            ((.75, 67, .75), (2.25, 64, 1.15)),
-            ((.25, 66, .7), (1.25, 69, .45), (2.25, 76, .9)),
-            ((.75, 74, .5), (1.75, 73, .6), (3.0, 69, .65)),
-            ((.25, 67, .7), (1.5, 66, .45), (2.5, 64, .8)),
-            ((.75, 64, .65), (2.0, 66, .55), (3.0, 64, .6)),
+            ((.25, 66, .32), (.75, 71, .4), (1.5, 74, .45), (2.5, 73, .35), (3.25, 69, .35)),
+            ((.5, 71, .55), (1.5, 67, .4), (2.75, 64, .65)),
+            ((.25, 66, .32), (.75, 69, .4), (1.5, 74, .45), (2.5, 76, .35), (3.25, 73, .35)),
+            ((.5, 71, .55), (1.5, 69, .4), (2.75, 64, .65)),
+            ((.75, 67, .6), (2.25, 71, .85)),
+            ((.5, 66, .55), (1.75, 62, 1.0)),
+            ((.5, 64, .5), (1.5, 67, .5), (2.75, 71, .55)),
+            ((.5, 70, .55), (2, 66, .6), (3.25, 70, .3)),
+            ((.25, 66, .32), (.75, 71, .4), (1.5, 74, .45), (2.5, 76, .35), (3.25, 73, .35)),
+            ((.5, 74, .55), (1.5, 71, .4), (2.75, 67, .65)),
+            ((.25, 69, .32), (.75, 66, .4), (1.5, 74, .45), (2.5, 73, .35), (3.25, 69, .35)),
+            ((.5, 71, .55), (1.5, 73, .4), (2.75, 69, .65)),
+            ((.75, 67, .6), (2.25, 64, .85)),
+            ((.5, 67, .55), (1.75, 71, 1.0)),
+            ((.5, 69, .5), (1.5, 66, .5), (2.75, 64, .55)),
+            ((.5, 66, .55), (2, 64, .6), (3.25, 70, .3)),
         ), 76147,
     ),
     Score(
         "gauntlet-quiet-resolve", "gauntlet", "Quiet Resolve",
-        "Recommended Gauntlet: a rounded wooden-mallet hook over muted keys, "
-        "a gently moving bass line and quiet cloth-and-rim percussion. Descending "
-        "bass harmony and an open second phrase give momentum without urgency.",
-        106, True, "mallet", (
-            D69, D69, AC, AC, BM9, BM9, G9, ASUS,
-            EM9, EM9, FM7, FM7, G6, G9, ASUS, A13,
+        "Recommended Gauntlet / battle mix: a soft-brass challenger motif, "
+        "a pulsing B-minor bass line and quick plucked replies. Brief tom fills "
+        "and dominant-chord turns add resolve; quieter phrases keep it repeat-friendly.",
+        120, True, "battle", (
+            BM7, BM9, G6, FS7, EM7, B7, EM7, FS7,
+            BM7, G6, D69, A13, EM7, G6, BM7, FS7,
         ), (
-            ((.25, 66, .5), (1.0, 69, .4), (1.75, 71, .6), (3.0, 69, .55)),
-            ((.25, 76, .7), (1.75, 74, .6), (3.0, 69, .55)),
-            ((.25, 66, .5), (1.0, 69, .4), (1.75, 71, .6), (3.0, 73, .55)),
-            ((.25, 76, .7), (1.75, 73, 1.0)),
-            ((.25, 66, .5), (1.0, 69, .4), (1.75, 71, .6), (3.0, 74, .55)),
-            ((.25, 73, .7), (1.75, 71, .6), (3.0, 66, .55)),
-            ((.25, 67, .5), (1.0, 71, .4), (2.0, 74, .7)),
-            ((.25, 71, .55), (1.25, 69, .55), (2.75, 64, .7)),
-            ((.25, 67, .5), (1.0, 71, .4), (1.75, 74, .6), (3.0, 71, .55)),
-            ((.25, 76, .7), (1.75, 74, .6), (3.0, 71, .55)),
-            ((.25, 66, .5), (1.0, 69, .4), (1.75, 73, .6), (3.0, 69, .55)),
-            ((.25, 76, .7), (1.75, 73, 1.0)),
-            ((.25, 67, .5), (1.0, 69, .4), (1.75, 71, .6), (3.0, 74, .55)),
-            ((.25, 71, .7), (1.75, 69, .6), (3.0, 66, .55)),
-            ((.25, 64, .5), (1.0, 66, .4), (2.0, 71, .7)),
-            ((.25, 73, .55), (1.25, 69, .55), (2.75, 64, .7)),
+            ((0, 71, .3), (.5, 66, .3), (1, 74, .4), (1.75, 73, .35), (2.5, 69, .4), (3.25, 66, .3)),
+            ((.25, 71, .45), (1, 74, .32), (1.5, 76, .32), (2.25, 78, .5), (3.25, 73, .3)),
+            ((0, 74, .3), (.5, 71, .3), (1, 69, .4), (1.75, 67, .35), (2.5, 66, .4), (3.25, 67, .3)),
+            ((.25, 73, .4), (1, 70, .4), (2, 66, .6), (3.25, 70, .3)),
+            ((.5, 67, .5), (1.5, 71, .45), (2.75, 76, .6)),
+            ((.5, 75, .65), (2.25, 71, .85)),
+            ((.5, 74, .5), (1.5, 71, .45), (2.75, 67, .6)),
+            ((.5, 66, .6), (2, 64, .55), (3.25, 70, .3)),
+            ((0, 71, .3), (.5, 66, .3), (1, 74, .4), (1.75, 76, .35), (2.5, 73, .4), (3.25, 69, .3)),
+            ((.25, 71, .45), (1, 74, .32), (1.5, 71, .32), (2.25, 67, .5), (3.25, 69, .3)),
+            ((0, 74, .3), (.5, 69, .3), (1, 66, .4), (1.75, 69, .35), (2.5, 76, .4), (3.25, 74, .3)),
+            ((.25, 73, .4), (1, 71, .4), (2, 69, .6), (3.25, 64, .3)),
+            ((.5, 67, .5), (1.5, 71, .45), (2.75, 74, .6)),
+            ((.5, 71, .65), (2.25, 67, .85)),
+            ((.5, 66, .5), (1.5, 62, .45), (2.75, 66, .6)),
+            ((.5, 70, .6), (2, 73, .55), (3.25, 66, .3)),
         ), 76213,
     ),
     Score(
         "gauntlet-northbound", "gauntlet", "Northbound",
-        "Gauntlet alternate: a soft, syncopated nylon hook, broad felt-key "
-        "responses and a half-time brushed pocket. A little more spacious and "
-        "reflective, with a subtly busier bass in the second half.",
-        102, False, "travel", (
-            D9, D69, G9, G9, BM9, BM9, ASUS, A13,
-            DF, DF, EM9, EM9, G9, G6, ASUS, A13,
+        "Gauntlet alternate / scout mix: a nimble nylon hook over a walking "
+        "minor-key pulse, warm reed answers and a half-time drum pocket. "
+        "Forward-looking challenge energy with more space than the battle mix.",
+        116, False, "travel", (
+            BM7, D69, G6, ASUS, EM7, G6, BM7, FS7,
+            BM9, G6, D9, A13, EM7, G6, ASUS, FS7,
         ), (
-            ((.5, 69, .5), (1.25, 66, .45), (2.5, 74, .85)),
-            ((.25, 73, .5), (1.5, 69, .6), (3.0, 66, .6)),
-            ((.5, 71, .5), (1.25, 67, .45), (2.5, 74, .85)),
-            ((.25, 71, .5), (1.5, 69, 1.0)),
-            ((.5, 69, .5), (1.25, 66, .45), (2.5, 74, .85)),
-            ((.25, 73, .5), (1.5, 71, .6), (3.0, 66, .6)),
-            ((.5, 64, .5), (1.25, 66, .45), (2.5, 71, .85)),
-            ((.25, 73, .5), (1.5, 69, 1.0)),
-            ((.5, 69, .5), (1.25, 66, .45), (2.5, 76, .85)),
-            ((.25, 74, .5), (1.5, 73, .6), (3.0, 69, .6)),
-            ((.5, 71, .5), (1.25, 67, .45), (2.5, 76, .85)),
-            ((.25, 74, .5), (1.5, 71, 1.0)),
-            ((.5, 71, .5), (1.25, 69, .45), (2.5, 74, .85)),
-            ((.25, 71, .5), (1.5, 69, .6), (3.0, 67, .6)),
-            ((.5, 66, .5), (1.25, 64, .45), (2.5, 69, .85)),
-            ((.25, 71, .5), (1.5, 73, .7), (3.0, 64, .6)),
+            ((0, 66, .3), (.75, 71, .35), (1.5, 69, .4), (2.25, 74, .4), (3, 73, .4)),
+            ((.25, 69, .45), (1, 66, .3), (1.75, 74, .4), (2.75, 76, .55)),
+            ((0, 67, .3), (.75, 71, .35), (1.5, 69, .4), (2.25, 74, .4), (3, 71, .4)),
+            ((.25, 69, .55), (1.75, 66, .55), (3, 64, .4)),
+            ((.5, 67, .6), (2, 71, .7)),
+            ((.5, 71, .5), (1.75, 67, .55), (3, 64, .4)),
+            ((.75, 66, .55), (2.25, 62, .8)),
+            ((.5, 64, .6), (2, 66, .6), (3.25, 70, .3)),
+            ((0, 66, .3), (.75, 71, .35), (1.5, 74, .4), (2.25, 76, .4), (3, 73, .4)),
+            ((.25, 74, .45), (1, 71, .3), (1.75, 67, .4), (2.75, 69, .55)),
+            ((0, 69, .3), (.75, 66, .35), (1.5, 74, .4), (2.25, 73, .4), (3, 69, .4)),
+            ((.25, 71, .55), (1.75, 73, .55), (3, 69, .4)),
+            ((.5, 67, .6), (2, 74, .7)),
+            ((.5, 71, .5), (1.75, 69, .55), (3, 67, .4)),
+            ((.75, 66, .55), (2.25, 64, .8)),
+            ((.5, 66, .6), (2, 64, .6), (3.25, 70, .3)),
         ), 76253,
     ),
 )
@@ -199,13 +199,20 @@ def validate_scores():
         assert 30 <= score.duration <= 50
         assert score.frames % AAC_FRAME == 0
         assert abs(score.bpm - score.tempo) < .04
+        assert score.color in ("rival", "tactical", "battle", "travel")
+        # Dominant thirds are brief tension colors, not a new tonal center.
+        palette = (1, 2, 3, 4, 6, 7, 9, 10, 11)
         for chord, phrase in zip(score.chords, score.melody):
             for note in (chord.root, *chord.voices):
-                assert note % 12 in (1, 2, 4, 6, 7, 9, 11)
-            assert 1 <= len(phrase) <= 5
+                assert note % 12 in palette
+            assert 1 <= len(phrase) <= 7
+            assert list(phrase) == sorted(phrase)
             for beat, note, held in phrase:
                 assert 0 <= beat < 4 and 0 < held <= 2
-                assert 60 <= note <= 78 and note % 12 in (1, 2, 4, 6, 7, 9, 11)
+                assert 60 <= note <= 78 and note % 12 in palette
+        for bar in (5, 7, 13, 15):
+            assert len(score.melody[bar]) <= 3
+            assert sum(held for _, _, held in score.melody[bar]) < 2.2
 
 
 def _end_window(index, count, release_frames=1200):
@@ -221,7 +228,8 @@ def voice(kind, note, held_ms, articulation=0):
     gate = held_ms / 1000
     rng = random.Random(note * 373 + articulation * 1259 + sum(map(ord, kind)))
     frequency = hz(note)
-    release = {"felt": .9, "nylon": .65, "mallet": .75, "bass": .3, "pad": 1.6}[kind]
+    release = {"felt": .9, "nylon": .65, "mallet": .75, "bass": .3, "pad": 1.6,
+               "reed": .38, "brass": .42, "pulse": .3}[kind]
     count = round((gate + release) * SR)
     out = array("f", [0.0]) * count
     step = TAU * frequency / SR
@@ -265,7 +273,8 @@ def voice(kind, note, held_ms, articulation=0):
     filtered_noise = 0.0
     for i in range(count):
         t = i / SR
-        phase += step
+        vibrato = .0012 * math.sin(TAU * 4.8 * t + drift_phase) * min(1, t / .3) if kind in ("reed", "brass") else 0
+        phase += step * (1 + vibrato)
         if kind == "felt":
             hammer = (.55 + articulation * .09) * math.exp(-t * 8)
             sound = (
@@ -286,6 +295,27 @@ def voice(kind, note, held_ms, articulation=0):
             sound *= .96 + .04 * math.sin(TAU * 4.7 * t + drift_phase)
             envelope = min(1, t / .007) * math.exp(-t * 2.4)
             envelope *= math.exp(-max(0, t - gate) * 8)
+        elif kind in ("reed", "brass"):
+            bloom = 1 - math.exp(-t * 42)
+            body = .25 if kind == "reed" else .42
+            sound = (
+                .66 * math.sin(phase + body * bloom * math.sin(phase * 2))
+                + .12 * math.sin(phase * 1.0009 + .16)
+                + .10 * math.sin(phase * 2.001) * bloom
+                + .045 * math.sin(phase * 3.002) * math.exp(-t * 2.5)
+            )
+            envelope = min(1, t / .016) * (.8 + .2 * math.exp(-t * 5))
+            envelope *= math.exp(-max(0, t - gate) * 15)
+        elif kind == "pulse":
+            # A short, band-limited pulse/pluck: no square-wave edge or buzzer sustain.
+            sound = (
+                .67 * math.sin(phase)
+                + .17 * math.sin(phase * 2.001) * math.exp(-t * 7)
+                + .11 * math.sin(phase * 3.002) * math.exp(-t * 11)
+                + .025 * math.sin(phase * 5.001) * math.exp(-t * 18)
+            )
+            envelope = min(1, t / .009) * math.exp(-t * 3)
+            envelope *= math.exp(-max(0, t - gate) * 20)
         elif kind == "bass":
             sound = (
                 .66 * math.sin(phase)
@@ -313,10 +343,11 @@ def voice(kind, note, held_ms, articulation=0):
     return out
 
 
-@lru_cache(maxsize=20)
+@lru_cache(maxsize=28)
 def percussion(kind, variation):
     rng = random.Random(4409 + variation * 173 + sum(map(ord, kind)))
-    duration = {"kick": .34, "brush": .22, "rim": .13, "shaker": .095}[kind]
+    duration = {"kick": .34, "brush": .22, "rim": .13, "shaker": .095,
+                "tom": .27, "low_tom": .32}[kind]
     count = round(duration * SR)
     out = array("f", [0.0]) * count
     fast = slow = phase = 0.0
@@ -334,6 +365,12 @@ def percussion(kind, variation):
             envelope = (1 - math.exp(-t * 150)) * math.exp(-t * 24)
             sound = (fast - slow) * envelope * (.64 + .17 * math.sin(TAU * 27 * t))
             sound += .025 * math.sin(TAU * 183 * t) * math.exp(-t * 40)
+            attack = .008
+        elif kind in ("tom", "low_tom"):
+            frequency = 142 if kind == "tom" else 106
+            phase += TAU * frequency * (1 + .12 * math.exp(-t * 30)) / SR
+            sound = (.55 * math.sin(phase) + .17 * math.sin(phase * 1.58)) * math.exp(-t * 20)
+            sound += (fast - slow) * .10 * math.exp(-t * 55)
             attack = .008
         elif kind == "rim":
             sound = (
@@ -392,7 +429,7 @@ class LoopMix:
                 channel[i] = math.tanh((sample - dc) * .85) / .85
         peak = max(max(map(abs, self.left)), max(map(abs, self.right)))
         rms = math.sqrt(sum(x * x for channel in (self.left, self.right) for x in channel) / (2 * self.frames))
-        gain = min(10 ** (-23 / 20) / rms, 10 ** (-8.5 / 20) / peak)
+        gain = min(10 ** (-24 / 20) / rms, 10 ** (-8.5 / 20) / peak)
         for channel in (self.left, self.right):
             # Saturation is memoryless and this second DC removal is periodic.
             dc = sum(channel) / self.frames
@@ -409,6 +446,12 @@ def render(score):
     rng = random.Random(score.seed)
     beat_seconds = score.beat_seconds
     active = score.mode == "gauntlet"
+    lead, lead_gain, comp_kind, comp_gain, arp_kind, arp_gain = {
+        "rival": ("reed", .143, "nylon", .092, "pulse", .037),
+        "tactical": ("mallet", .137, "felt", .050, "nylon", .090),
+        "battle": ("brass", .139, "felt", .052, "pulse", .039),
+        "travel": ("nylon", .390, "felt", .046, "pulse", .029),
+    }[score.color]
 
     def note(kind, pitch, at, held, gain, pan=0, send=.3, echo=False, articulation=0):
         signal = voice(kind, pitch, round(held * beat_seconds * 1000), articulation)
@@ -420,71 +463,75 @@ def render(score):
 
     for bar, (chord, melody) in enumerate(zip(score.chords, score.melody)):
         start = bar * 4
-        phrase_gain = (.93, 1.0, .97, .91)[bar // 4]
-        # The harmonic bed is not the hook: sparse strums leave conversational
-        # rests for the melody and for card/pack/grading sounds.
-        if score.color == "felt":
-            comp_kind, lead = "nylon", "felt"
-            comp = ((.02, 1.65, .088), (2.4, .9, .071))
-        elif score.color == "nylon":
-            comp_kind, lead = "felt", "nylon"
-            comp = ((.04, 1.5, .053), (2.55, .8, .044))
-        elif score.color == "mallet":
-            comp_kind, lead = "felt", "mallet"
-            comp = ((.03, 1.0, .062), (1.75, .6, .038), (3.35, .4, .030))
-        else:
-            comp_kind, lead = "felt", "nylon"
-            comp = ((.05, 1.6, .055), (2.15, .9, .045))
-        for beat, held, gain in comp:
+        breathing = bar % 8 >= 4
+        phrase_gain = (1.0, .77, .96, .81)[bar // 4]
+        comp = ((.03, 1.3, 1.0), (2.25, .85, .68)) if breathing else ((.03, .65, 1.0), (1.75, .45, .62), (3, .45, .70))
+        for beat, held, accent in comp:
             for index, pitch in enumerate(chord.voices):
                 pan = -.24 + index * .12
-                note(comp_kind, pitch, start + beat + index * .018, held,
-                     gain * phrase_gain * rng.uniform(.91, 1.04), pan, .38,
+                note(comp_kind, pitch, start + beat + index * .012, held,
+                     comp_gain * accent * phrase_gain * rng.uniform(.93, 1.04), pan, .28,
                      articulation=(bar + index) % 3)
         if bar % 2 == 0:
-            for index, pitch in enumerate(chord.voices[:3]):
-                note("pad", pitch, start - .16, 7.4, .022, -.42 + index * .42, .48)
+            # Carry only shared tones across a chord change, not a suspended
+            # minor third rubbing against the next dominant's major third.
+            shared = [pitch for pitch in chord.voices if pitch in score.chords[bar + 1].voices]
+            for index, pitch in enumerate(shared):
+                pan = 0 if len(shared) == 1 else -.35 + .7 * index / (len(shared) - 1)
+                note("pad", pitch, start - .16, 7.4, .014, pan, .38)
 
-        bass = [(0, chord.root, 1.6, .155), (2.45 if not active else 2.25, chord.root + 7, .8, .104)]
-        if active and bar % 2 == 1:
-            bass.append((3.5, score.chords[(bar + 1) % BARS].root, .36, .068))
-        elif not active and bar in (3, 7, 11, 15):
-            bass.append((3.55, score.chords[(bar + 1) % BARS].root, .35, .065))
+        arp_beats = (.5, 2.5) if breathing else (.5, 1, 1.5, 2.5, 3.5)
+        if score.color in ("tactical", "travel") and not breathing:
+            arp_beats = (.5, 1.5, 2.5, 3.5)
+        for index, beat in enumerate(arp_beats):
+            pitch = chord.voices[(index + bar % 2) % len(chord.voices)]
+            note(arp_kind, pitch + (12 if index % 3 == 1 else 0),
+                 start + beat, .23 if not breathing else .38,
+                 arp_gain * phrase_gain * (1 if index % 2 == 0 else .72),
+                 -.3 if index % 2 == 0 else .3, .22, articulation=bar % 3)
+
+        if breathing:
+            bass = [(0, chord.root, .8, .144), (1.5, chord.root + 7, .35, .090),
+                    (2.5, chord.root + 12, .4, .077)]
+        else:
+            bass = [(0, chord.root, .4, .144), (.75, chord.root + 12, .27, .081),
+                    (1.5, chord.root + 7, .32, .105), (2, chord.root, .38, .126),
+                    (2.75, chord.root + 12, .27, .078)]
+        if bar % 2 == 1:
+            bass.append((3.5, score.chords[(bar + 1) % BARS].root, .3, .071))
         for beat, pitch, held, gain in bass:
-            note("bass", pitch, start + beat + .009, held, gain * phrase_gain, send=.035)
+            note("bass", pitch, start + beat + .006, held, gain * phrase_gain, send=.025)
 
-        lead_gain = {"felt": .156, "nylon": .40, "mallet": .150, "travel": .385}[score.color]
         for index, (beat, pitch, held) in enumerate(melody):
-            gain = lead_gain * phrase_gain * (1.0 if index == 0 else .86) * rng.uniform(.94, 1.04)
-            note(lead, pitch, start + beat + rng.uniform(-.009, .009), held, gain,
-                 .055 if bar < 8 else -.055, .43, True, (index + bar // 4) % 3)
-        if bar in (3, 7, 11, 15):
-            answer_kind = "felt" if lead == "nylon" else "nylon"
-            answer_gain = .044 if answer_kind == "felt" else .11
-            for at, pitch in ((2.85, chord.voices[1] + 12), (3.55, chord.voices[0] + 12)):
-                note(answer_kind, pitch, start + at, .4, answer_gain, -.28, .5)
+            gain = lead_gain * phrase_gain * (1.0 if index == 0 else .87) * rng.uniform(.95, 1.04)
+            note(lead, pitch, start + beat + rng.uniform(-.005, .005), held, gain,
+                 .055 if bar < 8 else -.055, .31, breathing, (index + bar // 4) % 3)
+        if bar in (5, 13):
+            answer_kind = "reed" if lead == "nylon" else "felt"
+            for at, pitch in ((3, chord.voices[1] + 12), (3.5, chord.voices[0] + 12)):
+                note(answer_kind, pitch, start + at, .25, .039, -.24, .3)
 
-        kicks = (0, 2.5) if not active else (0, 1.75, 2.75)
-        if score.color == "travel":
-            kicks = (0, 2.75)
+        kicks = (0, 2.5) if breathing or not active else (0, 1.5, 2.75)
         for index, beat in enumerate(kicks):
-            gain = (.072 if index == 0 else .043) * (1.05 if active else .85)
+            gain = (.089 if index == 0 else .053) * phrase_gain * (1 if active else .84)
             mix.add(percussion("kick", bar % 4), (start + beat) * beat_seconds, gain, send=.035)
-        backbeats = (1, 3) if score.color != "travel" else (2,)
+        backbeats = (2,) if score.color in ("tactical", "travel") or breathing else (1, 3)
         for index, beat in enumerate(backbeats):
-            offset = (start + beat + .025) * beat_seconds
-            mix.add(percussion("brush", (bar + index) % 4), offset, .105 if active else .088, .13, .16)
-            if active or bar % 2 == 1:
-                mix.add(percussion("rim", bar % 4), offset + .005, .055 if active else .032, -.16, .19)
-        shaker_beats = (.5, 1.5, 2.5, 3.5)
-        if active and bar % 4 in (1, 2):
-            shaker_beats += (2.0, 3.0)
+            offset = (start + beat + .012) * beat_seconds
+            mix.add(percussion("brush", (bar + index) % 4), offset, .108 * phrase_gain, .13, .12)
+            mix.add(percussion("rim", bar % 4), offset + .005,
+                    (.048 if active else .030) * phrase_gain, -.16, .12)
+        if bar in (3, 11):
+            for beat, kind, gain in ((3.25, "tom", .044), (3.5, "tom", .032), (3.75, "low_tom", .052)):
+                mix.add(percussion(kind, bar % 4), (start + beat) * beat_seconds,
+                        gain * (1 if active else .65), -.12 if kind == "tom" else .12, .1)
+        shaker_beats = (1.5, 3.5) if breathing else (.5, 1.5, 2.5, 3.5)
         for index, beat in enumerate(shaker_beats):
-            # A small, late offbeat breath, not a constant bright hi-hat grid.
-            swing = .035 if not active else .008
+            # Soft offbeat breaths, never a bright sixteenth-note hi-hat wall.
             mix.add(percussion("shaker", (bar + index) % 4),
-                    (start + beat + swing + rng.uniform(-.006, .006)) * beat_seconds,
-                    (.020 if active else .016) * rng.uniform(.72, 1.08), (-1) ** index * .28, .08)
+                    (start + beat + .012 + rng.uniform(-.004, .004)) * beat_seconds,
+                    (.018 if active else .014) * phrase_gain * rng.uniform(.75, 1.06),
+                    (-1) ** index * .28, .06)
     left, right = mix.finish()
     voice.cache_clear()
     assert mix.wrapped_events >= 5
