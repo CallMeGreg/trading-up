@@ -246,6 +246,7 @@ struct GradeRevealOverlay: View {
                 Text("PSA \(result.grade)")
                     .font(.system(size: 60, weight: .black, design: .rounded))
                     .foregroundStyle(gradeColor(result.grade))
+                    .accessibilityIdentifier("gradeResultValue")
                 Text(Economy.gradeLabel(result.grade))
                     .font(.system(size: 13, weight: .bold))
                     .foregroundStyle(Palette.text)
@@ -271,6 +272,7 @@ struct GradeRevealOverlay: View {
                 }
                 .buttonStyle(.plain)
                 .padding(.top, 4)
+                .accessibilityIdentifier("gradeResultContinue")
             }
             .padding(28)
             .background(RoundedRectangle(cornerRadius: 22).fill(Palette.panel))

@@ -56,6 +56,9 @@ final class GauntletState {
     /// Continue button lowers it once the pull is fully resolved (`finishReveal`).
     var revealActive = false
 
+    /// Keep the grade result visible until its popup or detail sheet is dismissed.
+    private var reviewingGrade = false
+
     /// The outcome of the last resolved round, so the UI can flash "cleared" /
     /// "missed" without inspecting the state machine.
     private(set) var lastOutcome: RoundOutcome?
@@ -101,7 +104,7 @@ final class GauntletState {
         // A fixed seed pins the RNG for deterministic tests; the seeded
         // initializer is DEBUG-only, so release builds always use system
         // randomness (matching `GameState`).
-        self.rng = seed.map { AppRNG(seed: $0) } ?? AppRNG()
+        self.rng = (seed ?? DebugLaunchState.seed()).map { AppRNG(seed: $0) } ?? AppRNG()
         #else
         self.rng = AppRNG()
         #endif
@@ -126,6 +129,7 @@ final class GauntletState {
         revealActive = snapshot.revealActive
         celebratedRound = snapshot.celebratedRound
         phase = snapshot.phase == .shop ? .shop : .ripping
+        evaluateRoundProgress()
     }
 
     /// Persist (or clear) the resume snapshot. An active run — ripping a round or
@@ -225,6 +229,7 @@ final class GauntletState {
         pendingCards = []
         pendingCatalyst = nil
         revealActive = false
+        reviewingGrade = false
         celebratedRound = 0
         confettiBurst = 0
         lastOutcome = nil
@@ -244,6 +249,7 @@ final class GauntletState {
         pendingCards = []
         pendingCatalyst = nil
         revealActive = false
+        reviewingGrade = false
         selectedTrainer = nil
         phase = .trainerSelect
         autosaveRun()
@@ -254,7 +260,7 @@ final class GauntletState {
     /// Whether a fresh rip is allowed: rips remain and the last pull is fully
     /// resolved.
     var canRip: Bool {
-        guard let run else { return false }
+        guard phase == .ripping, !revealActive, !reviewingGrade, let run else { return false }
         return run.ripsLeft > 0 && pendingCards.isEmpty && pendingCatalyst == nil
     }
 
@@ -278,7 +284,7 @@ final class GauntletState {
     /// Lower the full-screen reveal cover. Only allowed once the pull is settled,
     /// which the reveal's Continue button enforces.
     func finishReveal() {
-        guard pendingCards.isEmpty, pendingCatalyst == nil else { return }
+        guard phase == .ripping, revealActive, pendingCards.isEmpty, pendingCatalyst == nil else { return }
         revealActive = false
         evaluateRoundProgress()
     }
@@ -311,7 +317,8 @@ final class GauntletState {
 
     /// Keep a pulled card, moving it into the Showcase (if a slot is free).
     func keep(_ card: CardInstance) {
-        guard var r = run, r.canKeep else { return }
+        guard phase == .ripping, pendingCards.contains(where: { $0.id == card.id }),
+              var r = run, r.canKeep else { return }
         r.keep(card)
         run = r
         removePending(card)
@@ -321,7 +328,8 @@ final class GauntletState {
     /// Sell a pulled card straight to cash at the run's sell-back rate.
     @discardableResult
     func sell(_ card: CardInstance) -> Double {
-        guard var r = run else { return 0 }
+        guard phase == .ripping, pendingCards.contains(where: { $0.id == card.id }),
+              var r = run else { return 0 }
         let gain = r.sell(card)
         run = r
         removePending(card)
@@ -332,7 +340,8 @@ final class GauntletState {
     /// Replace a Showcase card with a pulled one, banking the removed card's
     /// sell-back. Used when the Showcase is full but the pull is an upgrade.
     func swap(_ card: CardInstance, forShowcaseIndex index: Int) {
-        guard var r = run, r.showcase.indices.contains(index) else { return }
+        guard phase == .ripping, pendingCards.contains(where: { $0.id == card.id }),
+              var r = run, r.showcase.indices.contains(index) else { return }
         _ = r.swapIn(card, at: index)
         run = r
         removePending(card)
@@ -387,24 +396,35 @@ final class GauntletState {
         return run.canSwapCatalyst
     }
 
-    /// Grade a Showcase card, paying the fee and gambling its score. Returns the
-    /// rolled grade (nil if unaffordable or already graded).
+    /// Grade a Showcase card, returning the rolled grade, fee, and actual value
+    /// change for the shared result popup (nil if unaffordable or already graded).
     @discardableResult
-    func grade(showcaseIndex index: Int) -> Int? {
-        guard var r = run else { return nil }
-        let g = r.gradeShowcaseCard(at: index, using: &rng)
+    func grade(showcaseIndex index: Int, deferResolution: Bool = false) -> GradeResult? {
+        guard canGrade(showcaseIndex: index), var r = run else { return nil }
+        let oldValue = r.showcase[index].currentValue
+        let fee = r.gradeFee(for: r.showcase[index].card)
+        guard let grade = r.gradeShowcaseCard(at: index, using: &rng) else { return nil }
+        let result = GradeResult(grade: grade, fee: fee, oldValue: oldValue,
+                                 newValue: r.showcase[index].currentValue)
         run = r
-        if g != nil, r.showcase.indices.contains(index) {
-            game.recordGauntletCards([r.showcase[index]])
-        }
+        game.recordGauntletCards([r.showcase[index]])
+        reviewingGrade = deferResolution
         evaluateRoundProgress()
-        return g
+        return result
     }
 
     func canGrade(showcaseIndex index: Int) -> Bool {
-        guard let run, run.showcase.indices.contains(index) else { return false }
-        let card = run.showcase[index]
-        return card.grade == nil && run.cash >= run.gradeFee(for: card.card)
+        phase == .ripping && (run?.canGradeShowcaseCard(at: index) ?? false)
+    }
+
+    func finishGrading() {
+        reviewingGrade = false
+        evaluateRoundProgress()
+    }
+
+    var isLastChance: Bool {
+        guard phase == .ripping, let run else { return false }
+        return !revealActive && run.ripsLeft == 0 && run.auraShortfall > 0 && run.hasAffordableGrade
     }
 
     // MARK: Flow — round resolution
@@ -413,8 +433,8 @@ final class GauntletState {
     /// current pull, drive the round forward (req 6): fire the win confetti the
     /// first time the bar is crossed (immediate, even mid pack-summary), and — once
     /// the pull is fully settled and we're back on the main run screen (the reveal
-    /// cover down) — auto-resolve. A round out of rips resolves too (into a clear,
-    /// win, or loss). This replaces the old manual "End Round" button.
+    /// cover down) — auto-resolve. With no rips, an affordable grade is still a
+    /// legal play: let the player try it or explicitly end the run.
     private func evaluateRoundProgress() {
         guard let r = run, phase == .ripping else { return }
         let reached = r.showcaseAura >= r.target
@@ -422,7 +442,7 @@ final class GauntletState {
             celebratedRound = r.round
             confettiBurst &+= 1
         }
-        if !revealActive && canEndRound && (reached || r.ripsLeft == 0) {
+        if canEndRound && (reached || (r.ripsLeft == 0 && !r.hasAffordableGrade)) {
             endRound()
         } else {
             autosaveRun()
@@ -431,7 +451,8 @@ final class GauntletState {
 
     /// Whether the round can be resolved yet: the current pull must be settled.
     var canEndRound: Bool {
-        run != nil && pendingCards.isEmpty && pendingCatalyst == nil
+        phase == .ripping && run != nil && !revealActive && !reviewingGrade
+            && pendingCards.isEmpty && pendingCatalyst == nil
     }
 
     /// Resolve the current round against its target, routing into the next phase:
@@ -465,7 +486,7 @@ final class GauntletState {
     /// clear). If the standing Showcase already clears the next bar, it resolves at
     /// once — banking the round's rips (req 5/6).
     func continueFromShop() {
-        guard run != nil else { return }
+        guard phase == .shop, run != nil else { return }
         // Clear any lingering win-confetti so it never re-fires when the next
         // round's run screen (or its first pack reveal) mounts. (req 13)
         confettiBurst = 0
@@ -481,7 +502,7 @@ final class GauntletState {
     func buyCatalystSlot() -> Bool { mutateRun { $0.buyCatalystSlot() } }
 
     private func mutateRun(_ body: (inout GauntletRun) -> Bool) -> Bool {
-        guard var r = run else { return false }
+        guard phase == .shop, var r = run else { return false }
         let ok = body(&r)
         run = r
         autosaveRun()
@@ -555,6 +576,8 @@ final class GauntletState {
     /// Return to Trainer select after a win or loss, ready for another run.
     func finish() {
         run = nil
+        revealActive = false
+        reviewingGrade = false
         pendingCards = []
         pendingCatalyst = nil
         selectedTrainer = nil

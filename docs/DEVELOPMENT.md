@@ -119,8 +119,7 @@ correctness.
 **Gauntlet Mode has its own knobs, kept out of `Economy.swift`.** Tier configs, the
 target-Aura curve, interest rate/ceiling, stipend curve, and the `RunMods` aggregator
 live in `TradingUp/Models/GauntletEconomy.swift` — which also holds `GauntletSkillTuning`,
-the seam that turns a Trainer's five-skill graph into its advantage (its per-pip magnitudes
-are `TODO(balance)` zeros today, so every Trainer is currently neutral). The Trainer roster,
+the live seam that turns a Trainer's five-skill graph into its advantage. The Trainer roster,
 skill profiles and unlock thresholds live in `TradingUp/Models/Trainer.swift`; Catalyst
 effects in `Catalyst.swift`. The pack rail (which element sets start unlocked and what
 unlocking a set costs in the between-rounds shop) is driven from `GauntletCore.swift`. Gauntlet has its **own**
@@ -128,6 +127,13 @@ unlocking a set costs in the between-rounds shop) is driven from `GauntletCore.s
 trivialise it — so re‑run the harness after any Gauntlet balance change too, especially when
 setting the skill magnitudes; trainer-unlock thresholds are meta pacing and don't affect the win-rate
 assertions.
+
+Gauntlet's simulator now distinguishes the historical **full-budget** reference from
+the **automatic-clear** play cadence. Both are needed: spending all remaining rips
+after reaching a target is not possible in the UI. The current Hard target ramp is
+1.64; the opening, rip budget, boss multiplier, and other tiers are unchanged.
+See [Gauntlet playtesting](TESTING.md#gauntlet-decisions-and-playtesting) for the
+comparison, deterministic UI fixtures, and targeted commands.
 
 ## Feature flags
 
