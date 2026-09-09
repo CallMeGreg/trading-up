@@ -411,12 +411,14 @@ struct TierSelectScreen: View {
                 VStack(spacing: 12) {
                     ForEach(GauntletTier.allCases, id: \.self) { tier in
                         TierCard(tier: tier, unlocked: state.isUnlocked(tier), trainer: state.selectedTrainer) {
+                            Sound.play(.tierSelect)
                             state.startRun(tier: tier)
                         }
                     }
                 }
             }
             Button {
+                Sound.play(.uiBack)
                 state.backToTrainerSelect()
             } label: {
                 Label("Back", systemImage: "chevron.left")
@@ -536,13 +538,25 @@ struct ResultsScreen: View {
             Spacer()
             shareButton
             BigButton(title: "Play Again", systemImage: "arrow.clockwise", tint: GauntletTheme.tint) {
-                Haptics.play(.light); state.finish()
+                Haptics.play(.light); Sound.play(.uiTap); state.finish()
             }
-            Button("Back to Menu") { onExit() }
+            Button("Back to Menu") { Sound.play(.uiBack); onExit() }
                 .font(.system(size: 14, weight: .bold))
                 .foregroundStyle(Palette.subtle)
         }
         .onAppear(perform: renderShareImage)
+        .task {
+            if state.lastClear?.unlockedTier != nil {
+                let generation = SoundManager.shared.effectGeneration
+                await Sound.after(state.rewardWasConsolation ? 3.5 : 2.4, play: .tierUnlock)
+                guard !Task.isCancelled, generation == SoundManager.shared.effectGeneration else { return }
+                if !state.lastUnlockedTrainers.isEmpty {
+                    await Sound.after(2.1, play: .trainerUnlock)
+                }
+            } else if !state.lastUnlockedTrainers.isEmpty {
+                await Sound.after(state.rewardWasConsolation ? 3.5 : 2.4, play: .trainerUnlock)
+            }
+        }
     }
 
     @ViewBuilder private var shareButton: some View {
@@ -627,11 +641,16 @@ struct LostScreen: View {
             }
             .scrollBounceBehavior(.basedOnSize)
             BigButton(title: "New Run", systemImage: "arrow.clockwise", tint: GauntletTheme.tint) {
-                Haptics.play(.light); state.finish()
+                Haptics.play(.light); Sound.play(.uiTap); state.finish()
             }
-            Button("Back to Menu") { onExit() }
+            Button("Back to Menu") { Sound.play(.uiBack); onExit() }
                 .font(.system(size: 14, weight: .bold))
                 .foregroundStyle(Palette.subtle)
+        }
+        .task {
+            if !state.lastUnlockedTrainers.isEmpty {
+                await Sound.after(2.4, play: .trainerUnlock)
+            }
         }
     }
 }
@@ -721,7 +740,7 @@ struct IntroScreen: View {
             }
 
             BigButton(title: "Let's Rip", systemImage: "sparkles", tint: GauntletTheme.tint) {
-                Haptics.play(.light); state.dismissIntro()
+                Haptics.play(.light); Sound.play(.uiTap); state.dismissIntro()
             }
         }
     }

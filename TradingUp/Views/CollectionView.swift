@@ -96,6 +96,7 @@ struct CollectionView: View {
 
     private func toggle(_ f: CardFilter) {
         Haptics.play(.light)
+        Sound.play(.uiTap)
         if activeFilters.contains(f) { activeFilters.remove(f) } else { activeFilters.insert(f) }
     }
 

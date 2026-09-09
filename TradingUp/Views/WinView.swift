@@ -51,6 +51,7 @@ struct WinView: View {
         }
         .onAppear {
             Haptics.play(.success)
+            if !reveal { Sound.play(.classicWin) }
             renderShareImage()
             withAnimation(.spring(response: 0.72, dampingFraction: 0.6).delay(0.15)) {
                 reveal = true

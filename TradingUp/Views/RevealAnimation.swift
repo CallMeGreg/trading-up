@@ -163,6 +163,7 @@ struct RevealingCardView: View {
     @State private var flash: Double = 0
     @State private var showParticles = false
     @State private var sheen = false
+    @State private var isPresented = false
 
     private var s: CGFloat { width / 230 }
     private var rarity: Rarity { inst.card.rarity }
@@ -233,6 +234,7 @@ struct RevealingCardView: View {
             }
         }
         .onAppear(perform: run)
+        .onDisappear { isPresented = false }
     }
 
     /// Footprint of the burst effects, scaled off the card so a reveal looks the
@@ -270,6 +272,7 @@ struct RevealingCardView: View {
     }
 
     private func run() {
+        isPresented = true
         // The soft flip "ffttt" rides the card's motion — but not on the first
         // card of a pack, which arrives on the pack-rip rather than off the stack.
         if playFlipSound { Sound.play(.cardFlip, volume: 0.7) }
@@ -279,12 +282,17 @@ struct RevealingCardView: View {
 
         // Land the sting + effects right as the card crosses to face-up.
         let mid = response * 0.42
+        let audioGeneration = SoundManager.shared.effectGeneration
         DispatchQueue.main.asyncAfter(deadline: .now() + mid) {
+            guard isPresented else { return }
             // Foil is a shimmer overlay on any rarity; the rarity sting layers
             // under it, so a foil rare/ultra gets both.
-            if inst.foil { Sound.play(.foilShimmer, volume: 0.8) }
-            if rarity == .ultra { Sound.play(.ultra) }
-            else if rarity == .rare { Sound.play(.rare) }
+            if audioGeneration == SoundManager.shared.effectGeneration {
+                if inst.foil { Sound.play(.foilShimmer, volume: 0.8) }
+                if rarity == .ultra { Sound.play(.ultra) }
+                else if rarity == .rare { Sound.play(.rare) }
+                else if isNew && !inst.foil { Sound.play(.newCard, volume: 0.6) }
+            }
 
             if isSpecial {
                 showParticles = true

@@ -39,6 +39,10 @@ game, generated from code and shipped inside the app. No accounts, no ads, no
 tracking — just the game. Set 1 is free to play in full; one optional one‑time
 purchase unlocks the other four sets.
 
+Tactile card sounds and original background music give Classic and Gauntlet
+their own feel. Music and sound effects have separate volume sliders and
+one-tap mute, so you can keep the mix comfortable or play quietly.
+
 ## Screenshots
 
 <table>

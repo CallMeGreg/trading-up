@@ -19,19 +19,25 @@ struct SettingsView: View {
                 ScrollView {
                     VStack(spacing: 16) {
                         VStack(alignment: .leading, spacing: 14) {
+                            header("Audio")
+                            AudioVolumeRow(channel: sound.preferences.music, title: "Music",
+                                           identifier: "music") {}
+                            Divider().overlay(Palette.stroke)
+                            AudioVolumeRow(channel: sound.preferences.sfx, title: "SFX",
+                                           identifier: "sfx") { Sound.play(.toggleOn) }
+                            Text("Tap a speaker to mute. Tap again to restore your previous volume. Music stays quiet while another app's audio needs priority.")
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundStyle(Palette.subtle)
+                            if let message = sound.errorMessage {
+                                Text(message)
+                                    .font(.system(size: 11, weight: .medium))
+                                    .foregroundStyle(Color(hex: "e0663b"))
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .panel()
+                        VStack(alignment: .leading, spacing: 14) {
                             header("Feedback")
-                            Toggle(isOn: $sound.isEnabled) {
-                                Label("Sound Effects",
-                                      systemImage: sound.isEnabled ? "speaker.wave.2.fill" : "speaker.slash.fill")
-                                    .font(.system(size: 14, weight: .semibold))
-                                    .foregroundStyle(Palette.text)
-                            }
-                            .tint(Palette.money)
-                            .onChange(of: sound.isEnabled) { _, on in
-                                Haptics.play(.light)
-                                if on { Sound.play(.coin) }   // brief confirmation you can hear
-                            }
-
                             Toggle(isOn: $haptics.isEnabled) {
                                 Label("Haptics",
                                       systemImage: haptics.isEnabled ? "iphone.radiowaves.left.and.right" : "iphone.slash")
@@ -64,12 +70,14 @@ struct SettingsView: View {
             if let onExitToMenu {
                 Button {
                     Haptics.play(.light)
+                    Sound.play(.uiBack)
                     onExitToMenu()
                 } label: {
                     Text("Done")
                         .font(.system(size: 15, weight: .bold))
                         .foregroundStyle(Palette.tapCue)
                 }
+
                 .accessibilityIdentifier("exitToMenu")
             }
         }

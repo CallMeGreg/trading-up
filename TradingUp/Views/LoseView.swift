@@ -8,6 +8,7 @@ struct LoseView: View {
     private var s: Stats { game.stats }
     @State private var confirmNew = false
     @State private var selected: Card?
+    @State private var announced = false
 
     var body: some View {
         ZStack {
@@ -29,7 +30,13 @@ struct LoseView: View {
         .sheet(item: $selected) { card in
             CardDetailView(card: card)
         }
-        .onAppear { Haptics.play(.error) }
+        .onAppear {
+            Haptics.play(.error)
+            if !announced {
+                announced = true
+                Sound.play(.classicLoss)
+            }
+        }
         .alert("Start a new game?", isPresented: $confirmNew) {
             Button("Cancel", role: .cancel) {}
             Button("Reset", role: .destructive) { Haptics.play(.medium); game.newGame() }

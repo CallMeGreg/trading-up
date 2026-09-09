@@ -1,0 +1,6 @@
+# Preserve the original vendor license bytes for provenance hashing.
+/docs/sound-lab/licenses/kenney-casino-audio.txt -text -whitespace
+# Music provenance also pins the source files' byte hashes.
+/tools/generate_music.py text eol=lf
+/tools/sound_lab/music.py text eol=lf
+/tools/sound_lab/dsp.py text eol=lf

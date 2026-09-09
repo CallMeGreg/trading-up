@@ -81,7 +81,8 @@ final class GauntletExperienceTests: XCTestCase {
         shot("after-last-chance")
         button("Home").tap()
         app.terminate()
-        app.launchEnvironment = ["TU_FORCE_UNLOCK": "1", "TU_TEST_SEED": "0"]
+        app.launchEnvironment = ["TU_FORCE_UNLOCK": "1", "TU_TEST_SEED": "0",
+                                 "TU_AUDIO_DISABLED": "1"]
         app.launch()
         enterGauntlet(resume: true)
         XCTAssertTrue(app.buttons["gauntletEndRun"].waitForExistence(timeout: 5))
@@ -203,7 +204,7 @@ final class GauntletExperienceTests: XCTestCase {
         app.launchArguments = largeText
             ? ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryXXXL"] : []
         app.launchEnvironment = ["TU_FORCE_UNLOCK": "1", "TU_TEST_GAUNTLET": scenario,
-                                 "TU_TEST_SEED": seed]
+                                 "TU_TEST_SEED": seed, "TU_AUDIO_DISABLED": "1"]
         app.launch()
         enterGauntlet(resume: scenario != "fresh")
     }
