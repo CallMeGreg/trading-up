@@ -18,6 +18,7 @@ private struct MiniButton: View {
             }
             .foregroundStyle(.white)
             .padding(.horizontal, 10).padding(.vertical, 6)
+            .frame(minWidth: 44, minHeight: 44)
             .background(Capsule().fill(enabled ? tint : Palette.stroke))
             .opacity(enabled ? 1 : 0.5)
         }
@@ -166,7 +167,9 @@ struct CatalystEmblem: View {
 struct RunScreen: View {
     let state: GauntletState
     var onHome: () -> Void = {}
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var detail: ShowcaseSelection?
+    @State private var confirmingEnd = false
     /// Measured height of the HUD panel, so the Home button can match it and the
     /// two tiles read as one row (req 4).
     @State private var hudHeight: CGFloat = 0
@@ -193,10 +196,16 @@ struct RunScreen: View {
                     }
                     .padding(.bottom, 4)
                 }
-                PackRail(state: state, run: run)
+                if state.isLastChance {
+                    LastChancePanel(run: run, onReview: { index in
+                        detail = ShowcaseSelection(index: index)
+                    }, onEnd: { confirmingEnd = true })
+                } else {
+                    PackRail(state: state, run: run)
+                }
             }
             .overlay {
-                if state.confettiBurst > 0 {
+                if state.confettiBurst > 0 && !reduceMotion {
                     ParticleBurst(colors: [Palette.money, Color(hex: "ffd54a"),
                                            Color(hex: "6d5cf7"), Color(hex: "b06cf7")])
                         .id(state.confettiBurst)
@@ -206,8 +215,14 @@ struct RunScreen: View {
             .fullScreenCover(isPresented: revealBinding) {
                 GauntletRevealView(state: state, set: state.lastRippedSet)
             }
-            .sheet(item: $detail) { sel in
+            .sheet(item: $detail, onDismiss: { state.finishGrading() }) { sel in
                 ShowcaseCardDetail(state: state, index: sel.index) { detail = nil }
+            }
+            .alert("End this run?", isPresented: $confirmingEnd) {
+                Button("End Run", role: .destructive) { state.endRound() }
+                Button("Keep Playing", role: .cancel) {}
+            } message: {
+                Text("You still have an affordable grade to try. Your best pulls and earned Trainer milestones stay saved either way.")
             }
         }
     }
@@ -217,8 +232,6 @@ struct RunScreen: View {
     }
 }
 
-private func fmt(_ v: Double) -> String { String(format: "%.0f", v) }
-
 /// Aura counted against the bar is shown **floored**, and the target **ceiled**, so
 /// the integer readout can only reach "n / n" once the round is genuinely won
 /// (`showcaseAura >= target`). Aura and targets are fractional (e.g. Medium round 2
@@ -227,6 +240,44 @@ private func fmt(_ v: Double) -> String { String(format: "%.0f", v) }
 /// count honest; ceiling the goal keeps the pair from tying before the win.
 private func fmtAura(_ v: Double) -> String { String(format: "%.0f", v.rounded(.down)) }
 private func fmtGoal(_ v: Double) -> String { String(format: "%.0f", v.rounded(.up)) }
+private func fmtChange(_ v: Double) -> String { String(format: "%+.2f", v) }
+
+private struct LastChancePanel: View {
+    let run: GauntletRun
+    let onReview: (Int) -> Void
+    let onEnd: () -> Void
+
+    private var reviewIndex: Int? {
+        run.showcase.indices.filter { run.canGradeShowcaseCard(at: $0) }
+            .max { run.showcase[$0].currentValue < run.showcase[$1].currentValue }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label("Out of rips, not out of options", systemImage: "seal.fill")
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(Color(hex: "ffd54a"))
+            Text("Need \(fmtGoal(run.auraShortfall)) more Aura. Grade a Showcase card for one last chance. Grades can lower Aura, too.")
+                .font(.caption)
+                .foregroundStyle(Palette.text)
+                .fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: 10) {
+                if let index = reviewIndex {
+                    BigButton(title: "Review \(run.showcase[index].card.name)",
+                              systemImage: "seal", tint: GauntletTheme.tint) {
+                        onReview(index)
+                    }
+                    .accessibilityIdentifier("gauntletReviewGrade")
+                }
+                Button("End Run", role: .destructive, action: onEnd)
+                    .font(.caption.weight(.bold))
+                    .frame(minWidth: 64, minHeight: 44)
+                    .accessibilityIdentifier("gauntletEndRun")
+            }
+        }
+        .panel(12)
+    }
+}
 
 /// Subtitle for the Championship (final round) shop CTA: current Aura and the
 /// goal (gold) picked out against the button's gold skin. The Hard finale also
@@ -285,6 +336,9 @@ private struct PackRail: View {
                 .frame(width: geo.size.width, height: railHeight, alignment: .center)
             }
             .frame(height: railHeight)
+            Text("Unlock other sets in the shop between rounds.")
+                .font(.caption2)
+                .foregroundStyle(Palette.subtle)
         }
     }
 }
@@ -316,6 +370,7 @@ private struct PackTile: View {
         }
         .buttonStyle(.plain)
         .disabled(!enabled)
+        .accessibilityIdentifier("gauntletPack-\(set)")
         .accessibilityLabel("\(CardDatabase.setName(set)) pack — \(statusLine)")
     }
 
@@ -383,6 +438,7 @@ private struct HUDPanel: View {
                 Text(run.cash.moneyShort)
                     .font(.system(size: 18, weight: .black, design: .rounded))
                     .foregroundStyle(Palette.money)
+                    .monospacedDigit()
             }
 
             HStack(spacing: 8) {
@@ -397,6 +453,7 @@ private struct HUDPanel: View {
                     .foregroundStyle(run.showcaseAura >= run.target ? Palette.money : Palette.subtle)
             }
             .accessibilityElement(children: .ignore)
+            .accessibilityIdentifier("gauntletAura")
             .accessibilityLabel("Aura \(fmtAura(run.showcaseAura)) of \(fmtGoal(run.target))")
         }
         .panel()
@@ -476,23 +533,27 @@ private struct PullRow: View {
                         .font(.system(size: 13, weight: .heavy, design: .rounded))
                         .foregroundStyle(Palette.money)
                 }
-                Text("+\(fmt(max(0, run.marginalAura(of: inst)))) Aura if kept")
-                    .font(.system(size: 10, weight: .semibold))
+                Text(auraPreview)
+                    .font(.caption2.weight(.semibold))
                     .foregroundStyle(Palette.subtle)
+                    .fixedSize(horizontal: false, vertical: true)
                 HStack(spacing: 8) {
                     if state.canKeepPending {
                         MiniButton(title: "Keep", systemImage: "tray.and.arrow.down.fill",
                                    tint: Color(hex: "3fbf7f")) {
                             Haptics.play(.light); state.keep(inst)
                         }
+                        .accessibilityIdentifier("gauntletKeep-\(inst.cardId)")
                     } else {
                         MiniButton(title: "Swap", systemImage: "arrow.left.arrow.right",
                                    tint: Color(hex: "3b82f6")) { onSwap(inst) }
+                            .accessibilityIdentifier("gauntletSwap-\(inst.cardId)")
                     }
                     MiniButton(title: "Sell \(sellPreview)", systemImage: "dollarsign.circle.fill",
                                tint: Color(hex: "6d5cf7")) {
                         Haptics.play(.light); state.sell(inst)
                     }
+                    .accessibilityIdentifier("gauntletSell-\(inst.cardId)")
                 }
             }
             Spacer(minLength: 0)
@@ -503,6 +564,138 @@ private struct PullRow: View {
 
     private var sellPreview: String {
         (inst.currentValue * run.sellbackRate).moneyShort
+    }
+
+    private var auraPreview: String {
+        if run.canKeep { return "\(fmtChange(run.marginalAura(of: inst))) Aura if kept" }
+        if let best = run.swapPreviews(for: inst).first {
+            return "Best swap: \(fmtChange(best.auraChange)) Aura"
+        }
+        return "Showcase full"
+    }
+}
+
+private struct ShowcaseSwapPicker: View {
+    let state: GauntletState
+    let incoming: CardInstance
+    let onClose: () -> Void
+    @State private var selectedId: UUID?
+
+    var body: some View {
+        NavigationStack {
+            if let run = state.run {
+                let previews = run.swapPreviews(for: incoming)
+                let selected = previews.first { $0.id == selectedId }
+                VStack(spacing: 0) {
+                    HStack(spacing: 12) {
+                        CardView(card: incoming.card, instance: incoming, width: 54)
+                            .accessibilityHidden(true)
+                        VStack(alignment: .leading, spacing: 5) {
+                            Text("Make room for \(incoming.card.name)")
+                                .font(.headline)
+                                .foregroundStyle(.white)
+                            Text("Compare the whole Showcase, including evolution bonuses. The replaced card is sold.")
+                                .font(.caption)
+                                .foregroundStyle(Palette.subtle)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                    .padding(16)
+
+                    ScrollView {
+                        VStack(spacing: 10) {
+                            ForEach(previews) { preview in
+                                Button {
+                                    Haptics.play(.light)
+                                    selectedId = preview.id
+                                } label: {
+                                    swapOption(preview, run: run,
+                                               isBest: preview.id == previews.first?.id)
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityIdentifier("gauntletReplace-\(preview.index)")
+                                .accessibilityAddTraits(selectedId == preview.id ? .isSelected : [])
+                            }
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 12)
+                    }
+                    .scrollBounceBehavior(.basedOnSize)
+                    .accessibilityIdentifier("gauntletSwapOptions")
+
+                    BigButton(title: selected.map { "Swap & sell \($0.outgoing.card.name)" } ?? "Choose a card to replace",
+                              subtitle: selected.map { "Receive \($0.cashGain.money) · \(fmtChange($0.auraChange)) Aura" },
+                              systemImage: "arrow.left.arrow.right", tint: GauntletTheme.tint,
+                              enabled: selected != nil) {
+                        if let selected {
+                            state.swap(incoming, forShowcaseIndex: selected.index)
+                            Haptics.play(.light)
+                            onClose()
+                        }
+                    }
+                    .accessibilityIdentifier("gauntletConfirmSwap")
+                    .padding(16)
+                    .background(.ultraThinMaterial)
+                }
+                .readableWidth()
+                .background(GauntletBackdrop())
+                .navigationTitle("Compare swaps")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cancel", action: onClose)
+                    }
+                }
+            }
+        }
+    }
+
+    private func swapOption(_ preview: ShowcaseSwapPreview, run: GauntletRun, isBest: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: selectedId == preview.id ? "checkmark.circle.fill" : "circle")
+                    .foregroundStyle(selectedId == preview.id ? Color(hex: "b06cf7") : Palette.subtle)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(preview.outgoing.card.name)
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(.white)
+                    Text("Sell for \(preview.cashGain.money)")
+                        .font(.caption)
+                        .foregroundStyle(Palette.subtle)
+                }
+                Spacer(minLength: 0)
+                VStack(alignment: .trailing, spacing: 3) {
+                    Text("\(fmtChange(preview.auraChange)) Aura")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(preview.auraChange >= 0 ? Palette.money : Color(hex: "ff8a80"))
+                        .monospacedDigit()
+                    if isBest {
+                        Text("MOST AURA")
+                            .font(.caption2.weight(.heavy))
+                            .foregroundStyle(Color(hex: "bfa3ff"))
+                    }
+                }
+            }
+            Text("Showcase after swap: \(fmtAura(preview.auraAfter)) / \(fmtGoal(run.target)) Aura")
+                .font(.caption)
+                .foregroundStyle(Palette.subtle)
+            if !preview.brokenLineIds.isEmpty {
+                Label("Breaks a completed evolution line", systemImage: "exclamationmark.triangle.fill")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color(hex: "ffd54a"))
+            }
+            if !preview.completedLineIds.isEmpty {
+                Label("Completes an evolution line", systemImage: "link")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Palette.money)
+            }
+        }
+        .multilineTextAlignment(.leading)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .panel(12)
+        .overlay(RoundedRectangle(cornerRadius: 18)
+            .strokeBorder(selectedId == preview.id ? Color(hex: "b06cf7") : .clear, lineWidth: 2))
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -526,7 +719,7 @@ private struct CatalystOfferRow: View {
                         .font(.system(size: 9, weight: .black))
                         .foregroundStyle(catalyst.element.badgeTint)
                 }
-                Text(catalyst.blurb)
+                Text(catalyst.effectSummary)
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(Palette.subtle)
                     .fixedSize(horizontal: false, vertical: true)
@@ -684,11 +877,15 @@ private struct ShowcasePanel: View {
             } else {
                 LazyVGrid(columns: cols, spacing: 10) {
                     ForEach(Array(run.showcase.enumerated()), id: \.element.id) { idx, inst in
-                        Button { onTapCard(idx) } label: {
+                        if interactive {
+                            Button { onTapCard(idx) } label: {
+                                ShowcaseCardCell(run: run, inst: inst, width: 92)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityIdentifier("gauntletShowcase-\(idx)")
+                        } else {
                             ShowcaseCardCell(run: run, inst: inst, width: 92)
                         }
-                        .buttonStyle(.plain)
-                        .disabled(!interactive)
                     }
                 }
                 if interactive {
@@ -843,6 +1040,7 @@ private struct ShowcaseCardDetail: View {
     let state: GauntletState
     let index: Int
     let onClose: () -> Void
+    @State private var auraBeforeGrading: Double?
 
     var body: some View {
         ZStack {
@@ -895,7 +1093,14 @@ private struct ShowcaseCardDetail: View {
                 }
 
                 EvolutionLineView(line: CardDatabase.line(inst.card.lineId),
-                                  currentCardId: inst.card.id) { _ in true }
+                                  currentCardId: inst.card.id) { id in
+                    run.showcase.contains { $0.cardId == id }
+                }
+                if inst.card.stageCount > 1 && !run.isInCompletedLine(inst) {
+                    Text("Only stages in your Showcase count toward the evolution bonus.")
+                        .font(.caption)
+                        .foregroundStyle(Palette.subtle)
+                }
 
                 if run.isInCompletedLine(inst) {
                     completedLineBanner(set: inst.card.set, mult: run.evoLineMultiplier(forSet: inst.card.set))
@@ -906,6 +1111,7 @@ private struct ShowcaseCardDetail: View {
             .padding(20)
             .readableWidth()
         }
+        .accessibilityIdentifier("gauntletCardDetails")
     }
 
     @ViewBuilder
@@ -919,6 +1125,16 @@ private struct ShowcaseCardDetail: View {
                 Text(Economy.gradeLabel(g))
                     .font(.system(size: 11, weight: .bold))
                     .foregroundStyle(Palette.subtle)
+                if let before = auraBeforeGrading {
+                    Text("\(fmtChange(run.showcaseAura - before)) Aura")
+                        .font(.headline)
+                        .foregroundStyle(run.showcaseAura >= before ? Palette.money : Color(hex: "ff8a80"))
+                        .accessibilityIdentifier("gauntletGradeResult")
+                    BigButton(title: run.showcaseAura >= run.target ? "Collect rewards" : "Back to round",
+                              systemImage: "checkmark", tint: GauntletTheme.tint, action: onClose)
+                        .padding(.top, 8)
+                        .accessibilityIdentifier("gauntletFinishGrade")
+                }
             }
             .frame(maxWidth: .infinity)
             .panel()
@@ -926,14 +1142,18 @@ private struct ShowcaseCardDetail: View {
             VStack(spacing: 8) {
                 BigButton(title: "Grade for \(fee.moneyShort)",
                           subtitle: state.canGrade(showcaseIndex: index)
-                            ? "Gambles a grade onto the card, changing its value"
+                            ? "Can raise or lower Aura. One grade per card."
                             : "Not enough cash — need \(fee.moneyShort)",
                           systemImage: "seal.fill",
                           tint: [Color(hex: "6d5cf7")],
                           enabled: state.canGrade(showcaseIndex: index)) {
                     Haptics.play(.medium)
-                    state.grade(showcaseIndex: index)
+                    let before = run.showcaseAura
+                    if state.grade(showcaseIndex: index, deferResolution: true) != nil {
+                        auraBeforeGrading = before
+                    }
                 }
+                .accessibilityIdentifier("gauntletGradeCard")
             }
         }
     }
@@ -981,47 +1201,68 @@ private struct ShowcaseCardDetail: View {
 
 struct ShopScreen: View {
     let state: GauntletState
+    @State private var showingAllPacks = false
 
-    /// Element sets still locked this run — opened here, in the between-rounds
-    /// shop. This is the only place a run unlocks new packs: the mid-round rail can
-    /// rip open sets but never buy them. (req 10)
-    private var lockedPacks: [Int] { state.packTiers.filter { !state.isPackUnlocked($0) } }
+    private var paidPacks: [Int] { state.packTiers.filter { $0 > 1 } }
 
     var body: some View {
         if let run = state.run {
-            VStack(spacing: 14) {
+            let featuredPacks = paidPacks.filter {
+                run.isPackUnlocked($0) || run.canUnlockPack($0) || $0 == run.nextLockedPack
+            }
+            let otherPacks = paidPacks.filter { !featuredPacks.contains($0) }
+            VStack(spacing: 12) {
                 RoundClearedHero(run: run)
+                    .id(run.round)
 
                 ScrollView {
-                    VStack(spacing: 10) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        nextRoundPreview(run)
+
+                        SectionTitle(text: "Unlock packs · this run only")
+                            .padding(.top, 4)
+                        ForEach(featuredPacks, id: \.self) { set in
+                            packRow(set, run: run)
+                        }
+
+                        SectionTitle(text: "Grow your build")
+                            .padding(.top, 8)
                         ShopRow(glyph: .symbol("square.stack.3d.up.fill", tint: Color(hex: "6d5cf7")),
                                 title: "Add Showcase Slot",
                                 subtitle: "Now \(run.effectiveSlots) → \(run.effectiveSlots + 1)",
-                                cost: run.nextSlotCost, affordable: run.cash >= run.nextSlotCost) {
+                                cost: run.nextSlotCost, cash: run.cash) {
                             Haptics.play(.light); state.buySlot()
                         }
+                        .accessibilityIdentifier("gauntletBuyShowcaseSlot")
                         ShopRow(glyph: .symbol("bolt.circle.fill", tint: Color(hex: "ff9500")),
                                 title: "Add Catalyst Slot",
                                 subtitle: "Now \(run.effectiveCatalystSlots) → \(run.effectiveCatalystSlots + 1)",
-                                cost: run.nextCatalystSlotCost, affordable: run.cash >= run.nextCatalystSlotCost) {
+                                cost: run.nextCatalystSlotCost, cash: run.cash) {
                             Haptics.play(.light); state.buyCatalystSlot()
                         }
-                        if !lockedPacks.isEmpty {
-                            SectionTitle(text: "Unlock packs")
-                                .padding(.top, 4)
-                        }
-                        ForEach(lockedPacks, id: \.self) { set in
-                            if let cost = state.packUnlockCost(set) {
-                                ShopRow(glyph: .pack(set),
-                                        title: "Unlock \(CardDatabase.setName(set)) Packs",
-                                        subtitle: "Adds this set to your pack rail",
-                                        cost: cost, affordable: state.canUnlockPack(set)) {
-                                    Haptics.play(.light); state.unlockPack(set)
+                        .accessibilityIdentifier("gauntletBuyCatalystSlot")
+
+                        if !otherPacks.isEmpty {
+                            DisclosureGroup(isExpanded: $showingAllPacks) {
+                                VStack(spacing: 10) {
+                                    ForEach(otherPacks, id: \.self) { set in
+                                        packRow(set, run: run)
+                                    }
                                 }
+                                .padding(.top, 10)
+                            } label: {
+                                Text("More pack sets (\(otherPacks.count))")
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(Palette.text)
+                                    .frame(minHeight: 44)
                             }
+                            .tint(Palette.subtle)
                         }
                     }
+                    .padding(.bottom, 8)
                 }
+                .scrollBounceBehavior(.basedOnSize)
+                .accessibilityIdentifier("gauntletShopOffers")
 
                 if run.isFinalRound {
                     BigButton(title: "Enter the Championship",
@@ -1029,105 +1270,156 @@ struct ShopScreen: View {
                               systemImage: "play.fill", tint: GauntletTheme.championship) {
                         Haptics.play(.medium); state.continueFromShop()
                     }
+                    .accessibilityIdentifier("gauntletNextRound")
                 } else {
-                    BigButton(title: "Start Round \(run.round)",
-                              subtitle: "Aura: \(fmtAura(run.showcaseAura)) · Goal: \(fmtGoal(run.target))",
+                    BigButton(title: run.auraShortfall == 0 ? "Bank Round \(run.round)" : "Start Round \(run.round)",
+                              subtitle: run.auraShortfall == 0
+                                ? "Target already met · Cash out \(run.ripsLeft) unused rips"
+                                : "\(run.ripsLeft) rips · Need \(fmtGoal(run.auraShortfall)) more Aura",
                               systemImage: "play.fill", tint: GauntletTheme.tint) {
                         Haptics.play(.medium); state.continueFromShop()
                     }
+                    .accessibilityIdentifier("gauntletNextRound")
                 }
             }
         }
     }
+
+    @ViewBuilder
+    private func packRow(_ set: Int, run: GauntletRun) -> some View {
+        if let cost = state.packUnlockCost(set) {
+            ShopRow(glyph: .pack(set),
+                    title: "\(CardDatabase.setName(set)) packs",
+                    subtitle: "Unlock once, then spend rips to open",
+                    cost: cost, cash: run.cash) {
+                Haptics.play(.light); state.unlockPack(set)
+            }
+            .accessibilityIdentifier("gauntletUnlockPack-\(set)")
+        } else {
+            HStack(spacing: 12) {
+                ShopGlyphView(glyph: .pack(set), affordable: true)
+                    .frame(width: 40)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("\(CardDatabase.setName(set)) packs")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(.white)
+                    Label("Unlocked for this run", systemImage: "checkmark.circle.fill")
+                        .font(.caption)
+                        .foregroundStyle(Palette.money)
+                }
+                Spacer(minLength: 0)
+            }
+            .panel(12)
+            .accessibilityElement(children: .combine)
+            .accessibilityIdentifier("gauntletUnlockedPack-\(set)")
+        }
+    }
+
+    private func nextRoundPreview(_ run: GauntletRun) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Label(run.isFinalRound ? "Championship ahead" : "Round \(run.round) ahead",
+                      systemImage: run.isFinalRound ? "trophy.fill" : "target")
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(.white)
+                Spacer(minLength: 4)
+                Text("\(run.ripsLeft) rips")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(Palette.subtle)
+            }
+            ProgressBar(value: run.showcaseAura, total: run.target,
+                        tint: run.auraShortfall == 0 ? Palette.money : Color(hex: "b06cf7"), height: 7)
+            Text("\(fmtAura(run.showcaseAura)) / \(fmtGoal(run.target)) Aura"
+                 + (run.auraShortfall == 0 ? " · Target already met" : " · \(fmtGoal(run.auraShortfall)) to go"))
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(run.auraShortfall == 0 ? Palette.money : Palette.text)
+            Text("At this balance: +\(GauntletEconomy.interest(on: run.cash).money) interest at the next clear.")
+                .font(.caption2)
+                .foregroundStyle(Palette.subtle)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .panel(12)
+    }
 }
 
-/// Celebratory header for the between-rounds shop (reqs 2 & 3): an animated
-/// "Round N Cleared" above a stacked payout ledger. Interest is banked first (on
-/// the cash carried into the clear), then the round payout, so the player can read
-/// exactly how their ending cash was built.
+/// Earnings are historical; spendable cash is live. Never reconstruct a past
+/// balance from current cash, which changes as soon as the player buys something.
 private struct RoundClearedHero: View {
     let run: GauntletRun
-    @State private var appeared = false
+    @State private var expanded = false
 
     private var clearedRound: Int { max(1, run.round - 1) }
-    /// Cash carried into the clear, before interest + payout + banked rips were added.
-    private var carried: Double {
-        max(0, run.cash - run.lastInterest - run.lastStipend - run.lastRipBank)
-    }
 
     var body: some View {
-        VStack(spacing: 12) {
-            ZStack {
-                Circle().fill(Palette.money.opacity(0.16))
-                    .frame(width: 74, height: 74)
-                    .scaleEffect(appeared ? 1 : 0.3)
+        VStack(spacing: 10) {
+            HStack(spacing: 8) {
                 Image(systemName: "checkmark.seal.fill")
-                    .font(.system(size: 46, weight: .bold))
+                    .font(.system(size: 24, weight: .bold))
                     .foregroundStyle(Palette.money)
-                    .scaleEffect(appeared ? 1 : 0.3)
+                Text("Round \(clearedRound) Cleared!")
+                    .font(.system(size: 21, weight: .black, design: .rounded))
+                    .foregroundStyle(.white)
+                    .multilineTextAlignment(.center)
             }
-            Text("Round \(clearedRound) Cleared!")
-                .font(.system(size: 22, weight: .black, design: .rounded))
-                .foregroundStyle(.white)
+            .padding(.horizontal, 34)
+            .frame(minHeight: 38)
 
-            VStack(spacing: 9) {
-                LedgerRow(label: "Carried over", amount: carried, style: .base)
-                LedgerRow(label: "Interest", amount: run.lastInterest,
-                          style: .add, dim: run.lastInterest <= 0)
-                LedgerRow(label: "Round Payout", amount: run.lastStipend, style: .add)
-                if run.lastRipBank > 0 {
-                    LedgerRow(label: "Rips Banked", amount: run.lastRipBank, style: .add)
+            VStack(spacing: 10) {
+                HStack {
+                    Text("CASH TO SPEND")
+                        .font(.caption.weight(.heavy))
+                        .foregroundStyle(Palette.subtle)
+                    Spacer()
+                    Text(run.cash.money)
+                        .font(.system(size: 24, weight: .black, design: .rounded))
+                        .foregroundStyle(Palette.money)
+                        .monospacedDigit()
+                        .accessibilityIdentifier("gauntletShopCash")
                 }
-                Rectangle().fill(Palette.stroke).frame(height: 1).padding(.vertical, 1)
-                LedgerRow(label: "Cash", amount: run.cash, style: .total)
+                DisclosureGroup(isExpanded: $expanded) {
+                    VStack(spacing: 8) {
+                        LedgerRow(label: "Interest", amount: run.lastInterest)
+                        LedgerRow(label: "Round payout", amount: run.lastStipend)
+                        LedgerRow(label: "Unused rips", amount: run.lastRipBank)
+                        Text("Already included in your cash. Purchases don't change this payout.")
+                            .font(.caption2)
+                            .foregroundStyle(Palette.subtle)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(.top, 8)
+                } label: {
+                    HStack {
+                        Text("Earned last round")
+                        Spacer(minLength: 4)
+                        Text("+\(run.lastClearEarnings.money)")
+                            .foregroundStyle(Palette.money)
+                            .monospacedDigit()
+                            .accessibilityIdentifier("gauntletLastEarnings")
+                    }
+                    .font(.caption.weight(.semibold))
+                }
+                .tint(Palette.subtle)
+                .accessibilityIdentifier("gauntletPayoutDetails")
             }
-            .panel(14)
-            .opacity(appeared ? 1 : 0)
-            .offset(y: appeared ? 0 : 8)
-        }
-        .onAppear {
-            appeared = false
-            withAnimation(.spring(response: 0.5, dampingFraction: 0.62).delay(0.05)) { appeared = true }
+            .panel(12)
         }
     }
 }
 
-/// One line of the round-clear payout ledger. Colour follows a single consistent
-/// scheme: the carried-over **base** is yellow, each **addition** on top is white,
-/// and the **total** cash is green.
 private struct LedgerRow: View {
-    enum Style { case base, add, total }
     let label: String
     let amount: Double
-    var style: Style
-    var dim: Bool = false
-
-    private var valueText: String {
-        switch style {
-        case .base:  return amount.money
-        case .add:   return "+\(amount.moneyShort)"
-        case .total: return amount.money
-        }
-    }
-    private var valueColor: Color {
-        if dim { return Palette.subtle }
-        switch style {
-        case .base:  return Color(hex: "ffd54a")   // yellow — the carried-over base
-        case .add:   return Palette.text            // white — each credit added on top
-        case .total: return Palette.money           // green — the ending total
-        }
-    }
 
     var body: some View {
         HStack {
-            Text(label.uppercased())
-                .font(.system(size: style == .total ? 12 : 11, weight: .heavy)).tracking(1)
+            Text(label)
+                .font(.caption)
                 .foregroundStyle(Palette.subtle)
             Spacer()
-            Text(valueText)
-                .font(.system(size: style == .total ? 20 : 16,
-                              weight: style == .base ? .heavy : .black, design: .rounded))
-                .foregroundStyle(valueColor)
+            Text("+\(amount.money)")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(Palette.text)
+                .monospacedDigit()
         }
     }
 }
@@ -1168,19 +1460,29 @@ private struct ShopRow: View {
     let title: String
     let subtitle: String
     let cost: Double
-    let affordable: Bool
+    let cash: Double
     let action: () -> Void
+
+    private var affordable: Bool { cash >= cost }
 
     var body: some View {
         HStack(spacing: 12) {
             ShopGlyphView(glyph: glyph, affordable: affordable)
                 .frame(width: 40)
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 3) {
                 Text(title).font(.system(size: 14, weight: .bold)).foregroundStyle(.white)
                 Text(subtitle).font(.system(size: 11, weight: .medium)).foregroundStyle(Palette.subtle)
+                if !affordable {
+                    Text("Need \((cost - cash).money) more")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(Color(hex: "ffd54a"))
+                }
             }
+            .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)
             MiniButton(title: cost.moneyShort, tint: Color(hex: "6d5cf7"), enabled: affordable, action: action)
+                .accessibilityLabel("Buy \(title) for \(cost.money)")
+                .accessibilityHint(affordable ? "Available for this run" : "Need \((cost - cash).money) more")
         }
         .panel(12)
     }
@@ -1248,6 +1550,7 @@ struct RewardScreen: View {
             }
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier("gauntletReward-\(option.cardId)")
     }
 
     /// The gold "New" flag on a reward whose **Extended Art** the Binder doesn't
@@ -1279,6 +1582,7 @@ struct GauntletRevealView: View {
     let state: GauntletState
     let set: Int
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var phase: Phase = .sealed
     @State private var items: [RevealItem] = []
     @State private var swapCandidate: CardInstance?
@@ -1313,8 +1617,26 @@ struct GauntletRevealView: View {
             case .summary:          summaryView
             }
         }
+        .overlay(alignment: .topTrailing) {
+            if phase != .summary {
+                Button {
+                    Haptics.play(.light)
+                    withAnimation(reduceMotion ? nil : .easeOut(duration: 0.2)) { phase = .summary }
+                } label: {
+                    Label("Reveal all", systemImage: "forward.end.fill")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 14)
+                        .frame(minHeight: 44)
+                        .background(.ultraThinMaterial, in: Capsule())
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("gauntletRevealAll")
+                .padding(16)
+            }
+        }
         .overlay {
-            if state.confettiBurst > 0 {
+            if state.confettiBurst > 0 && !reduceMotion {
                 ParticleBurst(colors: [Palette.money, Color(hex: "ffd54a"),
                                        Color(hex: "6d5cf7"), Color(hex: "b06cf7")])
                     .id(state.confettiBurst)
@@ -1416,7 +1738,7 @@ struct GauntletRevealView: View {
             }
             ScrollView {
                 VStack(spacing: 14) {
-                    Text("Your Showcase")
+                    Text("Build your Showcase")
                         .font(.system(size: 22, weight: .black, design: .rounded))
                         .foregroundStyle(.white)
 
@@ -1431,44 +1753,61 @@ struct GauntletRevealView: View {
                 .padding(16)
                 .readableWidth()
             }
+            .accessibilityIdentifier("gauntletSummaryScroll")
             continueBar
         }
-        .confirmationDialog("Swap in — replace which card?",
-                            isPresented: swapBinding, presenting: swapCandidate) { cand in
-            if let run = state.run {
-                ForEach(run.showcase.indices, id: \.self) { i in
-                    Button("Replace \(run.showcase[i].card.name) · \(run.showcase[i].currentValue.money)") {
-                        state.swap(cand, forShowcaseIndex: i)
-                        swapCandidate = nil
-                        Haptics.play(.light)
-                    }
-                }
+        .sheet(item: $swapCandidate) { candidate in
+            ShowcaseSwapPicker(state: state, incoming: candidate) {
+                swapCandidate = nil
             }
-            Button("Cancel", role: .cancel) { swapCandidate = nil }
         }
     }
 
     private var continueBar: some View {
         VStack(spacing: 6) {
             if !resolved {
-                Text("Keep or sell every card to continue")
+                Text(pendingPrompt)
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(Palette.subtle)
             }
-            BigButton(title: "Continue",
+            BigButton(title: continueTitle, subtitle: continueSubtitle,
                       systemImage: "checkmark.circle.fill",
                       tint: GauntletTheme.gold,
                       enabled: resolved) {
                 Haptics.play(.success)
                 state.finishReveal()
             }
+            .accessibilityIdentifier("gauntletFinishPack")
         }
         .padding(16)
         .background(.ultraThinMaterial)
     }
 
-    private var swapBinding: Binding<Bool> {
-        Binding(get: { swapCandidate != nil }, set: { if !$0 { swapCandidate = nil } })
+    private var pendingPrompt: String {
+        var parts: [String] = []
+        let count = state.pendingCards.count
+        if count > 0 { parts.append("\(count) card\(count == 1 ? "" : "s")") }
+        if state.pendingCatalyst != nil { parts.append("1 Catalyst") }
+        return parts.joined(separator: " + ") + " left to decide"
+    }
+
+    private var continueTitle: String {
+        guard resolved, let run = state.run else { return "Finish pack" }
+        if run.showcaseAura >= run.target { return run.isFinalRound ? "Claim your prize" : "Collect round rewards" }
+        if run.ripsLeft == 0 { return run.hasAffordableGrade ? "Review last chance" : "See results" }
+        return "Back to round \(run.round)"
+    }
+
+    private var continueSubtitle: String? {
+        guard resolved, let run = state.run else { return nil }
+        if run.showcaseAura >= run.target {
+            let bank = GauntletEconomy.leftoverRipValue(round: run.round, rips: run.ripsLeft)
+            return "Target reached · \(run.ripsLeft) unused rips bank \(bank.moneyShort)"
+        }
+        if run.ripsLeft == 0 {
+            return run.hasAffordableGrade ? "No rips left. You can still try grading." : "No rips or affordable grades remain."
+        }
+        return "\(run.ripsLeft) rips left · Need \(fmtGoal(run.auraShortfall)) more Aura"
     }
 
     // MARK: Flow

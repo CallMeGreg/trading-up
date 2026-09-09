@@ -429,8 +429,8 @@ roll‑ups.
 > `Models/Gauntlet*` and `Views/Gauntlet*`, balance-verified by the Gauntlet `tools/verify`
 > harness (§14.8) and covered by XCTest. What remains design-only are the §14.7 "other
 > levers" (bounties, event nodes, the booster-box splurge, damaged/sealed pulls). The
-> per-Trainer level scaling (§14.3) now ships too. Gauntlet is gated behind the full-game
-> unlock (§11).
+> Trainer profiles are fixed: meta progression unlocks the roster and per-Trainer
+> tiers, not more powerful levels (§14.3). Gauntlet is gated behind the full-game unlock (§11).
 
 Gauntlet distils Classic to its strategic spine. Classic is, underneath, one tension:
 **value vs. liquidity** under a completion deadline — a card is worth more kept than sold
@@ -458,13 +458,22 @@ Three resources, each generating a *different* decision:
 | --- | --- | --- |
 | **Rips** | Per round; a hard count that resets each round | Tempo — is *this* rip worth spending? The "last rip, need a hit" crunch. |
 | **Aura** | Value of the cards you **keep**; must clear the round's Target | Which pulls to bank; whether to gamble-grade a keeper to clear the line. |
-| **Cash** | Across the run; earned by selling (at the spread), spent in the **shop** between rounds | Sell now for shop power later, vs. keep for this round's target. |
+| **Cash** | Across the run; earned by selling (at the spread) and clearing rounds, spent on **grading** and the between-round **shop** | Sell now for a grade or shop power later, vs. keep for this round's target. |
 
 Because the Showcase carries over, **selling a kept card is a real sacrifice** — it drops
 Aura you'll still need next round. That knife-edge keeps the loop strategic instead
 of a slot machine. Running out of rips below target with no legal play ends the run — the
 same "provably stuck" logic as Classic's `isGameOver` (§10), but per-round and escalating,
 so optimisation becomes *mandatory* on the higher tiers rather than optional.
+
+**Last-chance grading.** Finishing the last pack below target does **not** end a run
+while an ungraded Showcase card is affordable to grade. The run instead shows the Aura
+shortfall, a card to review, and an explicit **End Run** action with confirmation.
+Any eligible Showcase card can still be graded, at its normal Trainer-adjusted fee
+and odds; a grade can lower Aura, and each card is still graded only once. If no
+affordable grade remains, the run ends automatically. Grade results stay visible
+until dismissed before routing to the shop, prize, or loss. Leaving and resuming
+preserves the cards, spent cash, and remaining opportunity, not a free reroll.
 
 (The two constraints — a hard **rip count** and **cash** — are deliberate: the rip count
 creates tempo pressure, cash creates the economy. A single blended currency was considered
@@ -481,14 +490,30 @@ is tuned by the Gauntlet harness (§14.8) alongside targets and rip counts.
 **Targets & faucets.** A round's Target is a **cumulative** bar: it measures your whole
 standing Showcase's Aura, not just what you added this round, so *selling a keeper
 drops you back toward the line* — the sacrifice that keeps selling honest. Bars rise each
-round and spike on the Hard **boss** round (§14.5). The round **auto-clears the moment the
-Target is met** — no "end round" button to press — firing a confetti cue and, once the
-current pack is resolved, advancing to the shop. Cash for the shop comes from three
+round and spike on the Hard **boss** round (§14.5). Reaching the target fires a
+confetti cue; the round **auto-clears once the current pack and any displayed grade
+result are finished**, provided the Showcase still meets the target. No manual
+"end round" action is required. Cash for the shop comes from three
 faucets: **selling** pulls mid-round (at the spread), a **round-clear payout that
 scales with how far you overshoot** the Target — so pushing *past* the bar, not stopping
 exactly on it, is the keep-heavy player's way to fund Catalysts — and **leftover rips**,
 each banked at **$5 × the cleared round number** so unused tempo isn't simply wasted.
 Per-tier counts (rounds, rips, starting slots) live in §14.5.
+
+**Readable decisions, faster pacing.** **Reveal all** is an optional shortcut from the
+wrapper or card-by-card reveal to the same keep/sell summary. It neither rerolls nor
+resolves any item, and spends no additional rip. The summary counts unresolved
+cards **and Catalysts** and explains whether finishing the pack returns to the round,
+banks unused rips, opens a last-chance grade, or ends the run.
+
+**Shop planning.** Spendable cash stays separate from the expandable **earned last
+round** breakdown. Purchases must never rewrite historical payout amounts. The shop
+previews the next target, remaining Aura gap, rip budget, and interest at the current
+balance (future spending/selling changes that forecast). Affordable pack unlocks and
+the cheapest next set sit beside the slot-upgrade choices; pricier sets remain under
+**More pack sets**, and every set can still unlock independently. Unlocked rows show
+confirmation, unaffordable purchases show the cash shortfall, and an already-met
+target offers **Bank Round** rather than pretending another pack is required.
 
 ### 14.2 The Aura engine (where the strategy lives)
 
@@ -543,6 +568,20 @@ one out** — the knapsack question "is this rare better than my current worst k
 instead of "keep everything good." Because widening the Showcase competes with Catalysts for
 shop cash, *how big to build it* is itself a decision, and it's the main lever the
 difficulty tiers squeeze.
+
+**Swap previews.** A full Showcase opens a comparison sheet before replacing a card.
+Each option shows its sale proceeds, the **whole Showcase's** post-swap Aura and
+signed change, and any completed or broken evolution lines. Options sort by current
+post-swap Aura, with stable slot order for ties; **Most Aura** is not a promise of the
+best long-term strategy. A selection and confirmation are required before anything
+is sold. In the neutral, ungraded `swap` test fixture, replacing Emberpup in its
+completed three-stage line with Ignarok loses **14.82 Aura** even though the incoming
+ultra costs more. Completing
+Pebblit/Boulderkin with Magmalith while replacing Smoldfin in that original fixture
+gains **29.53 Aura**.
+These previews use the same scoring engine as the actual swap, including foils,
+grades, Trainers, Catalysts, and duplicate stages. Card details show only the
+evolution stages currently in the Showcase, not an always-complete line.
 
 ### 14.3 Trainers — the meta progression
 
@@ -631,17 +670,20 @@ immediately and announces it once on the results screen.
 
 ⚠️ **Guardrail — a Trainer is a sidegrade, never raw power.** Classic's whole thesis (§10) is
 *skill, not grinding, carries you*, so a Trainer **deepens an identity** without becoming a win
-button. The Gauntlet `tools/verify` sims (§14.8) enforce this: a **neutral** run must clear Hard
-with optimal play, *and* every Trainer is re-simulated to prove none trivialises Hard (best
-≤ 97%) or is left unwinnable (worst ≥ 25%), and no Trainer swings more than +25 / −35 points off
-the neutral pivot. A spiky Trainer that *requires* its specialty to win — or trivialises the
-mode — has overstepped and gets retuned.
+button. The Gauntlet full-budget reference sims (§14.8) enforce a **neutral**
+optimized-policy Hard win rate of 45–85%; every Trainer must remain within 25–99%
+and within 35 percentage points of that neutral pivot. The high ceiling accommodates
+Ash's intentionally stronger post-game profile. These are policy guardrails, not
+proof of perfect-play or human success rates; the automatic-clear comparison is
+reported separately.
 
-**Current Hard snapshot** (from `tools/verify`, seed `0x2C7`, n=120 — illustrative, will drift as
-constants are tuned): neutral **57%**; Sally 50, Fred 59, Jack 62, Curtis 75, Lucy 79. **Ash was
-deliberately buffed to `5 / 5 / 1 / 1 / 5` and now clears Hard ~98% (+41 vs neutral)** — an
-intentional post-game power fantasy that overshoots the sidegrade guardrails above, so
-`tools/verify` reports Ash over the `best ≤ 97%` and `≤ +25 vs neutral` caps *by design*.
+**Current Hard reference snapshot** (from `tools/verify`, full-budget cadence, seed
+`0x2C7`, n=120 — illustrative, not human win rates): neutral **69%**; Sally 55,
+Fred 60, Jack 86, Curtis 85, Lucy 75, Ash 96. The existing reference guardrails
+remain green: every Trainer wins at least 25%, none exceeds 99%, and each stays
+within 35 percentage points of the neutral reference. The separate automatic-clear
+comparison in [TESTING.md](TESTING.md#gauntlet-decisions-and-playtesting) models
+the actual UI cadence; do not substitute these full-budget figures for it.
 Note that in optimised play cash is rarely the binding constraint, so **Selling** is a *soft*
 lever while Aura / Inventory / Grading / Energy bind harder — a Trainer strong in a binding lever
 but weak in Selling (Curtis, +2 slots) reads higher than its graph suggests. These are the
@@ -685,7 +727,7 @@ survives above only as a note of what the concept was first sketched as.
 
 ### 14.5 Difficulty tiers
 
-Each tier **adds a mechanic**, not just bigger numbers, and each is unlocked **per Trainer**
+Each tier **tightens the challenge**, and each is unlocked **per Trainer**
 by clearing the previous one *with that same Trainer* (Easy → Medium → Hard). The ladder is
 walked once per Trainer — clearing Easy with the Ripper unlocks Medium for the Ripper, but a
 different Trainer still starts at Easy — so switching archetypes means re-earning the climb.
@@ -700,14 +742,24 @@ magnitudes get tuned:
 
 Target-Aura bars rise per round and spike on the boss round; absolute dollar
 values are harness-tuned (§14.2, §14.8). **Rounds are single-life** — miss the bar at any
-tier and the run ends (there are no reprints). Medium leans on an extra rip each round,
-rather than a retry, to stay winnable with focused play. What each tier *adds* on top:
+tier after exhausting or declining legal plays and the run ends (there are no reprints).
+Medium retains Easy's six-rip budget but asks for more efficient curation. What each tier adds:
 
 | Tier | Adds | Win reward (§14.6) |
 | --- | --- | --- |
 | **Easy** | The gentle tier: the fewest rounds, the lowest target ramp, and the widest Showcase soften the loop while it's being learned. | Foil Extended Art **common** |
-| **Medium** | A steeper target ramp and a tighter Showcase (6 slots), leaning on the extra rip each round rather than a retry — you must build more efficiently to keep pace. | Foil Extended Art **uncommon** |
-| **Hard** | The most aggressive target ramp, the fewest rips, the narrowest Showcase, and a **boss Aura** spike on the final round. | Foil Extended Art **rare / ultra** |
+| **Medium** | A steeper target ramp and a tighter Showcase (6 slots) with the same six-rip budget — you must build more efficiently to keep pace. | Foil Extended Art **uncommon** |
+| **Hard** | The fewest rips, the narrowest starting Showcase, and a **boss Aura** spike on the final round. | Foil Extended Art **rare / ultra** |
+
+**Current target ramps:** Easy starts at 20 and grows by 1.60 each round; Medium
+starts at 26 and grows by 1.88; Hard starts at 18 and grows by **1.64**, with its
+unchanged 1.65 boss multiplier on round 9. Hard previously grew by 1.67. The small
+ramp reduction leaves round 1 unchanged, lowers round 5 from 140.00 to 130.21 Aura,
+and lowers the finale from 1796.75 to 1554.20 Aura (13.5%). This corrects some of the
+late-round pressure exposed by automatic-clear simulation without granting extra
+rips, cash, slots, stronger Trainers, or better drop/grade odds. Easy and Medium's
+economy constants are unchanged. See the measured before/after results in
+[TESTING.md](TESTING.md#gauntlet-decisions-and-playtesting).
 
 ### 14.6 Rewards & the Binder
 
@@ -784,14 +836,18 @@ Curated, highest-leverage first; not all need to ship in v1:
 - **Own knobs, own harness.** Gauntlet gets its **own** balance constants (separate from
   `Economy.swift`'s Classic curve) and its **own** `tools/verify` simulations, held to the
   same statistical bar Classic is: an optimised build clears Hard, careless play busts, and
-  a **level-0 Trainer can still win** (grinding is not required). Do not fold Gauntlet
+  the **neutral Rookie can still win** (grinding is not required). Do not fold Gauntlet
   tuning into the Classic EV / win-rate assertions — they guard a different game.
 - **Foundation-only model.** Gauntlet logic lives in `Models/` like `GameCore`, so the
   headless harness can compile it. Views stay SwiftUI-only.
-- **Additive persistence** (§12). Trainer XP/levels, unlocked tiers, and the per-card
-  Extended-Art cosmetic record (on the Binder, *not* `CardInstance`) are all new optional
-  fields; old saves and the Binder file must keep decoding, and a bad file is quarantined,
-  never destroyed.
+- **Cadence matters.** The historical simulator spends the whole rip budget before
+  grading; the UI auto-clears after a settled pack or a grade reaches the target.
+  Keep both the reference guardrails and the automatic-clear comparison when
+  tuning. Last-chance grading must preserve runs that already won without it.
+- **Additive persistence** (§12). Run snapshots, Trainer milestones/unlocked tiers,
+  and the per-card Extended-Art cosmetic record (on the Binder, *not* `CardInstance`)
+  must preserve backward-compatible decoding. A bad file is quarantined, never destroyed.
+  Last-chance grading and shop accounting reuse existing save fields.
 - **Free vs. paid.** Gauntlet stays behind the full-game unlock (§11); it grants no
   in-game currency for real money and no randomised *paid* pull, so the 4+ rating and
   Guideline 3.1.1 stance are unchanged.
@@ -811,13 +867,11 @@ The **shape** of the mode is now decided; what's left is numeric tuning the harn
 5. **Reward pull** — ✅ **choose 1 of 3**, rarity by tier (common / uncommon /
    rare-with-20%-ultra), weighted toward unearned Extended Art (§14.6).
 6. **Showcase carry-over** — ✅ one **compounding standing Showcase** per run, with a
-   run-long capacity raisable in the shop, discarded at run's end — only the Binder reward
-   persists (§14.1–§14.2).
-7. **Meta ceiling** — ✅ **10 levels** that **smoothly scale each Trainer's advantage**
-   (a ~20% level-1 baseline → level-10 ceiling, a likelihood or rate, never a raw new ability),
-   plus horizontal roster unlocks; a level-0 Trainer *and* a maxed Trainer must both stay inside
-   the Hard curve (§14.3).
-8. **Trainer roster** — ✅ **earned, not just levelled**: only the **Rookie** is free; the
+   run-long capacity raisable in the shop, discarded at run's end — Binder gains and
+   Trainer milestones persist (§14.1–§14.2).
+7. **Meta ceiling** — ✅ **fixed skill profiles**, not escalating levels; horizontal
+   roster unlocks and per-Trainer tier accomplishments drive progression (§14.3).
+8. **Trainer roster** — ✅ **earned through play**: only the **Rookie** is free; the
    five specialists each unlock on a lifetime Gauntlet milestone shown with a live progress
    bar (§14.3). Milestone thresholds are meta pacing, not a difficulty knob.
 9. **Pack rail** — ✅ pick **which unlocked element** to rip each rip; every locked set is
@@ -829,7 +883,7 @@ The **shape** of the mode is now decided; what's left is numeric tuning the harn
     `hasSeenIntro` flag in `GauntletProgress`.
 
 🔧 **Left for the harness** (§14.8): the magnitudes — target-dollar bars per round, the
-interest ceiling, the round-clear payout curve, and each Trainer's per-level stat budget —
+interest ceiling, the round-clear payout curve, and the per-skill tuning magnitudes —
 tuned so an optimised build clears Hard, careless play busts, and grinding is never required.
 
 ---

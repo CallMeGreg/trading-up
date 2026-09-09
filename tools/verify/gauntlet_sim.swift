@@ -6,8 +6,17 @@ import Foundation
 // exactly as the Classic strategy sims do. See docs/DESIGN.md §14.8.
 
 enum GauntletStyle {
-    case optimized   // curates for synergy, grades keepers, banks Catalysts, works the shop
-    case careless    // keeps by raw value, never grades, dumps Catalysts, hoards cash
+    case optimized   // curates evolution lines, grades keepers, attunes Catalysts, works the shop
+    case careless    // raw-value curation, occasional top-card grade, sells Catalysts, hoards cash
+}
+
+enum GauntletCadence {
+    /// Historical balance reference: spend the whole rip budget, then grade.
+    case fullBudget
+    /// Shipping flow: settle a pack, auto-clear, or grade before the next rip.
+    case automatic
+    /// The previous UI ended a missed last pack before offering any grading.
+    case automaticWithoutLastChance
 }
 
 struct GauntletSimResult {
@@ -64,7 +73,9 @@ enum GauntletSim {
     static func showcaseScore(_ sc: [CardInstance], evoLineBonusBonus: Double, auraMult: Double) -> Double {
         var s = GauntletRun.aura(sc, evoLineBonusBonus: evoLineBonusBonus, auraMult: auraMult)
         let byLine = Dictionary(grouping: sc.filter { $0.card.stageCount > 1 }, by: { $0.card.lineId })
-        for (_, g) in byLine {
+        // Stable summation prevents tiny rounding differences from changing
+        // valuation ties (and therefore the path of an otherwise seeded run).
+        for (_, g) in byLine.sorted(by: { $0.key < $1.key }) {
             let stageCount = g[0].card.stageCount
             let present = Set(g.map { $0.card.stage }).count
             if present >= 1 && present < stageCount {
@@ -135,10 +146,12 @@ enum GauntletSim {
 
     // MARK: Grading
 
-    static func gradeKeepers<G: RandomNumberGenerator>(run: inout GauntletRun, rng: inout G) {
+    static func gradeKeepers<G: RandomNumberGenerator>(run: inout GauntletRun, rng: inout G,
+                                                      stopAtTarget: Bool = false) {
         // Grade ungraded keepers by descending value while it clears the fee EV.
         let order = run.showcase.indices.sorted { run.showcase[$0].currentValue > run.showcase[$1].currentValue }
         for i in order {
+            if stopAtTarget && run.auraShortfall == 0 { break }
             guard run.showcase[i].grade == nil else { continue }
             let v = run.showcase[i].currentValue
             let fee = run.gradeFee(for: run.showcase[i].card)
@@ -155,6 +168,16 @@ enum GauntletSim {
         guard run.showcase[i].grade == nil else { return }
         let fee = run.gradeFee(for: run.showcase[i].card)
         if run.cash >= fee * 2 { run.gradeShowcaseCard(at: i, using: &rng) }
+    }
+
+    static func gradeLastChance<G: RandomNumberGenerator>(run: inout GauntletRun, rng: inout G) {
+        // With no more rips, even a negative-cash-EV grade can rescue a run.
+        // Each card can be graded only once, so this always terminates.
+        while run.auraShortfall > 0,
+              let index = run.showcase.indices.filter({ run.canGradeShowcaseCard(at: $0) })
+                .max(by: { run.showcase[$0].currentValue < run.showcase[$1].currentValue }) {
+            run.gradeShowcaseCard(at: index, using: &rng)
+        }
     }
 
     // MARK: Shop (between rounds)
@@ -189,7 +212,9 @@ enum GauntletSim {
 
     // MARK: Full run
 
-    static func simulate<G: RandomNumberGenerator>(tier: GauntletTier, trainer: Trainer, style: GauntletStyle, rng: inout G, trace: Bool = false) -> GauntletSimResult {
+    static func simulate<G: RandomNumberGenerator>(tier: GauntletTier, trainer: Trainer, style: GauntletStyle,
+                                                   rng: inout G, trace: Bool = false,
+                                                   cadence: GauntletCadence = .fullBudget) -> GauntletSimResult {
         var run = GauntletRun(tier: tier, trainer: trainer, using: &rng)
         var guardCounter = 0
         var result = GauntletSimResult()
@@ -198,13 +223,24 @@ enum GauntletSim {
             guardCounter += 1
             if guardCounter > 2000 { result.capped = true; break }
 
-            while run.ripsLeft > 0 {
+            while run.ripsLeft > 0 && (cadence == .fullBudget || run.auraShortfall > 0) {
                 let res = run.rip(using: &rng)
                 handleCards(res.cards, style: style, run: &run, rng: &rng)
                 handleCatalyst(res.catalyst, style: style, run: &run)
+                if cadence != .fullBudget && run.auraShortfall > 0 {
+                    if run.ripsLeft > 0 {
+                        if style == .optimized { gradeKeepers(run: &run, rng: &rng, stopAtTarget: true) }
+                        else { gradeTopKeeper(run: &run, rng: &rng) }
+                    } else if cadence == .automatic {
+                        if style == .optimized { gradeLastChance(run: &run, rng: &rng) }
+                        else { gradeTopKeeper(run: &run, rng: &rng) }
+                    }
+                }
             }
-            if style == .optimized { gradeKeepers(run: &run, rng: &rng) }
-            else { gradeTopKeeper(run: &run, rng: &rng) }
+            if cadence == .fullBudget {
+                if style == .optimized { gradeKeepers(run: &run, rng: &rng) }
+                else { gradeTopKeeper(run: &run, rng: &rng) }
+            }
 
             let roundBefore = run.round
             let auraBefore = run.showcaseAura
@@ -232,12 +268,13 @@ enum GauntletSim {
     }
 
     /// Aggregate win/bust rates over many seeded runs.
-    static func winRate(tier: GauntletTier, trainer: Trainer, style: GauntletStyle, trials: Int, seed0: UInt64) -> (win: Double, bust: Double, capped: Int, avgCleared: Double, avgLines: Double) {
+    static func winRate(tier: GauntletTier, trainer: Trainer, style: GauntletStyle, trials: Int, seed0: UInt64,
+                        cadence: GauntletCadence = .fullBudget) -> (win: Double, bust: Double, capped: Int, avgCleared: Double, avgLines: Double) {
         var wins = 0, busts = 0, capped = 0, clearedTotal = 0
         var linesTotal = 0
         for s in 0..<trials {
             var rng = SeededRNG(seed0 &+ UInt64(s))
-            let r = simulate(tier: tier, trainer: trainer, style: style, rng: &rng)
+            let r = simulate(tier: tier, trainer: trainer, style: style, rng: &rng, cadence: cadence)
             if r.capped { capped += 1 }
             else if r.won { wins += 1 }
             else if r.lost { busts += 1 }

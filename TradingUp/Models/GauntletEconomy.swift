@@ -291,29 +291,14 @@ enum GauntletEconomy {
 
     // MARK: Target curve — the cumulative Aura bar each round
     //
-    // These three numbers per tier (base, growth, boss spike) are the difficulty
-    // dial. The Gauntlet strategy sims in `tools/verify` peg the neutral, level-0
-    // curve at roughly:
+    // Base, growth and boss spike are the difficulty dial. `tools/verify` keeps
+    // its historical full-budget guardrails AND models the shipping auto-clear
+    // cadence, which banks unused rips instead of opening every pack.
     //
-    //     Easy    optimized ~99% / careless ~99%   (a forgiving, unlosable-if-you-try tutorial)
-    //     Medium  optimized ~66% / careless ~37%   (skill gap ~29 pts)
-    //     Hard    optimized ~56% / careless ~11%   (skill gap ~45 pts; boss round is the filter)
-    //
-    // (These sit lower than the old synergy-era curve on purpose: batch-4 replaced the
-    // reliable same-element synergy multiplier with an evolution-line completion bonus,
-    // which is RNG-gated — you have to pull a line's whole chain — so it can't prop up
-    // optimised Aura every round the way synergy did. Medium/Hard optimised win
-    // rates fell ~13/~3 pts as a result; the skill *gap* is preserved by grading and
-    // shop play, which is where an optimised run really separates from a careless one.)
-    //
-    // Rounds are single-life — a missed bar ends the run at any tier (no reprints).
-    // Medium leans on an extra rip/round rather than a retry to stay winnable.
-    // The guardrail: a *neutral* Trainer clears Hard with optimal play (~56% > 45%),
-    // so Trainers and Catalysts are gravy, never a requirement (docs/DESIGN.md §14.3).
-    // Growth is steep because the Aura engine snowballs ~3× per pack-tier jump;
-    // a gentle curve lets an optimised build run away and kills the tension. Retune
-    // in small steps and re-run the harness in the same breath — careless win rate is
-    // very sensitive to the bar height, optimised much less so.
+    // These are heuristic-policy estimates, not human or perfect-play win rates.
+    // Hard's 1.64 ramp softens late targets without changing its opening, four
+    // normal rips, five starting slots, or boss spike. The historical guardrails
+    // still pass; see docs/TESTING.md for both cadences and the measured change.
 
     /// Round-1 bar per tier. Starts inside what a tier-1 pack can produce so the
     /// opening is survivable; the ramp (below) is what makes a tier hard.
@@ -332,7 +317,7 @@ enum GauntletEconomy {
         switch tier {
         case .easy: return 1.60
         case .medium: return 1.88
-        case .hard: return 1.67
+        case .hard: return 1.64
         }
     }
 

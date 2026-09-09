@@ -6,6 +6,9 @@ struct TradingUpApp: App {
     @State private var purchases: PurchaseStore
 
     init() {
+        #if DEBUG
+        DebugGauntletScenario.prepare()
+        #endif
         // One shared GameState, with the StoreKit layer built on top of it so it
         // can push the verified entitlement in. Both are @MainActor; App.init
         // runs on the main thread.

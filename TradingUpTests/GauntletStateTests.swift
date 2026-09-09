@@ -269,7 +269,7 @@ final class GauntletStateTests: XCTestCase {
         XCTAssertTrue(s.pendingCards.isEmpty)
         XCTAssertNil(s.pendingCatalyst)
         // Either rips remain (can rip again) or the round is spent.
-        XCTAssertTrue(s.canRip || s.run!.ripsLeft == 0)
+        XCTAssertTrue(s.canRip || s.run!.ripsLeft == 0 || s.phase != .ripping)
     }
 
     func testKeepMovesToShowcaseAndSellBanksCash() {
@@ -336,6 +336,8 @@ final class GauntletStateTests: XCTestCase {
                     while let card = s.pendingCards.first {
                         if s.canKeepPending { s.keep(card) } else { s.sell(card) }
                     }
+                    s.finishReveal()
+                    if s.phase != .ripping { continue }
                     if s.canRip {
                         s.rip()
                     } else if s.canEndRound {
@@ -526,6 +528,7 @@ final class GauntletStateTests: XCTestCase {
                 s.sell(card)
             }
         }
+        s.finishReveal()
     }
 
     /// How much the Showcase card at `idx` currently contributes to the Aura.
