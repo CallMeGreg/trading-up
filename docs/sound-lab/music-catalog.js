@@ -5,31 +5,31 @@ globalThis.SOUND_LAB_MUSIC = {
       "id": "classic-sunlit-sleeves",
       "mode": "classic",
       "title": "Sunlit Sleeves",
-      "description": "Recommended Classic / challenger mix: a playful rounded-reed hook, springy bass and soft plucked arpeggios. A friendly turn-based duel rather than a boss fight, with quieter answers and no piercing lead.",
+      "description": "Classic alternate / challenger mix: a playful rounded-reed hook, springy bass and soft plucked arpeggios. A friendly turn-based duel rather than a boss fight, with quieter answers and no piercing lead.",
       "bpm": 107.978404,
       "duration": 35.562666666666665,
       "file": "music/classic-sunlit-sleeves.m4a",
       "sha256": "566beca9044c8c4a9ce169b593c5ea80f44b3a4f6294e9210a7e59631c2dff6e",
-      "recommended": true,
+      "recommended": false,
       "license": "Original composition; no third-party musical content"
     },
     {
       "id": "classic-paper-lanterns",
       "mode": "classic",
       "title": "Paper Lanterns",
-      "description": "Classic alternate / tactical mix: a warm wooden-mallet question and answer, nimble bass and little nylon figures. Minor-key curiosity with a lighter, more spacious rhythm for long collecting sessions.",
+      "description": "Selected Classic / tactical mix: a warm wooden-mallet question and answer, nimble bass and little nylon figures. Minor-key curiosity with a lighter, more spacious rhythm for long collecting sessions.",
       "bpm": 103.986135,
       "duration": 36.928,
       "file": "music/classic-paper-lanterns.m4a",
       "sha256": "267acb0d1757bc7584c7f55893b5e9be728e5e73c338e60ec7f45d2f1456a913",
-      "recommended": false,
+      "recommended": true,
       "license": "Original composition; no third-party musical content"
     },
     {
       "id": "gauntlet-quiet-resolve",
       "mode": "gauntlet",
       "title": "Quiet Resolve",
-      "description": "Recommended Gauntlet / battle mix: a soft-brass challenger motif, a pulsing B-minor bass line and quick plucked replies. Brief tom fills and dominant-chord turns add resolve; quieter phrases keep it repeat-friendly.",
+      "description": "Selected Gauntlet / battle mix: a soft-brass challenger motif, a pulsing B-minor bass line and quick plucked replies. Brief tom fills and dominant-chord turns add resolve; quieter phrases keep it repeat-friendly.",
       "bpm": 120.0,
       "duration": 32.0,
       "file": "music/gauntlet-quiet-resolve.m4a",
@@ -53,7 +53,7 @@ globalThis.SOUND_LAB_MUSIC = {
   "render": {
     "sourceSha256": {
       "tools/generate_music.py": "94bb84a231e66cde75a1f8e1e6e725a943f076da1210b09e341112da4665725b",
-      "tools/sound_lab/music.py": "f4cffe13a5948277dc1ce1d90cf5ce16dd51af0ae29f5937932daa7b5f5be75b",
+      "tools/sound_lab/music.py": "ea5a7a6cfdc87344bcc595282faff43a85274c5e08d088f5d7704816ae3c4da0",
       "tools/sound_lab/dsp.py": "77cb0525b52cabd6f15a7202c093a7134a2a07ddeb00bb8b7dd4e645c71fbcf2"
     },
     "sampleRate": 48000,

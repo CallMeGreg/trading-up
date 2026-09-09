@@ -80,10 +80,10 @@ B7 = Chord(35, (51, 57, 59, 66))
 SCORES = (
     Score(
         "classic-sunlit-sleeves", "classic", "Sunlit Sleeves",
-        "Recommended Classic / challenger mix: a playful rounded-reed hook, "
+        "Classic alternate / challenger mix: a playful rounded-reed hook, "
         "springy bass and soft plucked arpeggios. A friendly turn-based duel "
         "rather than a boss fight, with quieter answers and no piercing lead.",
-        108, True, "rival", (
+        108, False, "rival", (
             D69, BM7, G6, ASUS, EM7, G6, D9, FS7,
             BM7, G6, D69, A13, EM7, G6, ASUS, A13,
         ), (
@@ -107,10 +107,10 @@ SCORES = (
     ),
     Score(
         "classic-paper-lanterns", "classic", "Paper Lanterns",
-        "Classic alternate / tactical mix: a warm wooden-mallet question and "
+        "Selected Classic / tactical mix: a warm wooden-mallet question and "
         "answer, nimble bass and little nylon figures. Minor-key curiosity "
         "with a lighter, more spacious rhythm for long collecting sessions.",
-        104, False, "tactical", (
+        104, True, "tactical", (
             BM7, G6, D69, ASUS, EM7, BM7, G6, FS7,
             BM9, G6, D9, A13, EM7, G6, ASUS, FS7,
         ), (
@@ -134,7 +134,7 @@ SCORES = (
     ),
     Score(
         "gauntlet-quiet-resolve", "gauntlet", "Quiet Resolve",
-        "Recommended Gauntlet / battle mix: a soft-brass challenger motif, "
+        "Selected Gauntlet / battle mix: a soft-brass challenger motif, "
         "a pulsing B-minor bass line and quick plucked replies. Brief tom fills "
         "and dominant-chord turns add resolve; quieter phrases keep it repeat-friendly.",
         120, True, "battle", (

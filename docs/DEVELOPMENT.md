@@ -311,8 +311,8 @@ Settings**, Music and SFX have independent live sliders and one-tap speaker mute
 Zero mutes without forgetting the previous nonzero level; raising a slider
 unmutes. Haptics remain a separate toggle.
 
-The bundled choices are **Sunlit Sleeves** (Classic, about 108 BPM / 35.56 seconds)
-and **Quiet Resolve** (Gauntlet, 120 BPM / 32 seconds). **Paper Lanterns**
+The selected, bundled choices are **Paper Lanterns** (Classic, about 104 BPM / 36.93 seconds)
+and **Quiet Resolve** (Gauntlet, 120 BPM / 32 seconds). **Sunlit Sleeves**
 and **Northbound** are audition-only alternatives. All four are original,
 light turn-based challenge themes: rounded reed/soft-brass hooks, short plucked
 arpeggios, mobile bass lines and occasional muted tom fills. D major and relative
