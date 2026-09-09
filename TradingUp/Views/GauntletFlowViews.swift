@@ -150,6 +150,7 @@ struct TrainerCard: View {
         }
         .buttonStyle(.plain)
         .disabled(!unlocked)
+        .accessibilityIdentifier("gauntletTrainer-\(trainer.id)")
     }
 }
 
@@ -483,6 +484,7 @@ private struct TierCard: View {
         }
         .buttonStyle(.plain)
         .disabled(!unlocked)
+        .accessibilityIdentifier("gauntletTier-\(tier.rawValue)")
     }
 
     private var difficultyNote: String {
@@ -588,31 +590,42 @@ struct LostScreen: View {
     @State private var quote: String = GauntletQuotes.pool.randomElement() ?? ""
 
     var body: some View {
-        VStack(spacing: 20) {
-            Spacer()
-            Image(systemName: "xmark.octagon.fill")
-                .font(.system(size: 58, weight: .bold))
-                .foregroundStyle(Color(hex: "e0663b"))
-            GauntletHeader(eyebrow: "Gauntlet", title: "Run Over")
-            if let run = state.run {
-                VStack(spacing: 12) {
-                    Text("You reached round \(run.round) of \(run.roundsTotal), short of the bar.")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(Palette.subtle)
-                        .multilineTextAlignment(.center)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .padding(.horizontal, 8)
-                    Text("“\(quote)”")
-                        .font(.system(size: 15, weight: .semibold, design: .rounded))
-                        .italic()
-                        .foregroundStyle(Color(hex: "ffd54a"))
-                        .multilineTextAlignment(.center)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .padding(.horizontal, 20)
+        VStack(spacing: 16) {
+            ScrollView {
+                VStack(spacing: 20) {
+                    Image(systemName: "xmark.octagon.fill")
+                        .font(.system(size: 58, weight: .bold))
+                        .foregroundStyle(Color(hex: "e0663b"))
+                    GauntletHeader(eyebrow: "Gauntlet", title: "Run Over")
+                    if let run = state.run {
+                        Text("Round \(run.round) of \(run.roundsTotal)")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Palette.subtle)
+                        HStack(spacing: 10) {
+                            StatTile(label: "Final Aura",
+                                     value: String(format: "%.0f", run.showcaseAura.rounded(.down)))
+                            StatTile(label: "Target",
+                                     value: String(format: "%.0f", run.target.rounded(.up)))
+                        }
+                        Text("Your best pulls and Trainer milestones are saved. Complete evolution lines and unlock stronger packs to push further next time.")
+                            .font(.subheadline)
+                            .foregroundStyle(Palette.subtle)
+                            .multilineTextAlignment(.center)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Text("“\(quote)”")
+                            .font(.system(size: 15, weight: .semibold, design: .rounded))
+                            .italic()
+                            .foregroundStyle(Color(hex: "ffd54a"))
+                            .multilineTextAlignment(.center)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.horizontal, 12)
+                    }
+                    UnlockedTrainersBanner(trainers: state.lastUnlockedTrainers)
                 }
+                .padding(.top, 44)
+                .padding(.bottom, 16)
             }
-            UnlockedTrainersBanner(trainers: state.lastUnlockedTrainers)
-            Spacer()
+            .scrollBounceBehavior(.basedOnSize)
             BigButton(title: "New Run", systemImage: "arrow.clockwise", tint: GauntletTheme.tint) {
                 Haptics.play(.light); state.finish()
             }
@@ -687,7 +700,7 @@ struct IntroScreen: View {
                 VStack(spacing: 10) {
                     IntroRow(icon: "target", tint: Color(hex: "ff8ad6"),
                              title: "Hit the round's bar",
-                             detail: "Clear each round's target Aura before your rips run out. Miss it and the run ends.")
+                             detail: "Reach the target Aura to clear a round. Unused rips turn into cash. Out of rips? You can still try an affordable grade before ending the run.")
                     IntroRow(icon: "square.stack.3d.up.fill", tint: Color(hex: "6d5cf7"),
                              title: "Aura & evolutions",
                              detail: "Your showcase scores on value, foils, and grades — complete an evolution line to boost its value.")
@@ -699,7 +712,7 @@ struct IntroScreen: View {
                              detail: "Some packs offer a Catalyst — attune it to buff the rest of your run.")
                     IntroRow(icon: "cart.fill", tint: Color(hex: "5be08a"),
                              title: "The shop, between rounds",
-                             detail: "Clear a round to open the shop: unlock new element packs and buy extra Showcase and Catalyst slots.")
+                             detail: "Unlock stronger packs for this run, or add Showcase and Catalyst slots. Opening an unlocked pack costs a rip, not cash. Unspent cash earns interest when you clear.")
                     IntroRow(icon: "trophy.fill", tint: Color(hex: "ffd54a"),
                              title: "Prizes",
                              detail: "Win a run to earn a Foil Extended Art card for your Binder.")

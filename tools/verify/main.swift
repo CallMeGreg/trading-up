@@ -665,6 +665,13 @@ do {
     check(abs(complete - rawFull * (1 + elb)) < 1e-6, "a complete evolution line earns the completion bonus")
     check(abs(incomplete - partialLine[0].currentValue) < 1e-6, "an incomplete line earns no bonus")
 
+    let partials = ["S1-001", "S1-004", "S2-007", "S3-010", "S4-013", "S5-016"]
+        .map { CardInstance(cardId: $0) }
+    let score = GauntletSim.showcaseScore(partials, evoLineBonusBonus: 0.3, auraMult: 1.1)
+    check((0..<128).allSatisfy { _ in
+        GauntletSim.showcaseScore(partials, evoLineBonusBonus: 0.3, auraMult: 1.1) == score
+    }, "partial-line valuations are deterministic across repeated evaluations")
+
     // The completion bonus scales up with the set: later sets pay strictly harder.
     let bonuses = (1...GauntletEconomy.maxPackTier).map { GauntletEconomy.evoLineBonus(set: $0) }
     check(zip(bonuses, bonuses.dropFirst()).allSatisfy { $0 < $1 },
@@ -694,7 +701,7 @@ do {
     check(GauntletEconomy.interest(on: 100) == 100 * GauntletEconomy.interestRate, "interest is linear below the cap")
 }
 
-print("\n== Gauntlet: difficulty curve (Monte Carlo) ==")
+print("\n== Gauntlet: full-budget reference curve (Monte Carlo) ==")
 do {
     let n = 200
     var opt: [GauntletTier: Double] = [:]
@@ -711,12 +718,12 @@ do {
     check(cappedTotal == 0, "every Gauntlet run resolves (no runaway)")
 
     // Winnable with skill on every tier; Easy is a gentle teacher.
-    check(opt[.easy]! >= 90, "Easy is winnable with optimal play (≥ 90%)")
-    check(opt[.medium]! >= 60, "Medium is winnable with optimal play (≥ 60%)")
-    // Guardrail (docs/DESIGN.md §14.3): a level-0, no-Trainer run clears Hard.
-    check(opt[.hard]! >= 45, "a level-0 neutral run clears Hard with optimal play (≥ 45%)")
+    check(opt[.easy]! >= 90, "Easy optimized reference wins ≥ 90%")
+    check(opt[.medium]! >= 60, "Medium optimized reference wins ≥ 60%")
+    // Historical cadence guardrail (docs/DESIGN.md §14.3); not a human win rate.
+    check(opt[.hard]! >= 45, "neutral Hard optimized reference wins ≥ 45%")
     // …but Hard is never a formality.
-    check(opt[.hard]! <= 85, "Hard is not a formality even played perfectly (≤ 85%)")
+    check(opt[.hard]! <= 85, "Hard optimized reference remains challenging (≤ 85%)")
 
     // Careless play carries real bankruptcy risk that climbs with the tier.
     check(100 - car[.medium]! >= 45, "careless play often busts on Medium (bust ≥ 45%)")
@@ -758,11 +765,30 @@ do {
     // pick — so the ceilings admit a champion-grade win rate while still failing any
     // Trainer that turns Hard into a guaranteed win or an even more extreme outlier.
     check(maxT <= 99, "no Trainer makes Hard a pure formality (best ≤ 99%)")
-    check(minT >= 25, "every Trainer stays winnable on Hard with optimal play (worst ≥ 25%)")
+    check(minT >= 25, "every Trainer stays winnable in the Hard reference policy (worst ≥ 25%)")
     check(maxT - base.win <= 35, "no Trainer is a runaway power spike (≤ 35 pts over neutral)")
     check(base.win - minT <= 35, "no Trainer is a dead pick (≤ 35 pts under neutral)")
 }
 
+print("\n== Gauntlet: automatic-clear cadence, last-chance grading off / on ==")
+do {
+    let n = 400
+    for tier in GauntletTier.allCases {
+        for style in [GauntletStyle.optimized, .careless] {
+            let before = GauntletSim.winRate(tier: tier, trainer: .neutral, style: style,
+                                             trials: n, seed0: 0x6A17,
+                                             cadence: .automaticWithoutLastChance)
+            let after = GauntletSim.winRate(tier: tier, trainer: .neutral, style: style,
+                                            trials: n, seed0: 0x6A17, cadence: .automatic)
+            print(String(format: "  %@ %@: %.1f%% -> %.1f%% wins (n=%d per policy, current economy)",
+                         tier.rawValue, String(describing: style), before.win, after.win, n))
+            check(before.capped == 0 && after.capped == 0,
+                  "\(tier.rawValue) \(style): automatic-clear runs always resolve")
+            check(after.win >= before.win,
+                  "\(tier.rawValue) \(style): optional last-chance grading preserves prior wins")
+        }
+    }
+}
+
 print("\n\(failures == 0 ? "ALL CHECKS PASSED ✅" : "\(failures) CHECK(S) FAILED ❌")")
 exit(failures == 0 ? 0 : 1)
-

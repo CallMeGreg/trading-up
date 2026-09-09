@@ -43,7 +43,7 @@ Or just press `⌘U` in Xcode.
 Only the Swift toolchain from Command Line Tools is required:
 
 ```bash
-swiftc TradingUp/Models/Card.swift \
+swiftc -O TradingUp/Models/Card.swift \
        TradingUp/Models/Economy.swift \
        TradingUp/Models/FeatureFlags.swift \
        TradingUp/Models/GameCore.swift \
@@ -96,7 +96,7 @@ the only thing that will tell you the game is still winnable and still losable.
 `.github/workflows/ci.yml` runs three jobs on every push to `main` and every pull
 request, on `macos-15` with Xcode 16.4:
 
-1. **Verify harness** — compiles and runs `tools/verify/main.swift`.
+1. **Verify harness** — compiles with `swiftc -O` and runs `tools/verify/main.swift`.
 2. **Build (iOS Simulator)** — `xcodebuild build` with code signing off.
 3. **Unit tests (iOS Simulator)** — `xcodebuild test` against a simulator picked
    at runtime by `.github/scripts/pick_simulator.py`, so the workflow doesn't
@@ -209,3 +209,99 @@ xcrun xcresulttool export attachments --path /tmp/tu_ui.xcresult \
 
 Like the other UI tests it runs on the `TradingUpScreenshots` scheme and is **not**
 part of the CI test plan.
+
+## Gauntlet decisions and playtesting
+
+`GauntletDecisionTests.swift` covers exact whole-Showcase swap previews, broken and
+completed lines, duplicate stages, foil/grade/Trainer/Catalyst modifiers, grading
+affordability, and stable round earnings after a purchase. Its
+`GauntletDecisionStateTests` class covers the last-pack recovery window, successful
+and unsuccessful grades, deferred result dismissal, explicit loss, mid-grade
+relaunch, pending Catalysts, duplicate decisions, and phase gates.
+
+Run those alongside the existing Gauntlet regressions:
+
+```bash
+xcodebuild test -project TradingUp.xcodeproj -scheme TradingUp \
+  -destination 'platform=iOS Simulator,name=iPhone 17' \
+  -only-testing:TradingUpTests/GauntletCoreTests \
+  -only-testing:TradingUpTests/GauntletStateTests \
+  -only-testing:TradingUpTests/GauntletMetaTests \
+  -only-testing:TradingUpTests/GauntletProgressStoreTests \
+  -only-testing:TradingUpTests/GauntletDecisionTests \
+  -only-testing:TradingUpTests/GauntletDecisionStateTests \
+  CODE_SIGNING_ALLOWED=NO
+```
+
+### Playable DEBUG fixtures
+
+`DebugGauntletScenario` seeds **real resume snapshots**, not mock screens. It runs
+once at application launch only when `TU_TEST_GAUNTLET` is explicitly set; Home /
+Continue afterward uses normal persistence. It is entirely absent from Release
+builds. Use a disposable Simulator: an explicit fixture replaces that install's
+Gauntlet run and meta progress (not its Binder).
+
+| Launch environment | Starting point |
+| --- | --- |
+| `TU_TEST_GAUNTLET=fresh` | Fresh Trainer selection, with the primer already seen |
+| `TU_TEST_GAUNTLET=swap` | Full Medium Showcase with a complete and a partial evolution line |
+| `TU_TEST_GAUNTLET=shop` | Round-one payout with enough cash to choose a pack unlock or slots |
+| `TU_TEST_GAUNTLET=last-pack` | Last pending card, zero rips, and an ungraded keeper below target |
+| `TU_TEST_SEED=0` | The last-pack fixture's next grade is PSA 9, rescuing the round |
+| `TU_TEST_SEED=7` | The same grade is PSA 7, demonstrating a genuine failed gamble |
+
+`GauntletExperienceTests` plays a fresh Easy run from Trainer selection through all
+five rounds and the Binder reward, rather than seeding a win. Its other cases
+exercise swap cancellation/confirmation, line completion, stable purchase history,
+unaffordable actions, save/resume and process relaunch, both grading outcomes,
+the shared grading-result popup, declining the last chance, and large text. It
+also follows the remaining-rip counter from the round through the sealed pack,
+individual reveals, and summary, and verifies that removed controls/copy stay absent.
+Each relevant screen is attached as a real Simulator screenshot. The review pass
+uses iPhone 17, iPhone SE (3rd generation),
+and iPad mini (A17 Pro); the full-run case only needs to run once.
+
+```bash
+xcodebuild test -project TradingUp.xcodeproj -scheme TradingUpScreenshots \
+  -destination 'platform=iOS Simulator,name=iPhone 17' \
+  -parallel-testing-enabled NO \
+  -only-testing:TradingUpUITests/GauntletExperienceTests \
+  -resultBundlePath /tmp/tu_gauntlet.xcresult CODE_SIGNING_ALLOWED=NO
+xcrun xcresulttool export attachments --path /tmp/tu_gauntlet.xcresult \
+  --output-path /tmp/tu_gauntlet_screenshots
+```
+
+### Balance: reference versus playable cadence
+
+The existing verify command also runs a paired **automatic-clear** comparison.
+`GauntletCadence.fullBudget` retains the old reference and all its difficulty and
+Trainer guardrails. `.automatic` settles every pull before testing the target,
+banks unused rips, permits ordinary grading between packs, and offers normal-fee
+last-chance grades before a loss. `.automaticWithoutLastChance` is the same policy
+with the old premature-loss behavior. Optimized play tries affordable keepers when
+out of rips; careless play still only tries its top keeper. Every run must resolve,
+and enabling the optional recovery must not reduce that policy's prior wins.
+Partial-line valuations sum in line-ID order so floating-point ties cannot change
+a seeded run merely because a Dictionary iterates in a different order.
+The harness is compiled with `-O` locally and in CI to keep the additional 4,800
+automatic-clear runs practical; its explicit `check` calls remain active.
+
+The September 2026 review found that the full-budget reference overstated success
+in the shipping flow. Using the neutral Trainer and 400 seeds per cell starting at
+`0x6A17`, the automatic-clear **optimized-policy** results were:
+
+| Tier | Original flow, original economy | Last-chance fix only | Final, with Hard ramp 1.64 |
+| --- | --- | --- | --- |
+| Easy | 99.2% | 99.8% | 99.8% |
+| Medium | 69.2% | 75.2% | 75.2% |
+| Hard | 26.0% | 36.0% | 41.2% |
+
+The final automatic-clear careless-policy rates were 97.2% / 3.8% / 3.2%, so higher
+tiers still punish that policy's cash hoarding and weak curation. The unchanged
+historical reference checks also pass: at 200 trials its optimized rates are
+99% / 84% / 69%, versus careless 98% / 40% / 20%. These are **heuristic-policy
+estimates**, not human win probabilities, proof of optimal play, or interchangeable
+measurements. In particular, the new automatic-clear Hard estimate remains below
+the historical reference's 45% floor; that older floor was calibrated against a
+different cadence. Future balance work should improve and calibrate the live
+policies across Trainers rather than silently relaxing the existing reference checks.

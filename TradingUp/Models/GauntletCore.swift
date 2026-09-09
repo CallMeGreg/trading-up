@@ -43,6 +43,19 @@ enum RoundOutcome: Equatable {
     case lost      // missed the bar — run over (rounds are single-life)
 }
 
+struct ShowcaseSwapPreview: Identifiable {
+    let index: Int
+    let outgoing: CardInstance
+    let auraBefore: Double
+    let auraAfter: Double
+    let cashGain: Double
+    let completedLineIds: Set<String>
+    let brokenLineIds: Set<String>
+
+    var id: UUID { outgoing.id }
+    var auraChange: Double { auraAfter - auraBefore }
+}
+
 // MARK: - Gauntlet run
 
 /// One Gauntlet run: an escalating sequence of rounds, each demanding a rising
@@ -197,6 +210,27 @@ struct GauntletRun: Codable {
         return after - showcaseAura
     }
 
+    /// Trial the whole Showcase, not just the two cards' prices: replacing a
+    /// linemate can remove a bonus from several other cards at once.
+    func swapPreviews(for incoming: CardInstance) -> [ShowcaseSwapPreview] {
+        let before = showcaseAura
+        let completedBefore = completedShowcaseLineIds
+        return showcase.indices.map { index in
+            var trial = self
+            trial.showcase[index] = incoming
+            let completedAfter = trial.completedShowcaseLineIds
+            return ShowcaseSwapPreview(
+                index: index, outgoing: showcase[index],
+                auraBefore: before, auraAfter: trial.showcaseAura,
+                cashGain: showcase[index].currentValue * sellbackRate,
+                completedLineIds: completedAfter.subtracting(completedBefore),
+                brokenLineIds: completedBefore.subtracting(completedAfter))
+        }.sorted {
+            if $0.auraAfter == $1.auraAfter { return $0.index < $1.index }
+            return $0.auraAfter > $1.auraAfter
+        }
+    }
+
     /// The Showcase card that contributes the least Aura right now.
     func weakestShowcaseIndex() -> Int? {
         guard !showcase.isEmpty else { return nil }
@@ -222,6 +256,8 @@ struct GauntletRun: Codable {
     /// (`isBossRound`) additionally spikes the target and grants a bonus rip.
     var isFinalRound: Bool { round == roundsTotal }
     var progress: Double { target > 0 ? showcaseAura / target : 1 }
+    var auraShortfall: Double { max(0, target - showcaseAura) }
+    var lastClearEarnings: Double { lastInterest + lastStipend + lastRipBank }
 
     // MARK: Rounds
 
@@ -381,6 +417,16 @@ struct GauntletRun: Codable {
 
     // MARK: Grading (gamble a keeper's score)
 
+    func canGradeShowcaseCard(at index: Int) -> Bool {
+        guard showcase.indices.contains(index) else { return false }
+        let card = showcase[index]
+        return card.grade == nil && cash >= gradeFee(for: card.card)
+    }
+
+    var hasAffordableGrade: Bool {
+        showcase.indices.contains { canGradeShowcaseCard(at: $0) }
+    }
+
     /// Roll a grade, bent by the Trainer's Grading luck. Above neutral Grading rolls
     /// with *advantage* (roll twice, keep the more valuable) at a per-run chance;
     /// below neutral it rolls with *disadvantage* (roll twice, keep the worse) — the
@@ -402,9 +448,8 @@ struct GauntletRun: Codable {
     /// or unaffordable. Returns the rolled grade.
     @discardableResult
     mutating func gradeShowcaseCard<G: RandomNumberGenerator>(at index: Int, using rng: inout G) -> Int? {
-        guard showcase.indices.contains(index), showcase[index].grade == nil else { return nil }
+        guard canGradeShowcaseCard(at: index) else { return nil }
         let fee = gradeFee(for: showcase[index].card)
-        guard cash >= fee else { return nil }
         cash -= fee
         let g = rollGradeWithLuck(using: &rng)
         showcase[index].grade = g
