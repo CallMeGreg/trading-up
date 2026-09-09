@@ -56,7 +56,7 @@ final class GauntletState {
     /// Continue button lowers it once the pull is fully resolved (`finishReveal`).
     var revealActive = false
 
-    /// Keep the grade result visible until its detail sheet is dismissed.
+    /// Keep the grade result visible until its popup or detail sheet is dismissed.
     private var reviewingGrade = false
 
     /// The outcome of the last resolved round, so the UI can flash "cleared" /
@@ -396,19 +396,21 @@ final class GauntletState {
         return run.canSwapCatalyst
     }
 
-    /// Grade a Showcase card, paying the fee and gambling its score. Returns the
-    /// rolled grade (nil if unaffordable or already graded).
+    /// Grade a Showcase card, returning the rolled grade, fee, and actual value
+    /// change for the shared result popup (nil if unaffordable or already graded).
     @discardableResult
-    func grade(showcaseIndex index: Int, deferResolution: Bool = false) -> Int? {
+    func grade(showcaseIndex index: Int, deferResolution: Bool = false) -> GradeResult? {
         guard canGrade(showcaseIndex: index), var r = run else { return nil }
-        let g = r.gradeShowcaseCard(at: index, using: &rng)
+        let oldValue = r.showcase[index].currentValue
+        let fee = r.gradeFee(for: r.showcase[index].card)
+        guard let grade = r.gradeShowcaseCard(at: index, using: &rng) else { return nil }
+        let result = GradeResult(grade: grade, fee: fee, oldValue: oldValue,
+                                 newValue: r.showcase[index].currentValue)
         run = r
-        if g != nil, r.showcase.indices.contains(index) {
-            game.recordGauntletCards([r.showcase[index]])
-            reviewingGrade = deferResolution
-        }
+        game.recordGauntletCards([r.showcase[index]])
+        reviewingGrade = deferResolution
         evaluateRoundProgress()
-        return g
+        return result
     }
 
     func canGrade(showcaseIndex index: Int) -> Bool {

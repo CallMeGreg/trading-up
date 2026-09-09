@@ -467,13 +467,15 @@ same "provably stuck" logic as Classic's `isGameOver` (§10), but per-round and 
 so optimisation becomes *mandatory* on the higher tiers rather than optional.
 
 **Last-chance grading.** Finishing the last pack below target does **not** end a run
-while an ungraded Showcase card is affordable to grade. The run instead shows the Aura
-shortfall, a card to review, and an explicit **End Run** action with confirmation.
-Any eligible Showcase card can still be graded, at its normal Trainer-adjusted fee
+while an ungraded Showcase card is affordable to grade. The run instead reminds
+players that grading is still available and offers one centered **End Run** button
+with confirmation, without a suggested-card button or repeated Aura-shortfall sentence.
+Tap any eligible Showcase card to grade it at its normal Trainer-adjusted fee
 and odds; a grade can lower Aura, and each card is still graded only once. If no
-affordable grade remains, the run ends automatically. Grade results stay visible
-until dismissed before routing to the shop, prize, or loss. Leaving and resuming
-preserves the cards, spent cash, and remaining opportunity, not a free reroll.
+affordable grade remains, the run ends automatically. Results use the same grading
+popup as Classic, showing the grade and value before/after; round resolution waits
+until that popup is dismissed before routing to the shop, prize, or loss. Leaving
+and resuming preserves the cards, spent cash, and remaining opportunity, not a free reroll.
 
 (The two constraints — a hard **rip count** and **cash** — are deliberate: the rip count
 creates tempo pressure, cash creates the economy. A single blended currency was considered
@@ -500,11 +502,13 @@ exactly on it, is the keep-heavy player's way to fund Catalysts — and **leftov
 each banked at **$5 × the cleared round number** so unused tempo isn't simply wasted.
 Per-tier counts (rounds, rips, starting slots) live in §14.5.
 
-**Readable decisions, faster pacing.** **Reveal all** is an optional shortcut from the
-wrapper or card-by-card reveal to the same keep/sell summary. It neither rerolls nor
-resolves any item, and spends no additional rip. The summary counts unresolved
-cards **and Catalysts** and explains whether finishing the pack returns to the round,
-banks unused rips, opens a last-chance grade, or ends the run.
+**Visible rip budget.** A high-contrast **Rips Left** counter anchors the pinned round
+HUD and pack-summary HUD. It also stays visible beside the sealed pack and each
+card reveal, using the already-decremented budget; one or zero remaining rips turn
+the counter gold. Opening still follows the card-by-card reveal, with no skip-all
+button. The summary counts unresolved cards **and Catalysts** and explains whether
+finishing the pack returns to the round, banks unused rips, opens a last-chance
+grade, or ends the run.
 
 **Shop planning.** Spendable cash stays separate from the expandable **earned last
 round** breakdown. Purchases must never rewrite historical payout amounts. The shop

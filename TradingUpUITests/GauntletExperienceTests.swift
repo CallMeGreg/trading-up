@@ -10,7 +10,8 @@ final class GauntletExperienceTests: XCTestCase {
 
     func testSwapPreviewsExplainLossesCompletionsAndPersistTheChoice() {
         launch("swap")
-        revealAll()
+        revealPack()
+        XCTAssertEqual(rips.label, "2 rips left")
         shot("after-pull-decisions")
         app.buttons["gauntletSwap-S1-048"].tap()
         let breaking = app.buttons["gauntletReplace-0"]
@@ -63,6 +64,7 @@ final class GauntletExperienceTests: XCTestCase {
         XCTAssertTrue(details.waitForExistence(timeout: 5))
         details.tap()
         XCTAssertTrue(app.staticTexts["Round payout"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.staticTexts["Already included in your cash. Purchases don't change this payout."].exists)
         shot("after-purchase-ledger")
         let savedCash = cash.label
         button("Home").tap()
@@ -82,11 +84,13 @@ final class GauntletExperienceTests: XCTestCase {
         app.launchEnvironment = ["TU_FORCE_UNLOCK": "1", "TU_TEST_SEED": "0"]
         app.launch()
         enterGauntlet(resume: true)
-        XCTAssertTrue(app.buttons["gauntletReviewGrade"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["gauntletEndRun"].waitForExistence(timeout: 5))
         gradeLastChance()
-        XCTAssertEqual(app.staticTexts["gauntletGradeResult"].label, "+12.30 Aura")
+        XCTAssertEqual(app.staticTexts["gradeResultValue"].label, "PSA 9")
+        XCTAssertTrue(app.staticTexts["Was"].exists)
+        XCTAssertTrue(app.staticTexts["Now"].exists)
         shot("after-last-chance-grade")
-        app.buttons["gauntletFinishGrade"].tap()
+        app.buttons["gradeResultContinue"].tap()
         XCTAssertTrue(app.staticTexts["Round 1 Cleared!"].waitForExistence(timeout: 5))
     }
 
@@ -96,10 +100,10 @@ final class GauntletExperienceTests: XCTestCase {
         app.buttons["gauntletEndRun"].tap()
         XCTAssertTrue(app.alerts["End this run?"].waitForExistence(timeout: 5))
         app.alerts.buttons["Keep Playing"].tap()
-        XCTAssertTrue(app.buttons["gauntletReviewGrade"].exists)
+        XCTAssertTrue(app.buttons["gauntletShowcase-0"].isHittable)
         gradeLastChance()
-        XCTAssertTrue(app.staticTexts["gauntletGradeResult"].label.hasPrefix("-"))
-        app.buttons["gauntletFinishGrade"].tap()
+        XCTAssertEqual(app.staticTexts["gradeResultValue"].label, "PSA 7")
+        app.buttons["gradeResultContinue"].tap()
         XCTAssertTrue(app.staticTexts["Run Over"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["FINAL AURA"].exists)
         shot("after-run-summary")
@@ -123,12 +127,7 @@ final class GauntletExperienceTests: XCTestCase {
     }
 
     func testPlaysAFreshEasyRunThroughTheBinderReward() {
-        launch("fresh", seed: "0")
-        let trainer = app.buttons["gauntletTrainer-neutral"]
-        XCTAssertTrue(trainer.waitForExistence(timeout: 5))
-        trainer.tap()
-        app.buttons["gauntletTier-easy"].tap()
-        XCTAssertTrue(app.buttons["gauntletPack-1"].waitForExistence(timeout: 5))
+        startFreshEasyRun()
         shot("after-fresh-run")
 
         for _ in 0..<60 {
@@ -153,19 +152,51 @@ final class GauntletExperienceTests: XCTestCase {
                 app.buttons["gauntletNextRound"].tap()
                 continue
             }
-            if app.buttons["gauntletReviewGrade"].exists {
+            if app.buttons["gauntletEndRun"].exists {
                 gradeLastChance()
-                app.buttons["gauntletFinishGrade"].tap()
+                app.buttons["gradeResultContinue"].tap()
+                let close = button("Close card")
+                if close.exists && close.isHittable { close.tap() }
                 continue
             }
             let packs = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'gauntletPack-' AND enabled == true"))
             XCTAssertGreaterThan(packs.count, 0)
             packs.element(boundBy: packs.count - 1).tap()
-            revealAll()
+            revealPack()
             resolvePull()
             app.buttons["gauntletFinishPack"].tap()
         }
         XCTFail("Easy playthrough exceeded its bounded action budget")
+    }
+
+    func testRipsRemainProminentThroughoutPackOpening() {
+        startFreshEasyRun()
+        XCTAssertEqual(rips.label, "6 rips left")
+        XCTAssertTrue(rips.isHittable)
+        shot("after-round-rips")
+
+        app.buttons["gauntletPack-1"].tap()
+        XCTAssertTrue(app.staticTexts["Tap to open"].waitForExistence(timeout: 5))
+        XCTAssertEqual(rips.label, "5 rips left", "opening one pack spends exactly one rip")
+        XCTAssertFalse(app.buttons["gauntletRevealAll"].exists)
+        shot("after-sealed-rips")
+        XCTAssertTrue(rips.isHittable)
+
+        app.staticTexts["Tap to open"].tap()
+        XCTAssertTrue(app.staticTexts["Tap for next card"].waitForExistence(timeout: 5))
+        XCTAssertEqual(rips.label, "5 rips left")
+        XCTAssertTrue(rips.isHittable)
+        shot("after-reveal-rips")
+
+        revealPack()
+        XCTAssertEqual(rips.label, "5 rips left", "card reveals don't spend additional rips")
+        XCTAssertTrue(rips.isHittable)
+        shot("after-summary-rips")
+
+        startFreshEasyRun(largeText: true)
+        XCTAssertEqual(rips.label, "6 rips left")
+        XCTAssertTrue(rips.isHittable)
+        shot("after-round-rips-large-text")
     }
 
     private func launch(_ scenario: String, seed: String = "0", largeText: Bool = false) {
@@ -188,30 +219,55 @@ final class GauntletExperienceTests: XCTestCase {
         }
     }
 
-    private func revealAll() {
-        let reveal = app.buttons["gauntletRevealAll"]
-        XCTAssertTrue(reveal.waitForExistence(timeout: 5))
-        reveal.tap()
-        XCTAssertTrue(app.staticTexts["Build your Showcase"].waitForExistence(timeout: 5))
+    private func startFreshEasyRun(largeText: Bool = false) {
+        launch("fresh", seed: "0", largeText: largeText)
+        let trainer = app.buttons["gauntletTrainer-neutral"]
+        XCTAssertTrue(trainer.waitForExistence(timeout: 5))
+        trainer.tap()
+        app.buttons["gauntletTier-easy"].tap()
+        XCTAssertTrue(app.buttons["gauntletPack-1"].waitForExistence(timeout: 5))
+    }
+
+    private func revealPack() {
+        let summary = app.staticTexts["Build your Showcase"]
+        XCTAssertFalse(app.buttons["gauntletRevealAll"].exists)
+        for _ in 0..<12 {
+            if summary.exists { return }
+            let prompt = app.staticTexts.matching(NSPredicate(
+                format: "label IN %@", ["Tap to open", "Tap for next card", "Tap to finish"])).firstMatch
+            if !prompt.waitForExistence(timeout: 5) {
+                XCTAssertTrue(summary.exists, "every reveal must offer its next tap or the summary")
+                return
+            }
+            prompt.tap()
+        }
+        XCTAssertTrue(summary.waitForExistence(timeout: 5))
     }
 
     private func settleLastPack() {
-        revealAll()
+        revealPack()
         app.buttons["gauntletSell-S1-001"].tap()
         XCTAssertTrue(app.buttons["gauntletFinishPack"].label.contains("Review last chance"))
         app.buttons["gauntletFinishPack"].tap()
-        XCTAssertTrue(app.buttons["gauntletReviewGrade"].waitForExistence(timeout: 5))
+        let endRun = app.buttons["gauntletEndRun"]
+        XCTAssertTrue(endRun.waitForExistence(timeout: 5))
+        XCTAssertTrue(endRun.isHittable)
+        XCTAssertEqual(endRun.frame.midX, app.frame.midX, accuracy: 1)
+        XCTAssertEqual(rips.label, "0 rips left")
+        XCTAssertFalse(app.buttons["gauntletReviewGrade"].exists)
+        XCTAssertFalse(app.staticTexts.matching(NSPredicate(
+            format: "label BEGINSWITH 'Need ' AND label CONTAINS 'more Aura'")).firstMatch.exists)
     }
 
     private func gradeLastChance() {
-        app.buttons["gauntletReviewGrade"].tap()
+        app.buttons["gauntletShowcase-0"].tap()
         let grade = app.buttons["gauntletGradeCard"]
         scrollTo(grade, in: app.scrollViews["gauntletCardDetails"])
         XCTAssertTrue(grade.isHittable)
         grade.tap()
-        let finish = app.buttons["gauntletFinishGrade"]
-        XCTAssertTrue(finish.waitForExistence(timeout: 5))
-        scrollTo(finish, in: app.scrollViews["gauntletCardDetails"])
+        XCTAssertTrue(app.staticTexts["gradeResultValue"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["gradeResultContinue"].exists)
+        XCTAssertFalse(app.staticTexts["Round 1 Cleared!"].exists, "the result must be shown before advancing")
     }
 
     private func resolvePull() {
@@ -265,6 +321,12 @@ final class GauntletExperienceTests: XCTestCase {
     }
 
     private var aura: XCUIElement { element("gauntletAura") }
+
+    private var rips: XCUIElement {
+        // The full-screen reveal keeps the covered round HUD in the accessibility tree.
+        let matches = app.descendants(matching: .any).matching(identifier: "gauntletRipsRemaining")
+        return matches.allElementsBoundByIndex.first { $0.isHittable } ?? matches.firstMatch
+    }
 
     private func element(_ identifier: String) -> XCUIElement {
         app.descendants(matching: .any).matching(identifier: identifier).firstMatch

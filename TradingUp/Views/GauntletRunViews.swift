@@ -197,9 +197,7 @@ struct RunScreen: View {
                     .padding(.bottom, 4)
                 }
                 if state.isLastChance {
-                    LastChancePanel(run: run, onReview: { index in
-                        detail = ShowcaseSelection(index: index)
-                    }, onEnd: { confirmingEnd = true })
+                    LastChancePanel(onEnd: { confirmingEnd = true })
                 } else {
                     PackRail(state: state, run: run)
                 }
@@ -243,36 +241,28 @@ private func fmtGoal(_ v: Double) -> String { String(format: "%.0f", v.rounded(.
 private func fmtChange(_ v: Double) -> String { String(format: "%+.2f", v) }
 
 private struct LastChancePanel: View {
-    let run: GauntletRun
-    let onReview: (Int) -> Void
     let onEnd: () -> Void
-
-    private var reviewIndex: Int? {
-        run.showcase.indices.filter { run.canGradeShowcaseCard(at: $0) }
-            .max { run.showcase[$0].currentValue < run.showcase[$1].currentValue }
-    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Label("Out of rips, not out of options", systemImage: "seal.fill")
                 .font(.subheadline.weight(.bold))
                 .foregroundStyle(Color(hex: "ffd54a"))
-            Text("Need \(fmtGoal(run.auraShortfall)) more Aura. Grade a Showcase card for one last chance. Grades can lower Aura, too.")
+            Text("Grade a Showcase card for one last chance. Grades can lower Aura, too.")
                 .font(.caption)
                 .foregroundStyle(Palette.text)
                 .fixedSize(horizontal: false, vertical: true)
-            HStack(spacing: 10) {
-                if let index = reviewIndex {
-                    BigButton(title: "Review \(run.showcase[index].card.name)",
-                              systemImage: "seal", tint: GauntletTheme.tint) {
-                        onReview(index)
-                    }
-                    .accessibilityIdentifier("gauntletReviewGrade")
+            HStack {
+                Spacer()
+                Button(role: .destructive, action: onEnd) {
+                    Text("End Run")
+                        .font(.subheadline.weight(.bold))
+                        .frame(minWidth: 120, minHeight: 44)
                 }
-                Button("End Run", role: .destructive, action: onEnd)
-                    .font(.caption.weight(.bold))
-                    .frame(minWidth: 64, minHeight: 44)
-                    .accessibilityIdentifier("gauntletEndRun")
+                .buttonStyle(.bordered)
+                .tint(Color(hex: "ff8a80"))
+                .accessibilityIdentifier("gauntletEndRun")
+                Spacer()
             }
         }
         .panel(12)
@@ -314,13 +304,7 @@ private struct PackRail: View {
 
     var body: some View {
         VStack(spacing: 6) {
-            HStack {
-                SectionTitle(text: "Packs — pick a set to rip")
-                Spacer(minLength: 6)
-                Text("\(run.ripsLeft) rip\(run.ripsLeft == 1 ? "" : "s") left")
-                    .font(.system(size: 11, weight: .heavy, design: .rounded))
-                    .foregroundStyle(run.ripsLeft > 0 ? Palette.text : Palette.subtle)
-            }
+            SectionTitle(text: "Packs — pick a set to rip")
             // Fixed row (no horizontal scroll): every set gets an equal column and
             // the pack shrinks to fit whatever width is available.
             GeometryReader { geo in
@@ -418,27 +402,55 @@ private struct PackTile: View {
 
 // MARK: HUD
 
+private struct RipsRemainingBadge: View {
+    let count: Int
+
+    private var tint: Color {
+        count <= 1 ? Color(hex: "ffd54a") : Color(hex: "cbb5ff")
+    }
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Text("\(count)")
+                .font(.system(size: 26, weight: .black, design: .rounded))
+                .monospacedDigit()
+            VStack(alignment: .leading, spacing: 0) {
+                Text(count == 1 ? "RIP" : "RIPS")
+                Text("LEFT")
+            }
+            .font(.system(size: 10, weight: .heavy, design: .rounded))
+        }
+        .foregroundStyle(tint)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
+        .background(RoundedRectangle(cornerRadius: 12).fill(Palette.panel))
+        .overlay(RoundedRectangle(cornerRadius: 12).fill(tint.opacity(0.10)))
+        .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(tint.opacity(0.45), lineWidth: 1))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(count) rip\(count == 1 ? "" : "s") left")
+        .accessibilityIdentifier("gauntletRipsRemaining")
+    }
+}
+
 private struct HUDPanel: View {
     let run: GauntletRun
 
     var body: some View {
         VStack(spacing: 10) {
-            HStack {
-                Text("Round \(run.round) / \(run.roundsTotal)")
-                    .font(.system(size: 15, weight: .black, design: .rounded))
-                    .foregroundStyle(.white)
-                    .lineLimit(1).minimumScaleFactor(0.8)
-                if run.isFinalRound {
-                    Text("FINALS").font(.system(size: 10, weight: .black)).tracking(1)
-                        .foregroundStyle(Color(hex: "1a0d2e"))
-                        .padding(.horizontal, 6).padding(.vertical, 2)
-                        .background(Capsule().fill(Color(hex: "ffd54a")))
+            HStack(spacing: 8) {
+                RipsRemainingBadge(count: run.ripsLeft)
+                Spacer(minLength: 4)
+                VStack(alignment: .trailing, spacing: 3) {
+                    Text("\(run.isFinalRound ? "Final round" : "Round") \(run.round) / \(run.roundsTotal)")
+                        .font(.system(size: 12, weight: .heavy, design: .rounded))
+                        .foregroundStyle(run.isFinalRound ? Color(hex: "ffd54a") : .white)
+                        .lineLimit(1).minimumScaleFactor(0.7)
+                    Text(run.cash.moneyShort)
+                        .font(.system(size: 18, weight: .black, design: .rounded))
+                        .foregroundStyle(Palette.money)
+                        .monospacedDigit()
+                        .lineLimit(1).minimumScaleFactor(0.7)
                 }
-                Spacer()
-                Text(run.cash.moneyShort)
-                    .font(.system(size: 18, weight: .black, design: .rounded))
-                    .foregroundStyle(Palette.money)
-                    .monospacedDigit()
             }
 
             HStack(spacing: 8) {
@@ -1040,7 +1052,7 @@ private struct ShowcaseCardDetail: View {
     let state: GauntletState
     let index: Int
     let onClose: () -> Void
-    @State private var auraBeforeGrading: Double?
+    @State private var gradeResult: GradeResult?
 
     var body: some View {
         ZStack {
@@ -1061,6 +1073,14 @@ private struct ShowcaseCardDetail: View {
             .buttonStyle(.plain)
             .padding(14)
             .accessibilityLabel("Close card")
+        }
+        .overlay {
+            if let result = gradeResult {
+                GradeRevealOverlay(result: result) {
+                    gradeResult = nil
+                    state.finishGrading()
+                }
+            }
         }
     }
 
@@ -1125,16 +1145,6 @@ private struct ShowcaseCardDetail: View {
                 Text(Economy.gradeLabel(g))
                     .font(.system(size: 11, weight: .bold))
                     .foregroundStyle(Palette.subtle)
-                if let before = auraBeforeGrading {
-                    Text("\(fmtChange(run.showcaseAura - before)) Aura")
-                        .font(.headline)
-                        .foregroundStyle(run.showcaseAura >= before ? Palette.money : Color(hex: "ff8a80"))
-                        .accessibilityIdentifier("gauntletGradeResult")
-                    BigButton(title: run.showcaseAura >= run.target ? "Collect rewards" : "Back to round",
-                              systemImage: "checkmark", tint: GauntletTheme.tint, action: onClose)
-                        .padding(.top, 8)
-                        .accessibilityIdentifier("gauntletFinishGrade")
-                }
             }
             .frame(maxWidth: .infinity)
             .panel()
@@ -1148,9 +1158,10 @@ private struct ShowcaseCardDetail: View {
                           tint: [Color(hex: "6d5cf7")],
                           enabled: state.canGrade(showcaseIndex: index)) {
                     Haptics.play(.medium)
-                    let before = run.showcaseAura
-                    if state.grade(showcaseIndex: index, deferResolution: true) != nil {
-                        auraBeforeGrading = before
+                    if let result = state.grade(showcaseIndex: index, deferResolution: true) {
+                        gradeResult = result
+                    } else {
+                        Haptics.play(.error)
                     }
                 }
                 .accessibilityIdentifier("gauntletGradeCard")
@@ -1381,10 +1392,6 @@ private struct RoundClearedHero: View {
                         LedgerRow(label: "Interest", amount: run.lastInterest)
                         LedgerRow(label: "Round payout", amount: run.lastStipend)
                         LedgerRow(label: "Unused rips", amount: run.lastRipBank)
-                        Text("Already included in your cash. Purchases don't change this payout.")
-                            .font(.caption2)
-                            .foregroundStyle(Palette.subtle)
-                            .fixedSize(horizontal: false, vertical: true)
                     }
                     .padding(.top, 8)
                 } label: {
@@ -1618,21 +1625,9 @@ struct GauntletRevealView: View {
             }
         }
         .overlay(alignment: .topTrailing) {
-            if phase != .summary {
-                Button {
-                    Haptics.play(.light)
-                    withAnimation(reduceMotion ? nil : .easeOut(duration: 0.2)) { phase = .summary }
-                } label: {
-                    Label("Reveal all", systemImage: "forward.end.fill")
-                        .font(.subheadline.weight(.bold))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 14)
-                        .frame(minHeight: 44)
-                        .background(.ultraThinMaterial, in: Capsule())
-                }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("gauntletRevealAll")
-                .padding(16)
+            if phase != .summary, let run = state.run {
+                RipsRemainingBadge(count: run.ripsLeft)
+                    .padding(16)
             }
         }
         .overlay {

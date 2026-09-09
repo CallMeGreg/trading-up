@@ -254,8 +254,11 @@ Gauntlet run and meta progress (not its Binder).
 five rounds and the Binder reward, rather than seeding a win. Its other cases
 exercise swap cancellation/confirmation, line completion, stable purchase history,
 unaffordable actions, save/resume and process relaunch, both grading outcomes,
-declining the last chance, and large text. Each relevant screen is attached as a
-real Simulator screenshot. The review pass uses iPhone 17, iPhone SE (3rd generation),
+the shared grading-result popup, declining the last chance, and large text. It
+also follows the remaining-rip counter from the round through the sealed pack,
+individual reveals, and summary, and verifies that removed controls/copy stay absent.
+Each relevant screen is attached as a real Simulator screenshot. The review pass
+uses iPhone 17, iPhone SE (3rd generation),
 and iPad mini (A17 Pro); the full-run case only needs to run once.
 
 ```bash
