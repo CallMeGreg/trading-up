@@ -37,6 +37,56 @@ Or just press `⌘U` in Xcode.
 | `WinAndUnlockTests.swift` | Winning shows once, doesn't erase the collection; set unlocks |
 | `FullUnlockGateTests.swift` | The free-tier/full-version IAP gate: Set 1 free, paid sets refuse a buy until unlocked, and the unlock never skips progression |
 | `RevealFlowTests.swift` | The win/Game Over overlay waits for a pack reveal to finish; the DEBUG fast‑travel seed |
+| `AudioTests.swift` | Independent persisted Music/SFX channels and legacy migration; continuous-drag mute/restore; one-shot Gauntlet audio priorities; all 60 Studio effects and both music loops decode from the app bundle |
+
+### Audio
+
+Run the focused audio and reveal/state regression tests after changing playback
+or presentation hooks:
+
+```bash
+xcodebuild test -project TradingUp.xcodeproj -scheme TradingUp \
+  -destination 'platform=iOS Simulator,name=iPhone 16' \
+  -only-testing:TradingUpTests/AudioPreferencesTests \
+  -only-testing:TradingUpTests/GauntletAudioFeedbackTests \
+  -only-testing:TradingUpTests/AudioCatalogueTests \
+  -only-testing:TradingUpTests/RevealFlowTests \
+  -only-testing:TradingUpTests/GauntletStateTests \
+  CODE_SIGNING_ALLOWED=NO
+```
+
+`TradingUpUITests/AudioSettingsUITests` exercises both sliders, independent
+speaker mute, restoring a pre-drag level after sliding to zero, relaunch
+persistence and the separate Haptics control. It attaches a Settings screenshot.
+Run it on the existing `TradingUpScreenshots` scheme:
+
+```bash
+xcodebuild test -project TradingUp.xcodeproj -scheme TradingUpScreenshots \
+  -destination 'platform=iOS Simulator,name=iPhone 16' \
+  -only-testing:TradingUpUITests/AudioSettingsUITests \
+  CODE_SIGNING_ALLOWED=NO
+```
+
+The UI test sets `TU_AUDIO_DISABLED=1`, and unit-test hosts suppress hardware
+playback automatically in Debug. Neither changes the visible audio preferences.
+For generated assets, use the offline checks below; `--rerender` also proves
+every SFX candidate reproduces byte-for-byte from its sources.
+
+```bash
+python3 tools/generate_sound_lab.py --check --rerender
+python3 tools/generate_sfx.py --check
+python3 tools/generate_music.py --check
+```
+
+The music check verifies source/output hashes, exact decoded frame counts,
+AAC priming/padding, true peaks and the loop seam. Add `--render-pcm` to
+recompose all four scores and compare their pre-encode PCM hashes as well.
+
+In the [sound lab](sound-lab/index.html), audition repeated Studio actions under
+each recommended music loop, at low volume and through actual phone speakers
+as well as headphones. Check the native app's silent switch, background/return,
+other-app audio priority and headphone disconnect on a device. Automated
+decoding and peak/loop-boundary checks do not establish subjective mix quality.
 
 ## The simulation harness (no Xcode needed)
 

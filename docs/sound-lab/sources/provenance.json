@@ -1,0 +1,178 @@
+{
+  "schemaVersion": 1,
+  "author": "Kenney",
+  "pack": "Casino Audio",
+  "sourcePage": "https://kenney.nl/assets/casino-audio",
+  "downloadURL": "https://kenney.nl/media/pages/assets/casino-audio/2472606a04-1721639069/kenney_casino-audio.zip",
+  "archiveSha256": "f36250766ac5bc378c13708ddf12a23a8e54a3251f8d482c7536e51b5dbafa18",
+  "license": "CC0-1.0",
+  "licenseURL": "https://creativecommons.org/publicdomain/zero/1.0/legalcode",
+  "licenseFile": "licenses/kenney-casino-audio.txt",
+  "licenseSha256": "3d9c53acb6e236d760da14030f54bc53e1d8c2599f78470c36b96fddcde09221",
+  "modifications": "Selected recordings converted to 48 kHz 16-bit mono PCM; leading/trailing silence trimmed with 3 ms / 10 ms margins. No source normalization.",
+  "preparationTool": "ffmpeg version 9.0.1 Copyright (c) 2000-2026 the FFmpeg developers",
+  "files": [
+    {
+      "group": "card",
+      "file": "sources/audio/card-place-1.wav",
+      "sourceMember": "Audio/card-place-1.ogg",
+      "sourceSha256": "d8f26c33a665dcbdcc6f632f6050bc9dd548feb0d4942d4547615926d3926810",
+      "sha256": "3c8e2ec4bf4840ce52d1be9acc5c44627887d93c6ce148f0dccfa50c5b5a5817",
+      "trimmedStartFramesAt48000Hz": 3078,
+      "trimmedEndFramesAt48000Hz": 18126
+    },
+    {
+      "group": "card",
+      "file": "sources/audio/card-place-2.wav",
+      "sourceMember": "Audio/card-place-2.ogg",
+      "sourceSha256": "903d5050718595e87864dd755643b476ab1a5533080dcc2dddc72570d33ba9f8",
+      "sha256": "151e93f63c13bab95d92582fbd8f71b6a181e5e33b9b18cc70c3f74df8d2aaf6",
+      "trimmedStartFramesAt48000Hz": 1863,
+      "trimmedEndFramesAt48000Hz": 8416
+    },
+    {
+      "group": "card",
+      "file": "sources/audio/card-place-3.wav",
+      "sourceMember": "Audio/card-place-3.ogg",
+      "sourceSha256": "1d988631a6e5201ed1bb0d728f2e43a3ec79401258426858793598044ac95841",
+      "sha256": "93e11410474fe8fcc422f226a799a6b60e97e950661feefe92f54cb7be57ae59",
+      "trimmedStartFramesAt48000Hz": 10679,
+      "trimmedEndFramesAt48000Hz": 14443
+    },
+    {
+      "group": "slide",
+      "file": "sources/audio/card-slide-1.wav",
+      "sourceMember": "Audio/card-slide-1.ogg",
+      "sourceSha256": "006cf9822d15d7063f8899e56041f41646df30adb6fbd8b974ee5d5420012690",
+      "sha256": "168f77fdc567ba66838b844e99eeab7ca78ae3eb0c873e18db62048b924b81a0",
+      "trimmedStartFramesAt48000Hz": 3652,
+      "trimmedEndFramesAt48000Hz": 15630
+    },
+    {
+      "group": "slide",
+      "file": "sources/audio/card-slide-2.wav",
+      "sourceMember": "Audio/card-slide-2.ogg",
+      "sourceSha256": "e674a1679ec87b507047fe012d068ad2c412125f56186f0e732684705c2a6888",
+      "sha256": "1647dc8dbc68e323f564db2ecdcaae8eed1a106b3e35769397e075b86545bf57",
+      "trimmedStartFramesAt48000Hz": 0,
+      "trimmedEndFramesAt48000Hz": 0
+    },
+    {
+      "group": "slide",
+      "file": "sources/audio/card-slide-3.wav",
+      "sourceMember": "Audio/card-slide-3.ogg",
+      "sourceSha256": "af2ab62656cb3df73316ce5771b8ee1111a840962b21607e3202151e7413c52c",
+      "sha256": "74181043c503fd25c2f7c1b5ccc0fdf8275a9be1755c90f640db8d8922eb15dd",
+      "trimmedStartFramesAt48000Hz": 0,
+      "trimmedEndFramesAt48000Hz": 388
+    },
+    {
+      "group": "fan",
+      "file": "sources/audio/card-fan-1.wav",
+      "sourceMember": "Audio/card-fan-1.ogg",
+      "sourceSha256": "7a9758ccad8899baef1b9f60b4064e4baa724a548293832fdaea07e6e07e638d",
+      "sha256": "3fdcdb2e1405dee8bf11316a763b5cffccc4d1010c0dd9289db5d5cd1a90f788",
+      "trimmedStartFramesAt48000Hz": 0,
+      "trimmedEndFramesAt48000Hz": 0
+    },
+    {
+      "group": "fan",
+      "file": "sources/audio/card-fan-2.wav",
+      "sourceMember": "Audio/card-fan-2.ogg",
+      "sourceSha256": "5743373c9dde00c6eee949a2c8e65d75946522768999167e1f5632451630e848",
+      "sha256": "75ed456d3a515c8faca99f651f91d3b7f1582c3684ffd35884ca666d34eb48b1",
+      "trimmedStartFramesAt48000Hz": 1860,
+      "trimmedEndFramesAt48000Hz": 375
+    },
+    {
+      "group": "chip",
+      "file": "sources/audio/chips-collide-1.wav",
+      "sourceMember": "Audio/chips-collide-1.ogg",
+      "sourceSha256": "f41b3d106360fc68ebc061a211d4265b4cb5fa1fbe86e4d57d3673510e2c3784",
+      "sha256": "ed443d4f47949301bff69272b6a89843c9691aa423f2b1c97811956f8a072d14",
+      "trimmedStartFramesAt48000Hz": 3654,
+      "trimmedEndFramesAt48000Hz": 3795
+    },
+    {
+      "group": "chip",
+      "file": "sources/audio/chips-collide-2.wav",
+      "sourceMember": "Audio/chips-collide-2.ogg",
+      "sourceSha256": "2a10c5ff4b2fbaa55a317fc258ddce3fec85bd26db2d3c2ad298b3b33ce23bc6",
+      "sha256": "69e7d0b770d4663a8e95a56d70466ad49ab738c94893856a63c773238050bbd3",
+      "trimmedStartFramesAt48000Hz": 1257,
+      "trimmedEndFramesAt48000Hz": 4277
+    },
+    {
+      "group": "chip",
+      "file": "sources/audio/chips-collide-3.wav",
+      "sourceMember": "Audio/chips-collide-3.ogg",
+      "sourceSha256": "1c5e885f72b64c38fff7ef05579e49310e7acf026cf123ffb65fffb57fb06e1c",
+      "sha256": "e66182895ff552c1b1416454f28847de03b384424c5521ebaf4601c116d9d41f",
+      "trimmedStartFramesAt48000Hz": 5626,
+      "trimmedEndFramesAt48000Hz": 1837
+    },
+    {
+      "group": "stack",
+      "file": "sources/audio/chips-stack-1.wav",
+      "sourceMember": "Audio/chips-stack-1.ogg",
+      "sourceSha256": "12bf175b9afcea112175b241ad3336c6244ac5fdcdff8b5942ecc03f2225e0c4",
+      "sha256": "ea8c6318edcd1d2a90ada31bed3fa5a9bf43e82a4efe47538a995b80fec78403",
+      "trimmedStartFramesAt48000Hz": 3667,
+      "trimmedEndFramesAt48000Hz": 4736
+    },
+    {
+      "group": "stack",
+      "file": "sources/audio/chips-stack-2.wav",
+      "sourceMember": "Audio/chips-stack-2.ogg",
+      "sourceSha256": "9f985e766c3557eef1764240b48e30b2f0ffa870a99f05de85cd6bf0ea758ef5",
+      "sha256": "ed17464876636ffda070ed2b5e532552caf250d61f4b0758a99f8477c650a85b",
+      "trimmedStartFramesAt48000Hz": 246,
+      "trimmedEndFramesAt48000Hz": 2223
+    },
+    {
+      "group": "stack",
+      "file": "sources/audio/chips-stack-3.wav",
+      "sourceMember": "Audio/chips-stack-3.ogg",
+      "sourceSha256": "48cc0f01e2b62be7677f2e8c02177906cab80e96fa8176fa05b3ced35bc2a9c2",
+      "sha256": "5920bc5a5ac58e2bef5d6c7a70df9523bee3152d51adf67b27795ec358177480",
+      "trimmedStartFramesAt48000Hz": 755,
+      "trimmedEndFramesAt48000Hz": 0
+    },
+    {
+      "group": "wrapper",
+      "file": "sources/audio/cards-pack-open-1.wav",
+      "sourceMember": "Audio/cards-pack-open-1.ogg",
+      "sourceSha256": "1214059fdfbf1c396c0702244fc833739cc346d326a71e450b731f456e54d6fb",
+      "sha256": "4dd74b243390afc3bf5e2ca44a02dc7df5d0bd0b614415b1496dd0fda3622362",
+      "trimmedStartFramesAt48000Hz": 0,
+      "trimmedEndFramesAt48000Hz": 0
+    },
+    {
+      "group": "wrapper",
+      "file": "sources/audio/cards-pack-open-2.wav",
+      "sourceMember": "Audio/cards-pack-open-2.ogg",
+      "sourceSha256": "49e02479815c69cd303e0d8f12952c0492d5b3e555838f3485cc25a09818e6fb",
+      "sha256": "02b46513551e667c63d734bb72dbd39f2bef59379fc70c23b866d024ff991de2",
+      "trimmedStartFramesAt48000Hz": 0,
+      "trimmedEndFramesAt48000Hz": 0
+    },
+    {
+      "group": "draw",
+      "file": "sources/audio/cards-pack-take-out-1.wav",
+      "sourceMember": "Audio/cards-pack-take-out-1.ogg",
+      "sourceSha256": "6d38b979f64d20e4153173187ed67b04c6c004767c0a43eddb65c75fa925a1c4",
+      "sha256": "889514662263aba214e02102ab85bf4dec618d9a327bd58cde272370ee9ca83f",
+      "trimmedStartFramesAt48000Hz": 0,
+      "trimmedEndFramesAt48000Hz": 0
+    },
+    {
+      "group": "draw",
+      "file": "sources/audio/cards-pack-take-out-2.wav",
+      "sourceMember": "Audio/cards-pack-take-out-2.ogg",
+      "sourceSha256": "d991829eeaf7e5a6f8462594e5be0d91535309ffd6249278f34eec70470395a4",
+      "sha256": "6b36d30481722634527943d3928549aab6d3c6f7cc74770c60b31c1230e10008",
+      "trimmedStartFramesAt48000Hz": 0,
+      "trimmedEndFramesAt48000Hz": 0
+    }
+  ]
+}

@@ -37,7 +37,7 @@ struct ShopView: View {
             .background(Palette.screen.ignoresSafeArea())
             .toolbar(.hidden, for: .navigationBar)
         }
-        .fullScreenCover(item: $pending, onDismiss: { freeze = nil; game.endReveal() }) { p in
+        .fullScreenCover(item: $pending, onDismiss: finishReveal) { p in
             RevealView(content: p.content, set: p.set) { pending = nil }
         }
         .sheet(isPresented: $showPaywall) { PaywallView() }
@@ -58,6 +58,7 @@ struct ShopView: View {
             Sound.play(.purchase)
         } else {
             Haptics.play(.error)
+            Sound.play(.blocked)
         }
     }
 
@@ -76,6 +77,20 @@ struct ShopView: View {
             Sound.play(.purchase)
         } else {
             Haptics.play(.error)
+            Sound.play(.blocked)
+        }
+    }
+
+    private func finishReveal() {
+        let before = freeze?.uniqueCount ?? game.uniqueCount
+        let unlocked = (1...CardDatabase.setCount).contains { set in
+            before < game.uniquesToUnlock(set: set)
+                && game.isSetUnlocked(set) && !game.requiresFullUnlock(set: set)
+        }
+        freeze = nil
+        game.endReveal()
+        if unlocked && !game.presentsWin && !game.presentsGameOver {
+            Sound.play(.setUnlock)
         }
     }
 

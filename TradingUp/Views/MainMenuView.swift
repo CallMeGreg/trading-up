@@ -23,6 +23,7 @@ struct MainMenuView: View {
     /// A mode the player chose "New Run" for, pending the "lose your progress?"
     /// confirmation. `nil` when that confirm isn't up.
     @State private var confirmNewRun: MenuRoute?
+    @State private var binderImproved = false
 
     private var unlocked: Bool { game.isFullVersionUnlocked }
 
@@ -61,6 +62,17 @@ struct MainMenuView: View {
         // start over, in the in-theme popup instead of a standard iOS dialog
         // (req 3). Layered above everything, including the Settings gear.
         .overlay { runPopupOverlay }
+        .onAppear { SoundManager.shared.playMusic(route == .gauntlet ? .gauntlet : .classic) }
+        .onChange(of: route) { _, destination in
+            SoundManager.shared.playMusic(destination == .gauntlet ? .gauntlet : .classic)
+        }
+        .onChange(of: game.binder) { old, new in
+            if new.bestByCardId.contains(where: { id, card in
+                old.best(for: id).map { card.currentValue > $0.currentValue } ?? false
+            }) {
+                binderImproved = true
+            }
+        }
     }
 
     /// The custom in-theme run-in-progress popup (req 3). Dims the menu and floats
@@ -104,6 +116,7 @@ struct MainMenuView: View {
     private var settingsButton: some View {
         Button {
             Haptics.play(.light)
+            Sound.play(.panelOpen)
             showSettings = true
         } label: {
             Image(systemName: "gearshape.fill")
@@ -168,6 +181,8 @@ struct MainMenuView: View {
                 accent: Color(hex: "6f9dff")
             ) {
                 Haptics.play(.light)
+                Sound.play(binderImproved ? .binderUpgrade : .panelOpen)
+                binderImproved = false
                 route = .binder
             }
             .accessibilityIdentifier("binder")
@@ -194,6 +209,7 @@ struct MainMenuView: View {
         } else {
             GauntletVaultButton(unlockTitle: unlockCTA) {
                 Haptics.play(.light)
+                Sound.play(.panelOpen)
                 showPaywall = true
             }
             .accessibilityIdentifier("gauntletMode")
@@ -251,6 +267,7 @@ struct MainMenuView: View {
     /// Entry point for the Classic and Gauntlet tiles. If the mode has a run
     /// in progress, ask whether to resume or restart; otherwise just enter.
     private func chooseMode(_ mode: MenuRoute) {
+        Sound.play(.uiTap)
         if hasRunInProgress(mode) {
             withAnimation(Self.popupAnim) { resumePrompt = mode }
         } else {
@@ -269,12 +286,14 @@ struct MainMenuView: View {
     /// Resume the existing run. Deferred so the popup starts dismissing before the
     /// full-screen cover presents.
     private func continueRun(_ mode: MenuRoute) {
+        Sound.play(.uiTap)
         withAnimation(Self.popupAnim) { resumePrompt = nil }
         DispatchQueue.main.async { route = mode }
     }
 
     /// "New Run" tapped — swap the resume prompt for the destructive confirm.
     private func promptNewRun(_ mode: MenuRoute) {
+        Sound.play(.uiTap)
         withAnimation(Self.popupAnim) {
             resumePrompt = nil
             confirmNewRun = mode
@@ -290,11 +309,13 @@ struct MainMenuView: View {
         case .binder:   break
         }
         Haptics.play(.warning)
+        Sound.play(.toggleOn)
         DispatchQueue.main.async { route = mode }
     }
 
     /// Dismiss the popup without entering a mode (tap-outside or Cancel).
     private func dismissRunPopup() {
+        Sound.play(.uiBack)
         withAnimation(Self.popupAnim) {
             resumePrompt = nil
             confirmNewRun = nil

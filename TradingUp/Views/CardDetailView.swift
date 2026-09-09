@@ -34,7 +34,7 @@ struct CardDetailView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                    Button("Done") { Sound.play(.uiBack); dismiss() }
                 }
             }
             .overlay {
@@ -42,6 +42,7 @@ struct CardDetailView: View {
                     GradeRevealOverlay(result: r) { gradeResult = nil }
                 }
             }
+            .onAppear { Sound.play(.panelOpen) }
         }
     }
 
@@ -91,14 +92,15 @@ struct CardDetailView: View {
                 miniButton("Sell \(inst.sellValue.moneyShort)", "dollarsign.circle.fill", Color(hex: "2fae63"),
                            enabled: game.isSellable(inst)) {
                     if game.sell(inst.id) != nil { Haptics.play(.success); Sound.play(.coin) }
-                    else { Haptics.play(.error) }
+                    else { Haptics.play(.error); Sound.play(.blocked) }
                 }
                 if inst.card.rarity.canBeGraded && inst.grade == nil {
                     miniButton("Grade \(Economy.gradeFee(set: card.set).money)", "seal.fill",
                                Color(hex: "6d5cf7"),
                                enabled: game.canAffordGrade(set: card.set)) {
-                        if let r = game.grade(inst.id) { Haptics.play(.rigid); gradeResult = r }
-                        else { Haptics.play(.error) }
+                        if let r = game.grade(inst.id) {
+                            Haptics.play(.rigid); Sound.play(.gradeStart); gradeResult = r
+                        } else { Haptics.play(.error); Sound.play(.blocked) }
                     }
                 }
             }
@@ -279,6 +281,11 @@ struct GradeRevealOverlay: View {
         }
         .onAppear {
             withAnimation(.spring(response: 0.5, dampingFraction: 0.6)) { shown = true }
+        }
+        .task {
+            await Sound.after(0.22, play: .gradingResult(grade: result.grade,
+                                                       oldValue: result.oldValue,
+                                                       newValue: result.newValue))
         }
     }
 

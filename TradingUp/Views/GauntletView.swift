@@ -19,6 +19,11 @@ struct GauntletView: View {
                 content(state)
                     .readableWidth()
                     .padding(20)
+                    .onChange(of: GauntletAudioSnapshot(state)) { old, new in
+                        if let cue = new.feedback(after: old) {
+                            Sound.play(cue, volume: cue == .auraGain ? 0.65 : 1)
+                        }
+                    }
             }
         }
         .task { if state == nil { state = GauntletState(game: game) } }
@@ -36,6 +41,7 @@ struct GauntletView: View {
             if let state, state.phase == .trainerSelect {
                 GauntletCornerButton(systemImage: "info.circle.fill", label: "How Gauntlet works") {
                     Haptics.play(.light)
+                    Sound.play(.panelOpen)
                     state.showIntro()
                 }
                 .padding(10)
@@ -59,6 +65,7 @@ struct GauntletView: View {
 
     private func goHome() {
         Haptics.play(.light)
+        Sound.play(.uiBack)
         state?.persistForExit()   // resume this run next time (req 11)
         dismiss()
     }

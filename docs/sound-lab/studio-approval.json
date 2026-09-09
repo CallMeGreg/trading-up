@@ -1,0 +1,163 @@
+{
+  "schemaVersion": 1,
+  "direction": "studio",
+  "decision": "Project owner selected Studio for every SFX on 2026-09-09.",
+  "sounds": {
+    "ui_tap": [
+      "c58945084edc81a32e94a9564f5832fd1b6a6a24540b8f2d872e6d97e1a9239a",
+      "36a5dbc08ba28c22d43d359e52e58169928c0203678125ef75d83aa829830eb3",
+      "399ef8a25e5777a14cdb3775ca2eb35696577eed6246f21672fc01acb959b506"
+    ],
+    "ui_back": [
+      "d5e7059dd1ef66936ae6fcd1c2fb4e6b3156b6bd2c6fd514966d383c2ae2544a"
+    ],
+    "panel_open": [
+      "ddbfb8379b617c0740274d0f1c897fd22d0c9700f93dfc8a654133e9cb3cbfd5"
+    ],
+    "toggle_on": [
+      "b635a57b3cd5d7372b932a2e939abe8868ae925a11132ff52d5998ee9c9735bd"
+    ],
+    "blocked": [
+      "adcf20d73fc5ad7dee2e5242b92d5bc9d2a8e76d8eaa4317a7a95722ff1426a8"
+    ],
+    "pack_open": [
+      "83d31f3434277402acc3b1903a2874826c6a533a39bd2082605a1dbeb322798c",
+      "effacad133647a1bc40c83e1a0a9ae6bd83da7cef3b9c2ad9d622c9631f55fc6",
+      "e24389c25a26de86927c85f1c291023e50b92d423c0ce32b23aadf8843f36474"
+    ],
+    "card_flip": [
+      "38837a4e0b4d8b44b086aa673666f69a437f77842199e5dc73d13b4a32685123",
+      "91221bcbc807bea80cb4b453be54c87ab9178e4b0934f7aaca7bd15086185f17",
+      "7f1b8ddb24c4700b54cc59e12f6f00095ee67fd60eeef13602fd643af94c4984"
+    ],
+    "new_card": [
+      "bfa40ca0092da3dc73ec52571c021bc8e560fe2a1ca4923abc981164fd29a910"
+    ],
+    "foil": [
+      "dbfaac20ee200d7819cc908c854743169f8fcda7f4a6eef8a3d88e6579847664"
+    ],
+    "rare": [
+      "294f2381699c34b67b78302ed1bf22d0c72c924cbd0c77cce1ad96688305bf2c"
+    ],
+    "ultra": [
+      "f8a969a54a139eb72bf76ed6a2c0bfbc78f902062ec05fe6b952b339cbc1632b"
+    ],
+    "keep_card": [
+      "8331ff22b038110d52cd65cd20cf61513e3dc4b795b744cee8c5707e1c2e63d1",
+      "264e5cb129af951e34e6c1e076e689c11f48cdce1c377c5e91024f8e40d57fda",
+      "79ff510c8dc98d8c90042e1c66a4332624d53b09daf0f8662a17739297e2f4fb"
+    ],
+    "sell_card": [
+      "34f2e66294c95fef2518bbe8b187ce38c6f43f919f3b82581a9daf5bed6283a8",
+      "93a0ac14e5b09fb4d0f2eb0108fb6f7f0a26ed8edb5163ed595359b6688a640e",
+      "9c8982e53c17db70d4ec506a44b0a685ccddffa93a70806907ac5b70df4792eb"
+    ],
+    "pack_purchase": [
+      "d1e65e17770c28760302e50cac5e38e1cfe4b6fab826f5271eac04f6497ef573"
+    ],
+    "bulk_sell": [
+      "dbabccdb6f80b6c2da9f9f366394bfc0dbca31cc82da394768dbe66bb1c5acf0"
+    ],
+    "grade_start": [
+      "6b4389174770ffccf1fc75f5229bf7697e35b8d9d2afd82d7634292ebb410fcd"
+    ],
+    "grade_low": [
+      "b5aa99a7bcaa9e2f6e475dee2174ddeaeaeb3b39249818039f73872948878501"
+    ],
+    "grade_high": [
+      "e6e79a253b3ca135b6fc356bff5a78d18dc0a267449bac910f2f26aba25b8226"
+    ],
+    "grade_perfect": [
+      "0f0b341210fe908f8966c5c32bc6702dd9b55bbe0b0f2e5b676c7ee5a7d9e0bf"
+    ],
+    "evolution_complete": [
+      "159b4771f7885393ed5e719b34db03e3bb971c99dfc7f4d88168b235246c766e"
+    ],
+    "binder_upgrade": [
+      "130eb24e62ccbd76fe4851cf569e153e09635c7abf553b583be50b1eeff6ebb4"
+    ],
+    "set_unlock": [
+      "6be541175044e8de803383b5a1619e12f1cf986dbaa95eb7118e869ba3f9ae9d"
+    ],
+    "set_complete": [
+      "9d1066ef3e9ed9d97c73f077a9bc795908152c1fd67395c124447177f9712f81"
+    ],
+    "classic_win": [
+      "0aefd14aa0adcfcb23bdd2583482e2f607f9e092de0468c3d0946dfa84389e0d"
+    ],
+    "classic_loss": [
+      "4e3081cfd2815f7f6c4b7566426d5495fce9685b9de2b322349a5f1d9f56dfa9"
+    ],
+    "trainer_select": [
+      "dd86a4ffc4aeb3dc7eff06215ea00e8dc8f3e40c6f22587cb55d460d7133429f"
+    ],
+    "tier_select": [
+      "35d50d9ad795be42911c18392b1c58bb144e0e717c0a0e459bd5d00d3bd63d43"
+    ],
+    "run_start": [
+      "d60ab8962a9d060fc34632fa51ce7b86e9eb34eec58c18308ac1579640984d8b"
+    ],
+    "round_start": [
+      "5e26135f732906c96fd99b0e40a62fc2814d069a527056525e34c8e621efe035"
+    ],
+    "boss_round": [
+      "e934fe8f7a5c1474111da0c0ef10cf313c8fc5a293f1786a38178f82029c66ed"
+    ],
+    "last_rip": [
+      "72230544a466ee7555888739c939ec232c8d727e51868e700af544945219ddc9"
+    ],
+    "showcase_swap": [
+      "273346cae44e548138c8d931cc47c2a32c9165f6dd3ed1f6b0abae5c25589884"
+    ],
+    "aura_gain": [
+      "7914e4c59231a3ca623cc0ef600d75c482a387e8f8246de24be7a0eb804818c1",
+      "d5e71e4a028c7e1661e005c66d523da7e035ba7fb0bb4246930f6aad857f757b",
+      "42e4a894e6056de7a11f2868ade9a85027392a09c8965c3e4da36f68a9d2b784"
+    ],
+    "catalyst_offer": [
+      "2b7a2fb03b290f1437ab8551b2c90b15d6114392072aa11a934f1b2dbb886634"
+    ],
+    "catalyst_attune": [
+      "c0687176df347a6d0bff5636cb7d62e85f31b2ab0b18ece186e8340ff83eeb72"
+    ],
+    "catalyst_swap": [
+      "ada37d81221ee83d5e8a856818051d0cd8ba1499e5bbfa99ba97711809f9cca0"
+    ],
+    "catalyst_sell": [
+      "f7fdbf23abe71762c2ecf9d2a9a712ecaa207728235726e23bf1a8bbf1d6def7"
+    ],
+    "round_clear": [
+      "cdf053a1fda27ab8905b3583240e053b959593a18e468aecd809288ffa587b49"
+    ],
+    "round_payout": [
+      "0b103981c2443aee410c671242c3c66bb3615f8d995a62624a313c872cdc9929"
+    ],
+    "showcase_expand": [
+      "dfe5e1a3aeac149d044dd3187361207f0e90b90ae0e25e6913e29151de565e8a"
+    ],
+    "catalyst_expand": [
+      "c4036e7a29d7f3ed9b661a37a1c58beb00fefe9231436d782c700e35a7b0d8b2"
+    ],
+    "pack_unlock": [
+      "c4ce8c77edce1fe08226b6445b91892e66afa5bd24d750d45bc8fae06e476e45"
+    ],
+    "gauntlet_win": [
+      "b28f8dcf0a3070499bc1b7e19f59142a4ee691661e1018563ca9867ae9126645"
+    ],
+    "gauntlet_loss": [
+      "d884527519855830b4cd0ebe60278834daa36f8671f9f62ccaa95c39a84a0a18"
+    ],
+    "reward_reveal": [
+      "35dd682321f4d4674577157e063feed7ca19b8342ccc740bc5eed881396fd5b5"
+    ],
+    "reward_claim": [
+      "e4a37a1206bbd8040e150d516147e46db4dc0b4288bf015d939ce3e7e396bf27"
+    ],
+    "tier_unlock": [
+      "378531c752a015aeb901c48d120b03540a589816b46ef51555042de7d0ddfd18"
+    ],
+    "trainer_unlock": [
+      "35907aa15004305aa3ec841be258b4ee5b812c891d8d271cea172ff97ecd8f19"
+    ]
+  }
+}

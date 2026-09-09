@@ -48,6 +48,7 @@ struct BinderView: View {
                 ToolbarItem(placement: .topBarLeading) {
                     Button {
                         Haptics.play(.light)
+                        Sound.play(.uiBack)
                         dismiss()
                     } label: {
                         Label("Home", systemImage: "house.fill")
@@ -110,6 +111,7 @@ struct BinderView: View {
         if let best = binder.best(for: card.id) {
             Button {
                 Haptics.play(.light)
+                Sound.play(.panelOpen)
                 selected = card
             } label: {
                 CardView(card: card, instance: best, width: 104,

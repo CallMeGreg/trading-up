@@ -15,7 +15,7 @@ struct ClassicModeView: View {
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            ShopView(onHome: { dismiss() })
+            ShopView(onHome: { Sound.play(.uiBack); dismiss() })
                 .tabItem { Label("Shop", systemImage: "bag.fill") }
                 .tag(AppTab.shop)
             CollectionView()
@@ -26,6 +26,7 @@ struct ClassicModeView: View {
                 .tag(AppTab.stats)
         }
         .tint(Palette.money)
+        .onChange(of: selectedTab) { _, _ in Sound.play(.uiTap) }
         // "Start Collecting" is the only way out of the welcome intro, so its
         // dismissal marks the start of a run — first launch, after a download,
         // or a reset. Drop the player on the Shop, where a run begins, even if

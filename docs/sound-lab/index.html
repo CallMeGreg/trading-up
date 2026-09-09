@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="description" content="A private, offline-capable sound direction review for Trading Up.">
+  <title>Trading Up / Sound lab</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="styles.css">
+  <script src="catalog.js" defer></script>
+  <script src="music-catalog.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#library">Skip to the sounds</a>
+  <header class="masthead">
+    <a class="wordmark" href="#top"><span class="brand-icon" aria-hidden="true">TU</span> TRADING UP <span>/ SOUND LAB</span></a>
+    <span class="review-pill"><i aria-hidden="true"></i> STUDIO SELECTED / MUSIC LAB</span>
+  </header>
+
+  <main id="top">
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <p class="eyebrow">A new material language</p>
+        <h1 id="hero-title">Small gestures.<br><span>Extraordinary finds.</span></h1>
+        <p class="intro">Less beep. More paper, weight, light and anticipation.
+          Two fully rendered directions for the things you do in Classic and Gauntlet.</p>
+        <div class="hero-meta" id="pack-stats" aria-label="Sound library statistics"></div>
+        <p class="scope-note"><strong>Studio is the selected in-game SFX direction.</strong>
+          Audition the original background tracks below, or revisit individual effects and export notes.</p>
+      </div>
+      <div class="directions" aria-label="The two sound directions">
+        <article class="direction direction-a">
+          <div class="direction-heading"><span class="direction-letter">A</span><span class="eyebrow">The tactile direction</span></div>
+          <h2>Studio</h2>
+          <p>Close card handling. Felt-soft landings. Warm, tuned glass. A physical collection, not an arcade.</p>
+          <div class="material-line" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          <button class="direction-listen" data-reel="studio">Listen to A <span aria-hidden="true">&#9654;</span></button>
+        </article>
+        <article class="direction direction-b">
+          <div class="direction-heading"><span class="direction-letter">B</span><span class="eyebrow">The cinematic direction</span></div>
+          <h2>Mythic</h2>
+          <p>The same real materials, with more motion, resonant depth and a wider magical afterglow.</p>
+          <div class="material-line" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          <button class="direction-listen" data-reel="mythic">Listen to B <span aria-hidden="true">&#9654;</span></button>
+        </article>
+      </div>
+    </section>
+
+    <aside class="recommendation">
+      <span class="small-label">Selected direction</span>
+      <p><strong>Studio for every action.</strong> The production selection is pinned to the approved audio files.
+        Mythic remains here for comparison; it is not bundled in the game.</p>
+      <button id="listen-hybrid" class="quiet-button">Hear the Studio reel <span aria-hidden="true">&#8599;</span></button>
+    </aside>
+
+    <section class="transport" aria-label="Playback controls">
+      <button id="stop" class="stop-button" aria-label="Stop all playback (Escape)">&#9632; Stop</button>
+      <div class="now-playing">
+        <span class="small-label" id="play-state">Ready when you are</span>
+        <strong id="now-playing">Start at a low volume. Nothing plays automatically.</strong>
+        <progress id="play-progress" max="1" value="0" aria-label="Playback progress"></progress>
+      </div>
+      <label class="volume-control">Volume <output id="volume-value" for="volume">45%</output>
+        <input id="volume" type="range" min="0" max="100" value="45" aria-label="Master audition volume">
+      </label>
+      <label class="monitor-control">Monitor
+        <select id="monitor">
+          <option value="stereo">Stereo / headphones</option>
+          <option value="mono">Mono fold-down</option>
+          <option value="phone">Phone approximation</option>
+        </select>
+      </label>
+    </section>
+    <p class="monitor-note">Phone approximation = mono, 250 Hz to 6.5 kHz; not a substitute for listening on a device.
+      Originals are level-trimmed for comparison. Escape stops playback.</p>
+    <div id="error" class="error" role="alert" hidden></div>
+    <noscript><p class="error">Enable JavaScript to audition and review this local soundboard.</p></noscript>
+
+    <section class="music-section" aria-labelledby="music-heading">
+      <div class="section-heading">
+        <div><p class="eyebrow">Original background music</p><h2 id="music-heading">A little melody. Room to play.</h2></div>
+        <span class="review-pill">ORIGINAL COMPOSITIONS / NO STOCK MUSIC</span>
+      </div>
+      <p class="subtle">Two alternatives for each mode. The recommended loops are included in the game.
+        Start a track, then play Studio effects over it to judge the balance. Music loops until stopped.</p>
+      <div class="music-toolbar">
+        <button id="music-mute" class="quiet-button" aria-label="Mute music preview">Mute music</button>
+        <label class="volume-control">Music bed <output id="music-volume-value" for="music-volume">28%</output>
+          <input id="music-volume" type="range" min="0" max="100" value="28" aria-label="Music preview volume">
+        </label>
+        <button id="music-stop" class="quiet-button">Stop music</button>
+        <span id="music-status" role="status">Nothing playing. Music starts only when you choose a track.</span>
+      </div>
+      <div id="music-tracks" class="music-grid"></div>
+    </section>
+
+    <section class="scenes-section" aria-labelledby="scenes-heading">
+      <div class="section-heading">
+        <div><p class="eyebrow">Listen in context</p><h2 id="scenes-heading">Not just isolated buttons.</h2></div>
+        <label class="scene-direction">Scene direction
+          <select id="scene-style">
+            <option value="studio">All A / Studio (selected)</option>
+            <option value="hybrid">Original hybrid proposal</option>
+            <option value="mythic">All B / Mythic</option>
+            <option value="picks">Your picks + Studio for pending</option>
+          </select>
+        </label>
+      </div>
+      <div id="scenes" class="scenes"></div>
+      <p class="subtle">These are audition timelines, not new gameplay delays. Optional accents are not a recommendation to make every tap louder.</p>
+    </section>
+
+    <section id="library" class="library" aria-labelledby="library-heading">
+      <div class="section-heading">
+        <div><p class="eyebrow">The action library</p><h2 id="library-heading">Find your sound.</h2></div>
+        <div class="review-summary"><strong id="review-count">0 approved</strong><span id="review-detail">All actions awaiting your review</span></div>
+      </div>
+      <div class="filters">
+        <label class="search-label"><span class="sr-only">Search actions</span>
+          <input type="search" id="search" placeholder="Search actions, materials, triggers..." autocomplete="off">
+        </label>
+        <label><span class="sr-only">Game mode</span>
+          <select id="mode">
+            <option value="all">Both modes</option>
+            <option value="classic">Classic + shared</option>
+            <option value="gauntlet">Gauntlet + shared</option>
+            <option value="shared">Shared actions only</option>
+          </select>
+        </label>
+        <label><span class="sr-only">Action family</span><select id="group"><option value="all">All action families</option></select></label>
+        <label><span class="sr-only">Review status</span>
+          <select id="status">
+            <option value="all">All review states</option>
+            <option value="pending">Awaiting review</option>
+            <option value="approved">Approved A or B</option>
+            <option value="revise">Needs revision</option>
+            <option value="silence">Prefer silence</option>
+          </select>
+        </label>
+        <label class="shortlist-filter"><input id="shortlist" type="checkbox"> Signature sounds</label>
+      </div>
+      <div class="library-toolbar">
+        <span id="result-count" role="status"></span>
+        <div class="review-actions">
+          <button id="export" class="quiet-button">Export review</button>
+          <button id="import" class="quiet-button">Import review</button>
+          <input id="review-file" type="file" accept=".json,application/json" hidden>
+        </div>
+      </div>
+      <p id="storage-status" class="storage-note" role="status">Choices and notes stay in this browser. Export a review JSON to hand back for implementation.</p>
+      <div id="cue-grid" class="cue-grid"></div>
+      <p id="empty" class="empty" hidden>No actions match these filters.</p>
+    </section>
+
+    <section class="process-section" aria-labelledby="process-heading">
+      <div class="section-heading">
+        <div><p class="eyebrow">Materials, not magic claims</p><h2 id="process-heading">What you are hearing.</h2></div>
+        <span class="review-pill">ZERO APP DEPENDENCIES</span>
+      </div>
+      <div class="process-grid">
+        <article><span class="step-number">01</span><h3>A physical foundation</h3>
+          <p>CC0 card and casino-chip recordings, edited into new gestures. Real, irregular transients
+            replace generic synth clicks. Frequent actions have three alternate takes.</p></article>
+        <article><span class="step-number">02</span><h3>A designed harmonic layer</h3>
+          <p>Original damped resonances, soft harmonic blooms, moving filtered air and windowed foley grains.
+            Low impacts carry midrange harmonics so they are not all inaudible sub-bass.</p></article>
+        <article><span class="step-number">03</span><h3>Space, restraint, hierarchy</h3>
+          <p>Diffuse stereo rooms, gentle transient control, quiet overlays and category-based levels.
+            Full-quality 48 kHz / 16-bit stereo SFX previews, with headroom and click-free edges.
+            Original music uses compact AAC loops, just as it does in the game.</p></article>
+      </div>
+      <p class="subtle">Studio is selected for the game; the alternatives remain available for comparison.
+        No measurement is a substitute for your listening judgment. Review the mix against animations and real iPhone speakers.</p>
+    </section>
+
+    <details class="licensing" id="licenses">
+      <summary><span>Production options &amp; commercial-use licensing</span><span class="small-label">Sources, tradeoffs, and what is actually included</span></summary>
+      <div class="license-content">
+        <p><strong>Included:</strong> original compositions and synthesis, CC0 foley, and standard-library-only
+          offline renderers with offline AAC encoding. The app has no new library or service dependency. Source licenses and hashes
+          travel with this soundboard.</p>
+        <p>Software and audio have different licenses. An open-source editor does not automatically make
+          an imported sample commercially usable; a GPL production tool does not automatically make its original audio output GPL.</p>
+        <div class="table-scroll"><table>
+          <thead><tr><th scope="col">Option</th><th scope="col">License / role</th><th scope="col">Decision</th></tr></thead>
+          <tbody id="option-rows"></tbody>
+        </table></div>
+        <div id="source-links" class="source-links"></div>
+        <p class="subtle">No paid stock, scraped game sounds, commercial music, unverified presets, cloud sound generation,
+          or noncommercial/share-alike sample packs are included. License findings are scoped to the specific sources linked here.</p>
+      </div>
+    </details>
+  </main>
+
+  <footer><span>TRADING UP / SOUND LAB</span><span>Local assets. Local decisions. Nothing uploaded.</span><a href="#top">Back to top &#8593;</a></footer>
+
+  <template id="cue-template">
+    <article class="cue-card">
+      <div class="cue-top"><span class="cue-category"></span><span class="cue-number"></span></div>
+      <h3></h3>
+      <div class="cue-tags"></div>
+      <p class="cue-description"></p>
+      <div class="waveform" aria-hidden="true"></div>
+      <div class="audition-buttons">
+        <button class="play-a" data-style="studio"><span aria-hidden="true">&#9654;</span> A / Studio</button>
+        <button class="play-b" data-style="mythic"><span aria-hidden="true">&#9654;</span> B / Mythic</button>
+      </div>
+      <div class="take-meta"></div>
+      <div class="baseline-row"><button class="original-button" data-style="original">Play previous sound</button><span class="baseline-note"></span></div>
+      <div class="decision-row">
+        <label>Decision <select class="decision">
+          <option value="pending">Not reviewed</option>
+          <option value="studio">Approve A / Studio</option>
+          <option value="mythic">Approve B / Mythic</option>
+          <option value="revise">Revise this sound</option>
+          <option value="silence">Prefer silence</option>
+        </select></label>
+        <span class="decision-indicator" aria-live="polite"></span>
+      </div>
+      <label class="note-label"><span class="sr-only">Review notes</span>
+        <textarea class="review-note" rows="2" maxlength="2000" placeholder="Too bright? More weight? Shorter tail?"></textarea>
+      </label>
+      <details class="cue-details"><summary>Trigger, priority &amp; WAV downloads</summary><p class="cue-trigger"></p><code class="cue-hook"></code><div class="downloads"></div></details>
+    </article>
+  </template>
+</body>
+</html>

@@ -105,6 +105,7 @@ struct RevealView: View {
         withAnimation(.spring(response: 0.45, dampingFraction: 0.82)) {
             evoBanners.append(bonus)
         }
+        Sound.play(.evolutionComplete, volume: 0.7)
     }
 
     /// The evolution bonus (if any) that this pack finishes on the card at
@@ -268,6 +269,7 @@ private struct SummaryView: View {
     @State private var gradedInstances: [UUID: CardInstance] = [:]
     /// The PSA reveal to show after a grade roll, mirroring the Collection flow.
     @State private var gradeResult: GradeResult?
+    @State private var announcedSetBonus = false
 
     /// Lazily computed and cached: the first read takes the snapshot, later
     /// reads return it, so a card's kind stays stable as the collection changes.
@@ -354,6 +356,12 @@ private struct SummaryView: View {
             .frame(width: geo.size.width, height: geo.size.height)
         }
         .background(Palette.bg0.ignoresSafeArea())
+        .onAppear {
+            if !announcedSetBonus && result.bonuses.contains(where: { $0.kind == .set }) {
+                announcedSetBonus = true
+                Sound.play(.setComplete)
+            }
+        }
         .overlay {
             if let r = gradeResult {
                 GradeRevealOverlay(result: r) { gradeResult = nil }
@@ -440,14 +448,14 @@ private struct SummaryView: View {
                     BigButton(title: "Sell \(dup.count) Duplicate\(dup.count == 1 ? "" : "s")",
                               subtitle: "Keep 1 of each · +\(dup.proceeds.moneyShort)",
                               systemImage: "dollarsign.circle.fill", tint: green) {
-                        Haptics.play(.success); Sound.play(.coin); game.sellDuplicates(from: result); onDone()
+                        Haptics.play(.success); Sound.play(.bulkSell); game.sellDuplicates(from: result); onDone()
                     }
                     BigButton(title: "Keep All", systemImage: "tray.and.arrow.down.fill", tint: blue) {
-                        Haptics.play(.light); onDone()
+                        Haptics.play(.light); Sound.play(.keepCard); onDone()
                     }
                 } else {
                     BigButton(title: "Add to Collection", systemImage: "checkmark.circle.fill", tint: blue) {
-                        Haptics.play(.light); onDone()
+                        Haptics.play(.light); Sound.play(.keepCard); onDone()
                     }
                 }
             } else {
@@ -459,11 +467,11 @@ private struct SummaryView: View {
                         sellAllPending()
                     }
                     BigButton(title: "Keep All", systemImage: "tray.and.arrow.down.fill", tint: blue) {
-                        Haptics.play(.light); onDone()
+                        Haptics.play(.light); Sound.play(.keepCard); onDone()
                     }
                 } else {
                     BigButton(title: "Add to Collection", systemImage: "checkmark.circle.fill", tint: blue) {
-                        Haptics.play(.light); onDone()
+                        Haptics.play(.light); Sound.play(.keepCard); onDone()
                     }
                 }
             }
@@ -529,6 +537,7 @@ private struct SummaryView: View {
 
     private func decideKeep(_ inst: CardInstance) {
         Haptics.play(.light)
+        Sound.play(.keepCard)
         withAnimation(.easeOut(duration: 0.2)) { _ = keptIds.insert(inst.id) }
     }
 
@@ -537,8 +546,9 @@ private struct SummaryView: View {
     /// freshly slabbed card is a keeper, so its Keep/Sell choice falls away — and the
     /// reveal overlay shows the PSA result. A sold card can't reach here (no tab).
     private func decideGrade(_ inst: CardInstance) {
-        guard let r = game.grade(inst.id) else { Haptics.play(.error); return }
+        guard let r = game.grade(inst.id) else { Haptics.play(.error); Sound.play(.blocked); return }
         Haptics.play(.rigid)
+        Sound.play(.gradeStart)
         var graded = inst
         graded.grade = r.grade
         withAnimation(.easeOut(duration: 0.25)) {
@@ -569,7 +579,7 @@ private struct SummaryView: View {
 
     private func sellAllPending() {
         Haptics.play(.success)
-        Sound.play(.coin)
+        Sound.play(.bulkSell)
         withAnimation(.easeOut(duration: 0.25)) {
             for inst in pendingDuplicates where game.sell(inst.id) != nil {
                 soldIds.insert(inst.id)

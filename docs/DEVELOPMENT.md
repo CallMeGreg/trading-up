@@ -72,8 +72,11 @@ TradingUp/
   Store/
     PurchaseStore.swift      StoreKit 2 layer for the one-time full-version unlock (outside Models/)
   Audio/
-    SoundManager.swift       AVAudioPlayer pool + mute preference; Sound.play(.x) API
-    SFX/                     7 generated sound effects (auto-generated .wav files)
+    SoundManager.swift       Pooled Studio SFX + looping mode music; ambient audio/lifecycle handling
+    AudioPreferences.swift   Independent Music/SFX levels and remembered one-tap mute
+    Sound.swift              48 action cues, alternate-take resource names and grade-result selection
+    SFX/                     60 approved Studio WAVs (generated; includes alternate takes)
+    Music/                   2 original mode music loops (generated AAC)
   Assets.xcassets/           App icon + accent color + CardArt/ (250 card illustrations)
   PrivacyInfo.xcprivacy      Privacy manifest (no tracking, no data collection)
   TradingUp.storekit         StoreKit config for testing the IAP in the Simulator (dev only)
@@ -89,7 +92,9 @@ tools/
   generate_icon.py           Regenerates the app icon (needs rsvg-convert)
   generate_trainer_art.py    Regenerates the 7 Gauntlet Trainer emblems (needs rsvg-convert)
   generate_iap_promo.py      Regenerates the IAP promo image (needs rsvg-convert)
-  generate_sfx.py            Regenerates the 3 sound effects (stdlib only)
+  generate_sfx.py            Publishes hash-pinned, approved Studio takes into the app
+  generate_sound_lab.py      Renders/checks the review-only A/B soundboard (stdlib only)
+  generate_music.py          Composes the mode music and audition alternatives (offline AAC encoding)
   generate_screenshots.py    Renders framed marketing scenes (needs rsvg-convert)
   capture_screenshots.sh     Plays the game in a Simulator and captures real screenshots
   capture_iap_review.sh      Captures the IAP paywall as the App Review screenshot
@@ -290,27 +295,171 @@ show StoreKit's own price. See
 [APP_STORE.md](APP_STORE.md#in-app-purchase-app-review-screenshot) for where the
 image is uploaded.
 
-### Sound effects
+### Sound effects and music
 
-Every SFX is synthesized from scratch with the Python standard library only — no
-samples, no dependencies. The set is seven sounds: two for the shop (a purchase
-chime when you buy a pack, a coin chime when cards are sold) and five for the pack
-reveal — a paper‑rip **pack‑open**, a soft **card‑flip** as each card *after the
-first* turns (the first card rides in on the pack‑rip, so it's left silent), an
-airy **foil** glisten, and “achievement unlocked” stings for **rare** and **ultra**
-pulls. To regenerate them after editing `tools/generate_sfx.py`:
+**Studio is the approved direction for every action.** The app ships 48 cues in
+60 WAVs, combining physical CC0 card/wrapper/chip recordings with original
+resonant, granular and harmonic layers. Six frequent gestures have three
+alternate takes. `Sound.swift` names the cues; `SoundManager` preloads player
+pools, rotates available takes, applies the SFX mix level to playing voices, and
+keeps routine accents quieter under celebrations.
+
+The original Classic music also accompanies the main menu and Binder; Gauntlet
+has its own loop. Mode changes crossfade briefly, and returning to a mode resumes
+its paused track. Music starts at **28%** of its authored mix. In **gear ->
+Settings**, Music and SFX have independent live sliders and one-tap speaker mute.
+Zero mutes without forgetting the previous nonzero level; raising a slider
+unmutes. Haptics remain a separate toggle.
+
+The bundled choices are **Sunlit Sleeves** (Classic, about 86 BPM / 44.65 seconds)
+and **Quiet Resolve** (Gauntlet, about 106 BPM / 36.22 seconds). **Paper Lanterns**
+and **Northbound** are audition-only alternatives. The explicit scores and
+locally synthesized felt-key, nylon, mallet, bass and percussion instruments
+live in `tools/sound_lab/music.py`; no musical samples or generative-audio
+services are involved.
+
+Each score is a repeating 16-bar arrangement with an answering phrase and a
+second-half variation. Notes, echoes and room tails wrap across the boundary,
+rather than fading into silence. The exact tempo is adjusted by less than
+0.04 BPM to fit whole AAC access units. Offline FFmpeg encoding retains decoder
+pre-roll in an MP4 edit list and has no trailing padding. Keep that timing
+metadata intact: native `AVAudioPlayer` looping and the browser's looping
+`AudioBufferSourceNode` must honor the decoded period. The two 48 kHz stereo
+AAC-LC files total about 1.98 MB at 192 kbps.
+
+`AudioPreferences` retains the existing `tradingup_sound_enabled` preference.
+Music inherits that legacy preference **once**, so an existing silent game does
+not suddenly start playing a score. After migration, changing SFX never changes
+Music, including across launches. These preferences are separate from game saves.
+
+Playback uses `.ambient` with `.mixWithOthers`, honoring the device silent switch.
+Music pauses for backgrounding, interruptions, unplugged headphones and the
+system's secondary-audio silence hint. A headphone disconnect or an interruption
+without permission to resume requires an explicit music-volume/mode action.
+Effects queued before a mute, interruption or background transition are
+invalidated rather than sounding late on return. DEBUG-only `TU_AUDIO_DISABLED=1`
+suppresses hardware playback for UI automation without changing preferences;
+XCTest-hosted unit runs are also silent.
 
 ```bash
-python3 tools/generate_sfx.py                # 7 .wav files -> TradingUp/Audio/SFX
+python3 tools/generate_sound_lab.py          # Render the candidate source recipes
+python3 tools/generate_sfx.py                # Publish only the approved Studio bytes
+python3 tools/generate_sfx.py --check         # Verify all 60 shipping files
+python3 tools/generate_music.py              # Render/encode original mode music
+python3 tools/generate_music.py --check
+# Also recompose and compare the deterministic pre-encode PCM:
+python3 tools/generate_music.py --check --render-pcm
 ```
 
-The file‑system‑synchronized Xcode target picks the `.wav` files up automatically.
-`SoundManager` preloads them at launch and honors the in‑app mute toggle (the
-home‑screen **gear → Settings** sheet, which also carries the **Haptics** toggle).
-The reveal fires each sound at its moment in
-`TradingUp/Views/RevealAnimation.swift` (`RevealingCardView.run` for the flip/foil/
-rare/ultra stings, `SealedPackView.open` for the tear), so no extra wiring is
-needed after regenerating.
+The Xcode synchronized target bundles the generated WAV/M4A files automatically.
+`docs/sound-lab/studio-approval.json` pins the selected Studio file hashes.
+Publishing fails if those sounds changed: audition the changes and obtain
+approval before deliberately running `generate_sfx.py --approve-studio`.
+Neither a render nor a browser play button grants a new approval.
+
+#### Sound direction review
+
+The [sound lab](sound-lab/index.html) retains the complete **audition and review
+workspace**. It covers 48 actions: 19 shared, 6 Classic-only
+and 23 Gauntlet-only. Every action has **A / Studio** (close, tactile material
+sound) and **B / Mythic** (more weight, motion and harmonic space). Six frequent
+actions have three alternate takes per direction, for **120 candidate WAVs**.
+The seven pre-redesign sounds are preserved in `sources/legacy/` for
+level-trimmed comparisons; they are not the app's current sounds.
+
+```bash
+# Regenerate candidates from the included source material; no network or packages.
+python3 tools/generate_sound_lab.py
+
+# Serve only the soundboard, on loopback. Open http://127.0.0.1:8766.
+python3 -m http.server 8766 --bind 127.0.0.1 --directory docs/sound-lab
+
+# Validate the delivered catalogue and audio; optionally reproduce every WAV.
+python3 tools/generate_sound_lab.py --check
+python3 tools/generate_sound_lab.py --check --rerender
+```
+
+The local server is necessary for Web Audio decoding; opening `index.html` as a
+`file://` URL displays the board but cannot audition audio. Once the files are
+present, the board works without internet access. It has no analytics, CDN,
+external fonts, upload endpoint, or automatic playback.
+
+Start with the Studio signature reel, then the six listening scenes. The
+original hybrid proposal remains an explicit comparison option, not the shipping
+selection. Filter by mode, action family, review
+state or text; compare A/B/previous, rotate alternate takes, and audition in
+stereo, mono or a band-limited phone approximation. The phone filter is not a
+physical-device substitute. Individual WAV downloads are under each action's
+trigger details. Four original music alternatives (two per mode) can loop under
+the effects; the recommended track for each mode is bundled in the app, while
+the alternates stay in the lab. Music preview volume/mute is independent, and
+Stop ends both music and effects.
+
+**Approval is explicit and per action.** The requested all-Studio selection
+appears approved only where it matches the pinned file hashes. Review overrides
+can choose A, B, revision, or silence, and add notes. Choices persist in that
+browser's local storage, not the game save.
+Export the review JSON for a durable handoff; import it to continue elsewhere.
+Audio fingerprints invalidate stale decisions after a render changes, retaining
+the prior choice and notes for re-audition. Nothing automatically edits Swift,
+copies files into the app, or interprets an audition as approval.
+
+The source of truth is `tools/sound_lab/`: `catalog.py` owns the action inventory,
+action hooks, timing/priority notes and listening scenes; `recipes.py` owns the
+layered gestures; `dsp.py` owns material processing, resonators, granular texture,
+diffuse stereo rooms and mastering. `tools/generate_sound_lab.py` writes
+`docs/sound-lab/catalog.js` and `docs/sound-lab/audio/`; **do not hand-edit those
+outputs**. Candidate WAVs are 48 kHz, 16-bit stereo with category-based levels and
+at least 3.5 dB of sample-peak headroom. A/B and alternate takes are trimmed
+downward to a common per-action active-RMS level, rather than giving louder
+candidates an unfair advantage. Measurements distinguish active RMS from
+LUFS; they are not a loudness certification. The browser has a separate
+overlap-safety compressor and starts at 45% master volume.
+
+The material foundation is 18 provenance-tracked recordings from
+[Kenney Casino Audio](https://kenney.nl/assets/casino-audio), under **CC0 1.0**.
+The pack's supplied license and the source-file hashes are included in the lab.
+The tonal/noise layers and compositions are original, generated locally with
+Python's standard library. No sample service, model weights, stock music, or
+unverified preset library is used. SFX regeneration does not need FFmpeg;
+that open-source command-line tool prepares source PCM and encodes the original
+music. No FFmpeg binary/library is included in the app.
+
+To repeat that one-time preparation, download the exact archive URL recorded in
+`docs/sound-lab/sources/provenance.json`, then run:
+
+```bash
+python3 tools/prepare_sound_lab_sources.py /path/to/kenney_casino-audio.zip \
+  --archive-sha256 f36250766ac5bc378c13708ddf12a23a8e54a3251f8d482c7536e51b5dbafa18 \
+  --download-url 'https://kenney.nl/media/pages/assets/casino-audio/2472606a04-1721639069/kenney_casino-audio.zip'
+```
+
+The importer checks the archive hash and embedded CC0 declaration, selects only
+named card/wrapper/chip recordings, and records both original and prepared file
+hashes. It never installs anything. This archive contains 54 audio recordings
+despite the current source page's 50-asset label; only the listed 18 are used.
+Source preparation used FFmpeg 9.0.1; rendering was reproduced with Python
+3.14.6. Retain the prepared PCM and toolchain for byte-identical reproduction;
+do not assume that different resamplers or future Python RNG implementations
+will yield identical bytes.
+
+The board's **Production options & commercial-use licensing** section records
+the alternatives and their primary sources. Audacity, Surge XT and SuperCollider
+are potential offline production tools, **not** proposed dependencies for the
+closed-source app. Their software licenses and any imported content's licenses
+must be considered separately; in particular, do not embed a GPL synthesis
+engine in a proprietary target.
+
+The Studio cues cover navigation, pack/card reveals, trading, grading,
+collection progress, Showcase decisions, Catalysts, upgrades and run outcomes.
+NEW/Binder/Aura/last-rip accents stay restrained: ordinary new-card glints do not
+stack over foil/rarity stings; Binder improvements are heard on opening the
+Binder; target/line celebrations take precedence over a small Aura tick; the
+last-rip warning waits for the reveal to close. The first card still has no
+extra flip, foil layers under rarity, and endings still wait for the pack
+summary. `GauntletAudioSnapshot` selects one dominant transition cue and avoids
+re-celebrating a round at shop entry. Models remain Foundation-only, with
+**no gameplay or save-schema change**.
 
 ### Marketing renders
 

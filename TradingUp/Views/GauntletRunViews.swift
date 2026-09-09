@@ -483,15 +483,18 @@ private struct PullRow: View {
                     if state.canKeepPending {
                         MiniButton(title: "Keep", systemImage: "tray.and.arrow.down.fill",
                                    tint: Color(hex: "3fbf7f")) {
+                            let pending = state.pendingCards.count
                             Haptics.play(.light); state.keep(inst)
+                            Sound.play(state.pendingCards.count < pending ? .keepCard : .blocked)
                         }
                     } else {
                         MiniButton(title: "Swap", systemImage: "arrow.left.arrow.right",
-                                   tint: Color(hex: "3b82f6")) { onSwap(inst) }
+                                   tint: Color(hex: "3b82f6")) { Sound.play(.panelOpen); onSwap(inst) }
                     }
                     MiniButton(title: "Sell \(sellPreview)", systemImage: "dollarsign.circle.fill",
                                tint: Color(hex: "6d5cf7")) {
-                        Haptics.play(.light); state.sell(inst)
+                        Haptics.play(.light)
+                        Sound.play(state.sell(inst) > 0 ? .coin : .blocked)
                     }
                 }
             }
@@ -534,17 +537,21 @@ private struct CatalystOfferRow: View {
                     if state.canAttunePending {
                         MiniButton(title: "Attune", systemImage: "sparkles",
                                    tint: Color(hex: "b06cf7")) {
+                            let offered = state.pendingCatalyst != nil
                             Haptics.play(.success); state.attunePendingCatalyst()
+                            if offered && state.pendingCatalyst == nil { Sound.play(.catalystAttune) }
                         }
                     } else if state.canSwapPending {
                         MiniButton(title: "Swap", systemImage: "arrow.left.arrow.right",
                                    tint: Color(hex: "b06cf7")) {
-                            Haptics.play(.light); swapping = true
+                            Haptics.play(.light); Sound.play(.panelOpen); swapping = true
                         }
                     }
                     MiniButton(title: "Sell \(catalyst.saleValue.moneyShort)",
                                systemImage: "dollarsign.circle.fill", tint: Color(hex: "6d5cf7")) {
+                        let offered = state.pendingCatalyst != nil
                         Haptics.play(.light); state.sellPendingCatalyst()
+                        if offered && state.pendingCatalyst == nil { Sound.play(.catalystSell) }
                     }
                 }
                 if state.canSwapPending {
@@ -604,6 +611,7 @@ private struct CatalystSwapPicker: View {
                             Button {
                                 Haptics.play(.success)
                                 state.swapPendingCatalyst(replacing: idx)
+                                Sound.play(.catalystSwap)
                                 onClose()
                             } label: {
                                 CatalystSwapOption(outgoing: cat)
@@ -843,6 +851,7 @@ private struct ShowcaseCardDetail: View {
     let state: GauntletState
     let index: Int
     let onClose: () -> Void
+    @State private var gradeCue: Sound?
 
     var body: some View {
         ZStack {
@@ -863,6 +872,10 @@ private struct ShowcaseCardDetail: View {
             .buttonStyle(.plain)
             .padding(14)
             .accessibilityLabel("Close card")
+        }
+        .onAppear { Sound.play(.panelOpen) }
+        .task(id: gradeCue) {
+            if let gradeCue { await Sound.after(0.22, play: gradeCue) }
         }
     }
 
@@ -932,7 +945,15 @@ private struct ShowcaseCardDetail: View {
                           tint: [Color(hex: "6d5cf7")],
                           enabled: state.canGrade(showcaseIndex: index)) {
                     Haptics.play(.medium)
-                    state.grade(showcaseIndex: index)
+                    if let grade = state.grade(showcaseIndex: index) {
+                        Sound.play(.gradeStart)
+                        var graded = inst
+                        graded.grade = grade
+                        gradeCue = .gradingResult(grade: grade, oldValue: inst.currentValue,
+                                                  newValue: graded.currentValue)
+                    } else {
+                        Sound.play(.blocked)
+                    }
                 }
             }
         }
@@ -998,13 +1019,15 @@ struct ShopScreen: View {
                                 title: "Add Showcase Slot",
                                 subtitle: "Now \(run.effectiveSlots) → \(run.effectiveSlots + 1)",
                                 cost: run.nextSlotCost, affordable: run.cash >= run.nextSlotCost) {
-                            Haptics.play(.light); state.buySlot()
+                            Haptics.play(.light)
+                            Sound.play(state.buySlot() ? .showcaseExpand : .blocked)
                         }
                         ShopRow(glyph: .symbol("bolt.circle.fill", tint: Color(hex: "ff9500")),
                                 title: "Add Catalyst Slot",
                                 subtitle: "Now \(run.effectiveCatalystSlots) → \(run.effectiveCatalystSlots + 1)",
                                 cost: run.nextCatalystSlotCost, affordable: run.cash >= run.nextCatalystSlotCost) {
-                            Haptics.play(.light); state.buyCatalystSlot()
+                            Haptics.play(.light)
+                            Sound.play(state.buyCatalystSlot() ? .catalystExpand : .blocked)
                         }
                         if !lockedPacks.isEmpty {
                             SectionTitle(text: "Unlock packs")
@@ -1016,7 +1039,8 @@ struct ShopScreen: View {
                                         title: "Unlock \(CardDatabase.setName(set)) Packs",
                                         subtitle: "Adds this set to your pack rail",
                                         cost: cost, affordable: state.canUnlockPack(set)) {
-                                    Haptics.play(.light); state.unlockPack(set)
+                                    Haptics.play(.light)
+                                    Sound.play(state.unlockPack(set) ? .packUnlock : .blocked)
                                 }
                             }
                         }
@@ -1037,6 +1061,7 @@ struct ShopScreen: View {
                     }
                 }
             }
+            .task(id: run.round) { await Sound.after(0.65, play: .roundPayout) }
         }
     }
 }
@@ -1227,11 +1252,12 @@ struct RewardScreen: View {
                 .padding(.top, 12)   // headroom for the overhanging "New" badge
             }
         }
+        .task { await Sound.after(3.5, play: .rewardReveal) }
     }
 
     private func rewardCell(_ option: GauntletRewardOption, width: CGFloat) -> some View {
         Button {
-            Haptics.play(.success); state.chooseReward(option)
+            Haptics.play(.success); state.chooseReward(option); Sound.play(.rewardClaim)
         } label: {
             VStack(spacing: 5) {
                 CardView(card: option.card, instance: option.instance,
@@ -1441,6 +1467,7 @@ struct GauntletRevealView: View {
                         state.swap(cand, forShowcaseIndex: i)
                         swapCandidate = nil
                         Haptics.play(.light)
+                        Sound.play(.showcaseSwap)
                     }
                 }
             }
@@ -1525,7 +1552,7 @@ private struct CatalystRevealCard: View {
                     .animation(.easeOut(duration: 0.45), value: appear)
             }
             .onAppear {
-                Sound.play(.rare)
+                Sound.play(.catalystOffer)
                 withAnimation(.spring(response: 0.55, dampingFraction: 0.7)) { appear = true }
             }
     }
