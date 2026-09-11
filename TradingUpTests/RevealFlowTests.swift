@@ -174,4 +174,28 @@ final class EvolutionPipTests: XCTestCase {
         XCTAssertTrue(withBaseKept.ownedStages.contains(s.base.stage),
                       "a card standing in the Showcase lights its stage for the new pull")
     }
+
+    func testSwapPipsDistinguishIncomingStagesFromShowcaseOwnership() throws {
+        let s = try sampleLine()
+        let showcase = [CardInstance(cardId: s.base.id), CardInstance(cardId: s.base.id, foil: true, grade: 9)]
+        let incoming = CardSeries.gauntlet(s.top, showcase: showcase)
+        let keeper = CardSeries.gauntlet(s.base, showcase: showcase, pull: false)
+        XCTAssertEqual(incoming.ownedStages, [s.base.stage], "duplicate copies count as one collected stage")
+        XCTAssertEqual(keeper.ownedStages, incoming.ownedStages)
+        XCTAssertEqual(incoming.nowStage, s.top.stage)
+        XCTAssertNil(keeper.nowStage, "only the incoming card gets a gold pip")
+
+        let completed = CardSeries.gauntlet(s.base, showcase: s.line.map { CardInstance(cardId: $0.id) }, pull: false)
+        XCTAssertEqual(completed.ownedStages.count, completed.line.count)
+        let replaced = CardSeries.gauntlet(s.base, showcase: [], pull: false)
+        XCTAssertTrue(replaced.ownedStages.isEmpty, "a discarded card must not remain lit")
+    }
+
+    func testSingleCardsHaveOnePipButNoEvolutionSeries() throws {
+        let single = try XCTUnwrap(CardDatabase.all.first { $0.stageCount == 1 })
+        let series = CardSeries.gauntlet(single, showcase: [], pull: false)
+        XCTAssertEqual(series.line.map(\.id), [single.id])
+        XCTAssertTrue(series.ownedStages.isEmpty)
+        XCTAssertNil(series.nowStage)
+    }
 }

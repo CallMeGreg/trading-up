@@ -1,4 +1,5 @@
 import XCTest
+import UIKit
 
 /// End-to-end coverage of the fix for the win/reveal collision, played for real
 /// from a seeded near-complete save.
@@ -35,9 +36,11 @@ final class EndingFlowTests: XCTestCase {
         app.launchEnvironment["TU_TEST_STATE"] = "almost-won"
         app.launchEnvironment["TU_TEST_MISSING"] = Self.finalCard
         app.launchEnvironment["TU_TEST_SEED"] = Self.seed
+        app.launchEnvironment["TU_AUDIO_DISABLED"] = "1"
         app.launch()
     }
 
+    @MainActor
     func testWinWaitsForThePackSummaryThenSetReadsComplete() throws {
         // v2.0.0 opens on the main menu; the game (and its shop) is one tap in.
         enterClassicMode()
@@ -81,6 +84,15 @@ final class EndingFlowTests: XCTestCase {
         // restart — before choosing, so the recorded demo shows the ending at
         // its real pace instead of dismissing it the instant it appears.
         showcaseWin()
+        let share = app.buttons["classicShareCard"]
+        XCTAssertTrue(share.isEnabled)
+        share.tap()
+        let copy = app.descendants(matching: .any).matching(NSPredicate(format: "label == 'Copy'")).firstMatch
+        XCTAssertTrue(copy.waitForExistence(timeout: 10))
+        shot("05d-image-only-share")
+        copy.tap()
+        XCTAssertTrue(UIPasteboard.general.hasImages)
+        XCTAssertFalse(UIPasteboard.general.hasStrings, "Classic wins also share the image without a caption")
         keepCollection.tap()
 
         // The whole point of the fix: the finished set now reads complete instead

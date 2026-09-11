@@ -262,10 +262,11 @@ struct CardSeries {
 
     /// Pips scoped to the current Gauntlet Showcase: a stage counts as owned when
     /// a copy of it stands in the Showcase this run. A pull mode, so the card in
-    /// hand lights the gold "now" pip.
-    static func gauntlet(_ card: Card, showcase: [CardInstance]) -> CardSeries {
+    /// hand lights the gold "now" pip. Pass `pull: false` when comparing existing
+    /// keepers so only stages actually standing in the Showcase count as present.
+    static func gauntlet(_ card: Card, showcase: [CardInstance], pull: Bool = true) -> CardSeries {
         let owned = Set(showcase.map(\.cardId))
-        return CardSeries(for: card, pull: true) { owned.contains($0.id) }
+        return CardSeries(for: card, pull: pull) { owned.contains($0.id) }
     }
 }
 
@@ -276,7 +277,7 @@ struct CardSeries {
 /// both are present. A single (one pip) draws no connector, so "not a line" reads
 /// instantly. Everything scales from `s` (= card width / 230) like the rest of the
 /// card. See docs/mockups/evolution.
-private struct SeriesPips: View {
+struct SeriesPips: View {
     let series: CardSeries
     let setTint: Color
     let s: CGFloat

@@ -279,15 +279,18 @@ final class GauntletCoreTests: XCTestCase {
         XCTAssertEqual(run.cash, cashBefore + gained, accuracy: 1e-6)
     }
 
-    func testSwapInBanksTheRemovedCard() {
+    func testSwapInDiscardsTheRemovedCardWithoutPayingCash() {
         var run = GauntletRun(tier: .easy, trainer: .neutral)
-        let weak = CardInstance(cardId: fireIds[0])
+        let weak = CardInstance(cardId: fireIds[0], foil: true, grade: 9)
         run.keep(weak)
         let cashBefore = run.cash
-        let removed = run.swapIn(whale, at: 0)
-        XCTAssertEqual(removed.cardId, weak.cardId)
-        XCTAssertEqual(run.showcase[0].cardId, whale.cardId)
-        XCTAssertEqual(run.cash, cashBefore + weak.currentValue * run.sellbackRate, accuracy: 1e-6)
+        let maxCashBefore = run.maxCashReached
+        let incoming = whale
+        let removed = run.swapIn(incoming, at: 0)
+        XCTAssertEqual(removed, weak)
+        XCTAssertEqual(run.showcase, [incoming])
+        XCTAssertEqual(run.cash, cashBefore, accuracy: 1e-6)
+        XCTAssertEqual(run.maxCashReached, maxCashBefore, "discarding must not inflate Trainer milestones")
     }
 
     // MARK: Grading

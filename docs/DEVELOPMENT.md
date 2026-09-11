@@ -130,8 +130,10 @@ assertions.
 
 Gauntlet's simulator now distinguishes the historical **full-budget** reference from
 the **automatic-clear** play cadence. Both are needed: spending all remaining rips
-after reaching a target is not possible in the UI. The current Hard target ramp is
-1.64; the opening, rip budget, boss multiplier, and other tiers are unchanged.
+after reaching a target is not possible in the UI. Showcase swaps discard the
+outgoing card without paying cash. The Hard target ramp is 1.61, compensating for
+that lost income while preserving the existing Trainer-sidegrade guardrails; the
+opening, rip budget, boss multiplier, and other tiers are unchanged.
 See [Gauntlet playtesting](TESTING.md#gauntlet-decisions-and-playtesting) for the
 comparison, deterministic UI fixtures, and targeted commands.
 

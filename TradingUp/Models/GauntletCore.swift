@@ -48,7 +48,6 @@ struct ShowcaseSwapPreview: Identifiable {
     let outgoing: CardInstance
     let auraBefore: Double
     let auraAfter: Double
-    let cashGain: Double
     let completedLineIds: Set<String>
     let brokenLineIds: Set<String>
 
@@ -222,7 +221,6 @@ struct GauntletRun: Codable {
             return ShowcaseSwapPreview(
                 index: index, outgoing: showcase[index],
                 auraBefore: before, auraAfter: trial.showcaseAura,
-                cashGain: showcase[index].currentValue * sellbackRate,
                 completedLineIds: completedAfter.subtracting(completedBefore),
                 brokenLineIds: completedBefore.subtracting(completedAfter))
         }.sorted {
@@ -405,12 +403,10 @@ struct GauntletRun: Codable {
         return gain
     }
 
-    /// Replace a Showcase card, banking the removed one's sell-back into cash.
+    /// Replace a Showcase card, discarding the removed one without a cash payout.
     @discardableResult
     mutating func swapIn(_ inst: CardInstance, at index: Int) -> CardInstance {
         let removed = showcase[index]
-        cash += removed.currentValue * sellbackRate
-        noteCash()
         showcase[index] = inst
         return removed
     }

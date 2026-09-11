@@ -337,8 +337,8 @@ final class GauntletState {
         return gain
     }
 
-    /// Replace a Showcase card with a pulled one, banking the removed card's
-    /// sell-back. Used when the Showcase is full but the pull is an upgrade.
+    /// Replace a Showcase card with a pulled one. The removed card is discarded,
+    /// not sold; only explicitly selling a pending pull earns cash.
     func swap(_ card: CardInstance, forShowcaseIndex index: Int) {
         guard phase == .ripping, pendingCards.contains(where: { $0.id == card.id }),
               var r = run, r.showcase.indices.contains(index) else { return }

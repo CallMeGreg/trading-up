@@ -6,6 +6,8 @@ import Foundation
 enum DebugGauntletScenario: String {
     case fresh
     case swap
+    case gradedSwap = "graded-swap"
+    case catalyst
     case shop
     case lastPack = "last-pack"
 
@@ -28,20 +30,32 @@ enum DebugGauntletScenario: String {
     }
 
     var snapshot: GauntletRunSnapshot {
-        var run = GauntletRun(tier: self == .swap ? .medium : .easy, trainer: .neutral)
+        let fullShowcase = self == .swap || self == .gradedSwap
+        var run = GauntletRun(tier: fullShowcase ? .medium : .easy, trainer: .neutral)
         var pending: [CardInstance] = []
+        var catalyst: Catalyst?
         var phase = GauntletResumePhase.ripping
         switch self {
         case .fresh:
             break
-        case .swap:
+        case .swap, .gradedSwap:
             run.round = 3
             run.ripsLeft = 2
             run.cash = 36.75
             for id in ["S1-001", "S1-002", "S1-003", "S1-004", "S1-005", "S1-025"] {
                 run.keep(CardInstance(cardId: id))
             }
+            if self == .gradedSwap {
+                run.showcase[0].grade = 3
+                run.showcase[2].grade = 9
+                run.showcase[5].foil = true
+            }
             pending = [CardInstance(cardId: "S1-048"), CardInstance(cardId: "S1-006")]
+        case .catalyst:
+            run.ripsLeft = 3
+            run.keep(CardInstance(cardId: "S1-001"))
+            pending = ["S1-002", "S1-004", "S1-027", "S1-028", "S1-003"].map { CardInstance(cardId: $0) }
+            catalyst = Catalyst.byId("bloom")!
         case .shop:
             run.cash = 35
             run.ripsLeft = 3
@@ -57,7 +71,7 @@ enum DebugGauntletScenario: String {
             pending = [CardInstance(cardId: "S1-001")]
         }
         return GauntletRunSnapshot(run: run, phase: phase, pendingCards: pending,
-                                   pendingCatalyst: nil, lastRippedSet: 1,
+                                   pendingCatalyst: catalyst, lastRippedSet: 1,
                                    revealActive: !pending.isEmpty, celebratedRound: 0)
     }
 }

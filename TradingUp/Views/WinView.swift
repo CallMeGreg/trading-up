@@ -9,7 +9,7 @@ struct WinView: View {
     @Environment(GameState.self) var game: GameState
 
     /// Rendered snapshot of the win, shared as an image. Built on appear.
-    @State private var shareImage: Image?
+    @State private var shareImage: UIImage?
     @State private var confirmNew = false
     /// Drives the card's entrance and the fireworks fade-in.
     @State private var reveal = false
@@ -24,7 +24,7 @@ struct WinView: View {
         let renderer = ImageRenderer(content: card)
         renderer.scale = 3
         guard let ui = renderer.uiImage else { return }
-        shareImage = Image(uiImage: ui)
+        shareImage = ui
     }
 
     var body: some View {
@@ -132,22 +132,10 @@ struct WinView: View {
         .opacity(reveal ? 1 : 0)
     }
 
-    @ViewBuilder private var shareButton: some View {
-        if let shareImage {
-            ShareLink(item: shareImage,
-                      preview: SharePreview("Trading Up", image: shareImage)) {
-                BigButtonLabel(title: "Share your card",
-                               subtitle: "Send your one-of-a-kind win",
-                               systemImage: "square.and.arrow.up",
-                               tint: [Color(hex: "3b82f6"), Color(hex: "6d5cf7")])
-            }
-            .buttonStyle(.plain)
-        } else {
-            BigButtonLabel(title: "Share your card",
-                           subtitle: "Send your one-of-a-kind win",
-                           systemImage: "square.and.arrow.up",
-                           tint: [Color(hex: "3b82f6"), Color(hex: "6d5cf7")])
-        }
+    private var shareButton: some View {
+        ImageShareButton(image: shareImage, title: "Share your card",
+                         subtitle: "Send your one-of-a-kind win")
+            .accessibilityIdentifier("classicShareCard")
     }
 
     private var keepButton: some View {
