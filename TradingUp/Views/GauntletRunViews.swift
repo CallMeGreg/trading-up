@@ -585,26 +585,21 @@ private struct ShowcaseSwapPicker: View {
                 let previews = run.swapPreviews(for: incoming)
                 let selected = previews.first { $0.id == selectedId }
                 VStack(spacing: 0) {
-                    VStack(alignment: .leading, spacing: 10) {
-                        HStack(spacing: 12) {
-                            CardView(card: incoming.card, instance: incoming, width: 54)
-                                .accessibilityHidden(true)
-                            VStack(alignment: .leading, spacing: 5) {
-                                Text("Make room for \(incoming.card.name)")
-                                    .font(.headline)
-                                    .foregroundStyle(.white)
-                                Text("Current price \(incoming.currentValue.money)")
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(Palette.money)
-                                SwapSeriesProgress(card: incoming.card, showcase: run.showcase, incoming: true)
-                            }
+                    HStack(spacing: 12) {
+                        CardView(card: incoming.card, instance: incoming, width: 54)
+                            .accessibilityHidden(true)
+                        VStack(alignment: .leading, spacing: 5) {
+                            Text("Make room for \(incoming.card.name)")
+                                .font(.headline)
+                                .foregroundStyle(.white)
+                            Text("Current price \(incoming.currentValue.money)")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(Palette.money)
+                            SwapSeriesProgress(card: incoming.card, showcase: run.showcase, incoming: true)
+                                .accessibilityIdentifier("gauntletSwapIncomingSeries")
                         }
-                        Text("Compare total Aura and series progress. Replaced cards are discarded, not sold.")
-                            .font(.caption)
-                            .foregroundStyle(Palette.subtle)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .accessibilityIdentifier("gauntletSwapDiscardNotice")
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(16)
 
                     ScrollView {
@@ -696,16 +691,6 @@ private struct ShowcaseSwapPicker: View {
             Text("Showcase after swap: \(fmtAura(preview.auraAfter)) / \(fmtGoal(run.target)) Aura")
                 .font(.caption)
                 .foregroundStyle(Palette.subtle)
-            if !preview.brokenLineIds.isEmpty {
-                Label("Breaks a completed evolution line", systemImage: "exclamationmark.triangle.fill")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(Color(hex: "ffd54a"))
-            }
-            if !preview.completedLineIds.isEmpty {
-                Label("Completes an evolution line", systemImage: "link")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(Palette.money)
-            }
         }
         .multilineTextAlignment(.leading)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -738,7 +723,7 @@ private struct SwapSeriesProgress: View {
                         Text("Gold pip = incoming stage").foregroundStyle(Palette.subtle)
                     }
                 } else {
-                    Text("Single card · No series").foregroundStyle(Palette.subtle)
+                    Text("Single card").foregroundStyle(Palette.subtle)
                 }
             }
             .font(.caption2.weight(.semibold))
@@ -749,7 +734,7 @@ private struct SwapSeriesProgress: View {
             ? "Stage \(card.stage) of \(series.line.count), \(series.ownedStages.count) of \(series.line.count) stages in Showcase"
                 + (series.ownedStages.count == series.line.count ? ", series complete" : "")
                 + (incoming ? ". Gold pip marks the incoming stage" : "")
-            : "Single card, no series")
+            : "Single card")
     }
 }
 

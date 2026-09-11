@@ -581,7 +581,7 @@ difficulty tiers squeeze.
 **Swap previews.** A full Showcase opens a comparison sheet before replacing a card.
 Each option shows its **current price** (including foil and grade changes, without
 the sell-back discount), the **whole Showcase's** post-swap Aura and
-signed change, and any completed or broken evolution lines. Options sort by current
+signed change, and series progress. Options sort by current
 post-swap Aura, with stable slot order for ties; **Most Aura** is not a promise of the
 best long-term strategy. A selection and confirmation are required before anything
 is replaced. The outgoing card is **discarded for no cash**, just like a replaced
@@ -589,8 +589,9 @@ Catalyst; selling an undecided pull is still a separate, paying action.
 The incoming card and every replacement option show the shared stage pips,
 the card's stage, and the number of distinct stages currently in the Showcase.
 Filled pips show held stages; gold marks the incoming stage but does **not** count
-it as already collected. Completed series and single cards with no series are
-explicitly labeled.
+it as already collected. Completed series are labeled **Series complete** and
+standalone cards simply **Single card**. The sheet does not repeat separate
+line-completion or line-breakage badges; the confirmation still says **No cash paid**.
 
 In the neutral, ungraded `swap` test fixture, replacing Emberpup in its
 completed three-stage line with Ignarok loses **14.82 Aura** even though the incoming

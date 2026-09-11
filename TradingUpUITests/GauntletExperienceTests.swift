@@ -18,12 +18,12 @@ final class GauntletExperienceTests: XCTestCase {
         let breaking = app.buttons["gauntletReplace-0"]
         XCTAssertTrue(breaking.waitForExistence(timeout: 5))
         XCTAssertTrue(breaking.label.contains("-14.82 Aura"))
-        XCTAssertTrue(breaking.label.contains("Breaks a completed evolution line"))
+        assertConciseSwapCopy()
         XCTAssertTrue(breaking.label.contains("3 of 3 stages in Showcase"))
         XCTAssertTrue(breaking.label.contains("series complete"))
         XCTAssertTrue(breaking.label.contains("Current price $0.36"))
         XCTAssertFalse(breaking.label.contains("Sell"))
-        XCTAssertTrue(app.staticTexts["gauntletSwapDiscardNotice"].label.contains("discarded, not sold"))
+        XCTAssertEqual(element("gauntletSwapIncomingSeries").label, "Single card")
         XCTAssertFalse(app.buttons["gauntletConfirmSwap"].isEnabled)
         scrollTo(breaking, in: app.scrollViews["gauntletSwapOptions"])
         shot("after-informed-swaps")
@@ -39,9 +39,10 @@ final class GauntletExperienceTests: XCTestCase {
         app.buttons["gauntletSwap-S1-006"].tap()
         let completing = app.buttons["gauntletReplace-5"]
         XCTAssertTrue(completing.waitForExistence(timeout: 5))
-        XCTAssertTrue(completing.label.contains("Completes an evolution line"))
-        XCTAssertTrue(app.descendants(matching: .any).matching(NSPredicate(
-            format: "label CONTAINS 'Stage 3 of 3, 2 of 3 stages in Showcase'")).firstMatch.exists)
+        assertConciseSwapCopy()
+        XCTAssertTrue(completing.label.contains("Single card"))
+        XCTAssertTrue(element("gauntletSwapIncomingSeries").label
+            .contains("Stage 3 of 3, 2 of 3 stages in Showcase"))
         completing.tap()
         shot("after-completing-a-line")
         app.buttons["gauntletConfirmSwap"].tap()
@@ -168,6 +169,7 @@ final class GauntletExperienceTests: XCTestCase {
         swap.tap()
         let choice = app.buttons["gauntletReplace-5"]
         XCTAssertTrue(choice.waitForExistence(timeout: 5))
+        assertConciseSwapCopy()
         scrollTo(choice, in: app.scrollViews["gauntletSwapOptions"])
         choice.tap()
         let confirm = app.buttons["gauntletConfirmSwap"]
@@ -399,6 +401,19 @@ final class GauntletExperienceTests: XCTestCase {
             }
         }
         XCTAssertTrue(app.buttons["gauntletFinishPack"].isEnabled)
+    }
+
+    private func assertConciseSwapCopy() {
+        for text in [
+            "Breaks a completed evolution line",
+            "Completes an evolution line",
+            "Compare total Aura and series progress",
+            "No series"
+        ] {
+            XCTAssertFalse(app.descendants(matching: .any).matching(
+                NSPredicate(format: "label CONTAINS[c] %@", text)).firstMatch.exists,
+                "The swap comparison should not repeat: \(text)")
+        }
     }
 
     private func scrollTo(_ target: XCUIElement, in scroll: XCUIElement) {
