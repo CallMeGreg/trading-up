@@ -37,7 +37,7 @@ Or just press `⌘U` in Xcode.
 | `WinAndUnlockTests.swift` | Winning shows once, doesn't erase the collection; set unlocks |
 | `FullUnlockGateTests.swift` | The free-tier/full-version IAP gate: Set 1 free, paid sets refuse a buy until unlocked, and the unlock never skips progression |
 | `RevealFlowTests.swift` | The win/Game Over overlay waits for a pack reveal to finish; the DEBUG fast‑travel seed |
-| `AudioTests.swift` | Independent persisted Music/SFX channels and legacy migration; continuous-drag mute/restore; one-shot Gauntlet audio priorities; all 60 Studio effects and both music loops decode from the app bundle |
+| `AudioTests.swift` | Independent persisted Music/SFX channels and legacy migration; continuous-drag mute/restore; one-shot Gauntlet audio priorities; all 60 Studio effects and both selected music loops decode from the app bundle, with exact authored loop durations |
 
 ### Audio
 
@@ -79,8 +79,10 @@ python3 tools/generate_music.py --check
 ```
 
 The music check verifies source/output hashes, exact decoded frame counts,
-AAC priming/padding, true peaks and the loop seam. Add `--render-pcm` to
-recompose all four scores and compare their pre-encode PCM hashes as well.
+AAC priming/padding, true peaks and the loop seam. Neon's score also pins the
+1,566 retained note/drum/echo events and instrument counts from its audition,
+after removing only the 448 brass events. Add `--render-pcm` to
+recompose all five scores and compare their pre-encode PCM hashes as well.
 
 In the [sound lab](sound-lab/index.html), audition repeated Studio actions under
 each recommended music loop, at low volume and through actual phone speakers

@@ -29,12 +29,12 @@ globalThis.SOUND_LAB_MUSIC = {
       "id": "gauntlet-quiet-resolve",
       "mode": "gauntlet",
       "title": "Quiet Resolve",
-      "description": "Selected Gauntlet / battle mix: a soft-brass challenger motif, a pulsing B-minor bass line and quick plucked replies. Brief tom fills and dominant-chord turns add resolve; quieter phrases keep it repeat-friendly.",
+      "description": "Gauntlet alternate / battle mix: a soft-brass challenger motif, a pulsing B-minor bass line and quick plucked replies. Brief tom fills and dominant-chord turns add resolve; quieter phrases keep it repeat-friendly.",
       "bpm": 120.0,
       "duration": 32.0,
       "file": "music/gauntlet-quiet-resolve.m4a",
       "sha256": "4bef58b88ecbd63d5d5e0c1a3ed1dc684f931b80baab4e234c2554f4c736e8ee",
-      "recommended": true,
+      "recommended": false,
       "license": "Original composition; no third-party musical content"
     },
     {
@@ -48,12 +48,25 @@ globalThis.SOUND_LAB_MUSIC = {
       "sha256": "d1be4a05f17c14d6a235327cf94b065981bfcee7512949bae5dd17c430db1846",
       "recommended": false,
       "license": "Original composition; no third-party musical content"
+    },
+    {
+      "id": "gauntlet-neon-dead-drop",
+      "mode": "gauntlet",
+      "title": "Neon Dead Drop",
+      "description": "Selected Gauntlet / arcade drive: the original FM-pluck melody, octave bass and four-on-the-floor drums, with the offbeat brass accompaniment removed. A bass-led pocket makes room before the fuller final hook.",
+      "bpm": 148.026316,
+      "duration": 51.882666666666665,
+      "file": "music/gauntlet-neon-dead-drop.m4a",
+      "sha256": "d5e81ebc3140bd98c853ad8612b7dc4e69aebdc119ebb8c37e838d41b01f247c",
+      "recommended": true,
+      "license": "Original composition; no third-party musical content"
     }
   ],
   "render": {
     "sourceSha256": {
-      "tools/generate_music.py": "94bb84a231e66cde75a1f8e1e6e725a943f076da1210b09e341112da4665725b",
-      "tools/sound_lab/music.py": "ea5a7a6cfdc87344bcc595282faff43a85274c5e08d088f5d7704816ae3c4da0",
+      "tools/generate_music.py": "a8983b2a029a3e141e9fd71326fce3fcb3fedfe94c9eb655a56a7b02c4ba54ef",
+      "tools/sound_lab/music.py": "90f903fd804a0fc0f53b59647a46ad2677039f151446924fcf47f45112cd1c80",
+      "tools/sound_lab/neon_dead_drop.py": "729dda491210c0100d1e7ea01c22ddeaa3e1cdddaed4703d3bfa39b4711a0972",
       "tools/sound_lab/dsp.py": "77cb0525b52cabd6f15a7202c093a7134a2a07ddeb00bb8b7dd4e645c71fbcf2"
     },
     "sampleRate": 48000,
@@ -186,6 +199,51 @@ globalThis.SOUND_LAB_MUSIC = {
           "primingFrames": 1024,
           "paddingFrames": 0,
           "bytes": 811337
+        }
+      },
+      "gauntlet-neon-dead-drop": {
+        "bars": 32,
+        "frames": 2490368,
+        "nominalBPM": 148,
+        "events": 1566,
+        "wrappedEvents": 11,
+        "kickCount": 124,
+        "instruments": {
+          "bass": 272,
+          "clap": 64,
+          "crash": 4,
+          "hat": 256,
+          "kick": 124,
+          "open": 68,
+          "pluck": 650,
+          "snare": 104,
+          "string": 8,
+          "tom": 16
+        },
+        "arrangementSha256": "726153e7f7561929737c1b07258145dd83ff7d079a4d12412e11fdd9dd430d9e",
+        "pcmSha256": "a24e7995c5d0a46f6386e2276ea5f33580d13d9c462204267872a85efeea6806",
+        "pcm": {
+          "frames": 2490368,
+          "peakDBFS": -8.499998,
+          "rmsDBFS": -23.667433,
+          "boundaryStep": 0.014830000698566437,
+          "nearbyStepP99": 0.04704870283603668,
+          "edgeRMSRatio": 0.7347358982604724,
+          "dc": 5.156182110770292e-13
+        },
+        "decoded": {
+          "frames": 2490368,
+          "peakDBFS": -8.114387,
+          "rmsDBFS": -23.697274,
+          "boundaryStep": 0.00539766438305378,
+          "nearbyStepP99": 0.038359370082616806,
+          "edgeRMSRatio": 0.7343399398038495,
+          "dc": 1.1328167278022443e-05,
+          "integratedLUFS": -22.2,
+          "truePeakDBFS": -7.8,
+          "primingFrames": 1024,
+          "paddingFrames": 0,
+          "bytes": 1313633
         }
       }
     }
