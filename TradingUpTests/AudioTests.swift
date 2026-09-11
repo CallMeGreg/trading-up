@@ -245,11 +245,16 @@ final class AudioCatalogueTests: XCTestCase {
     }
 
     func testBothModeMusicLoopsAreBundledAndDecodable() throws {
+        let expectedFrames: [Music: AVAudioFramePosition] = [
+            .classic: 1_772_544,
+            .gauntlet: 2_490_368
+        ]
         for music in Music.allCases {
             let url = try XCTUnwrap(Bundle.main.url(forResource: music.rawValue, withExtension: "m4a"))
             let player = try AVAudioPlayer(contentsOf: url)
-            XCTAssertGreaterThan(player.duration, 20)
-            XCTAssertLessThan(player.duration, 75)
+            let frames = try XCTUnwrap(expectedFrames[music])
+            XCTAssertEqual(player.duration, Double(frames) / 48_000,
+                           accuracy: 1.0 / 48_000, music.rawValue)
             XCTAssertEqual(player.numberOfChannels, 2)
             player.numberOfLoops = -1
             XCTAssertEqual(player.numberOfLoops, -1)

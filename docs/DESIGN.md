@@ -508,12 +508,17 @@ card reveal, using the already-decremented budget; one or zero remaining rips tu
 the counter gold. Opening still follows the card-by-card reveal, with no skip-all
 button. The summary counts unresolved cards **and Catalysts** and explains whether
 finishing the pack returns to the round, banks unused rips, opens a last-chance
-grade, or ends the run.
+grade, or ends the run. An offered Catalyst is the **first decision row** in the
+summary, above the Sprytes, so its run-wide effect can inform keep/sell/swap choices.
+The card-by-card reveal order is unchanged, and players can still decide items in
+any order.
 
 **Shop planning.** Spendable cash stays separate from the expandable **earned last
 round** breakdown. Purchases must never rewrite historical payout amounts. The shop
-previews the next target, remaining Aura gap, rip budget, and interest at the current
-balance (future spending/selling changes that forecast). Affordable pack unlocks and
+previews the next target, remaining Aura gap, and rip budget once, above the offers.
+The next-round button is an action-only label, including the Championship; it
+doesn't repeat those stats. There is no next-interest forecast, but interest already
+earned remains in the payout breakdown and still accrues normally. Affordable pack unlocks and
 the cheapest next set sit beside the slot-upgrade choices; pricier sets remain under
 **More pack sets**, and every set can still unlock independently. Unlocked rows show
 confirmation, unaffordable purchases show the cash shortfall, and an already-met
@@ -574,11 +579,21 @@ shop cash, *how big to build it* is itself a decision, and it's the main lever t
 difficulty tiers squeeze.
 
 **Swap previews.** A full Showcase opens a comparison sheet before replacing a card.
-Each option shows its sale proceeds, the **whole Showcase's** post-swap Aura and
-signed change, and any completed or broken evolution lines. Options sort by current
+Each option shows its **current price** (including foil and grade changes, without
+the sell-back discount), the **whole Showcase's** post-swap Aura and
+signed change, and series progress. Options sort by current
 post-swap Aura, with stable slot order for ties; **Most Aura** is not a promise of the
 best long-term strategy. A selection and confirmation are required before anything
-is sold. In the neutral, ungraded `swap` test fixture, replacing Emberpup in its
+is replaced. The outgoing card is **discarded for no cash**, just like a replaced
+Catalyst; selling an undecided pull is still a separate, paying action.
+The incoming card and every replacement option show the shared stage pips,
+the card's stage, and the number of distinct stages currently in the Showcase.
+Filled pips show held stages; gold marks the incoming stage but does **not** count
+it as already collected. Completed series are labeled **Series complete** and
+standalone cards simply **Single card**. The sheet does not repeat separate
+line-completion or line-breakage badges; the confirmation still says **No cash paid**.
+
+In the neutral, ungraded `swap` test fixture, replacing Emberpup in its
 completed three-stage line with Ignarok loses **14.82 Aura** even though the incoming
 ultra costs more. Completing
 Pebblit/Boulderkin with Magmalith while replacing Smoldfin in that original fixture
@@ -756,13 +771,15 @@ Medium retains Easy's six-rip budget but asks for more efficient curation. What 
 | **Hard** | The fewest rips, the narrowest starting Showcase, and a **boss Aura** spike on the final round. | Foil Extended Art **rare / ultra** |
 
 **Current target ramps:** Easy starts at 20 and grows by 1.60 each round; Medium
-starts at 26 and grows by 1.88; Hard starts at 18 and grows by **1.64**, with its
-unchanged 1.65 boss multiplier on round 9. Hard previously grew by 1.67. The small
-ramp reduction leaves round 1 unchanged, lowers round 5 from 140.00 to 130.21 Aura,
-and lowers the finale from 1796.75 to 1554.20 Aura (13.5%). This corrects some of the
-late-round pressure exposed by automatic-clear simulation without granting extra
-rips, cash, slots, stronger Trainers, or better drop/grade odds. Easy and Medium's
-economy constants are unchanged. See the measured before/after results in
+starts at 26 and grows by 1.88; Hard starts at 18 and grows by **1.61**, with its
+unchanged 1.65 boss multiplier on round 9. Discard-only swaps remove a cash faucet
+that previously funded upgrades. With the prior 1.64 ramp, this pushed the champion
+outside the existing 35-point Trainer-sidegrade guardrail relative to the Rookie.
+The compensating Hard-only reduction leaves round 1 unchanged, lowers round 5 from
+130.21 to 120.94 Aura, and lowers the finale from 1554.20 to 1340.80 Aura (13.7%).
+It preserves every existing balance guardrail without granting extra rips, cash,
+slots, stronger Trainers, or better drop/grade odds. Easy and Medium's economy
+constants are unchanged. See the measured before/after results in
 [TESTING.md](TESTING.md#gauntlet-decisions-and-playtesting).
 
 ### 14.6 Rewards & the Binder
@@ -773,6 +790,10 @@ artwork layer, never the value.** A card's worth still comes entirely from its b
 foil × grade, exactly as in Classic (§6–§7), and the Binder still keeps the
 **highest-value** copy per card across **both** modes — so earning Extended Art never raises
 or lowers a slot's value.
+
+**Win sharing** sends only the rendered picture through the system share sheet,
+without a separate app-name text message or URL. Gauntlet and Classic use the
+same image-only sharing path; the artwork and branding inside the picture remain.
 
 **Every Gauntlet pull and grade feeds the Binder too**, exactly like Classic: each card a
 run rips or grades is folded into the all-time Binder and only ever raises a slot's

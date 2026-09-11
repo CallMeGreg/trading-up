@@ -3,18 +3,19 @@
 
 Requires Python 3 and the already-installed offline ffmpeg/ffprobe executables.
 No packages, samples, network, model weights, or plugins are used. Instrument
-and score source lives in tools/sound_lab/music.py; shared DSP is read-only.
+and score source lives in tools/sound_lab/music.py and neon_dead_drop.py;
+shared DSP is read-only.
 
     python3 tools/generate_music.py
     python3 tools/generate_music.py --check
     python3 tools/generate_music.py --check --render-pcm
 
-Generation writes four AAC-LC auditions and byte-identical copies of only the
+Generation writes five AAC-LC auditions and byte-identical copies of only the
 two recommended tracks into the app. No WAV files are retained. Scratch files
 live under the repository's ignored build/music-render directory and are
 removed on success or failure.
 
-The actual tempo is adjusted by < 0.04 BPM so each 16-bar period contains a
+The actual tempo is adjusted by < 0.04 BPM so each musical period contains a
 whole number of 1024-frame AAC access units. Encoding receives three periods;
 the middle period is losslessly remuxed with an MP4 edit list, retaining decoder
 pre-roll but excluding priming and padding from presentation. This avoids both
@@ -45,7 +46,13 @@ import sys
 from array import array
 from pathlib import Path
 
-from sound_lab.music import AAC_FRAME, BARS, LICENSE, SCORES, SR, render, validate_scores
+from sound_lab.music import (
+    AAC_FRAME, LICENSE, SCORES as LEGACY_SCORES, SR,
+    render as render_legacy, validate_scores as validate_legacy_scores,
+)
+from sound_lab.neon_dead_drop import (
+    SCORE as NEON_DEAD_DROP, render as render_neon, validate_score as validate_neon_score,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -53,13 +60,31 @@ AUDITIONS = ROOT / "docs/sound-lab/music"
 APP = ROOT / "TradingUp/Audio/Music"
 CATALOG = ROOT / "docs/sound-lab/music-catalog.js"
 SCRATCH = ROOT / "build/music-render"
-SOURCE_FILES = ("tools/generate_music.py", "tools/sound_lab/music.py", "tools/sound_lab/dsp.py")
+SOURCE_FILES = (
+    "tools/generate_music.py", "tools/sound_lab/music.py",
+    "tools/sound_lab/neon_dead_drop.py", "tools/sound_lab/dsp.py",
+)
 PREFIX = "globalThis.SOUND_LAB_MUSIC = "
+SCORES = (*LEGACY_SCORES, NEON_DEAD_DROP)
 
 
 def require(condition, message):
     if not condition:
         raise ValueError(message)
+
+
+def validate_scores():
+    validate_legacy_scores()
+    validate_neon_score()
+    require(len({score.id for score in SCORES}) == len(SCORES), "Duplicate music IDs")
+    require({score.mode for score in SCORES} == {"classic", "gauntlet"}, "Unexpected music modes")
+    for mode in ("classic", "gauntlet"):
+        require(sum(score.mode == mode and score.recommended for score in SCORES) == 1,
+                f"{mode}: expected exactly one selected track")
+
+
+def render(score):
+    return render_neon(score) if score.id == NEON_DEAD_DROP.id else render_legacy(score)
 
 
 def run(command, **kwargs):
@@ -257,7 +282,7 @@ def check(ffmpeg, ffprobe, render_pcm):
     catalog = json.loads(text[len(PREFIX):].strip().removesuffix(";"))
     require(catalog["schemaVersion"] == 1, "Unsupported catalog schema")
     require(catalog["render"]["sourceSha256"] == source_hashes(), "Music sources changed; regenerate the assets")
-    require(len(catalog["tracks"]) == len(SCORES), "Expected exactly four catalog tracks")
+    require(len(catalog["tracks"]) == len(SCORES), f"Expected exactly {len(SCORES)} catalog tracks")
     require({p.name for p in AUDITIONS.glob("*.m4a")} == {s.id + ".m4a" for s in SCORES},
             "Unexpected/missing audition M4A files")
     require({p.name for p in APP.iterdir() if p.is_file()} == {"classic.m4a", "gauntlet.m4a"},
@@ -266,7 +291,11 @@ def check(ffmpeg, ffprobe, render_pcm):
         path = AUDITIONS / f"{score.id}.m4a"
         require(entry == expected_track(score, sha256(path)), f"{score.id}: catalog metadata/hash mismatch")
         audit = catalog["render"]["tracks"][score.id]
-        require(audit["bars"] == BARS and audit["frames"] == score.frames, f"{score.id}: loop design changed")
+        require(audit["bars"] == score.bars and audit["frames"] == score.frames, f"{score.id}: loop design changed")
+        if score.id == NEON_DEAD_DROP.id:
+            from sound_lab.neon_dead_drop import ARRANGEMENT_SHA256, INSTRUMENT_COUNTS
+            require(audit["arrangementSha256"] == ARRANGEMENT_SHA256
+                    and audit["instruments"] == INSTRUMENT_COUNTS, f"{score.id}: arrangement changed")
         require(audit["pcm"]["frames"] == score.frames and audit["wrappedEvents"] >= 5, f"{score.id}: tails not carried")
         validate_metrics(audit["pcm"], f"{score.id} stored PCM")
         if render_pcm:
@@ -281,7 +310,7 @@ def check(ffmpeg, ffprobe, render_pcm):
         if score.recommended:
             require(sha256(APP / f"{score.mode}.m4a") == entry["sha256"], f"{score.mode}: app copy differs from recommendation")
         print_result(score, audit["pcm"], decoded)
-    print("Music check passed: four circular cues, two matching app defaults, exact decoded durations.", flush=True)
+    print(f"Music check passed: {len(SCORES)} circular cues, two matching app defaults, exact decoded durations.", flush=True)
 
 
 def generate(ffmpeg, ffprobe):
@@ -325,7 +354,7 @@ def generate(ffmpeg, ffprobe):
                 shutil.copyfile(destination, APP / f"{score.mode}.m4a")
             catalog["tracks"].append(expected_track(score, digest))
             catalog["render"]["tracks"][score.id] = {
-                "bars": BARS, "frames": score.frames, "nominalBPM": score.tempo,
+                "bars": score.bars, "frames": score.frames, "nominalBPM": score.tempo,
                 **events, "pcmSha256": pcm_digest, "pcm": pcm_values, "decoded": decoded,
             }
             print_result(score, pcm_values, decoded)
@@ -336,7 +365,7 @@ def generate(ffmpeg, ffprobe):
         shutil.rmtree(work)
         if SCRATCH.exists() and not any(SCRATCH.iterdir()):
             SCRATCH.rmdir()
-    print("Generated four auditions and only classic.m4a / gauntlet.m4a for app bundling.", flush=True)
+    print(f"Generated {len(SCORES)} auditions and only classic.m4a / gauntlet.m4a for app bundling.", flush=True)
 
 
 def main():
@@ -349,8 +378,8 @@ def main():
     ffmpeg, ffprobe = shutil.which("ffmpeg"), shutil.which("ffprobe")
     if not ffmpeg or not ffprobe:
         parser.error("ffmpeg and ffprobe must already be installed; this generator never installs or downloads tools")
-    validate_scores()
     try:
+        validate_scores()
         if args.check:
             check(ffmpeg, ffprobe, args.render_pcm)
         else:

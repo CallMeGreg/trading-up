@@ -47,6 +47,10 @@ class Score:
     seed: int
 
     @property
+    def bars(self):
+        return BARS
+
+    @property
     def frames(self):
         # A whole number of AAC access units prevents trailing partial-frame
         # padding. The tiny tempo adjustment is reported, never hidden by trim.
@@ -134,10 +138,10 @@ SCORES = (
     ),
     Score(
         "gauntlet-quiet-resolve", "gauntlet", "Quiet Resolve",
-        "Selected Gauntlet / battle mix: a soft-brass challenger motif, "
+        "Gauntlet alternate / battle mix: a soft-brass challenger motif, "
         "a pulsing B-minor bass line and quick plucked replies. Brief tom fills "
         "and dominant-chord turns add resolve; quieter phrases keep it repeat-friendly.",
-        120, True, "battle", (
+        120, False, "battle", (
             BM7, BM9, G6, FS7, EM7, B7, EM7, FS7,
             BM7, G6, D69, A13, EM7, G6, BM7, FS7,
         ), (
@@ -193,7 +197,7 @@ def validate_scores():
     assert len(SCORES) == 4 and len({s.id for s in SCORES}) == 4
     for mode in ("classic", "gauntlet"):
         assert sum(s.mode == mode for s in SCORES) == 2
-        assert sum(s.mode == mode and s.recommended for s in SCORES) == 1
+        assert sum(s.mode == mode and s.recommended for s in SCORES) == (1 if mode == "classic" else 0)
     for score in SCORES:
         assert len(score.chords) == len(score.melody) == BARS
         assert 30 <= score.duration <= 50
@@ -414,11 +418,11 @@ class LoopMix:
                 self.right[j] += x * right
                 self.send[j] += x * wet
 
-    def finish(self):
+    def finish(self, decay=1.25, wet=.38, saturation=.85, rms_db=-24):
         # No zero-state filter restart at the loop. More than one full musical
         # period of pre-roll makes the omitted older room state < -150 dBFS.
         two_periods = array("d", self.send) * 2
-        wet_left, wet_right = room(two_periods, two_periods, decay=1.25, wet=.38)
+        wet_left, wet_right = room(two_periods, two_periods, decay=decay, wet=wet)
         for i in range(self.frames):
             self.left[i] += wet_left[self.frames + i] - self.send[i]
             self.right[i] += wet_right[self.frames + i] - self.send[i]
@@ -426,10 +430,10 @@ class LoopMix:
         for channel in (self.left, self.right):
             dc = sum(channel) / self.frames
             for i, sample in enumerate(channel):
-                channel[i] = math.tanh((sample - dc) * .85) / .85
+                channel[i] = math.tanh((sample - dc) * saturation) / saturation
         peak = max(max(map(abs, self.left)), max(map(abs, self.right)))
         rms = math.sqrt(sum(x * x for channel in (self.left, self.right) for x in channel) / (2 * self.frames))
-        gain = min(10 ** (-24 / 20) / rms, 10 ** (-8.5 / 20) / peak)
+        gain = min(10 ** (rms_db / 20) / rms, 10 ** (-8.5 / 20) / peak)
         for channel in (self.left, self.right):
             # Saturation is memoryless and this second DC removal is periodic.
             dc = sum(channel) / self.frames

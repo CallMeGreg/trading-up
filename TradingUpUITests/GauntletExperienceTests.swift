@@ -1,4 +1,5 @@
 import XCTest
+import UIKit
 
 final class GauntletExperienceTests: XCTestCase {
     private var app: XCUIApplication!
@@ -17,20 +18,31 @@ final class GauntletExperienceTests: XCTestCase {
         let breaking = app.buttons["gauntletReplace-0"]
         XCTAssertTrue(breaking.waitForExistence(timeout: 5))
         XCTAssertTrue(breaking.label.contains("-14.82 Aura"))
-        XCTAssertTrue(breaking.label.contains("Breaks a completed evolution line"))
+        assertConciseSwapCopy()
+        XCTAssertTrue(breaking.label.contains("3 of 3 stages in Showcase"))
+        XCTAssertTrue(breaking.label.contains("series complete"))
+        XCTAssertTrue(breaking.label.contains("Current price $0.36"))
+        XCTAssertFalse(breaking.label.contains("Sell"))
+        XCTAssertEqual(element("gauntletSwapIncomingSeries").label, "Single card")
         XCTAssertFalse(app.buttons["gauntletConfirmSwap"].isEnabled)
+        scrollTo(breaking, in: app.scrollViews["gauntletSwapOptions"])
         shot("after-informed-swaps")
         button("Cancel").tap()
         XCTAssertTrue(app.buttons["gauntletSwap-S1-048"].exists, "cancel preserves the incoming card")
 
         app.buttons["gauntletSwap-S1-048"].tap()
         app.buttons["gauntletReplace-5"].tap()
+        XCTAssertTrue(app.buttons["gauntletConfirmSwap"].label.contains("No cash paid"))
+        XCTAssertFalse(app.buttons["gauntletConfirmSwap"].label.contains("sell"))
         app.buttons["gauntletConfirmSwap"].tap()
         XCTAssertTrue(app.buttons["gauntletSwap-S1-006"].waitForExistence(timeout: 5))
         app.buttons["gauntletSwap-S1-006"].tap()
         let completing = app.buttons["gauntletReplace-5"]
         XCTAssertTrue(completing.waitForExistence(timeout: 5))
-        XCTAssertTrue(completing.label.contains("Completes an evolution line"))
+        assertConciseSwapCopy()
+        XCTAssertTrue(completing.label.contains("Single card"))
+        XCTAssertTrue(element("gauntletSwapIncomingSeries").label
+            .contains("Stage 3 of 3, 2 of 3 stages in Showcase"))
         completing.tap()
         shot("after-completing-a-line")
         app.buttons["gauntletConfirmSwap"].tap()
@@ -53,7 +65,10 @@ final class GauntletExperienceTests: XCTestCase {
         let originalEarnings = earnings.label
         let buy = button("Buy Tidecaller packs for $42.00")
         XCTAssertTrue(buy.isHittable, "the first pack unlock must be visible without scrolling")
-        XCTAssertTrue(app.buttons["gauntletNextRound"].label.contains("Bank Round 2"))
+        XCTAssertEqual(app.buttons["gauntletNextRound"].label, "Bank Round 2")
+        XCTAssertFalse(app.staticTexts.matching(NSPredicate(
+            format: "label CONTAINS 'interest at the next clear'")).firstMatch.exists)
+        XCTAssertTrue(app.staticTexts["Round 2 ahead"].exists)
         shot("after-shop-overview")
         buy.tap()
         XCTAssertTrue(element("gauntletUnlockedPack-2").waitForExistence(timeout: 5))
@@ -64,6 +79,7 @@ final class GauntletExperienceTests: XCTestCase {
         XCTAssertTrue(details.waitForExistence(timeout: 5))
         details.tap()
         XCTAssertTrue(app.staticTexts["Round payout"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Interest"].exists, "earned interest still belongs in the payout history")
         XCTAssertFalse(app.staticTexts["Already included in your cash. Purchases don't change this payout."].exists)
         shot("after-purchase-ledger")
         let savedCash = cash.label
@@ -127,6 +143,62 @@ final class GauntletExperienceTests: XCTestCase {
         XCTAssertTrue(element("gauntletUnlockedPack-2").waitForExistence(timeout: 5))
     }
 
+    func testSwapPricesReflectGradesAndFoilsInsteadOfSaleProceeds() {
+        launch("graded-swap")
+        revealPack()
+        app.buttons["gauntletSwap-S1-048"].tap()
+        let discounted = app.buttons["gauntletReplace-0"]
+        XCTAssertTrue(discounted.waitForExistence(timeout: 5))
+        XCTAssertTrue(discounted.label.contains("Current price $0.09"))
+        XCTAssertTrue(discounted.label.contains("PSA 3"))
+        let boosted = app.buttons["gauntletReplace-2"]
+        XCTAssertTrue(boosted.label.contains("Current price $6.80"))
+        XCTAssertTrue(boosted.label.contains("PSA 9"))
+        let foil = app.buttons["gauntletReplace-5"]
+        XCTAssertTrue(foil.label.contains("Current price $0.87"))
+        XCTAssertTrue(foil.label.contains("Foil"))
+        scrollTo(boosted, in: app.scrollViews["gauntletSwapOptions"])
+        shot("after-graded-swap-prices")
+    }
+
+    func testSwapSeriesAndConfirmationRemainUsableAtLargeText() {
+        launch("swap", largeText: true)
+        revealPack()
+        let swap = app.buttons["gauntletSwap-S1-006"]
+        scrollTo(swap, in: app.scrollViews["gauntletSummaryScroll"])
+        swap.tap()
+        let choice = app.buttons["gauntletReplace-5"]
+        XCTAssertTrue(choice.waitForExistence(timeout: 5))
+        assertConciseSwapCopy()
+        scrollTo(choice, in: app.scrollViews["gauntletSwapOptions"])
+        choice.tap()
+        let confirm = app.buttons["gauntletConfirmSwap"]
+        XCTAssertTrue(confirm.isEnabled)
+        XCTAssertTrue(confirm.isHittable)
+        XCTAssertTrue(confirm.label.contains("No cash paid"))
+        shot("after-swap-large-text")
+        confirm.tap()
+        XCTAssertTrue(app.buttons["gauntletSell-S1-048"].waitForExistence(timeout: 5))
+    }
+
+    func testCatalystIsTheFirstDecisionInThePackSummary() {
+        launch("catalyst")
+        revealPack()
+        let attune = app.buttons["gauntletAttuneCatalyst"]
+        let keep = app.buttons["gauntletKeep-S1-002"]
+        XCTAssertTrue(attune.waitForExistence(timeout: 5))
+        XCTAssertTrue(attune.isHittable, "the Catalyst decision should be visible without scrolling")
+        XCTAssertLessThan(attune.frame.minY, keep.frame.minY)
+        XCTAssertFalse(app.buttons["gauntletFinishPack"].isEnabled)
+        shot("after-catalyst-first")
+        attune.tap()
+        XCTAssertFalse(attune.exists)
+        XCTAssertFalse(app.buttons["gauntletSellCatalyst"].exists)
+        XCTAssertTrue(keep.exists, "attuning does not decide any of the remaining cards")
+        XCTAssertFalse(app.buttons["gauntletFinishPack"].isEnabled)
+    }
+
+    @MainActor
     func testPlaysAFreshEasyRunThroughTheBinderReward() {
         startFreshEasyRun()
         shot("after-fresh-run")
@@ -139,10 +211,27 @@ final class GauntletExperienceTests: XCTestCase {
                 reward.tap()
                 XCTAssertTrue(app.staticTexts["Gauntlet Complete"].waitForExistence(timeout: 5))
                 shot("after-playtested-win")
+                let share = app.buttons["gauntletShareRun"]
+                XCTAssertTrue(share.isEnabled)
+                share.tap()
+                let copy = app.descendants(matching: .any).matching(NSPredicate(format: "label == 'Copy'")).firstMatch
+                XCTAssertTrue(copy.waitForExistence(timeout: 10), "the image opens the system share sheet")
+                shot("after-image-only-sharing")
+                copy.tap()
+                XCTAssertTrue(share.isHittable)
+                XCTAssertTrue(UIPasteboard.general.hasImages, "the real share activity receives the image")
+                XCTAssertFalse(UIPasteboard.general.hasStrings, "the share must not add a Trading Up text message")
                 return
             }
             XCTAssertFalse(app.staticTexts["Run Over"].exists, "the scripted Easy run should remain winnable")
             if app.buttons["gauntletNextRound"].exists {
+                let nextRound = app.buttons["gauntletNextRound"]
+                if nextRound.label.contains("Championship") {
+                    XCTAssertEqual(nextRound.label, "Enter the Championship")
+                    shot("after-championship")
+                } else {
+                    XCTAssertNotNil(nextRound.label.range(of: "^(Bank|Start) Round [0-9]+$", options: .regularExpression))
+                }
                 let buys = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Buy ' AND label CONTAINS ' packs for ' AND enabled == true"))
                 for _ in 0..<4 {
                     let buy = buys.firstMatch
@@ -300,7 +389,7 @@ final class GauntletExperienceTests: XCTestCase {
                 }
                 continue
             }
-            let attune = button("Attune")
+            let attune = app.buttons["gauntletAttuneCatalyst"]
             if attune.exists {
                 scrollTo(attune, in: summary)
                 attune.tap()
@@ -312,6 +401,19 @@ final class GauntletExperienceTests: XCTestCase {
             }
         }
         XCTAssertTrue(app.buttons["gauntletFinishPack"].isEnabled)
+    }
+
+    private func assertConciseSwapCopy() {
+        for text in [
+            "Breaks a completed evolution line",
+            "Completes an evolution line",
+            "Compare total Aura and series progress",
+            "No series"
+        ] {
+            XCTAssertFalse(app.descendants(matching: .any).matching(
+                NSPredicate(format: "label CONTAINS[c] %@", text)).firstMatch.exists,
+                "The swap comparison should not repeat: \(text)")
+        }
     }
 
     private func scrollTo(_ target: XCUIElement, in scroll: XCUIElement) {

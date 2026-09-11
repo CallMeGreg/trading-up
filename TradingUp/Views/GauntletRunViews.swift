@@ -269,23 +269,6 @@ private struct LastChancePanel: View {
     }
 }
 
-/// Subtitle for the Championship (final round) shop CTA: current Aura and the
-/// goal (gold) picked out against the button's gold skin. The Hard finale also
-/// grants a bonus rip, so it appends "+1 rip" (green); Easy/Medium finales don't.
-private func championshipSubtitle(_ run: GauntletRun) -> AttributedString {
-    let base = AttributedString("Aura \(fmtAura(run.showcaseAura)) · Goal ")
-    var goal = AttributedString(fmtGoal(run.target))
-    goal.foregroundColor = Color(hex: "fff0c2")
-    var result = base + goal
-    if run.isBossRound {
-        let sep = AttributedString(" · ")
-        var rip = AttributedString("+1 rip")
-        rip.foregroundColor = Color(hex: "bff7d4")
-        result += sep + rip
-    }
-    return result
-}
-
 // MARK: Pack rail — one tile per element set (req 5)
 
 /// Replaces the single "Rip a Pack" button. Each of the five element sets is a
@@ -510,11 +493,11 @@ private struct PullPanel: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             SectionTitle(text: "Your Pull — keep or sell")
-            ForEach(state.pendingCards) { inst in
-                PullRow(state: state, run: run, inst: inst, onSwap: onSwap)
-            }
             if let cat = state.pendingCatalyst {
                 CatalystOfferRow(state: state, catalyst: cat)
+            }
+            ForEach(state.pendingCards) { inst in
+                PullRow(state: state, run: run, inst: inst, onSwap: onSwap)
             }
         }
         .panel()
@@ -609,12 +592,14 @@ private struct ShowcaseSwapPicker: View {
                             Text("Make room for \(incoming.card.name)")
                                 .font(.headline)
                                 .foregroundStyle(.white)
-                            Text("Compare the whole Showcase, including evolution bonuses. The replaced card is sold.")
-                                .font(.caption)
-                                .foregroundStyle(Palette.subtle)
-                                .fixedSize(horizontal: false, vertical: true)
+                            Text("Current price \(incoming.currentValue.money)")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(Palette.money)
+                            SwapSeriesProgress(card: incoming.card, showcase: run.showcase, incoming: true)
+                                .accessibilityIdentifier("gauntletSwapIncomingSeries")
                         }
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(16)
 
                     ScrollView {
@@ -638,8 +623,8 @@ private struct ShowcaseSwapPicker: View {
                     .scrollBounceBehavior(.basedOnSize)
                     .accessibilityIdentifier("gauntletSwapOptions")
 
-                    BigButton(title: selected.map { "Swap & sell \($0.outgoing.card.name)" } ?? "Choose a card to replace",
-                              subtitle: selected.map { "Receive \($0.cashGain.money) · \(fmtChange($0.auraChange)) Aura" },
+                    BigButton(title: selected.map { "Replace \($0.outgoing.card.name)" } ?? "Choose a card to replace",
+                              subtitle: selected.map { "\(fmtChange($0.auraChange)) Aura · No cash paid" },
                               systemImage: "arrow.left.arrow.right", tint: GauntletTheme.tint,
                               enabled: selected != nil) {
                         if let selected {
@@ -676,9 +661,18 @@ private struct ShowcaseSwapPicker: View {
                     Text(preview.outgoing.card.name)
                         .font(.subheadline.weight(.bold))
                         .foregroundStyle(.white)
-                    Text("Sell for \(preview.cashGain.money)")
+                    Text("Current price \(preview.outgoing.currentValue.money)")
                         .font(.caption)
                         .foregroundStyle(Palette.subtle)
+                    if let grade = preview.outgoing.grade {
+                        Text("PSA \(grade)\(preview.outgoing.foil ? " · Foil" : "")")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(Palette.subtle)
+                    } else if preview.outgoing.foil {
+                        Text("Foil")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(Palette.subtle)
+                    }
                 }
                 Spacer(minLength: 0)
                 VStack(alignment: .trailing, spacing: 3) {
@@ -693,19 +687,10 @@ private struct ShowcaseSwapPicker: View {
                     }
                 }
             }
+            SwapSeriesProgress(card: preview.outgoing.card, showcase: run.showcase)
             Text("Showcase after swap: \(fmtAura(preview.auraAfter)) / \(fmtGoal(run.target)) Aura")
                 .font(.caption)
                 .foregroundStyle(Palette.subtle)
-            if !preview.brokenLineIds.isEmpty {
-                Label("Breaks a completed evolution line", systemImage: "exclamationmark.triangle.fill")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(Color(hex: "ffd54a"))
-            }
-            if !preview.completedLineIds.isEmpty {
-                Label("Completes an evolution line", systemImage: "link")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(Palette.money)
-            }
         }
         .multilineTextAlignment(.leading)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -713,6 +698,43 @@ private struct ShowcaseSwapPicker: View {
         .overlay(RoundedRectangle(cornerRadius: 18)
             .strokeBorder(selectedId == preview.id ? Color(hex: "b06cf7") : .clear, lineWidth: 2))
         .accessibilityElement(children: .combine)
+    }
+}
+
+private struct SwapSeriesProgress: View {
+    let card: Card
+    let showcase: [CardInstance]
+    var incoming = false
+
+    private var series: CardSeries { .gauntlet(card, showcase: showcase, pull: incoming) }
+    private var tint: Color { Element.theme(forSet: card.set).badgeTint }
+
+    var body: some View {
+        HStack(spacing: 8) {
+            SeriesPips(series: series, setTint: tint, s: 1, glow: incoming)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                if series.line.count > 1 {
+                    Text("Stage \(card.stage) · \(series.ownedStages.count)/\(series.line.count) in Showcase")
+                        .foregroundStyle(Palette.text)
+                    if series.ownedStages.count == series.line.count {
+                        Text("Series complete").foregroundStyle(tint)
+                    } else if incoming {
+                        Text("Gold pip = incoming stage").foregroundStyle(Palette.subtle)
+                    }
+                } else {
+                    Text("Single card").foregroundStyle(Palette.subtle)
+                }
+            }
+            .font(.caption2.weight(.semibold))
+            .fixedSize(horizontal: false, vertical: true)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(series.line.count > 1
+            ? "Stage \(card.stage) of \(series.line.count), \(series.ownedStages.count) of \(series.line.count) stages in Showcase"
+                + (series.ownedStages.count == series.line.count ? ", series complete" : "")
+                + (incoming ? ". Gold pip marks the incoming stage" : "")
+            : "Single card")
     }
 }
 
@@ -748,11 +770,13 @@ private struct CatalystOfferRow: View {
                             Haptics.play(.success); state.attunePendingCatalyst()
                             if offered && state.pendingCatalyst == nil { Sound.play(.catalystAttune) }
                         }
+                        .accessibilityIdentifier("gauntletAttuneCatalyst")
                     } else if state.canSwapPending {
                         MiniButton(title: "Swap", systemImage: "arrow.left.arrow.right",
                                    tint: Color(hex: "b06cf7")) {
                             Haptics.play(.light); Sound.play(.panelOpen); swapping = true
                         }
+                        .accessibilityIdentifier("gauntletSwapCatalyst")
                     }
                     MiniButton(title: "Sell \(catalyst.saleValue.moneyShort)",
                                systemImage: "dollarsign.circle.fill", tint: Color(hex: "6d5cf7")) {
@@ -760,6 +784,7 @@ private struct CatalystOfferRow: View {
                         Haptics.play(.light); state.sellPendingCatalyst()
                         if offered && state.pendingCatalyst == nil { Sound.play(.catalystSell) }
                     }
+                    .accessibilityIdentifier("gauntletSellCatalyst")
                 }
                 if state.canSwapPending {
                     Text("Catalyst slots full — swap one out or sell")
@@ -1235,6 +1260,8 @@ struct ShopScreen: View {
                 run.isPackUnlocked($0) || run.canUnlockPack($0) || $0 == run.nextLockedPack
             }
             let otherPacks = paidPacks.filter { !featuredPacks.contains($0) }
+            let nextRoundTitle = run.isFinalRound ? "Enter the Championship"
+                : (run.auraShortfall == 0 ? "Bank Round \(run.round)" : "Start Round \(run.round)")
             VStack(spacing: 12) {
                 RoundClearedHero(run: run)
                     .id(run.round)
@@ -1290,23 +1317,12 @@ struct ShopScreen: View {
                 .scrollBounceBehavior(.basedOnSize)
                 .accessibilityIdentifier("gauntletShopOffers")
 
-                if run.isFinalRound {
-                    BigButton(title: "Enter the Championship",
-                              attributedSubtitle: championshipSubtitle(run),
-                              systemImage: "play.fill", tint: GauntletTheme.championship) {
-                        Haptics.play(.medium); state.continueFromShop()
-                    }
-                    .accessibilityIdentifier("gauntletNextRound")
-                } else {
-                    BigButton(title: run.auraShortfall == 0 ? "Bank Round \(run.round)" : "Start Round \(run.round)",
-                              subtitle: run.auraShortfall == 0
-                                ? "Target already met · Cash out \(run.ripsLeft) unused rips"
-                                : "\(run.ripsLeft) rips · Need \(fmtGoal(run.auraShortfall)) more Aura",
-                              systemImage: "play.fill", tint: GauntletTheme.tint) {
-                        Haptics.play(.medium); state.continueFromShop()
-                    }
-                    .accessibilityIdentifier("gauntletNextRound")
+                BigButton(title: nextRoundTitle, systemImage: "play.fill",
+                          tint: run.isFinalRound ? GauntletTheme.championship : GauntletTheme.tint) {
+                    Haptics.play(.medium); state.continueFromShop()
                 }
+                .accessibilityIdentifier("gauntletNextRound")
+                .accessibilityLabel(nextRoundTitle)
             }
             .task(id: run.round) { await Sound.after(0.65, play: .roundPayout) }
         }
@@ -1361,10 +1377,6 @@ struct ShopScreen: View {
                  + (run.auraShortfall == 0 ? " · Target already met" : " · \(fmtGoal(run.auraShortfall)) to go"))
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(run.auraShortfall == 0 ? Palette.money : Palette.text)
-            Text("At this balance: +\(GauntletEconomy.interest(on: run.cash).money) interest at the next clear.")
-                .font(.caption2)
-                .foregroundStyle(Palette.subtle)
-                .fixedSize(horizontal: false, vertical: true)
         }
         .panel(12)
     }

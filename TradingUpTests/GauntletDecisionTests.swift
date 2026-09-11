@@ -20,7 +20,8 @@ final class GauntletDecisionTests: XCTestCase {
                 XCTAssertEqual(removed.id, preview.outgoing.id)
                 XCTAssertEqual(preview.auraAfter, actual.showcaseAura, accuracy: 1e-9)
                 XCTAssertEqual(preview.auraChange, actual.showcaseAura - run.showcaseAura, accuracy: 1e-9)
-                XCTAssertEqual(preview.cashGain, actual.cash - run.cash, accuracy: 1e-9)
+                XCTAssertEqual(actual.cash, run.cash, "swaps discard rather than sell, regardless of modifiers")
+                XCTAssertEqual(actual.maxCashReached, run.maxCashReached)
                 XCTAssertEqual(preview.completedLineIds,
                                actual.completedShowcaseLineIds.subtracting(run.completedShowcaseLineIds))
                 XCTAssertEqual(preview.brokenLineIds,
@@ -257,6 +258,38 @@ final class GauntletDecisionStateTests: XCTestCase {
         XCTAssertEqual(state.sell(card), 0)
         XCTAssertEqual(state.run?.cash, cash)
         XCTAssertEqual(state.run?.showcase, showcase)
+    }
+
+    func testSwappingDiscardsGradedKeepersAndPersistsTheUnchangedBankroll() throws {
+        let snapshot = DebugGauntletScenario.gradedSwap.snapshot
+        let state = seed(snapshot)
+        let incoming = try XCTUnwrap(state.pendingCards.first)
+        state.swap(incoming, forShowcaseIndex: 2)
+        XCTAssertEqual(state.run?.cash, snapshot.run.cash)
+        XCTAssertEqual(state.run?.maxCashReached, snapshot.run.maxCashReached)
+        XCTAssertEqual(state.run?.showcase[2], incoming)
+        XCTAssertFalse(state.run?.showcase.contains(snapshot.run.showcase[2]) ?? true)
+        XCTAssertFalse(state.pendingCards.contains(incoming))
+        state.persistForExit()
+
+        let restored = loadState()
+        XCTAssertEqual(restored.run?.cash, snapshot.run.cash)
+        XCTAssertEqual(restored.run?.showcase, state.run?.showcase)
+        XCTAssertEqual(restored.pendingCards, state.pendingCards)
+        XCTAssertEqual(restored.run?.ripsLeft, snapshot.run.ripsLeft)
+    }
+
+    func testCatalystCanBeAttunedBeforeDecidingAnySprytes() throws {
+        let snapshot = DebugGauntletScenario.catalyst.snapshot
+        let state = seed(snapshot)
+        let before = try XCTUnwrap(state.run)
+        state.attunePendingCatalyst()
+        XCTAssertNil(state.pendingCatalyst)
+        XCTAssertEqual(state.pendingCards, snapshot.pendingCards)
+        XCTAssertEqual(state.run?.cash, before.cash)
+        XCTAssertEqual(state.run?.showcaseAura ?? 0, before.showcaseAura * 1.1, accuracy: 1e-9)
+        state.finishReveal()
+        XCTAssertTrue(state.revealActive, "Spryte choices still need to be resolved")
     }
 
     func testRipsAndRoundResolutionCannotRunBehindTheRevealOrInsideTheShop() throws {

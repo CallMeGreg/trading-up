@@ -130,8 +130,10 @@ assertions.
 
 Gauntlet's simulator now distinguishes the historical **full-budget** reference from
 the **automatic-clear** play cadence. Both are needed: spending all remaining rips
-after reaching a target is not possible in the UI. The current Hard target ramp is
-1.64; the opening, rip budget, boss multiplier, and other tiers are unchanged.
+after reaching a target is not possible in the UI. Showcase swaps discard the
+outgoing card without paying cash. The Hard target ramp is 1.61, compensating for
+that lost income while preserving the existing Trainer-sidegrade guardrails; the
+opening, rip budget, boss multiplier, and other tiers are unchanged.
 See [Gauntlet playtesting](TESTING.md#gauntlet-decisions-and-playtesting) for the
 comparison, deterministic UI fixtures, and targeted commands.
 
@@ -318,24 +320,24 @@ Zero mutes without forgetting the previous nonzero level; raising a slider
 unmutes. Haptics remain a separate toggle.
 
 The selected, bundled choices are **Paper Lanterns** (Classic, about 104 BPM / 36.93 seconds)
-and **Quiet Resolve** (Gauntlet, 120 BPM / 32 seconds). **Sunlit Sleeves**
-and **Northbound** are audition-only alternatives. All four are original,
-light turn-based challenge themes: rounded reed/soft-brass hooks, short plucked
-arpeggios, mobile bass lines and occasional muted tom fills. D major and relative
-B minor share the SFX palette; brief dominant chords supply tension without
-quoting an existing game's melody. The explicit scores and
-locally synthesized reed, brass, felt-key, nylon, mallet, bass and percussion instruments
-live in `tools/sound_lab/music.py`; no musical samples or generative-audio
+and **Neon Dead Drop** (Gauntlet, about 148 BPM / 51.88 seconds). Neon's selected
+arrangement removes the offbeat brass stabs while retaining the FM-pluck melody,
+octave bass and four-on-the-floor drums. Its 32-bar arcade-drive loop includes
+a bass-led pocket and a fuller final return. **Sunlit Sleeves**, **Quiet Resolve**
+and **Northbound** remain audition-only alternatives.
+
+The four earlier scores retain their 16-bar arrangements: rounded reed/soft-brass
+hooks, short plucked arpeggios, mobile bass and occasional muted tom fills, with
+quieter answering phrases and a second-half variation. Their D-major/B-minor
+palette shares the SFX colors; lead notes stay below G5. The explicit original
+scores and locally synthesized instruments live in `tools/sound_lab/music.py`
+and `tools/sound_lab/neon_dead_drop.py`; no musical samples or generative-audio
 services are involved.
 
-Each score is a repeating 16-bar arrangement with quieter answering phrases
-and a second-half variation. Those passages reduce the lead, bass/arp density
-and percussion; lead notes stay below G5, and the hat pattern never becomes a
-bright sixteenth-note wash. Energy comes from the writing rather than extra
-loudness: the authored RMS target is about -24 dBFS and the in-app default remains
-28%. Sustained pads carry only notes shared by both chords, avoiding clashes
-across the brief dominant turns. Notes, echoes and room tails wrap across the boundary,
-rather than fading into silence. The exact tempo is adjusted by less than
+Energy comes from the writing rather than extra loudness: the authored mixes
+remain quiet beds and the in-app default remains 28%. Notes, echoes and room
+tails wrap across the boundary, rather than fading into silence.
+The exact tempo is adjusted by less than
 0.04 BPM to fit whole AAC access units. Offline FFmpeg encoding retains decoder
 pre-roll in an MP4 edit list and has no trailing padding. Keep that timing
 metadata intact: native `AVAudioPlayer` looping and the browser's looping
@@ -405,7 +407,7 @@ selection. Filter by mode, action family, review
 state or text; compare A/B/previous, rotate alternate takes, and audition in
 stereo, mono or a band-limited phone approximation. The phone filter is not a
 physical-device substitute. Individual WAV downloads are under each action's
-trigger details. Four original music alternatives (two per mode) can loop under
+trigger details. Five original music options (two Classic, three Gauntlet) can loop under
 the effects; the recommended track for each mode is bundled in the app, while
 the alternates stay in the lab. Music preview volume/mute is independent, and
 Stop ends both music and effects.

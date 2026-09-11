@@ -7,6 +7,29 @@ import SwiftUI
 @MainActor
 final class ShareImageRenderTests: XCTestCase {
 
+    func testWinSharingContainsOnlyTheRenderedImageWithoutTextOrURLs() throws {
+        let image = UIGraphicsImageRenderer(size: CGSize(width: 2, height: 2)).image { context in
+            UIColor.purple.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 2, height: 2))
+        }
+        let items = ImageShareSheet(image: image).activityItems
+        XCTAssertEqual(items.count, 1, "sharing a win must not add an app-name caption")
+        let item = try XCTUnwrap(items.first as? ImageShareItem)
+        let controller = UIActivityViewController(activityItems: items, applicationActivities: nil)
+        XCTAssertTrue(item.activityViewControllerPlaceholderItem(controller) as? UIImage === image)
+        let destinations: [UIActivity.ActivityType?] = [nil, .message, .mail, .copyToPasteboard, .airDrop, .saveToCameraRoll]
+        for destination in destinations {
+            let sharedImage = try XCTUnwrap(item.activityViewController(controller, itemForActivityType: destination) as? UIImage)
+            XCTAssertTrue(sharedImage === image, "every destination receives only the original rendered image")
+        }
+        let metadata = try XCTUnwrap(item.activityViewControllerLinkMetadata(controller))
+        XCTAssertTrue(metadata.imageProvider?.canLoadObject(ofClass: UIImage.self) ?? false)
+        XCTAssertTrue(metadata.iconProvider?.canLoadObject(ofClass: UIImage.self) ?? false)
+        XCTAssertNil(metadata.title)
+        XCTAssertNil(metadata.url)
+        XCTAssertNil(metadata.originalURL)
+    }
+
     private func completedCore() -> GameCore {
         var core = GameCore()
         for c in CardDatabase.all { core.instances.append(CardInstance(cardId: c.id)) }

@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 // MARK: - Shared bits
 
@@ -504,7 +505,7 @@ struct ResultsScreen: View {
     let onExit: () -> Void
 
     /// Rendered snapshot of the finished run + prize, shared as an image (req 7).
-    @State private var shareImage: Image?
+    @State private var shareImage: UIImage?
 
     var body: some View {
         VStack(spacing: 20) {
@@ -559,20 +560,10 @@ struct ResultsScreen: View {
         }
     }
 
-    @ViewBuilder private var shareButton: some View {
-        let label = BigButtonLabel(title: "Share your run",
-                                   subtitle: "Trainer, showcase, catalysts & prize",
-                                   systemImage: "square.and.arrow.up",
-                                   tint: [Color(hex: "3b82f6"), Color(hex: "6d5cf7")])
-        if let shareImage {
-            ShareLink(item: shareImage,
-                      preview: SharePreview("Trading Up — Gauntlet", image: shareImage)) {
-                label
-            }
-            .buttonStyle(.plain)
-        } else {
-            label
-        }
+    private var shareButton: some View {
+        ImageShareButton(image: shareImage, title: "Share your run",
+                         subtitle: "Trainer, showcase, catalysts & prize")
+            .accessibilityIdentifier("gauntletShareRun")
     }
 
     /// Rasterize `GauntletShareCard` from the just-finished run so the share sheet
@@ -590,7 +581,7 @@ struct ResultsScreen: View {
         let renderer = ImageRenderer(content: card)
         renderer.scale = 3
         guard let ui = renderer.uiImage else { return }
-        shareImage = Image(uiImage: ui)
+        shareImage = ui
     }
 }
 

@@ -317,7 +317,7 @@ enum GauntletEconomy {
         switch tier {
         case .easy: return 1.60
         case .medium: return 1.88
-        case .hard: return 1.64
+        case .hard: return 1.61
         }
     }
 

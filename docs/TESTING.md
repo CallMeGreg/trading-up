@@ -37,7 +37,7 @@ Or just press `⌘U` in Xcode.
 | `WinAndUnlockTests.swift` | Winning shows once, doesn't erase the collection; set unlocks |
 | `FullUnlockGateTests.swift` | The free-tier/full-version IAP gate: Set 1 free, paid sets refuse a buy until unlocked, and the unlock never skips progression |
 | `RevealFlowTests.swift` | The win/Game Over overlay waits for a pack reveal to finish; the DEBUG fast‑travel seed |
-| `AudioTests.swift` | Independent persisted Music/SFX channels and legacy migration; continuous-drag mute/restore; one-shot Gauntlet audio priorities; all 60 Studio effects and both music loops decode from the app bundle |
+| `AudioTests.swift` | Independent persisted Music/SFX channels and legacy migration; continuous-drag mute/restore; one-shot Gauntlet audio priorities; all 60 Studio effects and both selected music loops decode from the app bundle, with exact authored loop durations |
 
 ### Audio
 
@@ -79,8 +79,10 @@ python3 tools/generate_music.py --check
 ```
 
 The music check verifies source/output hashes, exact decoded frame counts,
-AAC priming/padding, true peaks and the loop seam. Add `--render-pcm` to
-recompose all four scores and compare their pre-encode PCM hashes as well.
+AAC priming/padding, true peaks and the loop seam. Neon's score also pins the
+1,566 retained note/drum/echo events and instrument counts from its audition,
+after removing only the 448 brass events. Add `--render-pcm` to
+recompose all five scores and compare their pre-encode PCM hashes as well.
 
 In the [sound lab](sound-lab/index.html), audition repeated Studio actions under
 each recommended music loop, at low volume and through actual phone speakers
@@ -264,10 +266,15 @@ part of the CI test plan.
 
 `GauntletDecisionTests.swift` covers exact whole-Showcase swap previews, broken and
 completed lines, duplicate stages, foil/grade/Trainer/Catalyst modifiers, grading
-affordability, and stable round earnings after a purchase. Its
-`GauntletDecisionStateTests` class covers the last-pack recovery window, successful
+affordability, discard-only swaps with no cash or cash-milestone gain, and stable
+round earnings after a purchase. `EvolutionPipTests` distinguishes held stages
+from the incoming gold pip, including duplicate stages and single cards.
+`ShareImageRenderTests` also checks that win sharing contains exactly one rendered
+image and no companion text or URL.
+`GauntletDecisionStateTests` covers the last-pack recovery window, successful
 and unsuccessful grades, deferred result dismissal, explicit loss, mid-grade
-relaunch, pending Catalysts, duplicate decisions, and phase gates.
+relaunch, Catalyst-first decisions, persisted discard swaps, duplicate decisions,
+and phase gates.
 
 Run those alongside the existing Gauntlet regressions:
 
@@ -280,6 +287,8 @@ xcodebuild test -project TradingUp.xcodeproj -scheme TradingUp \
   -only-testing:TradingUpTests/GauntletProgressStoreTests \
   -only-testing:TradingUpTests/GauntletDecisionTests \
   -only-testing:TradingUpTests/GauntletDecisionStateTests \
+  -only-testing:TradingUpTests/EvolutionPipTests \
+  -only-testing:TradingUpTests/ShareImageRenderTests \
   CODE_SIGNING_ALLOWED=NO
 ```
 
@@ -295,6 +304,8 @@ Gauntlet run and meta progress (not its Binder).
 | --- | --- |
 | `TU_TEST_GAUNTLET=fresh` | Fresh Trainer selection, with the primer already seen |
 | `TU_TEST_GAUNTLET=swap` | Full Medium Showcase with a complete and a partial evolution line |
+| `TU_TEST_GAUNTLET=graded-swap` | The same Showcase with PSA 3, PSA 9, and foil keepers for current-price comparisons |
+| `TU_TEST_GAUNTLET=catalyst` | A pending Bloom offer plus five Sprytes, for Catalyst-first summary decisions |
 | `TU_TEST_GAUNTLET=shop` | Round-one payout with enough cash to choose a pack unlock or slots |
 | `TU_TEST_GAUNTLET=last-pack` | Last pending card, zero rips, and an ungraded keeper below target |
 | `TU_TEST_SEED=0` | The last-pack fixture's next grade is PSA 9, rescuing the round |
@@ -307,6 +318,11 @@ unaffordable actions, save/resume and process relaunch, both grading outcomes,
 the shared grading-result popup, declining the last chance, and large text. It
 also follows the remaining-rip counter from the round through the sealed pack,
 individual reveals, and summary, and verifies that removed controls/copy stay absent.
+It checks action-only next-round labels, preserved earned-interest history,
+swap-series progress and buff/debuff-aware current prices, Catalyst-first placement,
+and opening/dismissing the image-only system share sheet after a real win.
+The share activity's Copy action must produce an image with no companion string;
+`EndingFlowTests` checks that same contract for a Classic win.
 Each relevant screen is attached as a real Simulator screenshot. The review pass
 uses iPhone 17, iPhone SE (3rd generation),
 and iPad mini (A17 Pro); the full-run case only needs to run once.
@@ -336,22 +352,41 @@ a seeded run merely because a Dictionary iterates in a different order.
 The harness is compiled with `-O` locally and in CI to keep the additional 4,800
 automatic-clear runs practical; its explicit `check` calls remain active.
 
-The September 2026 review found that the full-budget reference overstated success
+The earlier September 2026 review found that the full-budget reference overstated success
 in the shipping flow. Using the neutral Trainer and 400 seeds per cell starting at
 `0x6A17`, the automatic-clear **optimized-policy** results were:
 
-| Tier | Original flow, original economy | Last-chance fix only | Final, with Hard ramp 1.64 |
+| Tier | Original flow, original economy | Last-chance fix only | Before discard swaps, Hard ramp 1.64 |
 | --- | --- | --- | --- |
 | Easy | 99.2% | 99.8% | 99.8% |
 | Medium | 69.2% | 75.2% | 75.2% |
 | Hard | 26.0% | 36.0% | 41.2% |
 
-The final automatic-clear careless-policy rates were 97.2% / 3.8% / 3.2%, so higher
-tiers still punish that policy's cash hoarding and weak curation. The unchanged
-historical reference checks also pass: at 200 trials its optimized rates are
+That review's automatic-clear careless-policy rates were 97.2% / 3.8% / 3.2%, so higher
+tiers still punished that policy's cash hoarding and weak curation. Its
+historical reference checks also passed: at 200 trials its optimized rates were
 99% / 84% / 69%, versus careless 98% / 40% / 20%. These are **heuristic-policy
 estimates**, not human win probabilities, proof of optimal play, or interchangeable
-measurements. In particular, the new automatic-clear Hard estimate remains below
+measurements. In particular, that automatic-clear Hard estimate remained below
 the historical reference's 45% floor; that older floor was calibrated against a
 different cadence. Future balance work should improve and calibrate the live
 policies across Trainers rather than silently relaxing the existing reference checks.
+
+**Discard-only swap follow-up.** With the same seeds, policies, and trial counts,
+removing swap sale proceeds changes the optimized automatic-clear estimates:
+
+| Tier | Sold swaps, Hard ramp 1.64 | Discard swaps, Hard ramp 1.64 | Discard swaps, Hard ramp 1.61 |
+| --- | --- | --- | --- |
+| Easy | 99.8% | 99.8% | 99.8% |
+| Medium | 75.2% | 65.0% | 65.0% |
+| Hard | 41.2% | 34.5% | 44.5% |
+
+The initial discard-only run failed the existing Trainer-sidegrade ceiling: at
+120 seeds starting at `0x2C7`, Ash's Hard reference win rate exceeded the Rookie's
+by about 41 points. The Hard ramp adjustment to **1.61** brings that gap back to
+35 points without changing any harness assertions, Trainer skills, drop/grade
+odds, rip budgets, or the other tiers' constants. The final full-budget reference
+rates (200 seeds) are 98% / 74% / 67% optimized versus 98% / 21% / 16% careless;
+the automatic-clear careless rates are 96.0% / 2.0% / 2.0%. All existing guardrails
+remain in force. These are heuristic-policy estimates, not human win probabilities;
+Medium's lower cash income is a real consequence of discarding rather than selling.
