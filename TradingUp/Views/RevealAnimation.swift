@@ -314,48 +314,63 @@ struct RevealingCardView: View {
 
 // MARK: - Sealed pack (idle + tear-open)
 
-/// The sealed pack/box on the reveal screen: it floats and shimmers to invite a
-/// tap, then tears open with a flash and hands off to the card reveal.
+/// A highlighted top seam invites a horizontal swipe. The crimp follows the
+/// finger, resets on a short/cancelled drag, and tears away on a complete swipe.
 struct SealedPackView: View {
     let set: Int
     let isBox: Bool
     let onOpen: () -> Void
 
-    @State private var floaty = false
-    @State private var hint = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @GestureState private var translation: CGSize = .zero
     @State private var tearing = false
+    @State private var ripFromRight = false
     /// Split from `tearing` so the crimp rips off first and the body only falls
     /// once it's gone — a pack opens in two beats, not one.
     @State private var tearTop: Double = 0
     @State private var dropBody: Double = 0
     @State private var flash: Double = 0
 
+    private var packWidth: CGFloat { isBox ? 296 : 218 }
+    private var motion: PackRipMotion { PackRipMotion(translation: translation, packWidth: packWidth) }
+    private var progress: Double { tearing ? 1 : motion.progress }
+    private var fromRight: Bool { tearing ? ripFromRight : motion.fromRight }
+    private var seamTint: Color { Color(hex: "ffd54a") }
+
     var body: some View {
         GeometryReader { geo in
             ScrollView {
-                VStack(spacing: 28) {
+                VStack(spacing: 24) {
                     Spacer(minLength: 0)
-                    ZStack {
-                        PackArtwork(set: set, isBox: isBox, tearTop: tearTop, dropBody: dropBody)
-                            .rotationEffect(.degrees(floaty ? 1.6 : -1.6))
-                            .offset(y: floaty ? -9 : 9)
-                    }
-                    VStack(spacing: 6) {
+                    PackArtwork(set: set, isBox: isBox,
+                                tearTop: reduceMotion ? 0 : tearTop, dropBody: reduceMotion ? 0 : dropBody,
+                                ripProgress: reduceMotion ? 0 : progress, ripFromRight: fromRight,
+                                animatedSheen: !reduceMotion)
+                        .opacity(reduceMotion ? 1 - dropBody : 1)
+                        .overlay(alignment: .top) {
+                            ripSeam
+                                .offset(y: packWidth * 0.085 - 36)
+                        }
+                        .animation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.8),
+                                   value: translation == .zero)
+                        .padding(.top, 36)
+                    VStack(spacing: 8) {
                         Text(isBox ? "Booster Box" : "\(CardDatabase.setName(set)) Pack")
                             .font(.system(size: 22, weight: .black, design: .rounded))
                             .foregroundStyle(.white)
-                        Text(isBox ? "Tap to tear it open" : "Tap to open")
-                            .font(.system(size: 14, weight: .semibold))
+                        Text("Swipe to rip open")
+                            .font(.system(size: 17, weight: .bold, design: .rounded))
+                            .foregroundStyle(seamTint)
+                        Text(motion.isComplete ? "Release to open" :
+                                progress > 0 ? "Keep swiping across the seam" :
+                                "Swipe left or right across the glowing edge")
+                            .font(.system(size: 13, weight: .medium))
                             .foregroundStyle(Palette.subtle)
                     }
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 24)
                     .opacity(tearing ? 0 : 1)
                     Spacer(minLength: 0)
-                    Image(systemName: "hand.tap.fill")
-                        .font(.system(size: 26))
-                        .foregroundStyle(.white.opacity(0.6))
-                        .scaleEffect(hint ? 1.14 : 0.92)
-                        .opacity((hint ? 0.9 : 0.5) * (tearing ? 0 : 1))
-                        .padding(.bottom, 40)
                 }
                 // At least fill the screen (so the Spacers still centre things
                 // on a normal portrait phone), but let the VStack grow taller
@@ -363,27 +378,138 @@ struct SealedPackView: View {
                 // (e.g. 402pt-tall landscape phone).
                 .frame(minWidth: geo.size.width, minHeight: geo.size.height)
             }
+            .scrollBounceBehavior(.basedOnSize)
         }
         .overlay {
             Color.white.opacity(flash).blendMode(.plusLighter).ignoresSafeArea().allowsHitTesting(false)
         }
-        .contentShape(Rectangle())
-        .onTapGesture { open() }
-        .onAppear {
-            withAnimation(.easeInOut(duration: 2.1).repeatForever(autoreverses: true)) { floaty = true }
-            withAnimation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true)) { hint = true }
+        .onChange(of: Int(motion.progress * 3)) { old, new in
+            if new > old && !tearing { Haptics.play(new == 3 ? .rigid : .soft) }
+        }
+        .task(id: tearing) {
+            guard tearing else { return }
+            try? await Task.sleep(nanoseconds: reduceMotion ? 150_000_000 : 420_000_000)
+            guard !Task.isCancelled else { return }
+            onOpen()
         }
     }
 
-    private func open() {
+    private var ripSeam: some View {
+        let trackWidth = packWidth - 24
+        return ZStack {
+            Capsule()
+                .fill(.black.opacity(0.65))
+                .frame(width: packWidth + 24, height: 32)
+            HStack {
+                Image(systemName: "chevron.left")
+                Spacer()
+                Image(systemName: "chevron.right")
+            }
+            .font(.system(size: 13, weight: .black))
+            .foregroundStyle(seamTint)
+            .padding(.horizontal, 14)
+            Capsule()
+                .strokeBorder(seamTint.opacity(0.7), style: StrokeStyle(lineWidth: 2, dash: [5, 5]))
+                .frame(width: trackWidth, height: 4)
+            Capsule()
+                .fill(seamTint)
+                .frame(width: trackWidth * progress, height: 4)
+                .frame(width: trackWidth, alignment: fromRight ? .trailing : .leading)
+                .shadow(color: seamTint.opacity(0.7), radius: 6)
+            if progress > 0 {
+                Image(systemName: "hand.point.up.fill")
+                    .font(.system(size: 27, weight: .medium))
+                    .foregroundStyle(.white)
+                    .shadow(color: .black, radius: 3, y: 2)
+                    .offset(x: (fromRight ? -1 : 1) * trackWidth * (progress - 0.5), y: 14)
+            } else {
+                PackSwipeHint(trackWidth: trackWidth, reduceMotion: reduceMotion)
+            }
+        }
+        .frame(width: packWidth + 48, height: 72)
+        .contentShape(Rectangle())
+        .gesture(
+            DragGesture(minimumDistance: 12)
+                .updating($translation) { value, current, _ in
+                    if !tearing { current = value.translation }
+                }
+                .onEnded { value in
+                    let rip = PackRipMotion(translation: value.translation, packWidth: packWidth)
+                    if rip.isComplete { open(fromRight: rip.fromRight) }
+                }
+        )
+        .opacity(tearing ? 0 : 1)
+        .allowsHitTesting(!tearing)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Rip open \(CardDatabase.setName(set)) \(isBox ? "box" : "pack")")
+        .accessibilityValue(tearing ? "Opening" : progress > 0 ? "\(Int(progress * 100))% ripped" : "Sealed")
+        .accessibilityHint("Swipe across the top seam, or double-tap to open with assistive controls.")
+        .accessibilityAddTraits(.isButton)
+        .accessibilityIdentifier("packRipSeam")
+        .accessibilityAction { open() }
+        .accessibilityAction(named: Text("Rip open")) { open() }
+        .accessibilityInputLabels([Text("Rip open"), Text("Open pack")])
+    }
+
+    private func open(fromRight: Bool = false) {
         guard !tearing else { return }
+        ripFromRight = fromRight
         Haptics.play(isBox ? .heavy : .medium)
         Sound.play(.packOpen)
         tearing = true
-        withAnimation(.easeIn(duration: 0.34)) { tearTop = 1 }
-        withAnimation(.easeIn(duration: 0.42).delay(0.1)) { dropBody = 1 }
-        withAnimation(.easeOut(duration: 0.12).delay(0.12)) { flash = 0.45 }
-        withAnimation(.easeOut(duration: 0.35).delay(0.22)) { flash = 0 }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.42) { onOpen() }
+        if reduceMotion {
+            withAnimation(.easeOut(duration: 0.15)) {
+                tearTop = 1
+                dropBody = 1
+            }
+        } else {
+            withAnimation(.easeIn(duration: 0.34)) { tearTop = 1 }
+            withAnimation(.easeIn(duration: 0.42).delay(0.1)) { dropBody = 1 }
+            withAnimation(.easeOut(duration: 0.12).delay(0.12)) { flash = 0.45 }
+            withAnimation(.easeOut(duration: 0.35).delay(0.22)) { flash = 0 }
+        }
+    }
+
+    private struct PackSwipeHint: View {
+        let trackWidth: CGFloat
+        let reduceMotion: Bool
+
+        var body: some View {
+            Group {
+                if reduceMotion {
+                    finger(x: 0, lift: 0, opacity: 1)
+                } else {
+                    TimelineView(.animation(minimumInterval: 1.0 / 30)) { timeline in
+                        let phase = timeline.date.timeIntervalSinceReferenceDate
+                            .truncatingRemainder(dividingBy: 2.6) / 2.6
+                        let travel = min(1, max(0, (phase - 0.12) / 0.55))
+                        let eased = travel * travel * (3 - 2 * travel)
+                        let lift = min(1, max(0, (phase - 0.67) / 0.21))
+                        let opacity = min(1, phase / 0.12) * (1 - lift)
+                        // Lift and disappear before returning to the starting edge.
+                        finger(x: trackWidth * (eased - 0.5) * 0.68, lift: lift, opacity: opacity)
+                    }
+                }
+            }
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+        }
+
+        private func finger(x: CGFloat, lift: Double, opacity: Double) -> some View {
+            ZStack {
+                Circle()
+                    .strokeBorder(.white.opacity(0.55), lineWidth: 1.5)
+                    .frame(width: 15, height: 15)
+                    .scaleEffect(1 + lift * 0.4)
+                    .opacity(opacity * (1 - lift))
+                    .offset(x: x)
+                Image(systemName: "hand.point.up.fill")
+                    .font(.system(size: 27, weight: .medium))
+                    .foregroundStyle(.white)
+                    .shadow(color: .black, radius: 3, y: 2)
+                    .opacity(opacity)
+                    .offset(x: x, y: 14 - lift * 18)
+            }
+        }
     }
 }

@@ -122,7 +122,12 @@ final class GauntletExperienceTests: XCTestCase {
         XCTAssertEqual(app.staticTexts["gradeResultValue"].label, "PSA 7")
         app.buttons["gradeResultContinue"].tap()
         XCTAssertTrue(app.staticTexts["Run Over"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["FINAL AURA"].exists)
+        XCTAssertFalse(app.staticTexts["FINAL AURA"].exists)
+        XCTAssertFalse(app.staticTexts["TARGET"].exists)
+        XCTAssertFalse(app.staticTexts.matching(NSPredicate(
+            format: "label BEGINSWITH 'Your best pulls'")).firstMatch.exists)
+        XCTAssertTrue(button("New Run").isHittable)
+        XCTAssertTrue(button("Back to Menu").isHittable)
         shot("after-run-summary")
 
         launch("last-pack")
@@ -266,13 +271,13 @@ final class GauntletExperienceTests: XCTestCase {
         shot("after-round-rips")
 
         app.buttons["gauntletPack-1"].tap()
-        XCTAssertTrue(app.staticTexts["Tap to open"].waitForExistence(timeout: 5))
+        app.assertPackIsSealed()
         XCTAssertEqual(rips.label, "5 rips left", "opening one pack spends exactly one rip")
         XCTAssertFalse(app.buttons["gauntletRevealAll"].exists)
         shot("after-sealed-rips")
         XCTAssertTrue(rips.isHittable)
 
-        app.staticTexts["Tap to open"].tap()
+        app.ripOpenPack()
         XCTAssertTrue(app.staticTexts["Tap for next card"].waitForExistence(timeout: 5))
         XCTAssertEqual(rips.label, "5 rips left")
         XCTAssertTrue(rips.isHittable)
@@ -283,10 +288,53 @@ final class GauntletExperienceTests: XCTestCase {
         XCTAssertTrue(rips.isHittable)
         shot("after-summary-rips")
 
+        revealPack()
+        XCTAssertEqual(rips.label, "5 rips left", "an already-visible summary must not open another pack")
+        XCTAssertTrue(app.buttons["gauntletFinishPack"].exists)
+
         startFreshEasyRun(largeText: true)
         XCTAssertEqual(rips.label, "6 rips left")
         XCTAssertTrue(rips.isHittable)
         shot("after-round-rips-large-text")
+    }
+
+    func testGauntletPackRequiresSeamSwipeLeftToRightWithoutExtraRips() {
+        verifyGauntletPackOpening(direction: .leftToRight)
+    }
+
+    func testGauntletPackRequiresSeamSwipeRightToLeftWithoutExtraRips() {
+        verifyGauntletPackOpening(direction: .rightToLeft)
+    }
+
+    private func verifyGauntletPackOpening(direction: PackRipDirection) {
+        launch("swap")
+        app.assertPackIsSealed()
+        XCTAssertEqual(rips.label, "2 rips left")
+        shot("gauntlet-sealed-\(direction.rawValue)")
+
+        app.assertPackRejectsInvalidGestures(direction: direction) {
+            XCTAssertEqual(self.rips.label, "2 rips left", "rejected gestures must not spend another rip")
+            XCTAssertFalse(self.app.staticTexts["Build your Showcase"].exists)
+        }
+        shot("gauntlet-partial-rip-reset-\(direction.rawValue)")
+
+        app.ripOpenPack(direction: direction)
+        XCTAssertFalse(app.packRipSeam.exists)
+        XCTAssertTrue(app.staticTexts["Tap for next card"].waitForExistence(timeout: 5))
+        XCTAssertEqual(rips.label, "2 rips left")
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        XCTAssertTrue(app.staticTexts["Tap to finish"].waitForExistence(timeout: 5),
+                      "tapping the first of the two seeded cards must advance to the last")
+        XCTAssertEqual(rips.label, "2 rips left")
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        XCTAssertTrue(app.staticTexts["Build your Showcase"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.packCardPrompt.exists)
+        XCTAssertEqual(rips.label, "2 rips left")
+
+        revealPack()
+        XCTAssertTrue(app.buttons["gauntletSwap-S1-048"].exists)
+        XCTAssertTrue(app.buttons["gauntletSwap-S1-006"].exists)
+        XCTAssertEqual(rips.label, "2 rips left", "revisiting the summary must not re-rip the pack")
     }
 
     private func launch(_ scenario: String, seed: String = "0", largeText: Bool = false) {
@@ -320,15 +368,30 @@ final class GauntletExperienceTests: XCTestCase {
 
     private func revealPack() {
         let summary = app.staticTexts["Build your Showcase"]
+        let prompt = app.packCardPrompt
         XCTAssertFalse(app.buttons["gauntletRevealAll"].exists)
+        let ready = NSPredicate { _, _ in
+            summary.exists || prompt.exists
+                || (self.app.packRipSeam.exists && self.app.packRipSeam.isHittable
+                    && self.app.packRipSeam.value as? String == "Sealed")
+        }
+        guard XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: ready, object: app)],
+                            timeout: 5) == .completed else {
+            XCTFail("expected a sealed pack, a revealed card, or the summary")
+            return
+        }
+        if summary.exists { return }
+        if !prompt.exists { app.ripOpenPack() }
+
         for _ in 0..<12 {
             if summary.exists { return }
-            let prompt = app.staticTexts.matching(NSPredicate(
-                format: "label IN %@", ["Tap to open", "Tap for next card", "Tap to finish"])).firstMatch
-            if !prompt.waitForExistence(timeout: 5) {
-                XCTAssertTrue(summary.exists, "every reveal must offer its next tap or the summary")
+            let next = NSPredicate { _, _ in summary.exists || prompt.exists }
+            guard XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: next, object: app)],
+                                timeout: 5) == .completed else {
+                XCTFail("every revealed card must offer its next tap or the summary")
                 return
             }
+            if summary.exists { return }
             prompt.tap()
         }
         XCTAssertTrue(summary.waitForExistence(timeout: 5))

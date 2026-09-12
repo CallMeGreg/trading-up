@@ -73,9 +73,9 @@ struct StarburstShape: Shape {
 struct PackWrapper: View {
     /// How much printing the wrapper can carry before the type turns to mush.
     enum Detail {
-        /// Hero size: brand line, sigil, set name, kind, and the card-count burst.
+        /// Hero size: brand line, sigil, set name, and kind.
         case full
-        /// ~110pt: the same, without the burst.
+        /// The same printing at ~110pt.
         case mid
         /// ~58pt shop thumbnail: sigil and set name.
         case mini
@@ -94,6 +94,8 @@ struct PackWrapper: View {
     var tearTop: Double = 0
     /// 0 = intact, 1 = the body has dropped away.
     var dropBody: Double = 0
+    var ripProgress: Double = 0
+    var ripFromRight: Bool = false
 
     private var element: Element { Element.theme(forSet: set) }
     private var pal: [Color] { element.palette }
@@ -109,7 +111,6 @@ struct PackWrapper: View {
     private var showsBrandLine: Bool { detail == .full || detail == .mid }
     private var showsSetName: Bool { detail != .micro }
     private var showsKind: Bool { detail == .full || detail == .mid }
-    private var showsBurst: Bool { detail == .full }
 
     private var padH: CGFloat { showsKind ? width * 0.07 : width * 0.06 }
     private var padTop: CGFloat { showsKind ? width * 0.10 : width * 0.075 }
@@ -131,8 +132,10 @@ struct PackWrapper: View {
     var body: some View {
         VStack(spacing: 0) {
             crimp(teethOnTop: true)
-                .rotationEffect(.degrees(-16 * tearTop), anchor: .bottomLeading)
-                .offset(x: width * 0.07 * tearTop, y: -width * 0.37 * tearTop)
+                .rotationEffect(.degrees((ripFromRight ? -1 : 1) * (5 * ripProgress + 16 * tearTop)),
+                                anchor: ripFromRight ? .bottomLeading : .bottomTrailing)
+                .offset(x: (ripFromRight ? -1 : 1) * width * 0.12 * tearTop,
+                        y: -width * (0.025 * ripProgress + 0.37 * tearTop))
                 .opacity(1 - tearTop)
             VStack(spacing: 0) {
                 face
@@ -178,7 +181,6 @@ struct PackWrapper: View {
             HoloFilm(period: width * 0.126)
             bulge
             content
-            if showsBurst { burst }
             sheen
         }
         .frame(width: width, height: faceHeight)
@@ -236,8 +238,6 @@ struct PackWrapper: View {
                         .tracking(width * 0.018)
                         .lineLimit(1)
                         .minimumScaleFactor(0.5)
-                        // Boxed so the wordmark can never grow under the
-                        // card-count flash in the top-right corner.
                         .frame(width: innerWidth * 0.58)
                         .foregroundStyle(.white.opacity(0.95))
                         .shadow(color: .black.opacity(0.5), radius: 1, y: 1)
@@ -280,27 +280,6 @@ struct PackWrapper: View {
         .padding(.top, padTop)
         .padding(.bottom, padBottom)
         .frame(width: width, height: faceHeight)
-    }
-
-    /// The printed card-count flash, top-right, exactly where a real pack puts it.
-    private var burst: some View {
-        let size = width * 0.25
-        return ZStack {
-            StarburstShape()
-                .fill(RadialGradient(colors: [Color(hex: "fff3c4"), Color(hex: "ffd54a"), Color(hex: "e39a12")],
-                                     center: UnitPoint(x: 0.4, y: 0.35),
-                                     startRadius: 0, endRadius: size * 0.62))
-            VStack(spacing: 0) {
-                Text("6").font(.system(size: width * 0.088, weight: .black, design: .rounded))
-                Text("CARDS").font(.system(size: width * 0.032, weight: .black))
-            }
-            .foregroundStyle(Color(hex: "4a2b00"))
-        }
-        .frame(width: size, height: size)
-        .rotationEffect(.degrees(9))
-        .shadow(color: .black.opacity(0.5), radius: width * 0.015, y: width * 0.012)
-        .frame(width: width, height: faceHeight, alignment: .topTrailing)
-        .padding(.top, width * 0.045)
     }
 
     // MARK: Sheen

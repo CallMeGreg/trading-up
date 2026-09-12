@@ -86,7 +86,7 @@ final class ScreenshotTests: XCTestCase {
 
         XCTAssertTrue(waitForSealed(), "sealed booster box never appeared")
         shot("booster-box-sealed", settle: 1.2)
-        tapCenter()
+        app.ripOpenPack()
 
         var guardCount = 0
         while isRevealing && guardCount < 12 {
@@ -151,7 +151,7 @@ final class ScreenshotTests: XCTestCase {
         for pack in 2...9 {
             guard tapBuyPack() else { break }   // out of cash for set 1 packs
             guard waitForSealed() else { break }
-            tapCenter()
+            app.ripOpenPack()
 
             // Flip through, pausing on the first rare/ultra we see.
             var guard1 = 0
@@ -321,7 +321,7 @@ final class ScreenshotTests: XCTestCase {
 
     /// Taps through every card in the pack, screenshotting the first `captureFirst`.
     private func tapThroughPack(captureFirst: Int, prefix: String) {
-        tapCenter()   // tear open the wrapper
+        app.ripOpenPack()
         var captured = 0
         var guardCount = 0
         while isRevealing && guardCount < 12 {
@@ -347,8 +347,7 @@ final class ScreenshotTests: XCTestCase {
     }
 
     private func waitForSealed() -> Bool {
-        staticText("Tap to open").waitForExistence(timeout: 15)
-            || staticText("Tap to tear it open").exists
+        app.waitForSealedPack()
     }
 
     private func waitForSummary() -> Bool {

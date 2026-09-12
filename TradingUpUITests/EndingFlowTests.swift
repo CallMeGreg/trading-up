@@ -54,7 +54,7 @@ final class EndingFlowTests: XCTestCase {
 
         XCTAssertTrue(waitForSealed(), "sealed pack never appeared")
         shot("02-sealed-pack")
-        tapCenter()   // tear it open
+        app.ripOpenPack()
 
         // Rip through every card. The win must never appear mid-reveal — that
         // collision, cutting the reveal off, was the bug.
@@ -106,7 +106,70 @@ final class EndingFlowTests: XCTestCase {
         sleep(2)   // linger on the completed shop before the demo ends
     }
 
+    func testClassicPackRequiresSeamSwipeLeftToRightAndKeepsCardTaps() {
+        verifyClassicPackOpening(direction: .leftToRight)
+    }
+
+    func testClassicPackRequiresSeamSwipeRightToLeftAndKeepsCardTaps() {
+        verifyClassicPackOpening(direction: .rightToLeft)
+    }
+
+    func testClassicHelpReopensWithoutChangingTheRun() {
+        enterClassicMode()
+        let info = app.buttons["classicInfo"]
+        XCTAssertTrue(info.waitForExistence(timeout: 30))
+        let cash = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Cash '")).firstMatch
+        XCTAssertTrue(cash.exists)
+        let startingCash = cash.label
+
+        for _ in 0..<2 {
+            info.tap()
+            XCTAssertTrue(staticText("HOW TO PLAY").waitForExistence(timeout: 5))
+            XCTAssertTrue(staticText("Classic Mode").exists)
+            XCTAssertFalse(button(labeled: "Start Collecting").exists)
+            let back = button(labeled: "Back to Game")
+            XCTAssertTrue(back.isHittable)
+            back.tap()
+
+            XCTAssertTrue(info.waitForExistence(timeout: 5))
+            XCTAssertTrue(buyPack.isHittable)
+            XCTAssertEqual(cash.label, startingCash)
+            XCTAssertTrue(text(containing: "49 of 50").exists,
+                          "closing help must preserve the current collection")
+        }
+    }
+
     // MARK: - Actions
+
+    private func verifyClassicPackOpening(direction: PackRipDirection) {
+        enterClassicMode()
+        XCTAssertTrue(tapBuyPack(), "couldn't buy the seeded set-1 pack")
+        app.assertPackIsSealed()
+        shot("classic-sealed-\(direction.rawValue)")
+
+        app.assertPackRejectsInvalidGestures(direction: direction) {
+            XCTAssertFalse(self.summaryShowing)
+            XCTAssertFalse(self.winScreen.exists)
+        }
+        shot("classic-partial-rip-reset-\(direction.rawValue)")
+
+        app.ripOpenPack(direction: direction)
+        XCTAssertFalse(app.packRipSeam.exists)
+        // Six cards must still need six taps: the swipe must not skip the first card.
+        for _ in 0..<5 {
+            XCTAssertTrue(staticText("Tap for next card").waitForExistence(timeout: 5))
+            XCTAssertFalse(summaryShowing)
+            XCTAssertFalse(winScreen.exists)
+            tapCenter()
+        }
+        XCTAssertTrue(staticText("Tap to finish").waitForExistence(timeout: 5))
+        XCTAssertFalse(summaryShowing)
+        tapCenter()
+        XCTAssertTrue(button(labeled: "Keep All").waitForExistence(timeout: 5)
+                      || button(labeled: "Add to Collection").exists)
+        XCTAssertFalse(isRevealing)
+        XCTAssertFalse(winScreen.exists, "the completed collection still waits for the summary decision")
+    }
 
     /// From the main menu, open Classic Mode where the shop and the game live.
     private func enterClassicMode() {
@@ -156,8 +219,7 @@ final class EndingFlowTests: XCTestCase {
     }
 
     private func waitForSealed() -> Bool {
-        staticText("Tap to open").waitForExistence(timeout: 15)
-            || staticText("Tap to tear it open").exists
+        app.waitForSealedPack()
     }
 
     private func waitForSummary() -> Bool {

@@ -606,17 +606,6 @@ struct LostScreen: View {
                         Text("Round \(run.round) of \(run.roundsTotal)")
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(Palette.subtle)
-                        HStack(spacing: 10) {
-                            StatTile(label: "Final Aura",
-                                     value: String(format: "%.0f", run.showcaseAura.rounded(.down)))
-                            StatTile(label: "Target",
-                                     value: String(format: "%.0f", run.target.rounded(.up)))
-                        }
-                        Text("Your best pulls and Trainer milestones are saved. Complete evolution lines and unlock stronger packs to push further next time.")
-                            .font(.subheadline)
-                            .foregroundStyle(Palette.subtle)
-                            .multilineTextAlignment(.center)
-                            .fixedSize(horizontal: false, vertical: true)
                         Text("“\(quote)”")
                             .font(.system(size: 15, weight: .semibold, design: .rounded))
                             .italic()

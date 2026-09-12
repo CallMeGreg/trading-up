@@ -111,10 +111,10 @@ SCORES = (
     ),
     Score(
         "classic-paper-lanterns", "classic", "Paper Lanterns",
-        "Selected Classic / tactical mix: a warm wooden-mallet question and "
+        "Classic alternate / tactical mix: a warm wooden-mallet question and "
         "answer, nimble bass and little nylon figures. Minor-key curiosity "
         "with a lighter, more spacious rhythm for long collecting sessions.",
-        104, True, "tactical", (
+        104, False, "tactical", (
             BM7, G6, D69, ASUS, EM7, BM7, G6, FS7,
             BM9, G6, D9, A13, EM7, G6, ASUS, FS7,
         ), (
@@ -197,7 +197,7 @@ def validate_scores():
     assert len(SCORES) == 4 and len({s.id for s in SCORES}) == 4
     for mode in ("classic", "gauntlet"):
         assert sum(s.mode == mode for s in SCORES) == 2
-        assert sum(s.mode == mode and s.recommended for s in SCORES) == (1 if mode == "classic" else 0)
+        assert sum(s.mode == mode and s.recommended for s in SCORES) == 0
     for score in SCORES:
         assert len(score.chords) == len(score.melody) == BARS
         assert 30 <= score.duration <= 50

@@ -168,6 +168,16 @@ higher‑set cards are always worth more. Approximate resulting bands:
 ### Packs
 - **6 cards per pack:** 3 commons, 2 uncommons, 1 "hit."
 - The **hit slot** is a Rare 80% of the time, Ultra Rare 20%.
+- In **Classic and Gauntlet**, swipe horizontally across the highlighted top
+  seam to rip open a sealed pack. Either direction works; the crimp and seam
+  progress follow the finger. Release after crossing 55% of the pack's width
+  to open it; short or cancelled swipes reset, and taps or vertical drags do
+  not open it. Arrows, a finger that swipes then lifts and restarts, and explicit
+  instructions teach the gesture. The wrapper has no card-count sticker.
+  Assistive activation can open the pack without dragging, and
+  Reduce Motion replaces the moving tear and flash with a short fade. Card-by-card
+  reveals still advance with a tap. No additional cash or rips are spent by
+  the gesture.
 - A pack's contents are worth, on average, a **per‑set multiple of the pack price**.
   The payout curve **shrinks as sets get pricier** — early packs are generous, later
   packs are a bigger gamble:
@@ -294,6 +304,10 @@ and one big multi‑pack open, **not** a bulk discount.
   (S1 $150 … S5 $4,800) — a meaningful reward that helps toward the next set without
   fully bankrolling infinite spending (it was 30×, which snowballed too hard).
 
+Classic celebrates completed evolution lines with temporary banners during the
+pack reveal. Pack summaries do not repeat those banners; full-set completion
+bonuses still appear in the summary.
+
 ---
 
 ## 10. Win / lose & stats
@@ -394,8 +408,9 @@ v2.0.0 puts a **main menu** in front of the game (`Views/MainMenuView.swift`), w
 slow "parade" of Sprytes drifting behind it. It routes to:
 
 - **Classic Mode** — the original loop above (buy → rip → sell → grade → complete 250).
-  Unchanged; it just lives behind the menu now (`Views/ClassicModeView.swift`), and the
-  way back out is the **Main Menu** button on the Settings tab.
+  It lives behind the menu (`Views/ClassicModeView.swift`). The **Home** button in
+  the Shop's wallet header returns to the menu; the matching **Info** button
+  reopens the Classic instructions without resetting the run.
 - **Gauntlet Mode** — a roguelite mode, gated behind the full‑game unlock and **specced +
   shipped per §14**. `Views/GauntletView.swift` now hosts the real run loop (its Trainer
   select, pack rail, shop, and reward flow live in `Views/Gauntlet*Views.swift` over the

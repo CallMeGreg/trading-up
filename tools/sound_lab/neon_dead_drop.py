@@ -1,8 +1,8 @@
-"""The selected Neon Dead Drop arrangement, without its brass accompaniment.
+"""Neon Dead Drop's original bass/drum bed, with no lead or accompaniment.
 
-The original audition's melody, replies, bass, drums, timing and synthesis are
-preserved. Events include echoes; their fingerprint pins the original score
-after removing only the 448 brass events.
+The historical no-brass arrangement is fingerprinted before layer selection.
+Only pluck/string events (including replies and echoes) are omitted; bass and
+drum timings, gains, synthesis, RNG variations and the musical period stay put.
 """
 
 import hashlib
@@ -53,9 +53,9 @@ class Score:
 
 SCORE = Score(
     "gauntlet-neon-dead-drop", "gauntlet", "Neon Dead Drop",
-    "Selected Gauntlet / arcade drive: the original FM-pluck melody, octave bass "
-    "and four-on-the-floor drums, with the offbeat brass accompaniment removed. "
-    "A bass-led pocket makes room before the fuller final hook.",
+    "Selected Gauntlet / background drive: the original octave bass and "
+    "four-on-the-floor drums, without the lead, replies, melodic echoes or brass. "
+    "The original rhythm and quieter middle pocket remain, with no melody competing for attention.",
     148, True, 32, 30,
     ((0, "m9"), (8, "maj9"), (10, "6"), (7, "7"),
      (5, "m9"), (0, "m9"), (8, "maj9"), (7, "7")),
@@ -89,10 +89,11 @@ VOICINGS = {
     "7": (16, 19, 22, 26),
 }
 TONAL_VOICES = ("bass", "pluck", "string")
-ARRANGEMENT_SHA256 = "726153e7f7561929737c1b07258145dd83ff7d079a4d12412e11fdd9dd430d9e"
+BACKGROUND_VOICES = frozenset(("bass", "clap", "crash", "hat", "kick", "open", "snare", "tom"))
+ORIGINAL_ARRANGEMENT_SHA256 = "726153e7f7561929737c1b07258145dd83ff7d079a4d12412e11fdd9dd430d9e"
 INSTRUMENT_COUNTS = {
     "bass": 272, "clap": 64, "crash": 4, "hat": 256, "kick": 124,
-    "open": 68, "pluck": 650, "snare": 104, "string": 8, "tom": 16,
+    "open": 68, "snare": 104, "tom": 16,
 }
 
 
@@ -107,7 +108,7 @@ class Event(NamedTuple):
     send: float
 
 
-def arrange(score=SCORE):
+def _original_arrangement(score=SCORE):
     events = []
     rng = random.Random(score.seed)
 
@@ -191,17 +192,31 @@ def arrange(score=SCORE):
     return tuple(events)
 
 
+def arrange(score=SCORE):
+    # Select after arranging so removing a layer cannot perturb drum RNG draws.
+    return tuple(event for event in _original_arrangement(score) if event.voice in BACKGROUND_VOICES)
+
+
 def arrangement_sha256(events):
     encoded = json.dumps(events, separators=(",", ":"), allow_nan=False).encode()
     return hashlib.sha256(encoded).hexdigest()
+
+
+# The historical fingerprint below independently pins the source of this digest.
+ARRANGEMENT_SHA256 = arrangement_sha256(arrange())
 
 
 def validate_score(score=SCORE):
     assert score.bars == 32 and score.tempo == 148 and score.frames == 2_490_368
     assert score.frames % AAC_FRAME == 0 and abs(score.bpm - score.tempo) < .04
     assert len(score.harmony) == len(score.hook) == len(score.answer) == 8
+    original = _original_arrangement(score)
+    assert arrangement_sha256(original) == ORIGINAL_ARRANGEMENT_SHA256, "Neon's original score changed"
+    assert Counter(event.voice for event in original) == {**INSTRUMENT_COUNTS, "pluck": 650, "string": 8}
     events = arrange(score)
     assert Counter(event.voice for event in events) == INSTRUMENT_COUNTS
+    assert all(event.voice in BACKGROUND_VOICES for event in events)
+    assert events == tuple(event for event in original if event.voice not in ("pluck", "string"))
     assert arrangement_sha256(events) == ARRANGEMENT_SHA256, "Neon's retained arrangement changed"
 
 

@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Dramatic pack / box opening. Packs reveal one card at a time with a tap.
+/// Swipe the top seam to open a pack, then tap to reveal one card at a time.
 /// A booster box reveals each of its packs in turn — the same card-by-card
 /// flip and keep/sell summary as a single pack — advancing automatically to
 /// the next pack once its cards are kept or sold, with a "Pack X of N" counter.
@@ -18,8 +18,7 @@ struct RevealView: View {
     /// Short-lived "Evolution Complete!" toasts, shown on the exact card that
     /// finishes each line during the reveal. Several can stack when multiple
     /// lines finish in one pack, and each lingers on its own 3s timer even as the
-    /// player taps on to later cards. The permanent banners still live on the
-    /// summary; these are just the in-the-moment celebration (req 2).
+    /// player taps on to later cards, without repeating banners on the summary.
     @State private var evoBanners: [BonusEvent] = []
 
     private enum Phase: Equatable {
@@ -91,8 +90,7 @@ struct RevealView: View {
     /// Stack an evolution toast on the exact card that finishes a line, under any
     /// still-visible earlier toasts. A card that completes no line leaves the
     /// current toasts alone — they expire on their own 3s timers rather than when
-    /// the player advances. Leaving the reveal clears them; the summary shows its
-    /// own permanent banners.
+    /// the player advances. Leaving the reveal clears them.
     private func updateEvoBanners(for phase: Phase) {
         guard case .revealing(let i) = phase else {
             if !evoBanners.isEmpty {
@@ -235,6 +233,12 @@ struct RevealView: View {
 
 // MARK: - Summary
 
+extension OpenResult {
+    var summaryBonuses: [BonusEvent] {
+        bonuses.filter { $0.kind != .evolution }
+    }
+}
+
 /// Position of a pack within a booster box, shown as a "Pack X of N" counter.
 struct PackCounter: Equatable {
     let index: Int
@@ -337,7 +341,7 @@ private struct SummaryView: View {
                             }
                         }
 
-                        ForEach(result.bonuses) { bonus in
+                        ForEach(result.summaryBonuses) { bonus in
                             BonusBanner(bonus: bonus)
                         }
 
@@ -901,6 +905,9 @@ struct PackArtwork: View {
     var tearTop: Double = 0
     /// 0 = intact. Drives the body falling out of frame after the crimp goes.
     var dropBody: Double = 0
+    var ripProgress: Double = 0
+    var ripFromRight: Bool = false
+    var animatedSheen: Bool = true
 
     var body: some View {
         Group {
@@ -911,7 +918,8 @@ struct PackArtwork: View {
                     .opacity(1 - dropBody)
             } else {
                 PackWrapper(set: set, width: 218, detail: .full,
-                            animatedSheen: true, tearTop: tearTop, dropBody: dropBody)
+                            animatedSheen: animatedSheen, tearTop: tearTop, dropBody: dropBody,
+                            ripProgress: ripProgress, ripFromRight: ripFromRight)
             }
         }
     }

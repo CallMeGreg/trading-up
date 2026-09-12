@@ -1,9 +1,11 @@
 import SwiftUI
 
-/// Quick intro shown on first launch and after starting a new game. Explains
-/// the core loop plus how you win and lose.
+/// Classic's intro and replayable help. Explains the core loop plus how you
+/// win and lose without changing the current run when opened as a reference.
 struct WelcomeView: View {
     @Environment(GameState.self) var game: GameState
+    @Environment(\.dismiss) private var dismiss
+    var isReference = false
 
     var body: some View {
         ZStack {
@@ -29,10 +31,17 @@ struct WelcomeView: View {
                 }
                 .frame(maxHeight: .infinity)
 
-                BigButton(title: "Start Collecting", systemImage: "sparkles",
+                BigButton(title: isReference ? "Back to Game" : "Start Collecting",
+                          systemImage: isReference ? "arrow.left" : "sparkles",
                           tint: [Palette.money, Color(hex: "39b56a")]) {
-                    Haptics.play(.success)
-                    game.markWelcomeSeen()
+                    if isReference {
+                        Haptics.play(.light)
+                        Sound.play(.uiBack)
+                        dismiss()
+                    } else {
+                        Haptics.play(.success)
+                        game.markWelcomeSeen()
+                    }
                 }
             }
             .padding(16)
@@ -43,7 +52,7 @@ struct WelcomeView: View {
     private func explainer(_ d: Density) -> some View {
         VStack(spacing: d.stack) {
             VStack(spacing: 6) {
-                Text("WELCOME TO")
+                Text(isReference ? "HOW TO PLAY" : "WELCOME TO")
                     .font(.system(size: 13, weight: .black)).tracking(3)
                     .foregroundStyle(Palette.subtle)
                 Text("Trading Up")
