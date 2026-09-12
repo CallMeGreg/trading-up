@@ -75,7 +75,8 @@ way up is the only route to the expensive half of the collection.
 
 ### ✨ Rip it
 
-Tap to reveal cards one at a time, with the hit slot always saved for last. Every
+Swipe left or right across the glowing top seam to rip the pack open, then tap
+to reveal cards one at a time, with the hit slot always saved for last. Every
 pack is **3 commons, 2 uncommons, and 1 rare‑or‑ultra**, and every card has a
 **1% chance** to be a shiny **foil** (×3 value).
 

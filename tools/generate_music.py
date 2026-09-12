@@ -3,15 +3,17 @@
 
 Requires Python 3 and the already-installed offline ffmpeg/ffprobe executables.
 No packages, samples, network, model weights, or plugins are used. Instrument
-and score source lives in tools/sound_lab/music.py and neon_dead_drop.py;
-shared DSP is read-only.
+and score source lives in tools/sound_lab/music.py, neon_dead_drop.py and
+classic_backgrounds.py; shared DSP is read-only.
 
     python3 tools/generate_music.py
     python3 tools/generate_music.py --check
     python3 tools/generate_music.py --check --render-pcm
 
-Generation writes five AAC-LC auditions and byte-identical copies of only the
-two recommended tracks into the app. No WAV files are retained. Scratch files
+Generation writes eight AAC-LC auditions and byte-identical copies of only the
+two recommended tracks into the app: Soft Circuit for Classic and Neon Dead
+Drop for Gauntlet. The other scores remain audition-only alternatives.
+No WAV files are retained. Scratch files
 live under the repository's ignored build/music-render directory and are
 removed on success or failure.
 
@@ -53,6 +55,11 @@ from sound_lab.music import (
 from sound_lab.neon_dead_drop import (
     SCORE as NEON_DEAD_DROP, render as render_neon, validate_score as validate_neon_score,
 )
+from sound_lab.classic_backgrounds import (
+    SCORES as CLASSIC_BACKGROUNDS, SCORE_IDS as CLASSIC_BACKGROUND_IDS,
+    arrangement_details as classic_arrangement_details,
+    render as render_classic_background, validate_scores as validate_classic_backgrounds,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -62,10 +69,11 @@ CATALOG = ROOT / "docs/sound-lab/music-catalog.js"
 SCRATCH = ROOT / "build/music-render"
 SOURCE_FILES = (
     "tools/generate_music.py", "tools/sound_lab/music.py",
-    "tools/sound_lab/neon_dead_drop.py", "tools/sound_lab/dsp.py",
+    "tools/sound_lab/neon_dead_drop.py", "tools/sound_lab/classic_backgrounds.py",
+    "tools/sound_lab/dsp.py",
 )
 PREFIX = "globalThis.SOUND_LAB_MUSIC = "
-SCORES = (*LEGACY_SCORES, NEON_DEAD_DROP)
+SCORES = (*LEGACY_SCORES, NEON_DEAD_DROP, *CLASSIC_BACKGROUNDS)
 
 
 def require(condition, message):
@@ -76,6 +84,7 @@ def require(condition, message):
 def validate_scores():
     validate_legacy_scores()
     validate_neon_score()
+    validate_classic_backgrounds()
     require(len({score.id for score in SCORES}) == len(SCORES), "Duplicate music IDs")
     require({score.mode for score in SCORES} == {"classic", "gauntlet"}, "Unexpected music modes")
     for mode in ("classic", "gauntlet"):
@@ -84,6 +93,8 @@ def validate_scores():
 
 
 def render(score):
+    if score.id in CLASSIC_BACKGROUND_IDS:
+        return render_classic_background(score)
     return render_neon(score) if score.id == NEON_DEAD_DROP.id else render_legacy(score)
 
 
@@ -153,9 +164,10 @@ def validate_metrics(values, label, encoded=False):
 def encode(ffmpeg, pcm, score, destination, work):
     extended = work / f"{score.id}-preroll.m4a"
     command = [
-        ffmpeg, "-hide_banner", "-loglevel", "error", "-y", "-f", "f32le",
+        ffmpeg, "-hide_banner", "-loglevel", "error", "-y",
+        "-filter_threads", "1", "-filter_complex_threads", "1", "-f", "f32le",
         "-ar", str(SR), "-ac", "2", "-i", "pipe:0", "-map_metadata", "-1",
-        "-c:a", "aac", "-profile:a", "aac_low", "-b:a", "192k",
+        "-c:a", "aac", "-threads", "1", "-profile:a", "aac_low", "-b:a", "192k",
         "-aac_coder", "twoloop", "-use_editlist", "1", "-movie_timescale", str(SR),
         "-movflags", "+faststart", str(extended),
     ]
@@ -220,8 +232,9 @@ def inspect_audio(ffmpeg, ffprobe, path, score):
     require(priming >= AAC_FRAME, f"{path.name}: missing decoder pre-roll")
 
     raw = run([
-        ffmpeg, "-hide_banner", "-loglevel", "error", "-i", str(path),
-        "-map", "0:a:0", "-f", "f32le", "-c:a", "pcm_f32le", "pipe:1",
+        ffmpeg, "-hide_banner", "-loglevel", "error", "-threads", "1",
+        "-filter_threads", "1", "-filter_complex_threads", "1", "-i", str(path),
+        "-map", "0:a:0", "-f", "f32le", "-c:a", "pcm_f32le", "-threads", "1", "pipe:1",
     ]).stdout
     require(len(raw) == score.frames * 8,
             f"{path.name}: decoder produced {len(raw) // 8} frames, expected {score.frames}; padding/gap detected")
@@ -232,7 +245,8 @@ def inspect_audio(ffmpeg, ffprobe, path, score):
     values = metrics(samples[0::2], samples[1::2])
     validate_metrics(values, path.name, encoded=True)
     loudness_result = run([
-        ffmpeg, "-hide_banner", "-nostats", "-i", str(path),
+        ffmpeg, "-hide_banner", "-nostats", "-threads", "1",
+        "-filter_threads", "1", "-filter_complex_threads", "1", "-i", str(path),
         "-af", "ebur128=peak=true", "-f", "null", "-",
     ])
     summary = loudness_result.stderr.decode(errors="replace").rsplit("Summary:", 1)[-1]
@@ -296,6 +310,9 @@ def check(ffmpeg, ffprobe, render_pcm):
             from sound_lab.neon_dead_drop import ARRANGEMENT_SHA256, INSTRUMENT_COUNTS
             require(audit["arrangementSha256"] == ARRANGEMENT_SHA256
                     and audit["instruments"] == INSTRUMENT_COUNTS, f"{score.id}: arrangement changed")
+        elif score.id in CLASSIC_BACKGROUND_IDS:
+            for key, expected in classic_arrangement_details(score).items():
+                require(audit[key] == expected, f"{score.id}: {key} changed")
         require(audit["pcm"]["frames"] == score.frames and audit["wrappedEvents"] >= 5, f"{score.id}: tails not carried")
         validate_metrics(audit["pcm"], f"{score.id} stored PCM")
         if render_pcm:
@@ -317,24 +334,24 @@ def generate(ffmpeg, ffprobe):
     # This process-specific directory never borrows an OS temporary directory.
     work = SCRATCH / str(os.getpid())
     work.mkdir(parents=True, exist_ok=False)
-    AUDITIONS.mkdir(parents=True, exist_ok=True)
-    APP.mkdir(parents=True, exist_ok=True)
-    catalog = {
-        "schemaVersion": 1,
-        "tracks": [],
-        "render": {
-            "sourceSha256": source_hashes(),
-            "sampleRate": SR,
-            "channels": 2,
-            "codec": "AAC-LC",
-            "bitrate": 192000,
-            "aacAccessUnitFrames": AAC_FRAME,
-            "encoder": run([ffmpeg, "-version"]).stdout.decode().splitlines()[0],
-            "loopMethod": "periodic wrap-add; two-period room warm-up; middle-of-three AAC encode with edit-list pre-roll",
-            "tracks": {},
-        },
-    }
     try:
+        AUDITIONS.mkdir(parents=True, exist_ok=True)
+        APP.mkdir(parents=True, exist_ok=True)
+        catalog = {
+            "schemaVersion": 1,
+            "tracks": [],
+            "render": {
+                "sourceSha256": source_hashes(),
+                "sampleRate": SR,
+                "channels": 2,
+                "codec": "AAC-LC",
+                "bitrate": 192000,
+                "aacAccessUnitFrames": AAC_FRAME,
+                "encoder": run([ffmpeg, "-version"]).stdout.decode().splitlines()[0],
+                "loopMethod": "periodic wrap-add; two-period room warm-up; middle-of-three AAC encode with edit-list pre-roll",
+                "tracks": {},
+            },
+        }
         for score in SCORES:
             print(f"Composing {score.title}…", flush=True)
             left, right, events = render(score)
@@ -347,11 +364,13 @@ def generate(ffmpeg, ffprobe):
             encode(ffmpeg, raw, score, staged, work)
             del raw
             decoded = inspect_audio(ffmpeg, ffprobe, staged, score)
+            digest = sha256(staged)
             destination = AUDITIONS / staged.name
             staged.replace(destination)
-            digest = sha256(destination)
             if score.recommended:
-                shutil.copyfile(destination, APP / f"{score.mode}.m4a")
+                app_destination = APP / f"{score.mode}.m4a"
+                if not app_destination.exists() or sha256(app_destination) != digest:
+                    shutil.copyfile(destination, app_destination)
             catalog["tracks"].append(expected_track(score, digest))
             catalog["render"]["tracks"][score.id] = {
                 "bars": score.bars, "frames": score.frames, "nominalBPM": score.tempo,

@@ -220,7 +220,7 @@ natively — don't resize a 6.9" image to fill it, the aspect ratios differ.
 maximum of **10** per size. Recommended ten, in upload order — the first three
 are what most people ever see, so they lead with the hook:
 
-1. `pack-sealed` — a sealed pack, "tap to tear it open"
+1. `pack-sealed` — a sealed pack, "Swipe to rip open"
 2. `pack-reveal-rare-hit` — the rare flipping over
 3. `pack-summary-all-new` — the six-card haul
 4. `collection-grid` — the binder filling in

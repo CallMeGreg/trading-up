@@ -36,7 +36,8 @@ Or just press `⌘U` in Xcode.
 | `SaveStoreTests.swift` | Unreadable saves are quarantined on disk, never deleted |
 | `WinAndUnlockTests.swift` | Winning shows once, doesn't erase the collection; set unlocks |
 | `FullUnlockGateTests.swift` | The free-tier/full-version IAP gate: Set 1 free, paid sets refuse a buy until unlocked, and the unlock never skips progression |
-| `RevealFlowTests.swift` | The win/Game Over overlay waits for a pack reveal to finish; the DEBUG fast‑travel seed |
+| `RevealFlowTests.swift` | The win/Game Over overlay waits for a pack reveal to finish; summary-only evolution-banner filtering preserves the earned bonuses; the DEBUG fast‑travel seed |
+| `PackRipMotionTests.swift` | Both horizontal opening directions, the pack-width-relative threshold, rejected taps/short/vertical drags, and cancelled or reversed motion |
 | `AudioTests.swift` | Independent persisted Music/SFX channels and legacy migration; continuous-drag mute/restore; one-shot Gauntlet audio priorities; all 60 Studio effects and both selected music loops decode from the app bundle, with exact authored loop durations |
 
 ### Audio
@@ -79,10 +80,25 @@ python3 tools/generate_music.py --check
 ```
 
 The music check verifies source/output hashes, exact decoded frame counts,
-AAC priming/padding, true peaks and the loop seam. Neon's score also pins the
-1,566 retained note/drum/echo events and instrument counts from its audition,
-after removing only the 448 brass events. Add `--render-pcm` to
-recompose all five scores and compare their pre-encode PCM hashes as well.
+AAC priming/padding, true peaks and the loop seam. Neon's score pins the
+historical no-brass arrangement before removing its 650 pluck and eight string
+events, retaining exactly 908 original bass/drum events and their timings,
+gains and variations. Add `--render-pcm` to recompose all eight scores and
+compare their pre-encode PCM hashes as well.
+
+Soft Circuit is the selected Classic bass/percussion loop. Pocket Change and
+Velvet Current remain unselected background alternatives, and Paper Lanterns
+remains available as an earlier alternate. Fast source checks cover event
+retention, instrument counts, exact frame budgets, renderer routing and the
+Classic app copy's byte-for-byte match to the approved Soft Circuit audition:
+
+```bash
+python3 -B -m unittest discover -s tools -p test_music.py
+```
+
+After changing a score, run `python3 tools/generate_music.py` before the asset
+checks. Source-only changes are not an audio update: the generated catalog and
+app audio must be regenerated together.
 
 In the [sound lab](sound-lab/index.html), audition repeated Studio actions under
 each recommended music loop, at low volume and through actual phone speakers

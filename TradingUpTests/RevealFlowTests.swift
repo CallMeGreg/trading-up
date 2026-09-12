@@ -52,6 +52,24 @@ final class RevealFlowTests: XCTestCase {
         let game = GameState(core: GameCore(), store: tempStore())
         XCTAssertFalse(game.revealInFlight)
     }
+
+    func testSummaryOmitsEvolutionBannersButKeepsSetCompletion() {
+        let evolution = BonusEvent(kind: .evolution, title: "Evolution complete", amount: 20)
+        let set = BonusEvent(kind: .set, title: "Emberfall complete", amount: 150)
+
+        for isBox in [false, true] {
+            let result = OpenResult(pulled: [], bonuses: [evolution, set], isBox: isBox)
+            XCTAssertEqual(result.summaryBonuses.map(\.id), [set.id])
+            XCTAssertEqual(result.bonuses.map(\.id), [evolution.id, set.id],
+                           "evolution bonuses remain available to the temporary reveal banners")
+
+            let evolutionOnly = OpenResult(pulled: [], bonuses: [evolution], isBox: isBox)
+            XCTAssertTrue(evolutionOnly.summaryBonuses.isEmpty)
+
+            let noBonuses = OpenResult(pulled: [], bonuses: [], isBox: isBox)
+            XCTAssertTrue(noBonuses.summaryBonuses.isEmpty)
+        }
+    }
 }
 
 /// The DEBUG-only fast-travel seed used to reach the ending quickly in tests.

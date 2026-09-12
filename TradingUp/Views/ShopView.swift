@@ -13,11 +13,16 @@ struct ShopView: View {
     @State private var freeze: ShopFreeze?
     /// Drives the full-version unlock paywall, opened from a paid, locked set.
     @State private var showPaywall = false
+    @State private var showInfo = false
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                WalletHeader(freeze: freeze, onHome: onHome)
+                WalletHeader(freeze: freeze, onHome: onHome, onInfo: {
+                    Haptics.play(.light)
+                    Sound.play(.panelOpen)
+                    showInfo = true
+                })
                 ScrollView {
                     LazyVStack(spacing: 12) {
                         ForEach(1...CardDatabase.setCount, id: \.self) { set in
@@ -40,6 +45,7 @@ struct ShopView: View {
         .fullScreenCover(item: $pending, onDismiss: finishReveal) { p in
             RevealView(content: p.content, set: p.set) { pending = nil }
         }
+        .fullScreenCover(isPresented: $showInfo) { WelcomeView(isReference: true) }
         .sheet(isPresented: $showPaywall) { PaywallView() }
     }
 
@@ -158,6 +164,7 @@ struct WalletHeader: View {
     /// When set, a home button is shown at the leading edge that returns to the
     /// main menu. The wallet rows shift right to make room for it.
     var onHome: (() -> Void)? = nil
+    var onInfo: (() -> Void)? = nil
 
     private var cash: Double { freeze?.cash ?? game.cash }
     private var netWorth: Double { freeze?.netWorth ?? game.netWorth }
@@ -166,15 +173,7 @@ struct WalletHeader: View {
     var body: some View {
         HStack(spacing: 12) {
             if let onHome {
-                Button(action: onHome) {
-                    Image(systemName: "house.fill")
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundStyle(Palette.text)
-                        .frame(width: 38, height: 38)
-                        .background(Circle().fill(Palette.panelHi))
-                        .overlay(Circle().stroke(.white.opacity(0.08), lineWidth: 1))
-                }
-                .accessibilityLabel("Home")
+                GauntletCornerButton(systemImage: "house.fill", label: "Home", action: onHome)
             }
             VStack(spacing: 9) {
                 HStack(alignment: .center, spacing: 10) {
@@ -211,6 +210,11 @@ struct WalletHeader: View {
                 }
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel("Collection \(uniqueCount) of \(game.totalCards)")
+            }
+            if let onInfo {
+                GauntletCornerButton(systemImage: "info.circle.fill", label: "How Classic works", action: onInfo)
+                    .accessibilityIdentifier("classicInfo")
+                    .disabled(freeze != nil)
             }
         }
         .padding(.horizontal, 18)

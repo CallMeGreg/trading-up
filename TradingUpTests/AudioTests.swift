@@ -246,7 +246,7 @@ final class AudioCatalogueTests: XCTestCase {
 
     func testBothModeMusicLoopsAreBundledAndDecodable() throws {
         let expectedFrames: [Music: AVAudioFramePosition] = [
-            .classic: 1_772_544,
+            .classic: 3_177_472,
             .gauntlet: 2_490_368
         ]
         for music in Music.allCases {

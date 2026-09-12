@@ -36,7 +36,8 @@ Optional, only for regenerating content:
 3. **Pick a simulator** in the scheme selector at the top — e.g. *iPhone 16*.
 4. Press **▶︎ Run** (or `⌘R`). First build takes a moment; the app launches in the
    Simulator.
-5. You start with **$100**. Open the **Shop** tab, buy a pack, and tap to reveal!
+5. You start with **$100**. Open the **Shop** tab, buy a pack, swipe across its
+   glowing top seam to rip it open, then tap through the cards.
 
 There's nothing else to install — the app has **zero third‑party dependencies** and
 all 250 cards are embedded in the binary.
@@ -319,20 +320,23 @@ Settings**, Music and SFX have independent live sliders and one-tap speaker mute
 Zero mutes without forgetting the previous nonzero level; raising a slider
 unmutes. Haptics remain a separate toggle.
 
-The selected, bundled choices are **Paper Lanterns** (Classic, about 104 BPM / 36.93 seconds)
-and **Neon Dead Drop** (Gauntlet, about 148 BPM / 51.88 seconds). Neon's selected
-arrangement removes the offbeat brass stabs while retaining the FM-pluck melody,
-octave bass and four-on-the-floor drums. Its 32-bar arcade-drive loop includes
-a bass-led pocket and a fuller final return. **Sunlit Sleeves**, **Quiet Resolve**
-and **Northbound** remain audition-only alternatives.
+The selected, bundled choices are **Soft Circuit** (Classic, about 116 BPM /
+66.20 seconds) and **Neon Dead Drop** (Gauntlet, about 148 BPM / 51.88 seconds).
+Soft Circuit uses rounded electronic bass, cushioned four-on-the-floor kicks
+and subdued offbeat hats, without a lead melody or build-ups. Neon's selected
+arrangement retains its original octave bass and drums but removes the lead,
+replies, melodic echoes and brass. Its 32-bar loop keeps the quieter middle
+pocket and fuller final return. **Pocket Change** and **Velvet Current** are
+background alternatives; **Sunlit Sleeves**, **Paper Lanterns**, **Quiet Resolve**
+and **Northbound** remain earlier audition-only alternatives.
 
 The four earlier scores retain their 16-bar arrangements: rounded reed/soft-brass
 hooks, short plucked arpeggios, mobile bass and occasional muted tom fills, with
 quieter answering phrases and a second-half variation. Their D-major/B-minor
 palette shares the SFX colors; lead notes stay below G5. The explicit original
-scores and locally synthesized instruments live in `tools/sound_lab/music.py`
-and `tools/sound_lab/neon_dead_drop.py`; no musical samples or generative-audio
-services are involved.
+scores and locally synthesized instruments live in `tools/sound_lab/music.py`,
+`tools/sound_lab/neon_dead_drop.py` and `tools/sound_lab/classic_backgrounds.py`;
+no musical samples or generative-audio services are involved.
 
 Energy comes from the writing rather than extra loudness: the authored mixes
 remain quiet beds and the in-app default remains 28%. Notes, echoes and room

@@ -967,7 +967,7 @@ def screen_pack_sealed(defs):
     out.append(text(cx, 690, "6 cards inside", 14, SUBTLE, weight=600, anchor="middle"))
     g = defs.linear([("0%", ELEMENT[ele][1], "1"), ("100%", ELEMENT[ele][2], "1")], x1=0, y1=0, x2=1, y2=0)
     out.append(rrect(cx - 116, 712, 232, 46, 23, grad=g))
-    out.append(text(cx, 741, "Tap to tear it open", 16, "#ffffff", weight=800, anchor="middle"))
+    out.append(text(cx, 741, "Swipe to rip open", 16, "#ffffff", weight=800, anchor="middle"))
     return "".join(out)
 
 

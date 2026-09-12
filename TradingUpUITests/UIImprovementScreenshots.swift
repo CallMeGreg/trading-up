@@ -119,7 +119,7 @@ final class UIImprovementScreenshots: XCTestCase {
         shot("11-classic-top-bar")
         buy.tap()
 
-        tapCenter()                       // tear the wrapper
+        app.ripOpenPack()
         var guardCount = 0
         while isRevealing && guardCount < 14 {
             guardCount += 1
