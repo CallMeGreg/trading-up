@@ -36,9 +36,44 @@ Or just press `⌘U` in Xcode.
 | `SaveStoreTests.swift` | Unreadable saves are quarantined on disk, never deleted |
 | `WinAndUnlockTests.swift` | Winning shows once, doesn't erase the collection; set unlocks |
 | `FullUnlockGateTests.swift` | The free-tier/full-version IAP gate: Set 1 free, paid sets refuse a buy until unlocked, and the unlock never skips progression |
-| `RevealFlowTests.swift` | The win/Game Over overlay waits for a pack reveal to finish; summary-only evolution-banner filtering preserves the earned bonuses; the DEBUG fast‑travel seed |
-| `PackRipMotionTests.swift` | Both horizontal opening directions, the pack-width-relative threshold, rejected taps/short/vertical drags, and cancelled or reversed motion |
+| `RevealFlowTests.swift` | The win/Game Over overlay waits for a pack reveal to finish; summaries omit repeated evolution banners but retain them when auto-open skips the reveal; the DEBUG fast‑travel seed |
+| `PackRipMotionTests.swift` | Both horizontal opening directions, the pack-width-relative threshold, rejected/cancelled/reversed drags, and a physical-distance cut trail clamped to the wrapper rather than its padded hit target |
+| `PackOpeningPreferencesTests.swift` | Both preferences default off, all four persisted combinations, independent toggles, and opting back out without changing the other preference |
 | `AudioTests.swift` | Independent persisted Music/SFX channels and legacy migration; continuous-drag mute/restore; one-shot Gauntlet audio priorities; all 60 Studio effects and both selected music loops decode from the app bundle, with exact authored loop durations |
+
+### Pack opening
+
+```bash
+xcodebuild test -project TradingUp.xcodeproj -scheme TradingUp \
+  -destination 'platform=iOS Simulator,name=iPhone 16' \
+  -only-testing:TradingUpTests/PackOpeningPreferencesTests \
+  -only-testing:TradingUpTests/PackRipMotionTests \
+  -only-testing:TradingUpTests/RevealFlowTests \
+  CODE_SIGNING_ALLOWED=NO
+
+xcodebuild test -project TradingUp.xcodeproj -scheme TradingUpScreenshots \
+  -destination 'platform=iOS Simulator,name=iPhone 16' \
+  -only-testing:TradingUpUITests/PackOpeningSettingsUITests \
+  CODE_SIGNING_ALLOWED=NO
+```
+
+`PackOpeningSettingsUITests` changes the real Settings switches and checks
+relaunch persistence. In **both modes** it exercises wrapper taps, seam taps,
+swiping with tap-to-open enabled, and rejected gestures with auto-open enabled.
+The shared sealed-pack assertion requires exactly the **“Swipe to open”**
+instruction and checks that the former title and helper messages stay absent,
+independently of either preference.
+It verifies that disabling auto-open preserves all six reveal steps, while
+enabling it reaches the summary without consuming another rip, deciding cards
+or Catalysts, or letting a Classic win cover the summary. It restores both
+switches to off after each test and attaches a Settings screenshot.
+
+The existing `testClassicPackRequiresSeamSwipe…` cases in `EndingFlowTests` and
+`testGauntletPackRequiresSeamSwipe…` cases in `GauntletExperienceTests` cover the
+default-off flow in both swipe directions. The
+[browser cue concepts](mockups/ui/pack-opening.html) retain the selected Clean cut
+reference alongside two alternatives;
+their preview switches do not change app preferences.
 
 ### Audio
 

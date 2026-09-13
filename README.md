@@ -80,6 +80,11 @@ to reveal cards one at a time, with the hit slot always saved for last. Every
 pack is **3 commons, 2 uncommons, and 1 rare‑or‑ultra**, and every card has a
 **1% chance** to be a shiny **foil** (×3 value).
 
+For a quicker open, Settings offers **Tap to open packs** and **Auto open packs**.
+Both start off: tap-to-open lets you tap the wrapper instead of swiping, while
+auto-open skips straight to the summary after you open it. You still choose what
+to keep or sell.
+
 ### 🗂️ Keep or sell
 
 On the pack summary, brand‑new cards are flagged **✦ NEW**. Tap any duplicate to

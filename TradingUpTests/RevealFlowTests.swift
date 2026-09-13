@@ -59,15 +59,32 @@ final class RevealFlowTests: XCTestCase {
 
         for isBox in [false, true] {
             let result = OpenResult(pulled: [], bonuses: [evolution, set], isBox: isBox)
-            XCTAssertEqual(result.summaryBonuses.map(\.id), [set.id])
+            XCTAssertEqual(result.summaryBonuses(skippedReveal: false).map(\.id), [set.id])
             XCTAssertEqual(result.bonuses.map(\.id), [evolution.id, set.id],
                            "evolution bonuses remain available to the temporary reveal banners")
 
             let evolutionOnly = OpenResult(pulled: [], bonuses: [evolution], isBox: isBox)
-            XCTAssertTrue(evolutionOnly.summaryBonuses.isEmpty)
+            XCTAssertTrue(evolutionOnly.summaryBonuses(skippedReveal: false).isEmpty)
 
             let noBonuses = OpenResult(pulled: [], bonuses: [], isBox: isBox)
-            XCTAssertTrue(noBonuses.summaryBonuses.isEmpty)
+            XCTAssertTrue(noBonuses.summaryBonuses(skippedReveal: false).isEmpty)
+        }
+    }
+
+    func testAutoOpenSummaryIncludesBonusesWhoseRevealWasSkipped() {
+        let evolution = BonusEvent(kind: .evolution, title: "Evolution complete", amount: 20)
+        let set = BonusEvent(kind: .set, title: "Emberfall complete", amount: 150)
+
+        for isBox in [false, true] {
+            let result = OpenResult(pulled: [], bonuses: [evolution, set], isBox: isBox)
+            XCTAssertEqual(result.summaryBonuses(skippedReveal: true).map(\.id), [evolution.id, set.id])
+            XCTAssertEqual(result.bonuses.map(\.id), [evolution.id, set.id])
+
+            let evolutionOnly = OpenResult(pulled: [], bonuses: [evolution], isBox: isBox)
+            XCTAssertEqual(evolutionOnly.summaryBonuses(skippedReveal: true).map(\.id), [evolution.id])
+
+            let noBonuses = OpenResult(pulled: [], bonuses: [], isBox: isBox)
+            XCTAssertTrue(noBonuses.summaryBonuses(skippedReveal: true).isEmpty)
         }
     }
 }

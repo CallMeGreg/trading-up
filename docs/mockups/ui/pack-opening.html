@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="description" content="Three Pocket-inspired pack-opening concepts using Trading Up's original artwork. A local, no-purchase prototype.">
+  <title>Trading Up — Pocket-inspired pack opening</title>
+  <link rel="stylesheet" href="pack-opening.css">
+  <script src="pack-opening.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#concepts">Skip to the concepts</a>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="index.html">
+        <img src="../../../TradingUp/Assets.xcassets/AppIcon.appiconset/icon-1024.png" width="38" height="38" alt="">
+        <span><strong>Trading Up</strong><small>Design lab / Pack opening</small></span>
+      </a>
+      <nav aria-label="Prototype navigation">
+        <a href="#preferences">Settings</a>
+        <a href="#concepts">Concepts</a>
+        <a href="#behavior">Opening flow</a>
+      </nav>
+      <span class="concept-only"><span aria-hidden="true"></span> Clean cut selected</span>
+    </div>
+  </header>
+
+  <main class="shell">
+    <section class="intro" aria-labelledby="page-title">
+      <div>
+        <p class="eyebrow">Pocket-inspired study <span aria-hidden="true">/</span> 01–03</p>
+        <h1 id="page-title">Less interface.<br><span>More anticipation.</span></h1>
+        <p class="intro-copy">An airy stage. One floating pack. A fine cut of light, then the foil
+          strip lifts away. Clean cut is selected, with just “Swipe to open” on the opening screen.</p>
+        <p class="study-note">Inspired by Pokémon TCG Pocket’s opening feel, using Trading Up’s
+          own artwork. The other two concepts remain here for comparison.</p>
+      </div>
+      <aside class="gesture-spec" aria-label="The shared slicing gesture">
+        <div class="spec-heading"><span class="tiny-dot"></span> The wrapper is the interaction</div>
+        <svg class="gesture-diagram" viewBox="0 0 280 66" fill="none" aria-hidden="true">
+          <path d="M32 44H248" stroke="#6c8ba9" stroke-width="1"/>
+          <path d="M32 44H172" stroke="#e8f7ff" stroke-width="2" stroke-linecap="round"/>
+          <path d="M32 26L242 10L243 17L33 33Z" fill="#c5d8e8"/>
+          <path d="M36 27L239 12" stroke="#fff" stroke-opacity=".8"/>
+          <path d="M172 36V52M164 44H180" stroke="#c6eeff" stroke-linecap="round"/>
+        </svg>
+        <h2>A cut, not a control.</h2>
+        <p>No oversized handles or swipe lane. Just <strong>foil, a fingertip trail, and a detached top strip</strong>.
+          The differences are in the hint and the finish.</p>
+        <span class="spec-foot">Same gesture: slice across 55% of the pack, either way, then release.</span>
+      </aside>
+    </section>
+
+    <section class="preferences" id="preferences" aria-labelledby="preferences-title">
+      <div class="preferences-head">
+        <div>
+          <p class="eyebrow">Prototype settings</p>
+          <h2 id="preferences-title">Your pace. Your opening.</h2>
+        </div>
+        <button class="text-button" id="restore-defaults" type="button">Restore defaults</button>
+      </div>
+      <fieldset class="settings-grid">
+        <legend class="sr-only">Opening preferences, shared by all three concepts</legend>
+        <label class="setting" for="tap-setting">
+          <span class="setting-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M10 12V6a2 2 0 0 1 4 0v5l3 1a3 3 0 0 1 2 3v2a4 4 0 0 1-4 4h-3a4 4 0 0 1-3-1.5L5.5 15a1.5 1.5 0 0 1 2-2L10 15" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 8a6 6 0 0 1 12 0" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" opacity=".5"/></svg>
+          </span>
+          <span class="setting-copy"><strong>Tap to open packs</strong><small id="tap-description">Allow a tap on the wrapper. Slicing still works.</small></span>
+          <input id="tap-setting" type="checkbox" role="switch" aria-describedby="tap-description">
+          <span class="switch" aria-hidden="true"></span>
+          <span class="setting-state" id="tap-state" aria-hidden="true">Off</span>
+        </label>
+        <label class="setting" for="auto-setting">
+          <span class="setting-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M4 5L12 12L4 19V5ZM12 5L20 12L12 19V5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+          </span>
+          <span class="setting-copy"><strong>Auto open packs</strong><small id="auto-description">After an opening action, go straight to the summary.</small></span>
+          <input id="auto-setting" type="checkbox" role="switch" aria-describedby="auto-description">
+          <span class="switch" aria-hidden="true"></span>
+          <span class="setting-state" id="auto-state" aria-hidden="true">Off</span>
+        </label>
+      </fieldset>
+      <div class="preferences-foot">
+        <p id="preferences-status" role="status" aria-live="polite" aria-atomic="true">Slice → card-by-card reveal → six-card summary.</p>
+        <p>Both default to off. Auto never opens a sealed pack by itself.<br>Changes apply to the next opening action, not a reveal already in progress.</p>
+      </div>
+    </section>
+
+    <section id="concepts" class="comparison" aria-labelledby="concepts-title">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Closer to Pocket</p>
+          <h2 id="concepts-title">One clean stage. Three satisfying cuts.</h2>
+        </div>
+        <button class="secondary-button" id="replay-all" type="button"><span aria-hidden="true">↻</span> Replay all</button>
+      </div>
+      <p class="comparison-help">Clean cut is the selected direction. Drag across the very top of its pack, then release.</p>
+      <noscript><p class="no-script">Enable JavaScript to try the packs and prototype settings. All artwork and scripts are local; no connection is needed.</p></noscript>
+
+      <div class="concept-grid">
+        <article class="concept" id="clean" data-concept="clean" aria-labelledby="clean-title">
+          <header class="concept-heading">
+            <div class="concept-meta"><span class="concept-number">01 / A</span><span class="approach">Selected</span></div>
+            <h3 id="clean-title">Clean cut</h3>
+            <p>Light across the seam. One crisp release.</p>
+          </header>
+          <div class="phone-mount"></div>
+          <div class="demo-controls">
+            <button class="accessible-open" type="button"><span aria-hidden="true">↵</span> Open without a gesture</button>
+            <button class="replay-demo" type="button" aria-label="Replay Clean cut">↻ Replay</button>
+          </div>
+          <p class="accessibility-note">Keyboard / assistive action · always available while sealed</p>
+          <p class="interaction-status" role="status" aria-live="polite" aria-atomic="true">Sealed. Slice the fine line across the top.</p>
+          <dl class="concept-notes">
+            <div><dt>The cue</dt><dd>A hairline light sweeps along the top seal. “Swipe to open” is the only visible instruction, including while dragging or using either opening preference.</dd></div>
+            <div><dt>The finish · 0.64s</dt><dd>A bright cut follows your finger. The top strip snaps free and sails away as the wrapper drops.</dd></div>
+            <div><dt>Selected direction</dt><dd>Clean, quick, and focused on the pack. Extra guidance stays available to assistive controls, not on the opening screen.</dd></div>
+          </dl>
+        </article>
+
+        <article class="concept" id="ribbon" data-concept="ribbon" aria-labelledby="ribbon-title">
+          <header class="concept-heading">
+            <div class="concept-meta"><span class="concept-number">02 / B</span><span class="approach">More tactile</span></div>
+            <h3 id="ribbon-title">Foil ribbon</h3>
+            <p>Feel the seal give way under your finger.</p>
+          </header>
+          <div class="phone-mount"></div>
+          <div class="demo-controls">
+            <button class="accessible-open" type="button"><span aria-hidden="true">↵</span> Open without a gesture</button>
+            <button class="replay-demo" type="button" aria-label="Replay Foil ribbon">↻ Replay</button>
+          </div>
+          <p class="accessibility-note">Keyboard / assistive action · always available while sealed</p>
+          <p class="interaction-status" role="status" aria-live="polite" aria-atomic="true">Sealed. Start at either end of the foil seam.</p>
+          <dl class="concept-notes">
+            <div><dt>The cue</dt><dd>Tiny notches in the seal, not added handles. The metallic edge does most of the teaching.</dd></div>
+            <div><dt>The finish · 0.78s</dt><dd>The strip bends up as you slice, flashes its silver underside, then curls away on release. Reverse or cancel and it settles back.</dd></div>
+            <div><dt>The trade-off</dt><dd>More physical feedback and less glowing UI, but a slightly longer finish than Clean cut.</dd></div>
+          </dl>
+        </article>
+
+        <article class="concept" id="lift" data-concept="lift" aria-labelledby="lift-title">
+          <header class="concept-heading">
+            <div class="concept-meta"><span class="concept-number">03 / C</span><span class="approach">More cinematic</span></div>
+            <h3 id="lift-title">Cut + lift</h3>
+            <p>A little more anticipation before the first card.</p>
+          </header>
+          <div class="phone-mount"></div>
+          <div class="demo-controls">
+            <button class="accessible-open" type="button"><span aria-hidden="true">↵</span> Open without a gesture</button>
+            <button class="replay-demo" type="button" aria-label="Replay Cut and lift">↻ Replay</button>
+          </div>
+          <p class="accessibility-note">Keyboard / assistive action · always available while sealed</p>
+          <p class="interaction-status" role="status" aria-live="polite" aria-atomic="true">Sealed. Slice, release, and watch the card stack rise.</p>
+          <dl class="concept-notes">
+            <div><dt>The cue</dt><dd>The same restrained cut line, with a softer shimmer and an almost-white backdrop. Nothing competes with the pack.</dd></div>
+            <div><dt>The finish · 1.10s</dt><dd>The cap floats off, the sleeve falls, and a stack of card backs lifts into view before the first reveal.</dd></div>
+            <div><dt>The trade-off</dt><dd>The most ceremonial option. Auto open still bypasses the whole sequence when you want speed.</dd></div>
+          </dl>
+        </article>
+      </div>
+    </section>
+
+    <section class="behavior" id="behavior" aria-labelledby="behavior-title">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Same rules in every concept</p>
+          <h2 id="behavior-title">The cue changes. The contract doesn’t.</h2>
+        </div>
+        <a class="text-link" href="#preferences">Try another setting combination ↑</a>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <caption class="sr-only">Opening behavior for all four preference combinations</caption>
+          <thead><tr><th scope="col">Tap to open</th><th scope="col">Auto open</th><th scope="col">Opening action</th><th scope="col">Where you land</th></tr></thead>
+          <tbody>
+            <tr data-settings="00" class="current"><td>Off <span class="default-tag">Default</span></td><td>Off</td><td>Slice the seam</td><td>Card 1 of 6 <span class="table-arrow">→</span> reveal each <span class="table-arrow">→</span> summary <span class="current-tag">Current</span></td></tr>
+            <tr data-settings="10"><td>On</td><td>Off</td><td>Tap the wrapper or slice</td><td>Card 1 of 6 <span class="table-arrow">→</span> reveal each <span class="table-arrow">→</span> summary <span class="current-tag">Current</span></td></tr>
+            <tr data-settings="01"><td>Off</td><td>On</td><td>Slice the seam</td><td>Six-card summary immediately <span class="current-tag">Current</span></td></tr>
+            <tr data-settings="11"><td>On</td><td>On</td><td>Tap the wrapper or slice</td><td>Six-card summary immediately <span class="current-tag">Current</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="behavior-notes">
+        <p><strong>Accessible in every mode.</strong> Focus a pack and press Enter or Space, or use “Open without a gesture.”
+          These equivalents work even when wrapper taps are off. Escape cancels an active drag.</p>
+        <p><strong>Only a sample.</strong> Each concept reveals the same six cards. No purchases, inventory changes,
+          keeping, or selling. Fixed sample contents do not represent pack odds.</p>
+        <p><strong>Motion is optional.</strong> Your system’s reduced-motion preference removes the cue animations
+          and wrapper transition. Progress and all opening actions still work.</p>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <p>Trading Up · Pocket-inspired opening study · Clean cut selected</p>
+      <p>Emberfall scene adapted from <a href="../../../TradingUp/Views/SetArt.swift">the app’s original pack art</a>;
+        <a href="../index.html">original local card illustrations</a>. No network or game-state changes.</p>
+    </footer>
+  </main>
+
+  <template id="phone-template">
+    <div class="phone">
+      <div class="phone-screen">
+        <div class="status-bar" aria-hidden="true">
+          <span>9:41</span><span class="island"></span>
+          <svg viewBox="0 0 56 14" fill="none"><path d="M1 11V9M5 11V6M9 11V3M13 11V1" stroke="currentColor" stroke-width="2.5"/><path d="M20 4Q26-1 32 4M22 7Q26 3 30 7M25 10H27" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><rect x="38" y="2" width="15" height="10" rx="2.5" stroke="currentColor"/><rect x="40" y="4" width="11" height="6" rx="1" fill="currentColor"/><path d="M55 5V9" stroke="currentColor" stroke-width="1.5"/></svg>
+        </div>
+        <div class="screen-nav">
+          <button class="phone-replay" type="button" aria-label="Reseal this demo pack"><span aria-hidden="true">↻</span></button>
+          <span class="phone-title">Emberfall</span>
+          <span class="nav-spacer" aria-hidden="true"></span>
+        </div>
+        <div class="phone-content">
+          <div class="sealed-view">
+            <div class="pack-stage">
+              <div class="pack-aura" aria-hidden="true"></div>
+              <div class="pack-shadow" aria-hidden="true"></div>
+              <div class="foil-pack" role="button" tabindex="0" aria-keyshortcuts="Enter Space">
+                <div class="card-stack-preview" aria-hidden="true">
+                  <div class="stack-card stack-rear"></div>
+                  <div class="stack-card stack-middle"></div>
+                  <div class="stack-card stack-front">
+                    <svg viewBox="0 0 100 100"><use href="#emberfall-scene"></use></svg>
+                    <span>TRADING UP</span>
+                  </div>
+                </div>
+                <div class="top-crimp" aria-hidden="true"></div>
+                <div class="pack-body" aria-hidden="true">
+                  <svg class="pack-art" viewBox="0 0 100 100"><use href="#emberfall-scene"></use></svg>
+                  <div class="foil-film"></div><div class="foil-folds"></div><div class="foil-glint"></div>
+                  <span class="pack-brand">TRADING UP</span><span class="pack-set-name">Emberfall</span><span class="pack-kind">BOOSTER PACK</span>
+                </div>
+                <div class="bottom-crimp" aria-hidden="true"></div>
+                <div class="seam-hit-area" aria-hidden="true">
+                  <div class="seam-track">
+                    <div class="seam-line"></div><div class="seam-progress"></div>
+                    <span class="slice-tip"></span><span class="cue-sweep"></span>
+                  </div>
+                  <span class="edge-notch notch-left"></span><span class="edge-notch notch-right"></span>
+                </div>
+              </div>
+            </div>
+            <svg class="swipe-instruction" viewBox="0 0 68 16" fill="none" aria-hidden="true">
+              <path d="M10 8H58M15 3L10 8L15 13M53 3L58 8L53 13" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="34" cy="8" r="3" fill="currentColor"/>
+            </svg>
+            <p class="gesture-hint">Swipe to open</p>
+            <p class="gesture-detail">Across the top, in either direction</p>
+          </div>
+          <div class="reveal-view" hidden>
+            <div class="reveal-heading" tabindex="-1"><p class="eyebrow">The slow reveal</p><h4 class="card-count">Card 1 of 6</h4></div>
+            <div class="reveal-dots" aria-hidden="true"></div>
+            <div class="reveal-art"></div>
+            <button class="next-card primary-button" type="button">Reveal next card <span aria-hidden="true">→</span></button>
+          </div>
+          <div class="summary-view" hidden>
+            <div class="summary-heading" tabindex="-1"><p class="eyebrow">Emberfall Booster</p><h4>Pack summary</h4><p>All six. All revealed.</p></div>
+            <div class="summary-grid" role="list" aria-label="The six sample cards"></div>
+            <p class="summary-note">Preview only. Nothing kept, sold, or purchased.</p>
+          </div>
+        </div>
+        <div class="screen-footer"><span class="phase-dot" aria-hidden="true"></span><span class="route-label">Card-by-card reveal</span></div>
+        <div class="home-indicator" aria-hidden="true"></div>
+      </div>
+    </div>
+  </template>
+
+  <!-- SVG translation of SetArt.swift's existing 100×100 Emberfall scene.
+       One shared definition keeps the three wrappers identical without a new generated asset. -->
+  <svg class="art-definitions" width="0" height="0" aria-hidden="true" focusable="false">
+    <defs>
+      <radialGradient id="ember-night" cx="50" cy="44" r="50" gradientUnits="userSpaceOnUse">
+        <stop offset=".08" stop-color="#1a0603" stop-opacity=".94"/><stop offset=".38" stop-color="#1a0603" stop-opacity=".9"/><stop offset=".7" stop-color="#1a0603" stop-opacity=".62"/><stop offset="1" stop-color="#1a0603" stop-opacity="0"/>
+      </radialGradient>
+      <radialGradient id="ember-heat" cx="50" cy="76" r="40" gradientUnits="userSpaceOnUse">
+        <stop stop-color="#ff7a1a" stop-opacity=".5"/><stop offset=".5" stop-color="#ff5a0f" stop-opacity=".16"/><stop offset="1" stop-color="#ff5a0f" stop-opacity="0"/>
+      </radialGradient>
+      <linearGradient id="ember-peaks" x1="50" y1="50" x2="50" y2="88" gradientUnits="userSpaceOnUse">
+        <stop stop-color="#5e2411"/><stop offset="1" stop-color="#2b0d08"/>
+      </linearGradient>
+      <linearGradient id="ember-cone" x1="50" y1="28" x2="50" y2="90" gradientUnits="userSpaceOnUse">
+        <stop stop-color="#5a2110"/><stop offset="1" stop-color="#24090a"/>
+      </linearGradient>
+      <linearGradient id="ember-lit" x1="50" y1="32" x2="50" y2="86" gradientUnits="userSpaceOnUse">
+        <stop stop-color="#8a3a19" stop-opacity=".55"/><stop offset="1" stop-color="#3a1009" stop-opacity=".05"/>
+      </linearGradient>
+      <linearGradient id="ember-ash" x1="50" y1="0" x2="50" y2="26" gradientUnits="userSpaceOnUse">
+        <stop stop-color="#5b3226" stop-opacity=".8"/><stop offset="1" stop-color="#24100a" stop-opacity=".95"/>
+      </linearGradient>
+      <radialGradient id="ember-vent" cx="49" cy="31.5" r="7" gradientUnits="userSpaceOnUse">
+        <stop stop-color="#fff0b0"/><stop offset="1" stop-color="#ff8a1a"/>
+      </radialGradient>
+      <linearGradient id="ember-lake" x1="0" y1="50" x2="100" y2="50" gradientUnits="userSpaceOnUse">
+        <stop stop-color="#d8480a" stop-opacity="0"/><stop offset=".2" stop-color="#d8480a"/><stop offset=".5" stop-color="#ffb24d"/><stop offset=".8" stop-color="#d8480a"/><stop offset="1" stop-color="#d8480a" stop-opacity="0"/>
+      </linearGradient>
+      <filter id="ember-soft" x="-.5" y="-.5" width="2" height="2"><feGaussianBlur stdDeviation="1.6"/></filter>
+      <filter id="ember-glow" x="-.5" y="-.5" width="2" height="2"><feGaussianBlur stdDeviation="2.2"/></filter>
+      <filter id="ember-bloom" x="-.5" y="-.5" width="2" height="2"><feGaussianBlur stdDeviation="5"/></filter>
+      <path id="ember-flow-a" d="M44 34Q36.8 41 36 48Q30.6 54 30 60Q26.4 66 26 72Q23.3 78 23 84"/>
+      <path id="ember-flow-b" d="M55 31Q62.2 38 63 45Q65.7 51.5 66 58Q70.5 64 71 70Q72.8 77 73 84"/>
+      <path id="ember-flow-c" d="M47 36Q43.4 44 43 52Q45.7 59 46 66Q42.4 73 42 80"/>
+      <symbol id="emberfall-scene" viewBox="0 0 100 100">
+        <ellipse cx="50" cy="50" rx="50" ry="50" fill="url(#ember-night)"/>
+        <ellipse cx="50" cy="70" rx="44" ry="40" fill="url(#ember-heat)"/>
+        <path d="M12 86L21 54L28 64L35 52L44 86ZM58 86L68 50L75 61L81 55L90 86Z" fill="url(#ember-peaks)"/>
+        <path d="M15 87Q30 62 41 30L48 35L57 27Q70 60 85 87Z" fill="url(#ember-cone)"/>
+        <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M15 87Q30 62 41 30" stroke="#ff9a4a" stroke-opacity=".5" stroke-width="1.1"/>
+          <path d="M57 27Q70 60 85 87" stroke="#ff7a1a" stroke-opacity=".35"/>
+          <path d="M41 30L48 35L57 27" stroke="#ffb24d" stroke-opacity=".65"/>
+        </g>
+        <path d="M15 87Q30 62 41 30L44 33L26 87Z" fill="url(#ember-lit)"/>
+        <path d="M33 56L39 46L37 60ZM62 66L69 78L59 72ZM50 46L56 55L47 57ZM24 76L31 68L30 82Z" fill="#000" fill-opacity=".28"/>
+        <path d="M45 32Q40 24 37 15L68 13Q61 21 55 31Z" fill="#4a2418" fill-opacity=".85" filter="url(#ember-glow)"/>
+        <g filter="url(#ember-soft)" fill="url(#ember-ash)">
+          <ellipse cx="53" cy="14" rx="15" ry="8"/><ellipse cx="39" cy="12" rx="10" ry="6"/><ellipse cx="69" cy="10" rx="12" ry="6.5"/><ellipse cx="58" cy="4" rx="13" ry="5.5"/><ellipse cx="77" cy="16" rx="8" ry="5"/>
+          <g fill="#7a4a36" fill-opacity=".35"><ellipse cx="46" cy="9" rx="8" ry="4"/><ellipse cx="62" cy="5" rx="7" ry="3.4"/></g>
+        </g>
+        <ellipse cx="50" cy="22" rx="11" ry="4.5" fill="#ff7a1a" fill-opacity=".5" filter="url(#ember-glow)"/>
+        <ellipse cx="49" cy="31" rx="9" ry="4.5" fill="#ff6a1a" fill-opacity=".95" filter="url(#ember-glow)"/>
+        <path d="M45 30Q43.8 23.7 40.2 21M49 33Q49 23.2 49 19M53 30Q54.2 23 57.8 20" fill="none" stroke="#ffd15c" stroke-opacity=".9" stroke-width="1.3" stroke-linecap="round"/>
+        <ellipse cx="49" cy="31.5" rx="6" ry="2.4" fill="url(#ember-vent)"/>
+        <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+          <g stroke="#ff5a0f" stroke-opacity=".75" filter="url(#ember-glow)"><use href="#ember-flow-a" stroke-width="4.2"/><use href="#ember-flow-b" stroke-width="3.6"/><use href="#ember-flow-c" stroke-width="2.7"/></g>
+          <g stroke="#ffd15c"><use href="#ember-flow-a" stroke-width="1.4"/><use href="#ember-flow-b" stroke-width="1.2"/><use href="#ember-flow-c" stroke-width=".9"/></g>
+        </g>
+        <ellipse cx="50" cy="88" rx="39" ry="8.5" fill="#ff6a1a" fill-opacity=".55" filter="url(#ember-bloom)"/>
+        <ellipse cx="50" cy="88" rx="39" ry="8.5" fill="url(#ember-lake)"/>
+        <path d="M16 84Q34 81 52 82.5Q68 85.5 84 85" fill="none" stroke="#fff0b0" stroke-opacity=".5" stroke-width="1.2" stroke-linecap="round"/>
+        <path d="M20 90L26 86L33 88L29 92L22 92ZM60 87L68 85L74 89L65 91ZM41 93L48 90L55 94L46 95Z" fill="#220806" fill-opacity=".85"/>
+        <g fill="#ffe6a0">
+          <circle cx="19" cy="44" r="1.3" opacity=".8"/><circle cx="80" cy="38" r="1.5" opacity=".75"/><circle cx="28" cy="62" r="1" opacity=".65"/><circle cx="86" cy="58" r="1.2" opacity=".65"/><circle cx="14" cy="70" r=".9" opacity=".55"/><circle cx="67" cy="22" r="1.4" opacity=".85"/><circle cx="31" cy="20" r="1.1" opacity=".75"/><circle cx="73" cy="42" r=".9" opacity=".55"/><circle cx="24" cy="34" r="1" opacity=".6"/><circle cx="90" cy="72" r="1" opacity=".5"/>
+        </g>
+        <path d="M69 19L77 33M29 17L21 30" stroke="#ff8a1a" stroke-opacity=".4" stroke-width=".9" stroke-linecap="round"/>
+      </symbol>
+    </defs>
+  </svg>
+</body>
+</html>
