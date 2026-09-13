@@ -1841,8 +1841,13 @@ struct GauntletRevealView: View {
         switch phase {
         case .sealed:
             guard !items.isEmpty else { phase = .summary; return }
-            haptic(items[0])
-            withAnimation(.spring(response: 0.5, dampingFraction: 0.68)) { phase = .revealing(0) }
+            if PackOpeningPreferences.shared.autoOpenPacks {
+                Haptics.play(.success)
+                withAnimation(.easeOut(duration: 0.2)) { phase = .summary }
+            } else {
+                haptic(items[0])
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.68)) { phase = .revealing(0) }
+            }
         case .revealing(let i):
             let next = i + 1
             if next < items.count {

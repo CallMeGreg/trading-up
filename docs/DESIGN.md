@@ -168,16 +168,29 @@ higher‑set cards are always worth more. Approximate resulting bands:
 ### Packs
 - **6 cards per pack:** 3 commons, 2 uncommons, 1 "hit."
 - The **hit slot** is a Rare 80% of the time, Ultra Rare 20%.
-- In **Classic and Gauntlet**, swipe horizontally across the highlighted top
-  seam to rip open a sealed pack. Either direction works; the crimp and seam
-  progress follow the finger. Release after crossing 55% of the pack's width
-  to open it; short or cancelled swipes reset, and taps or vertical drags do
-  not open it. Arrows, a finger that swipes then lifts and restarts, and explicit
-  instructions teach the gesture. The wrapper has no card-count sticker.
-  Assistive activation can open the pack without dragging, and
-  Reduce Motion replaces the moving tear and flash with a short fade. Card-by-card
+- **Clean cut** is the opening style in **Classic and Gauntlet**: a floating
+  wrapper on a light stage, a fine seam shimmer, and a cut trail that follows
+  the finger's actual position. Swipe horizontally across the top seam in either
+  direction. Release after crossing 55% of the pack's width
+  to open it; short or cancelled swipes reset, and vertical drags do not open it.
+  The thin top strip flies off before the wrapper drops away, in a 0.64-second
+  finish without a full-screen flash. The visible instruction is always
+  **“Swipe to open”**: no duplicate set title, progress message, tap hint, or
+  auto-open status. A small two-way arrow remains beneath the pack, and the
+  thin seam retains a generously padded touch target.
+  Taps do not open it by default. Assistive activation can open the pack without
+  dragging; its descriptions remain available without extra visible copy.
+  Reduce Motion replaces the moving tear with a short fade. Card-by-card
   reveals still advance with a tap. No additional cash or rips are spent by
   the gesture.
+- **Settings → Pack opening** has two independent, device-persisted options,
+  both **off by default** in Classic and Gauntlet:
+  **Tap to open packs** allows a tap anywhere on the wrapper (including the seam);
+  slicing still works. **Auto open packs** skips the opening animation and card-by-card reveals after a
+  valid opening action and lands on the pack summary. Auto-open alone does not
+  enable tapping, open packs without input, buy another pack, or make any
+  keep/sell/swap/Catalyst decisions. Booster boxes still visit each pack's summary
+  in turn. Assistive activation remains available with either setting off.
 - A pack's contents are worth, on average, a **per‑set multiple of the pack price**.
   The payout curve **shrinks as sets get pricier** — early packs are generous, later
   packs are a bigger gamble:
@@ -305,8 +318,9 @@ and one big multi‑pack open, **not** a bulk discount.
   fully bankrolling infinite spending (it was 30×, which snowballed too hard).
 
 Classic celebrates completed evolution lines with temporary banners during the
-pack reveal. Pack summaries do not repeat those banners; full-set completion
-bonuses still appear in the summary.
+pack reveal. Pack summaries do not repeat those banners unless **Auto open packs**
+skipped the reveal; in that case the summary shows the earned evolution bonuses
+as well. Full-set completion bonuses always appear in the summary.
 
 ---
 
@@ -520,10 +534,11 @@ Per-tier counts (rounds, rips, starting slots) live in §14.5.
 **Visible rip budget.** A high-contrast **Rips Left** counter anchors the pinned round
 HUD and pack-summary HUD. It also stays visible beside the sealed pack and each
 card reveal, using the already-decremented budget; one or zero remaining rips turn
-the counter gold. Opening still follows the card-by-card reveal, with no skip-all
-button. The summary counts unresolved cards **and Catalysts** and explains whether
-finishing the pack returns to the round, banks unused rips, opens a last-chance
-grade, or ends the run. An offered Catalyst is the **first decision row** in the
+the counter gold. Opening follows the card-by-card reveal by default; the opt-in
+**Auto open packs** setting goes directly to the summary instead. There is no
+in-reveal skip-all button. The summary counts unresolved cards **and Catalysts**
+and explains whether finishing the pack returns to the round, banks unused rips,
+opens a last-chance grade, or ends the run. An offered Catalyst is the **first decision row** in the
 summary, above the Sprytes, so its run-wide effect can inform keep/sell/swap choices.
 The card-by-card reveal order is unchanged, and players can still decide items in
 any order.

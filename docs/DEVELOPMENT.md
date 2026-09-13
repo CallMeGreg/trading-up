@@ -509,5 +509,19 @@ cd docs/mockups && python3 -m http.server 8787
 **booster pack** and the **Shop home screen** (three options each, plus the
 tear‑open interaction). Open `http://localhost:8787/ui/` from the same server.
 The app ships the recommended combination — the foil wrapper (P1), the booster
-box and pack tray (P3), the shelf list (H1) and tap‑to‑tear — so the gallery now
-doubles as the reference for that art (`TradingUp/Views/PackWrapper.swift`).
+box and pack tray (P3), and the shelf list (H1) — so the gallery now doubles as
+the reference for that art (`TradingUp/Views/PackWrapper.swift`).
+
+[Pack-opening cue concepts](mockups/ui/pack-opening.html) compares three
+Pocket-inspired treatments using the app's original art: **Clean cut** (a crisp
+strip release), **Foil ribbon** (a finger-following bend), and **Cut + lift**
+(a card-stack entrance). Each uses a light, uncluttered stage and subtle seam
+cues rather than oversized handles or swipe lanes, with independent **Tap to open packs** and
+**Auto open packs** preview switches, both initially off. Open
+`http://localhost:8787/ui/pack-opening.html#clean` from the same server.
+**Clean cut is the selected native style**, implemented in `SealedPackView`:
+its only visible instruction is **“Swipe to open”**, even with either opening
+preference enabled. The other two treatments remain comparison mockups.
+The app's two preferences
+live in `Views/PackOpeningPreferences.swift`, outside game saves, and apply to
+both Classic and Gauntlet.

@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Swipe the top seam to open a pack, then tap to reveal one card at a time.
+/// Open a pack, then reveal one card at a time or go straight to its summary.
 /// A booster box reveals each of its packs in turn — the same card-by-card
 /// flip and keep/sell summary as a single pack — advancing automatically to
 /// the next pack once its cards are kept or sold, with a "Pack X of N" counter.
@@ -13,6 +13,7 @@ struct RevealView: View {
 
     @State private var phase: Phase = .sealed
     @State private var packIndex = 0
+    @State private var skippedReveal = false
     /// The pack currently being revealed. For a box, the next pack's result.
     @State private var current: OpenResult? = nil
     /// Short-lived "Evolution Complete!" toasts, shown on the exact card that
@@ -57,6 +58,7 @@ struct RevealView: View {
                         result: result,
                         set: set,
                         packCounter: isBox ? PackCounter(index: packIndex, total: packCount) : nil,
+                        skippedReveal: skippedReveal,
                         onDone: resolvePack
                     )
                     .id(packIndex)
@@ -210,8 +212,14 @@ struct RevealView: View {
         }
         current = result
         packIndex = index
-        haptic(for: result.pulled[0])
-        withAnimation(.spring(response: 0.5, dampingFraction: 0.68)) { phase = .revealing(0) }
+        skippedReveal = PackOpeningPreferences.shared.autoOpenPacks
+        if skippedReveal {
+            Haptics.play(.success)
+            withAnimation(.easeOut(duration: 0.2)) { phase = .summary }
+        } else {
+            haptic(for: result.pulled[0])
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.68)) { phase = .revealing(0) }
+        }
     }
 
     /// Called when the player finishes a pack's summary (kept or sold). Advances
@@ -234,8 +242,8 @@ struct RevealView: View {
 // MARK: - Summary
 
 extension OpenResult {
-    var summaryBonuses: [BonusEvent] {
-        bonuses.filter { $0.kind != .evolution }
+    func summaryBonuses(skippedReveal: Bool) -> [BonusEvent] {
+        bonuses.filter { skippedReveal || $0.kind != .evolution }
     }
 }
 
@@ -253,6 +261,7 @@ private struct SummaryView: View {
     let result: OpenResult
     let set: Int
     var packCounter: PackCounter? = nil
+    var skippedReveal = false
     let onDone: () -> Void
 
     /// One-time classification of each pulled instance, snapshotted before any
@@ -273,7 +282,7 @@ private struct SummaryView: View {
     @State private var gradedInstances: [UUID: CardInstance] = [:]
     /// The PSA reveal to show after a grade roll, mirroring the Collection flow.
     @State private var gradeResult: GradeResult?
-    @State private var announcedSetBonus = false
+    @State private var announcedBonuses = false
 
     /// Lazily computed and cached: the first read takes the snapshot, later
     /// reads return it, so a card's kind stays stable as the collection changes.
@@ -341,7 +350,7 @@ private struct SummaryView: View {
                             }
                         }
 
-                        ForEach(result.summaryBonuses) { bonus in
+                        ForEach(result.summaryBonuses(skippedReveal: skippedReveal)) { bonus in
                             BonusBanner(bonus: bonus)
                         }
 
@@ -361,9 +370,12 @@ private struct SummaryView: View {
         }
         .background(Palette.bg0.ignoresSafeArea())
         .onAppear {
-            if !announcedSetBonus && result.bonuses.contains(where: { $0.kind == .set }) {
-                announcedSetBonus = true
+            guard !announcedBonuses else { return }
+            announcedBonuses = true
+            if result.bonuses.contains(where: { $0.kind == .set }) {
                 Sound.play(.setComplete)
+            } else if skippedReveal && result.bonuses.contains(where: { $0.kind == .evolution }) {
+                Sound.play(.evolutionComplete, volume: 0.7)
             }
         }
         .overlay {
@@ -908,18 +920,22 @@ struct PackArtwork: View {
     var ripProgress: Double = 0
     var ripFromRight: Bool = false
     var animatedSheen: Bool = true
+    var width: CGFloat? = nil
+    var shadowColor: Color? = nil
 
     var body: some View {
         Group {
             if isBox {
-                BoosterBoxArt(set: set, width: 296)
+                BoosterBoxArt(set: set, width: width ?? 296,
+                              shadowColor: shadowColor ?? .black.opacity(0.6))
                     .scaleEffect(1 - 0.06 * dropBody)
                     .offset(y: 30 * dropBody - 26 * tearTop)
                     .opacity(1 - dropBody)
             } else {
-                PackWrapper(set: set, width: 218, detail: .full,
+                PackWrapper(set: set, width: width ?? 218, detail: .full,
                             animatedSheen: animatedSheen, tearTop: tearTop, dropBody: dropBody,
-                            ripProgress: ripProgress, ripFromRight: ripFromRight)
+                            ripProgress: ripProgress, ripFromRight: ripFromRight,
+                            shadowColor: shadowColor ?? .black.opacity(0.5))
             }
         }
     }

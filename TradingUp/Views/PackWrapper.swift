@@ -96,6 +96,7 @@ struct PackWrapper: View {
     var dropBody: Double = 0
     var ripProgress: Double = 0
     var ripFromRight: Bool = false
+    var shadowColor: Color = .black.opacity(0.5)
 
     private var element: Element { Element.theme(forSet: set) }
     private var pal: [Color] { element.palette }
@@ -132,22 +133,22 @@ struct PackWrapper: View {
     var body: some View {
         VStack(spacing: 0) {
             crimp(teethOnTop: true)
-                .rotationEffect(.degrees((ripFromRight ? -1 : 1) * (5 * ripProgress + 16 * tearTop)),
+                .rotationEffect(.degrees((ripFromRight ? -1 : 1) * (5 * ripProgress + 24 * tearTop)),
                                 anchor: ripFromRight ? .bottomLeading : .bottomTrailing)
-                .offset(x: (ripFromRight ? -1 : 1) * width * 0.12 * tearTop,
-                        y: -width * (0.025 * ripProgress + 0.37 * tearTop))
+                .offset(x: (ripFromRight ? -1 : 1) * width * 0.29 * tearTop,
+                        y: -width * (0.025 * ripProgress + 0.54 * tearTop))
                 .opacity(1 - tearTop)
             VStack(spacing: 0) {
                 face
                 crimp(teethOnTop: false)
             }
             .scaleEffect(1 - 0.04 * dropBody)
-            .offset(y: width * 0.24 * dropBody)
+            .offset(y: width * 0.41 * dropBody)
             .opacity(1 - dropBody)
         }
         .frame(width: width)
         .compositingGroup()
-        .shadow(color: .black.opacity(0.5), radius: width * 0.09, y: width * 0.05)
+        .shadow(color: shadowColor, radius: width * 0.09, y: width * 0.05)
         .accessibilityHidden(true)
     }
 
@@ -369,6 +370,7 @@ private struct HoloFilm: View {
 struct BoosterBoxArt: View {
     let set: Int
     var width: CGFloat = 230
+    var shadowColor: Color = .black.opacity(0.6)
 
     private var element: Element { Element.theme(forSet: set) }
     private var pal: [Color] { element.palette }
@@ -408,7 +410,7 @@ struct BoosterBoxArt: View {
         }
         .frame(width: width, height: totalHeight, alignment: .topLeading)
         .compositingGroup()
-        .shadow(color: .black.opacity(0.6), radius: width * 0.1, y: width * 0.09)
+        .shadow(color: shadowColor, radius: width * 0.1, y: width * 0.09)
         .accessibilityHidden(true)
     }
 

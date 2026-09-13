@@ -6,6 +6,8 @@ struct PackRipMotion {
 
     let translation: CGSize
     let packWidth: CGFloat
+    /// Gesture origin relative to the wrapper, excluding its padded hit target.
+    var startX: CGFloat = 0
 
     var progress: Double {
         let horizontal = abs(translation.width)
@@ -15,4 +17,14 @@ struct PackRipMotion {
 
     var isComplete: Bool { progress >= 1 }
     var fromRight: Bool { translation.width < 0 }
+
+    var fingerX: CGFloat { clamped(startX + translation.width) }
+    var trailStart: CGFloat { min(clamped(startX), fingerX) }
+    var trailWidth: CGFloat {
+        progress > 0 ? abs(fingerX - clamped(startX)) : 0
+    }
+
+    private func clamped(_ x: CGFloat) -> CGFloat {
+        min(max(0, x), max(0, packWidth))
+    }
 }

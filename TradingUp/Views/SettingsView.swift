@@ -1,12 +1,12 @@
 import SwiftUI
 
-/// The settings screen: audio and haptic feedback. As of the home-screen refresh
-/// this is reached from a gear on the main menu (not a Classic tab). Starting a
-/// fresh run for either mode is handled from the main menu's mode buttons, which
-/// offer Continue / New Run when a run is already in progress.
+/// Audio, haptic feedback, and pack-opening settings, reached from the main
+/// menu's gear (not a Classic tab). Fresh runs start from the mode buttons,
+/// which offer Continue / New Run when a run is already in progress.
 struct SettingsView: View {
     @Bindable private var sound = SoundManager.shared
     @Bindable private var haptics = HapticsManager.shared
+    @Bindable private var packOpening = PackOpeningPreferences.shared
 
     /// Dismisses the settings sheet. Left `nil` anywhere Settings is shown without
     /// its own dismissal affordance, which hides the Done button.
@@ -33,6 +33,24 @@ struct SettingsView: View {
                                     .font(.system(size: 11, weight: .medium))
                                     .foregroundStyle(Color(hex: "e0663b"))
                             }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .panel()
+                        VStack(alignment: .leading, spacing: 14) {
+                            header("Pack opening")
+                            packOpeningToggle(
+                                "Tap to open packs",
+                                isOn: $packOpening.tapToOpenPacks,
+                                identifier: "tapToOpenPacks",
+                                description: "Tap anywhere on the pack to open it. Swiping the top seam still works."
+                            )
+                            Divider().overlay(Palette.stroke)
+                            packOpeningToggle(
+                                "Auto open packs",
+                                isOn: $packOpening.autoOpenPacks,
+                                identifier: "autoOpenPacks",
+                                description: "After opening, skip the card-by-card reveal and go straight to the pack summary. You still decide what to keep or sell."
+                            )
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .panel()
@@ -93,5 +111,27 @@ struct SettingsView: View {
 
     private func header(_ t: String) -> some View {
         Text(t.uppercased()).font(.system(size: 12, weight: .black)).foregroundStyle(Palette.subtle)
+    }
+
+    private func packOpeningToggle(_ title: String, isOn: Binding<Bool>,
+                                   identifier: String, description: String) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Toggle(isOn: isOn) {
+                Text(title)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Palette.text)
+            }
+            .tint(Palette.money)
+            .accessibilityIdentifier(identifier)
+            .accessibilityHint(description)
+            .onChange(of: isOn.wrappedValue) { _, on in
+                Haptics.play(.light)
+                Sound.play(on ? .toggleOn : .uiTap)
+            }
+            Text(description)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(Palette.subtle)
+                .fixedSize(horizontal: false, vertical: true)
+        }
     }
 }

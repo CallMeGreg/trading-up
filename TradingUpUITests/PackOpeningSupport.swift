@@ -12,11 +12,16 @@ enum PackRipDirection: String {
 extension XCUIApplication {
     var packRipSeam: XCUIElement { buttons["packRipSeam"].firstMatch }
 
-    var packRipInstruction: XCUIElement { staticTexts["Swipe to rip open"].firstMatch }
+    var packRipInstruction: XCUIElement { staticTexts["packOpeningInstruction"].firstMatch }
 
     var packCardPrompt: XCUIElement {
         staticTexts.matching(NSPredicate(
             format: "label IN %@", ["Tap for next card", "Tap to finish"])).firstMatch
+    }
+
+    var packSummary: XCUIElement {
+        staticTexts.matching(NSPredicate(
+            format: "label IN %@", ["Pack Summary", "Booster Box Opened!", "Build your Showcase"])).firstMatch
     }
 
     func waitForSealedPack(timeout: TimeInterval = 15) -> Bool {
@@ -36,11 +41,23 @@ extension XCUIApplication {
                        "only the top seam should be an accessible rip surface", file: file, line: line)
         XCTAssertEqual(packRipSeam.value as? String, "Sealed", file: file, line: line)
         XCTAssertTrue(packRipInstruction.isHittable, file: file, line: line)
+        XCTAssertEqual(packRipInstruction.label, "Swipe to open", file: file, line: line)
+        for text in [
+            "Swipe to rip open", "Tap or swipe to open", "Emberfall Pack", "Booster Box",
+            "Swipe left or right across the glowing edge", "Tap the pack or swipe across the glowing edge",
+            "Keep swiping across the seam", "Release to open", "Opens directly to the pack summary"
+        ] {
+            XCTAssertFalse(staticTexts[text].exists, "removed pack helper must stay absent: \(text)",
+                           file: file, line: line)
+        }
         XCTAssertFalse(packCardPrompt.exists, "a rejected gesture must not reveal a card",
+                       file: file, line: line)
+        XCTAssertFalse(packSummary.exists, "a rejected gesture must not skip to the summary",
                        file: file, line: line)
     }
 
     func ripOpenPack(direction: PackRipDirection = .leftToRight,
+                     expectingSummary: Bool = false,
                      file: StaticString = #filePath, line: UInt = #line) {
         guard waitForSealedPack() else {
             XCTFail("sealed pack and swipe instruction never appeared", file: file, line: line)
@@ -49,9 +66,16 @@ extension XCUIApplication {
         let start = packRipSeam.coordinate(withNormalizedOffset: CGVector(dx: direction.startX, dy: 0.5))
         let end = packRipSeam.coordinate(withNormalizedOffset: CGVector(dx: direction.endX, dy: 0.5))
         start.press(forDuration: 0.05, thenDragTo: end)
-        XCTAssertTrue(packCardPrompt.waitForExistence(timeout: 5),
-                      "a complete seam swipe should reveal the first card without another tap",
-                      file: file, line: line)
+        if expectingSummary {
+            XCTAssertTrue(packSummary.waitForExistence(timeout: 5),
+                          "auto-open should go straight to the summary after a complete seam swipe",
+                          file: file, line: line)
+            XCTAssertFalse(packCardPrompt.exists, file: file, line: line)
+        } else {
+            XCTAssertTrue(packCardPrompt.waitForExistence(timeout: 5),
+                          "a complete seam swipe should reveal the first card without another tap",
+                          file: file, line: line)
+        }
     }
 
     func assertPackRejectsInvalidGestures(direction: PackRipDirection,
