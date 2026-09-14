@@ -79,8 +79,8 @@ struct PaywallView: View {
 
     /// The two things the unlock grants, side by side, so whichever mode's button
     /// opened this screen the player sees it represented — plus the other. Classic
-    /// leads because its content (200 more cards) is playable the moment you buy;
-    /// Gauntlet is flagged as coming so the offer stays honest.
+    /// leads with the expanded collection, followed by Gauntlet's alternate run
+    /// structure and rewards.
     private var pillars: some View {
         VStack(spacing: 12) {
             pillar(
@@ -93,14 +93,13 @@ struct PaywallView: View {
                 icon: "bolt.fill",
                 tint: [Color(hex: "b06cf7"), Color(hex: "6d2bb3")],
                 title: "Gauntlet Mode",
-                detail: "A relentless new way to play, arriving in a future update — and it's yours automatically the moment it lands.",
-                tag: "COMING SOON"
+                detail: "Take on escalating rounds, build a high-value Showcase with Trainers and Catalysts, and earn exclusive Extended Art rewards."
             )
         }
     }
 
     private func pillar(icon: String, tint: [Color], title: String,
-                        detail: String, tag: String? = nil) -> some View {
+                        detail: String) -> some View {
         HStack(alignment: .top, spacing: 14) {
             Image(systemName: icon)
                 .font(.system(size: 22, weight: .bold))
@@ -114,19 +113,10 @@ struct PaywallView: View {
                 .shadow(color: (tint.first ?? .clear).opacity(0.4), radius: 8, y: 3)
 
             VStack(alignment: .leading, spacing: 5) {
-                HStack(spacing: 8) {
-                    Text(title)
-                        .font(.system(size: 16, weight: .heavy, design: .rounded))
-                        .foregroundStyle(Palette.text)
-                        .fixedSize(horizontal: false, vertical: true)
-                    if let tag {
-                        Text(tag)
-                            .font(.system(size: 9, weight: .black)).tracking(0.5)
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 7).padding(.vertical, 2)
-                            .background(Capsule().fill((tint.last ?? Palette.subtle).opacity(0.9)))
-                    }
-                }
+                Text(title)
+                    .font(.system(size: 16, weight: .heavy, design: .rounded))
+                    .foregroundStyle(Palette.text)
+                    .fixedSize(horizontal: false, vertical: true)
                 Text(detail)
                     .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(Palette.subtle)

@@ -344,7 +344,7 @@ private struct MenuButton: View {
     let systemImage: String
     /// Drives both the leading accent rail and the glyph tint.
     var accent: Color
-    /// Optional capsule tag shown beside the title, e.g. "Coming soon!".
+    /// Optional capsule tag shown beside the title, e.g. "New".
     var badge: String? = nil
     let action: () -> Void
 
@@ -387,8 +387,7 @@ private struct MenuButton: View {
     }
 }
 
-/// A small capsule tag shown beside a mode's title — e.g. "Coming soon!" on
-/// Gauntlet Mode, in both its locked and unlocked states.
+/// A small capsule tag shown beside a mode's title.
 private struct MenuBadge: View {
     let text: String
     var body: some View {
@@ -403,8 +402,8 @@ private struct MenuBadge: View {
 }
 
 /// The locked Gauntlet "vault": a frosted tile that keeps Gauntlet's purple
-/// identity (medallion glyph + "Coming soon!" badge) and hosts a full-width amber
-/// call-to-action, which opens the Full Game paywall.
+/// identity and hosts a full-width amber call-to-action, which opens the Full
+/// Game paywall.
 private struct GauntletVaultButton: View {
     /// The amber CTA line, e.g. "Unlock the Full Game · $2.99".
     let unlockTitle: String
@@ -432,12 +431,9 @@ private struct GauntletVaultButton: View {
                         )
 
                     VStack(alignment: .leading, spacing: 3) {
-                        HStack(spacing: 7) {
-                            Text("Gauntlet Mode")
-                                .font(.system(size: 18, weight: .heavy, design: .rounded))
-                                .foregroundStyle(.white)
-                            MenuBadge(text: "Coming soon!")
-                        }
+                        Text("Gauntlet Mode")
+                            .font(.system(size: 18, weight: .heavy, design: .rounded))
+                            .foregroundStyle(.white)
                         Text("A relentless new way to play")
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundStyle(.white.opacity(0.7))
