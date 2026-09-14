@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Trading Up — Classic Card Action Layouts</title>
+  <link rel="stylesheet" href="binder-actions.css" />
+</head>
+<body>
+  <a class="skip-link" href="#concepts">Skip to layouts</a>
+
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="index.html">
+        <span class="brand-mark">TU</span>
+        <span>
+          <strong>Trading Up</strong>
+          <small>Classic card action mockups</small>
+        </span>
+      </a>
+      <nav aria-label="Mockup sections">
+        <a href="#concepts">Layouts</a>
+        <a href="#comparison">Comparison</a>
+        <a href="#recommendation">Recommendation</a>
+        <a href="index.html">Pack + Shop gallery</a>
+      </nav>
+      <span class="concept-only"><span></span>Mockups only</span>
+    </div>
+  </header>
+
+  <main class="shell">
+    <section class="intro">
+      <div>
+        <p class="eyebrow">Classic mode <span>/</span> Collection detail</p>
+        <h1>Make <span>Grade</span> and <span>Sell</span> impossible to confuse.</h1>
+        <p class="intro-copy">
+          The current copy row gives two same-size pills the same visual weight and stacks them
+          six points apart. These alternatives keep the same card, values, and economy, but create
+          a deliberate change of context before a player can sell the wrong copy or grade one by mistake.
+        </p>
+        <div class="goals" aria-label="Design goals">
+          <span>One action context at a time</span>
+          <span>Keep grading fast</span>
+          <span>Make selling deliberate</span>
+          <span>44pt+ touch targets</span>
+        </div>
+      </div>
+
+      <aside class="problem-card">
+        <div class="problem-heading">
+          <span class="warning-icon">!</span>
+          <div>
+            <p class="eyebrow">What changes</p>
+            <h2>Not just more spacing</h2>
+          </div>
+        </div>
+        <p>
+          Extra padding helps, but it does not remove the decision error: both actions still sit in
+          the same repeated target cluster. Each concept below separates them by <strong>interaction
+          state</strong>, not only by color or distance.
+        </p>
+        <dl>
+          <div><dt>Today</dt><dd>Sell + Grade visible together</dd></div>
+          <div><dt>Target</dt><dd>Only one immediate action</dd></div>
+          <div><dt>Data</dt><dd>Chilltoad · 3 standard copies</dd></div>
+        </dl>
+      </aside>
+    </section>
+
+    <section class="preview-tools" aria-labelledby="preview-tools-title">
+      <div>
+        <p class="eyebrow">Preview controls</p>
+        <h2 id="preview-tools-title">Stress-test the layouts</h2>
+      </div>
+      <div class="tool-row">
+        <label class="toggle">
+          <input id="large-text" type="checkbox" />
+          <span class="switch" aria-hidden="true"></span>
+          <span>
+            <strong>Large text</strong>
+            <small>Simulates a larger Dynamic Type setting</small>
+          </span>
+        </label>
+        <label class="toggle">
+          <input id="show-targets" type="checkbox" />
+          <span class="switch" aria-hidden="true"></span>
+          <span>
+            <strong>Show tap zones</strong>
+            <small>Outlines every interactive target</small>
+          </span>
+        </label>
+      </div>
+    </section>
+
+    <section id="concepts" class="concept-section">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Three directions</p>
+          <h2>Same screen, different safety model</h2>
+        </div>
+        <p>Scroll and tap inside each phone. The actions are live enough to compare the flow.</p>
+      </div>
+
+      <div class="concept-grid">
+        <article class="concept" data-concept="menu">
+          <header class="concept-heading">
+            <div class="concept-meta">
+              <span class="concept-number">A</span>
+              <span class="effort effort-low">Low effort</span>
+            </div>
+            <h3>Grade first, Sell in More</h3>
+            <p>One immediate action per copy. Selling moves behind a familiar second tap.</p>
+          </header>
+
+          <div class="phone-mount">
+            <div class="phone" aria-label="Grade first, Sell in More preview">
+              <div class="phone-screen">
+                <div class="status-bar" aria-hidden="true">
+                  <span>10:23</span>
+                  <span class="island"></span>
+                  <span>▮▮▮ ◒ 56</span>
+                </div>
+                <div class="screen-nav">
+                  <span class="nav-spacer"></span>
+                  <strong>Chilltoad</strong>
+                  <button class="done-button" type="button">Done</button>
+                </div>
+                <div class="detail-scroll">
+                  <div class="card-preview" aria-hidden="true">
+                    <div class="card-title">Chilltoad</div>
+                    <div class="card-art"><img src="../art/S2-043.svg" alt="" /></div>
+                    <div class="card-meta"><span><i></i>Tidecaller</span><span>043 / 050</span></div>
+                    <p>Its whiskers twitch before a downpour.</p>
+                    <div class="card-value"><span>COMMON</span><b>$0.90</b></div>
+                  </div>
+
+                  <section class="copies-panel menu-layout" aria-label="Your copies">
+                    <div class="copies-heading">
+                      <span>Your copies (3)</span>
+                      <small>Sell is under •••</small>
+                    </div>
+                    <div class="copy-card">
+                      <div class="copy-topline">
+                        <div class="copy-info"><span>Copy 1</span><strong>Standard</strong></div>
+                        <button class="more-button" type="button" aria-expanded="false"
+                                aria-label="More actions for copy 1">•••</button>
+                        <div class="more-menu" role="menu">
+                          <button type="button" role="menuitem" data-action="sell">
+                            <span class="money-dot">$</span>
+                            <span><strong>Sell this extra</strong><small>Receive $0.68</small></span>
+                          </button>
+                        </div>
+                      </div>
+                      <div class="copy-value">$0.90</div>
+                      <button class="action-button grade-button" type="button" data-action="grade">
+                        <span class="seal-icon">✹</span>Grade this copy · $4.00
+                      </button>
+                    </div>
+                    <div class="copy-card">
+                      <div class="copy-topline">
+                        <div class="copy-info"><span>Copy 2</span><strong>Standard</strong></div>
+                        <button class="more-button" type="button" aria-expanded="false"
+                                aria-label="More actions for copy 2">•••</button>
+                        <div class="more-menu" role="menu">
+                          <button type="button" role="menuitem" data-action="sell">
+                            <span class="money-dot">$</span>
+                            <span><strong>Sell this extra</strong><small>Receive $0.68</small></span>
+                          </button>
+                        </div>
+                      </div>
+                      <div class="copy-value">$0.90</div>
+                      <button class="action-button grade-button" type="button" data-action="grade">
+                        <span class="seal-icon">✹</span>Grade this copy · $4.00
+                      </button>
+                    </div>
+                    <div class="copy-card">
+                      <div class="copy-topline">
+                        <div class="copy-info"><span>Copy 3</span><strong>Standard</strong></div>
+                        <button class="more-button" type="button" aria-expanded="false"
+                                aria-label="More actions for copy 3">•••</button>
+                        <div class="more-menu" role="menu">
+                          <button type="button" role="menuitem" data-action="sell">
+                            <span class="money-dot">$</span>
+                            <span><strong>Sell this extra</strong><small>Receive $0.68</small></span>
+                          </button>
+                        </div>
+                      </div>
+                      <div class="copy-value">$0.90</div>
+                      <button class="action-button grade-button" type="button" data-action="grade">
+                        <span class="seal-icon">✹</span>Grade this copy · $4.00
+                      </button>
+                    </div>
+                    <p class="shop-note"><span>◆</span>The shop buys extra copies at 75% of market value.</p>
+                  </section>
+                </div>
+                <div class="toast" role="status" aria-live="polite"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="concept-notes">
+            <h4>Why it is safer</h4>
+            <ul>
+              <li>Grade is the only colored, full-width action in the row.</li>
+              <li>Sell requires opening <b>More</b>, so a near miss cannot sell a card.</li>
+              <li>The menu can carry a confirmation without making routine grading slower.</li>
+            </ul>
+            <p class="implementation"><b>Native shape:</b> replace the Sell pill with SwiftUI
+              <code>Menu</code>; keep the existing grade action.</p>
+          </div>
+        </article>
+
+        <article class="concept" data-concept="select">
+          <header class="concept-heading">
+            <div class="concept-meta">
+              <span class="concept-number">B</span>
+              <span class="effort effort-medium">Medium effort</span>
+            </div>
+            <h3>Select a copy, then act</h3>
+            <p>Copies become selection rows. One persistent action dock handles the selected copy.</p>
+          </header>
+
+          <div class="phone-mount">
+            <div class="phone" aria-label="Select a copy, then act preview">
+              <div class="phone-screen">
+                <div class="status-bar" aria-hidden="true">
+                  <span>10:23</span>
+                  <span class="island"></span>
+                  <span>▮▮▮ ◒ 56</span>
+                </div>
+                <div class="screen-nav">
+                  <span class="nav-spacer"></span>
+                  <strong>Chilltoad</strong>
+                  <button class="done-button" type="button">Done</button>
+                </div>
+                <div class="detail-scroll select-scroll">
+                  <div class="card-preview compact-card" aria-hidden="true">
+                    <div class="card-art"><img src="../art/S2-043.svg" alt="" /></div>
+                    <div class="compact-copy">
+                      <strong>Chilltoad</strong>
+                      <span>Tidecaller · 043 / 050</span>
+                      <b>$0.90</b>
+                    </div>
+                  </div>
+
+                  <section class="copies-panel select-layout" aria-label="Your copies">
+                    <div class="copies-heading">
+                      <span>Your copies (3)</span>
+                      <small>Tap one to select</small>
+                    </div>
+                    <button class="select-copy is-selected" type="button" data-copy="1"
+                            aria-pressed="true">
+                      <span class="radio-mark">✓</span>
+                      <span class="select-copy-info"><strong>Copy 1</strong><small>Standard</small></span>
+                      <span class="select-copy-value">$0.90</span>
+                    </button>
+                    <button class="select-copy" type="button" data-copy="2" aria-pressed="false">
+                      <span class="radio-mark"></span>
+                      <span class="select-copy-info"><strong>Copy 2</strong><small>Standard</small></span>
+                      <span class="select-copy-value">$0.90</span>
+                    </button>
+                    <button class="select-copy" type="button" data-copy="3" aria-pressed="false">
+                      <span class="radio-mark"></span>
+                      <span class="select-copy-info"><strong>Copy 3</strong><small>Standard</small></span>
+                      <span class="select-copy-value">$0.90</span>
+                    </button>
+                    <p class="shop-note"><span>◆</span>The shop buys extra copies at 75% of market value.</p>
+                  </section>
+                </div>
+
+                <section class="action-dock" aria-label="Actions for selected copy">
+                  <div class="dock-summary">
+                    <span>Selected</span>
+                    <strong>Copy <b class="selected-copy-number">1</b> · Standard · $0.90</strong>
+                  </div>
+                  <button class="action-button grade-button" type="button" data-action="grade">
+                    <span class="seal-icon">✹</span>Grade selected · $4.00
+                  </button>
+                  <div class="dock-divider"><span>or</span></div>
+                  <button class="sell-text-button" type="button" data-action="sell">
+                    <span class="money-dot">$</span>Sell selected for $0.68
+                  </button>
+                </section>
+                <div class="toast" role="status" aria-live="polite"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="concept-notes">
+            <h4>Why it is safer</h4>
+            <ul>
+              <li>The first tap answers “which copy?”; the second answers “what action?”</li>
+              <li>Grade and Sell appear once, not in three repeated button stacks.</li>
+              <li>The selected copy is restated immediately above the action.</li>
+            </ul>
+            <p class="implementation"><b>Native shape:</b> track <code>selectedCopyID</code> and place
+              the dock in <code>safeAreaInset(edge: .bottom)</code>.</p>
+          </div>
+        </article>
+
+        <article class="concept recommended" data-concept="mode">
+          <header class="concept-heading">
+            <div class="concept-meta">
+              <span class="concept-number">C</span>
+              <span class="recommended-tag">Selected</span>
+              <span class="effort effort-medium">Medium effort</span>
+            </div>
+            <h3>Choose an intent mode</h3>
+            <p>Grade and Sell are separate modes. Their buttons never coexist on screen.</p>
+          </header>
+
+          <div class="phone-mount">
+            <div class="phone mode-phone grade-mode" aria-label="Choose an intent mode preview">
+              <div class="phone-screen">
+                <div class="status-bar" aria-hidden="true">
+                  <span>10:23</span>
+                  <span class="island"></span>
+                  <span>▮▮▮ ◒ 56</span>
+                </div>
+                <div class="screen-nav">
+                  <span class="nav-spacer"></span>
+                  <strong>Chilltoad</strong>
+                  <button class="done-button" type="button">Done</button>
+                </div>
+                <div class="detail-scroll">
+                  <div class="card-preview compact-card" aria-hidden="true">
+                    <div class="card-art"><img src="../art/S2-043.svg" alt="" /></div>
+                    <div class="compact-copy">
+                      <strong>Chilltoad</strong>
+                      <span>Tidecaller · 043 / 050</span>
+                      <b>$0.90</b>
+                    </div>
+                  </div>
+
+                  <section class="copies-panel mode-layout" aria-label="Your copies">
+                    <div class="copies-heading">
+                      <span>Your copies (3)</span>
+                    </div>
+                    <div class="mode-picker" role="group" aria-label="Card action mode">
+                      <button class="mode-button is-active" type="button" data-mode="grade"
+                              aria-pressed="true"><span>✹</span>Grade</button>
+                      <button class="mode-button" type="button" data-mode="sell"
+                              aria-pressed="false"><span>$</span>Sell extras</button>
+                    </div>
+                    <div class="mode-copy">
+                      <div class="mode-copy-info"><span>Copy 1</span><strong>Standard</strong><b>$0.90</b></div>
+                      <button class="action-button grade-button mode-action" type="button" data-action="grade">
+                        <span class="seal-icon">✹</span>Grade $4.00
+                      </button>
+                    </div>
+                    <div class="mode-copy">
+                      <div class="mode-copy-info"><span>Copy 2</span><strong>Standard</strong><b>$0.90</b></div>
+                      <button class="action-button grade-button mode-action" type="button" data-action="grade">
+                        <span class="seal-icon">✹</span>Grade $4.00
+                      </button>
+                    </div>
+                    <div class="mode-copy">
+                      <div class="mode-copy-info"><span>Copy 3</span><strong>Standard</strong><b>$0.90</b></div>
+                      <button class="action-button grade-button mode-action" type="button" data-action="grade">
+                        <span class="seal-icon">✹</span>Grade $4.00
+                      </button>
+                    </div>
+                    <p class="shop-note"><span>◆</span>The shop buys extra copies at 75% of market value.</p>
+                  </section>
+                </div>
+                <div class="toast" role="status" aria-live="polite"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="concept-notes">
+            <h4>Why it is safer</h4>
+            <ul>
+              <li>Cross-action misclicks are structurally impossible: only one action type exists.</li>
+              <li>The segmented switch stays visually distinct from the copy-row actions.</li>
+              <li>Switching intent recolors every action together, so mixed controls never appear.</li>
+            </ul>
+            <p class="implementation"><b>Native shape:</b> a two-option segmented <code>Picker</code>
+              switches one shared row action between Grade and Sell.</p>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section id="comparison" class="comparison-section">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Trade-offs</p>
+          <h2>Which kind of friction is acceptable?</h2>
+        </div>
+      </div>
+      <div class="matrix-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Layout</th>
+              <th>Cross-action risk</th>
+              <th>Extra interaction</th>
+              <th>Copy comparison</th>
+              <th>Small-screen fit</th>
+              <th>SwiftUI effort</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th>A · More menu</th>
+              <td><span class="score strong">Very low</span></td>
+              <td>Sell takes one extra tap</td>
+              <td>Same as today</td>
+              <td><span class="score strong">Excellent</span></td>
+              <td><span class="score strong">Low</span></td>
+            </tr>
+            <tr>
+              <th>B · Select + dock</th>
+              <td><span class="score strong">Very low</span></td>
+              <td>Select before acting</td>
+              <td><span class="score strong">Best</span></td>
+              <td><span class="score strong">Excellent</span></td>
+              <td>Medium</td>
+            </tr>
+            <tr class="recommended-row">
+              <th>C · Intent modes <span>Selected</span></th>
+              <td><span class="score strongest">Lowest</span></td>
+              <td>Switch mode for selling</td>
+              <td>Same as today</td>
+              <td>Good</td>
+              <td>Medium</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="recommendation" class="recommendation-section">
+      <div class="recommendation-card">
+        <span class="recommendation-letter">C</span>
+        <div>
+          <p class="eyebrow">Selected direction</p>
+          <h2>Choose an intent</h2>
+          <p>
+            Grade and Sell never share a copy row, which removes the original near-target problem entirely.
+            The switch keeps both actions discoverable, defaults to Grade, and lets a player move through
+            several duplicates without reopening menus or reselecting a copy.
+          </p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    Browser mockups only · no gameplay or economy behavior changed ·
+    <a href="index.html">Back to Pack + Shop concepts</a>
+  </footer>
+
+  <script src="binder-actions.js"></script>
+</body>
+</html>

@@ -575,6 +575,15 @@ The app ships the recommended combination — the foil wrapper (P1), the booster
 box and pack tray (P3), and the shelf list (H1) — so the gallery now doubles as
 the reference for that art (`TradingUp/Views/PackWrapper.swift`).
 
+[Classic card action layouts](mockups/ui/binder-actions.html) compares three
+safer arrangements for the Collection card detail's per-copy **Grade** and
+**Sell** actions: Grade-first with Sell in a menu, select-then-act with a
+persistent action dock, and separate Grade/Sell intent modes. The phones are
+interactive and include large-text and tap-target overlays. Open
+`http://localhost:8787/ui/binder-actions.html` from the same server.
+The selected native direction is the intent switch (C), implemented in
+`TradingUp/Views/CardDetailView.swift` without the explanatory mode callout.
+
 [Pack-opening cue concepts](mockups/ui/pack-opening.html) compares three
 Pocket-inspired treatments using the app's original art: **Clean cut** (a crisp
 strip release), **Foil ribbon** (a finger-following bend), and **Cut + lift**
