@@ -19,7 +19,12 @@ final class PurchaseStore {
 
     /// Must match the product created in App Store Connect and in the bundled
     /// `.storekit` test configuration. Namespaced under the app's bundle id.
-    static let fullUnlockProductID = "com.callmegreg.tradingup.fullunlock"
+    static let fullUnlockProductID: String = {
+        guard let bundleID = Bundle.main.bundleIdentifier, !bundleID.isEmpty else {
+            preconditionFailure("The app needs a bundle identifier to select its purchase product.")
+        }
+        return "\(bundleID).fullunlock"
+    }()
 
     /// UserDefaults key for the cached entitlement hint. Reading/writing the
     /// app's own preferences is the `CA92.1` reason already declared in
