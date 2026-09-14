@@ -371,12 +371,12 @@ struct SealedPackView: View {
                     VStack(spacing: 10) {
                         Image(systemName: "arrow.left.and.right")
                             .font(.system(size: 14, weight: .regular))
-                            .foregroundStyle(Color(hex: "87a4b8"))
+                            .foregroundStyle(Palette.subtle.opacity(0.8))
                             .accessibilityHidden(true)
                         Text("Swipe to open")
                             .font(.system(size: 17, weight: .medium, design: .rounded))
                             .tracking(0.3)
-                            .foregroundStyle(Color(hex: "4e6578"))
+                            .foregroundStyle(Palette.subtle)
                             .accessibilityIdentifier("packOpeningInstruction")
                     }
                     .multilineTextAlignment(.center)
@@ -391,20 +391,10 @@ struct SealedPackView: View {
                 .frame(minWidth: geo.size.width, minHeight: geo.size.height)
             }
             .scrollBounceBehavior(.basedOnSize)
-            .background {
-                RadialGradient(stops: [
-                    .init(color: .white, location: 0.12),
-                    .init(color: Color(hex: "f6fbfd"), location: 0.55),
-                    .init(color: Color(hex: "deebf1"), location: 1)
-                ], center: UnitPoint(x: 0.5, y: 0.38), startRadius: 0,
-                   endRadius: max(geo.size.width, geo.size.height) * 0.85)
-                .ignoresSafeArea()
-            }
             .onChange(of: Int(motion.progress * 3)) { old, new in
                 if new > old && !tearing { Haptics.play(new == 3 ? .rigid : .soft) }
             }
         }
-        .preferredColorScheme(.light)
         .task(id: tearing) {
             guard tearing else { return }
             if openingDelay > 0 { try? await Task.sleep(nanoseconds: openingDelay) }
