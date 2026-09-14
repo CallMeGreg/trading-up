@@ -169,7 +169,7 @@ higher‑set cards are always worth more. Approximate resulting bands:
 - **6 cards per pack:** 3 commons, 2 uncommons, 1 "hit."
 - The **hit slot** is a Rare 80% of the time, Ultra Rare 20%.
 - **Clean cut** is the opening style in **Classic and Gauntlet**: a floating
-  wrapper on a light stage, a fine seam shimmer, and a cut trail that follows
+  wrapper on the mode's dark, set-tinted reveal backdrop, a fine seam shimmer, and a cut trail that follows
   the finger's actual position. Swipe horizontally across the top seam in either
   direction. Release after crossing 55% of the pack's width
   to open it; short or cancelled swipes reset, and vertical drags do not open it.

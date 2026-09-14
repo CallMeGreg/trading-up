@@ -515,13 +515,16 @@ the reference for that art (`TradingUp/Views/PackWrapper.swift`).
 [Pack-opening cue concepts](mockups/ui/pack-opening.html) compares three
 Pocket-inspired treatments using the app's original art: **Clean cut** (a crisp
 strip release), **Foil ribbon** (a finger-following bend), and **Cut + lift**
-(a card-stack entrance). Each uses a light, uncluttered stage and subtle seam
+(a card-stack entrance). Each browser mockup uses a light, uncluttered stage and subtle seam
 cues rather than oversized handles or swipe lanes, with independent **Tap to open packs** and
 **Auto open packs** preview switches, both initially off. Open
 `http://localhost:8787/ui/pack-opening.html#clean` from the same server.
 **Clean cut is the selected native style**, implemented in `SealedPackView`:
 its only visible instruction is **“Swipe to open”**, even with either opening
-preference enabled. The other two treatments remain comparison mockups.
+preference enabled, and it ships on the existing dark, set-tinted reveal
+backdrop supplied by `RevealView` and `GauntletRevealView` — the light stage
+above is a browser mockup only, not the shipped look. The other two treatments
+remain comparison mockups.
 The app's two preferences
 live in `Views/PackOpeningPreferences.swift`, outside game saves, and apply to
 both Classic and Gauntlet.
