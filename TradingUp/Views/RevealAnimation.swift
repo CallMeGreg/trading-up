@@ -314,7 +314,8 @@ struct RevealingCardView: View {
 
 // MARK: - Sealed pack (idle + tear-open)
 
-/// Clean cut: a floating wrapper, a finger-following seam, and one instruction.
+/// Clean cut: a floating wrapper, a finger-following seam, and one instruction
+/// aligned with the tear point.
 struct SealedPackView: View {
     let set: Int
     let isBox: Bool
@@ -366,22 +367,23 @@ struct SealedPackView: View {
                             ripSeam(packWidth: packWidth, motion: motion)
                                 .offset(y: packWidth * 0.085 - 36)
                         }
+                        .overlay(alignment: .topLeading) {
+                            SwipeFingerCue(tint: seamTint)
+                                .offset(x: -31, y: packWidth * 0.085 - 18)
+                                .opacity(tearing ? 0 : 1)
+                        }
                         .padding(.top, 36)
                         .padding(.bottom, 24)
-                    VStack(spacing: 10) {
-                        Image(systemName: "arrow.left.and.right")
-                            .font(.system(size: 14, weight: .regular))
-                            .foregroundStyle(Palette.subtle.opacity(0.8))
-                            .accessibilityHidden(true)
-                        Text("Swipe to open")
-                            .font(.system(size: 17, weight: .medium, design: .rounded))
-                            .tracking(0.3)
-                            .foregroundStyle(Palette.subtle)
-                            .accessibilityIdentifier("packOpeningInstruction")
-                    }
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 24)
-                    .opacity(tearing ? 0 : 1)
+                        .overlay(alignment: .top) {
+                            Text("Swipe to open")
+                                .font(.system(size: 17, weight: .medium, design: .rounded))
+                                .tracking(0.3)
+                                .foregroundStyle(Palette.subtle)
+                                .accessibilityIdentifier("packOpeningInstruction")
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 24)
+                                .opacity(tearing ? 0 : 1)
+                        }
                     Spacer(minLength: 0)
                 }
                 // At least fill the screen (so the Spacers still centre things
@@ -478,6 +480,30 @@ struct SealedPackView: View {
         } else {
             withAnimation(.easeIn(duration: 0.44)) { tearTop = 1 }
             withAnimation(.easeIn(duration: 0.45).delay(0.12)) { dropBody = 1 }
+        }
+    }
+
+    private struct SwipeFingerCue: View {
+        let tint: Color
+        @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+        var body: some View {
+            TimelineView(.animation(minimumInterval: 1.0 / 30, paused: reduceMotion)) { timeline in
+                let elapsed = timeline.date.timeIntervalSinceReferenceDate
+                let phase = elapsed.truncatingRemainder(dividingBy: 1.4) / 1.4
+                let travel = reduceMotion ? 0.45 : (1 - cos(phase * 2 * .pi)) / 2
+
+                Image(systemName: "hand.point.right.fill")
+                    .font(.system(size: 28, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.96))
+                    .shadow(color: tint.opacity(0.9), radius: 5)
+                    .offset(x: CGFloat(travel) * 10)
+                    .scaleEffect(0.96 + CGFloat(travel) * 0.05)
+                    .opacity(0.76 + travel * 0.24)
+            }
+            .frame(width: 36, height: 36)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
         }
     }
 

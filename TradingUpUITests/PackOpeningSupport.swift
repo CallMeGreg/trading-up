@@ -42,6 +42,9 @@ extension XCUIApplication {
         XCTAssertEqual(packRipSeam.value as? String, "Sealed", file: file, line: line)
         XCTAssertTrue(packRipInstruction.isHittable, file: file, line: line)
         XCTAssertEqual(packRipInstruction.label, "Swipe to open", file: file, line: line)
+        XCTAssertLessThan(packRipInstruction.frame.midY, packRipSeam.frame.midY,
+                          "the swipe instruction should sit above the pack's top seam",
+                          file: file, line: line)
         for text in [
             "Swipe to rip open", "Tap or swipe to open", "Emberfall Pack", "Booster Box",
             "Swipe left or right across the glowing edge", "Tap the pack or swipe across the glowing edge",
