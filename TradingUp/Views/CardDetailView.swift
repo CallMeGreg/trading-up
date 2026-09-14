@@ -2,10 +2,18 @@ import SwiftUI
 
 /// Card detail sheet: big art, evolution line, and per-copy sell / grade actions.
 struct CardDetailView: View {
+    private enum CopyActionMode: String, CaseIterable, Identifiable {
+        case grade = "Grade"
+        case sell = "Sell Extras"
+
+        var id: Self { self }
+    }
+
     let card: Card
     @Environment(GameState.self) var game: GameState
     @Environment(\.dismiss) private var dismiss
     @State private var gradeResult: GradeResult?
+    @State private var copyActionMode: CopyActionMode = .grade
 
     private var copies: [CardInstance] {
         game.instances(of: card.id).sorted { $0.currentValue > $1.currentValue }
@@ -51,22 +59,36 @@ struct CardDetailView: View {
     private var copiesSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             sectionHeader("Your Copies (\(copies.count))")
+            Picker("Copy action", selection: $copyActionMode) {
+                ForEach(CopyActionMode.allCases) { mode in
+                    Text(mode.rawValue).tag(mode)
+                }
+            }
+            .pickerStyle(.segmented)
+            .onChange(of: copyActionMode) { _, _ in
+                Haptics.play(.light)
+                Sound.play(.uiTap)
+            }
+
             ForEach(copies) { inst in
                 copyRow(inst)
                 if inst.id != copies.last?.id { Divider().overlay(Palette.stroke) }
             }
-            if copies.count == 1 {
-                Label("You can't sell your last copy — it stays safe in your collection.",
-                      systemImage: "lock.fill")
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(Palette.subtle)
-                    .padding(.top, 2)
-            } else {
-                Label("The shop buys extra copies at \(Int((Economy.sellbackRate * 100).rounded()))% of market value.",
-                      systemImage: "tag.fill")
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(Palette.subtle)
-                    .padding(.top, 2)
+
+            if copyActionMode == .sell {
+                if copies.count == 1 {
+                    Label("You can't sell your last copy — it stays safe in your collection.",
+                          systemImage: "lock.fill")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(Palette.subtle)
+                        .padding(.top, 2)
+                } else {
+                    Label("The shop buys extra copies at \(Int((Economy.sellbackRate * 100).rounded()))% of market value.",
+                          systemImage: "tag.fill")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(Palette.subtle)
+                        .padding(.top, 2)
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -88,13 +110,9 @@ struct CardDetailView: View {
                     .foregroundStyle(Palette.money)
             }
             Spacer(minLength: 0)
-            VStack(spacing: 6) {
-                miniButton("Sell \(inst.sellValue.moneyShort)", "dollarsign.circle.fill", Color(hex: "2fae63"),
-                           enabled: game.isSellable(inst)) {
-                    if game.sell(inst.id) != nil { Haptics.play(.success); Sound.play(.coin) }
-                    else { Haptics.play(.error); Sound.play(.blocked) }
-                }
-                if inst.card.rarity.canBeGraded && inst.grade == nil {
+            switch copyActionMode {
+            case .grade:
+                if inst.grade == nil {
                     miniButton("Grade \(Economy.gradeFee(set: card.set).money)", "seal.fill",
                                Color(hex: "6d5cf7"),
                                enabled: game.canAffordGrade(set: card.set)) {
@@ -102,6 +120,14 @@ struct CardDetailView: View {
                             Haptics.play(.rigid); Sound.play(.gradeStart); gradeResult = r
                         } else { Haptics.play(.error); Sound.play(.blocked) }
                     }
+                } else {
+                    actionStatus("Already Graded", "checkmark.seal.fill")
+                }
+            case .sell:
+                miniButton("Sell \(inst.sellValue.moneyShort)", "dollarsign.circle.fill", Color(hex: "2fae63"),
+                           enabled: game.isSellable(inst)) {
+                    if game.sell(inst.id) != nil { Haptics.play(.success); Sound.play(.coin) }
+                    else { Haptics.play(.error); Sound.play(.blocked) }
                 }
             }
         }
@@ -130,13 +156,23 @@ struct CardDetailView: View {
             Label(title, systemImage: icon)
                 .font(.system(size: 12, weight: .bold))
                 .foregroundStyle(.white)
-                .padding(.vertical, 7).padding(.horizontal, 12)
-                .frame(minWidth: 118)
+                .padding(.horizontal, 12)
+                .frame(minWidth: 126, minHeight: 44)
                 .background(Capsule().fill(enabled ? tint : Palette.stroke))
                 .opacity(enabled ? 1 : 0.5)
         }
         .buttonStyle(.plain)
         .disabled(!enabled)
+    }
+
+    private func actionStatus(_ title: String, _ icon: String) -> some View {
+        Label(title, systemImage: icon)
+            .font(.system(size: 12, weight: .bold))
+            .foregroundStyle(Palette.subtle)
+            .padding(.horizontal, 12)
+            .frame(minWidth: 126, minHeight: 44)
+            .background(Capsule().fill(Palette.bg0.opacity(0.45)))
+            .overlay(Capsule().strokeBorder(Palette.stroke, lineWidth: 1))
     }
 }
 
