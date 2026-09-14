@@ -1,0 +1,38 @@
+{
+  "identifier" : "D37B14B6-A4F3-4E6C-91AE-D932D445F063",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+    {
+      "displayPrice" : "2.99",
+      "familyShareable" : false,
+      "internalID" : "5C2BB38C-F593-45AD-89F7-39C82845A246",
+      "localizations" : [
+        {
+          "description" : "Unlocks sets 2-5 and the 250-card Master Collector finish. A one-time purchase.",
+          "displayName" : "Unlock the Full Collection",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.callmegreg.tradingup.test.fullunlock",
+      "referenceName" : "Full Collection Unlock",
+      "type" : "NonConsumable"
+    }
+  ],
+  "settings" : {
+    "_applicationInternalID" : "",
+    "_developerTeamID" : "",
+    "_failTransactionsEnabled" : false,
+    "_lastSynchronizedDate" : 0,
+    "_locale" : "en_US",
+    "_storefront" : "USA"
+  },
+  "subscriptionGroups" : [
+
+  ],
+  "version" : {
+    "major" : 3,
+    "minor" : 0
+  }
+}

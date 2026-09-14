@@ -5,6 +5,7 @@ rationale see [DESIGN.md](DESIGN.md); for tests see [TESTING.md](TESTING.md).
 
 - [Requirements](#requirements)
 - [Run it (5 steps)](#run-it-5-steps)
+- [Test app versus production](#test-app-versus-production)
 - [Project layout](#project-layout)
 - [Where to tweak the game](#where-to-tweak-the-game)
 - [Regenerating content](#regenerating-content)
@@ -33,7 +34,8 @@ Optional, only for regenerating content:
    component install prompt.
 2. **Open the project**: double‑click `TradingUp.xcodeproj` (or `xed .` from the
    repo root).
-3. **Pick a simulator** in the scheme selector at the top — e.g. *iPhone 16*.
+3. **Select the `TradingUpTest` scheme**, then pick a simulator at the top —
+   e.g. *iPhone 16*.
 4. Press **▶︎ Run** (or `⌘R`). First build takes a moment; the app launches in the
    Simulator.
 5. You start with **$100**. Open the **Shop** tab, buy a pack, swipe across its
@@ -41,6 +43,55 @@ Optional, only for regenerating content:
 
 There's nothing else to install — the app has **zero third‑party dependencies** and
 all 250 cards are embedded in the binary.
+
+## Test app versus production
+
+Use **`TradingUpTest` for development and personal TestFlight builds**. Keep
+`TradingUp` for the shipping app. Both schemes compile the same app target and
+source files; only the app identity and version counters differ.
+
+| Setting | Production | Test app |
+| --- | --- | --- |
+| Scheme | `TradingUp` | `TradingUpTest` |
+| Run / unit-test configuration | `Debug` | `Debug-Test` |
+| Archive / profile configuration | `Release` | `Release-Test` |
+| Bundle identifier | `com.callmegreg.tradingup` | `com.callmegreg.tradingup.test` |
+| Home Screen name | Trading Up | Trading Up Test |
+| Full-unlock product ID | `com.callmegreg.tradingup.fullunlock` | `com.callmegreg.tradingup.test.fullunlock` |
+| Local StoreKit catalog | `TradingUp.storekit` | `TradingUpTest.storekit` |
+
+The **bundle identifier**, not the build number or scheme name, lets iOS install
+both apps side by side. The existing production identifier is unchanged. Saves,
+Binder, Gauntlet progress/runs, preferences, and the cached purchase entitlement
+use each app's own sandbox, so the test app starts fresh without reading,
+migrating, or clearing production data. Production purchases do not unlock the
+test app; use its local or sandbox purchase instead. This is app/data isolation,
+not a separate backend deployment: the game still runs offline.
+
+For a physical iPhone, select `TradingUpTest` and the connected device. In the
+`TradingUp` target's **Signing & Capabilities**, select your team and automatic
+signing, including the `Debug-Test` and `Release-Test` configurations. Enable
+Developer Mode on the phone if Xcode requests it, then Run. Direct Xcode
+installation needs no App Store Connect app record. **Do not run the production
+scheme on a phone whose App Store installation you want to preserve.**
+
+For TestFlight, follow [the one-time Apple setup](APP_STORE.md#separate-test-app-testflight).
+A test archive must use `Release-Test`; overriding it with plain `Release`
+would build the production identity even with the test scheme selected.
+
+Build numbers are independent. Update `CURRENT_PROJECT_VERSION` in **both app
+configurations for the selected environment**, not in the XCTest/UI-test
+targets or the other environment. The test app starts at build 1. Keep each
+environment's Debug/Release pair in sync for `MARKETING_VERSION` too. The
+`/build` skill cuts a production build; **`/build test`** cuts a test build and
+only considers that bundle ID's local archives when choosing its next number.
+Neither command uploads the archive automatically.
+
+`Release-Test` has the same optimization and non-DEBUG behavior as `Release`;
+it does not enable cheat flags or bypass the purchase gate. Keep matching
+production/test build settings in sync; the configuration checks in
+[TESTING.md](TESTING.md#app-identity) guard against drift. The screenshot scheme
+deliberately stays on the production identity.
 
 ## Project layout
 
@@ -81,6 +132,7 @@ TradingUp/
   Assets.xcassets/           App icon + accent color + CardArt/ (250 card illustrations)
   PrivacyInfo.xcprivacy      Privacy manifest (no tracking, no data collection)
   TradingUp.storekit         StoreKit config for testing the IAP in the Simulator (dev only)
+  TradingUpTest.storekit     Separate local purchase catalog for the test app
 TradingUpTests/              XCTest unit tests (fast, deterministic)
 TradingUpUITests/            The screenshot playthrough (TradingUpScreenshots scheme)
 data/cards.json              The 250 cards as JSON (source for tooling/other targets)
@@ -103,6 +155,7 @@ tools/
   seed_save.py               Writes a completed-collection save (late-game screenshots)
   check_icon.py              Checks the 1024² icon against App Store rules
   check_screenshots.py       Checks captured screenshots against App Store sizes
+  test_app_identity.py       Guards scheme routing, app identities, catalogs, and configuration parity
   verify/main.swift          The Foundation-only simulation harness (see TESTING.md)
 ```
 
@@ -160,7 +213,9 @@ to play in full (design rationale in `docs/DESIGN.md` §11). The moving parts:
 - **`TradingUp/Store/PurchaseStore.swift`** — the StoreKit 2 layer. Verifies
   `Transaction.currentEntitlements`, listens to `Transaction.updates`, and pushes
   the verified entitlement into `GameState`. Product id
-  `com.callmegreg.tradingup.fullunlock` (`PurchaseStore.fullUnlockProductID`).
+  `PurchaseStore.fullUnlockProductID` is the running app's bundle identifier
+  plus `.fullunlock`: production remains `com.callmegreg.tradingup.fullunlock`;
+  the test app uses `com.callmegreg.tradingup.test.fullunlock`.
 - **`GameState.isFullVersionUnlocked`** — the single game-facing flag. Sets above
   `GameState.freeSetCount` (the one knob for the size of the free slice, default
   `1`) gate *buying* packs on it, so `buyPack` / `buyBox` / `buyBoxPacks` refuse a
@@ -175,10 +230,18 @@ sets the entitlement directly. **The economy is untouched**, so the
 [verify harness](TESTING.md#the-simulation-harness-no-xcode-needed) needs no
 re-run for this feature.
 
-To exercise the real purchase/restore flow in the Simulator, point the run action
-at the bundled StoreKit config: **Product ▸ Scheme ▸ Edit Scheme ▸ Run ▸ Options ▸
-StoreKit Configuration → `TradingUp.storekit`**. Then buy in-app, and use
-**Debug ▸ StoreKit ▸ Manage Transactions** to refund or reset between runs.
+`TradingUpTest` already selects `TradingUpTest.storekit` for Xcode Run, so local
+purchase/restore testing needs no Apple account or App Store Connect setup.
+For the production scheme, select **Product ▸ Scheme ▸ Edit Scheme ▸ Run ▸
+Options ▸ StoreKit Configuration → `TradingUp.storekit`**. Use the catalog that
+matches the scheme, then buy in-app and use **Debug ▸ StoreKit ▸ Manage
+Transactions** to refund or reset between runs. These are simulated, free
+transactions, not real purchases.
+
+To test Apple's sandbox directly from Xcode, set StoreKit Configuration to
+**None** locally and use a Sandbox Apple Account. TestFlight always uses Apple's
+sandbox instead of the Xcode catalog, and therefore needs the
+[test app's own product configured in App Store Connect](APP_STORE.md#test-app-purchases).
 
 ## Regenerating content
 

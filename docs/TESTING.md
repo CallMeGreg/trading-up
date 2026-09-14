@@ -29,6 +29,7 @@ Or just press `⌘U` in Xcode.
 
 | File | Covers |
 | --- | --- |
+| `AppIdentityTests.swift` | The running app's bundle ID, Home Screen name, test host, and full-unlock product ID agree for both production and the isolated test app |
 | `DataIntegrityTests.swift` | The generated catalogue: 250 cards, unique names/ids, rarity splits |
 | `EconomyRulesTests.swift` | The economy knobs are exactly as designed (prices, fees, sellback rate) |
 | `GameplaySimulationTests.swift` | Buy/open/sell/grade flows against a seeded, reproducible RNG |
@@ -40,6 +41,37 @@ Or just press `⌘U` in Xcode.
 | `PackRipMotionTests.swift` | Both horizontal opening directions, the pack-width-relative threshold, rejected/cancelled/reversed drags, and a physical-distance cut trail clamped to the wrapper rather than its padded hit target |
 | `PackOpeningPreferencesTests.swift` | Both preferences default off, all four persisted combinations, independent toggles, and opting back out without changing the other preference |
 | `AudioTests.swift` | Independent persisted Music/SFX channels and legacy migration; continuous-drag mute/restore; one-shot Gauntlet audio priorities; all 60 Studio effects and both selected music loops decode from the app bundle, with exact authored loop durations |
+
+### App identity
+
+Both `TradingUp` and `TradingUpTest` run the same XCTest suite against their own
+app identity. `AppIdentityTests` checks the built app, not just project text.
+The fast configuration tests additionally guard all scheme actions (especially
+Archive), both StoreKit catalogs, separate test-runner IDs, version pairs, and
+equivalent compiler/build settings. They require macOS's `plutil`, not a
+simulator or third-party Python packages:
+
+```bash
+python3 -B -m unittest discover -s tools -p test_app_identity.py
+
+for SCHEME in TradingUp TradingUpTest; do
+  xcodebuild test -project TradingUp.xcodeproj -scheme "$SCHEME" \
+    -destination 'platform=iOS Simulator,name=iPhone 16' \
+    -only-testing:TradingUpTests/AppIdentityTests \
+    -only-testing:TradingUpTests/FullUnlockGateTests \
+    -only-testing:TradingUpTests/SaveStoreTests \
+    -only-testing:TradingUpTests/SaveFormatTests \
+    CODE_SIGNING_ALLOWED=NO
+done
+```
+
+For an installation smoke test, use a disposable simulator: install both
+variants, confirm `simctl get_app_container <udid> <bundle-id> data` returns
+different containers, then update the test app and confirm production's
+progress remains unchanged. Re-read container paths after installation: iOS can
+relocate the updated app's container, so compare saved contents rather than
+assuming its directory UUID stays fixed. Never run destructive save fixtures
+against the App Store installation on your phone.
 
 ### Pack opening
 
@@ -196,14 +228,17 @@ the only thing that will tell you the game is still winnable and still losable.
 
 ## CI
 
-`.github/workflows/ci.yml` runs three jobs on every push to `main` and every pull
+`.github/workflows/ci.yml` runs these checks on every push to `main` and every pull
 request, on `macos-15` with Xcode 16.4:
 
-1. **Verify harness** — compiles with `swiftc -O` and runs `tools/verify/main.swift`.
-2. **Build (iOS Simulator)** — `xcodebuild build` with code signing off.
-3. **Unit tests (iOS Simulator)** — `xcodebuild test` against a simulator picked
-   at runtime by `.github/scripts/pick_simulator.py`, so the workflow doesn't
-   break when GitHub rotates the installed runtimes.
+1. **Verify harness** — checks app identity configuration, then compiles with
+   `swiftc -O` and runs `tools/verify/main.swift`.
+2. **Build (iOS Simulator)** and **Build test app (iOS Simulator)** — build
+   `Release` and `Release-Test` respectively, with code signing off.
+3. **Unit tests (iOS Simulator)** and **Unit tests test app (iOS Simulator)** —
+   run the full suite in `Debug` and `Debug-Test` against a simulator picked at
+   runtime by `.github/scripts/pick_simulator.py`, so the workflow doesn't break
+   when GitHub rotates the installed runtimes.
 
 The UI screenshot pass is deliberately **not** in CI — it takes ~10 minutes and
 lives on its own `TradingUpScreenshots` scheme so the unit‑test run stays fast.

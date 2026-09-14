@@ -20,14 +20,25 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Select Xcode
         run: sudo xcode-select -s /Applications/Xcode_16.4.app
+      - name: Check production and test app configuration
+        run: python3 -B -m unittest discover -s tools -p test_app_identity.py
       - name: Compile and run tools/verify/main.swift
         run: |
           swiftc -O TradingUp/Models/Card.swift TradingUp/Models/Economy.swift TradingUp/Models/FeatureFlags.swift TradingUp/Models/GameCore.swift TradingUp/Models/Persistence.swift TradingUp/Models/GauntletEconomy.swift TradingUp/Models/Trainer.swift TradingUp/Models/Catalyst.swift TradingUp/Models/GauntletCore.swift TradingUp/Generated/CardData.swift tools/verify/gauntlet_sim.swift tools/verify/main.swift -o /tmp/tu_verify
           /tmp/tu_verify
 
   build:
-    name: Build (iOS Simulator)
+    name: ${{ matrix.name }}
     runs-on: macos-15
+    strategy:
+      matrix:
+        include:
+          - name: Build (iOS Simulator)
+            scheme: TradingUp
+            configuration: Release
+          - name: Build test app (iOS Simulator)
+            scheme: TradingUpTest
+            configuration: Release-Test
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Select Xcode
@@ -36,13 +47,21 @@ jobs:
         run: |
           xcodebuild build \
             -project TradingUp.xcodeproj \
-            -scheme TradingUp \
+            -scheme "${{ matrix.scheme }}" \
+            -configuration "${{ matrix.configuration }}" \
             -destination 'generic/platform=iOS Simulator' \
             CODE_SIGNING_ALLOWED=NO
 
   test:
-    name: Unit tests (iOS Simulator)
+    name: ${{ matrix.name }}
     runs-on: macos-15
+    strategy:
+      matrix:
+        include:
+          - name: Unit tests (iOS Simulator)
+            scheme: TradingUp
+          - name: Unit tests test app (iOS Simulator)
+            scheme: TradingUpTest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Select Xcode
@@ -57,6 +76,6 @@ jobs:
         run: |
           xcodebuild test \
             -project TradingUp.xcodeproj \
-            -scheme TradingUp \
+            -scheme "${{ matrix.scheme }}" \
             -destination "platform=iOS Simulator,name=${{ steps.sim.outputs.name }}" \
             CODE_SIGNING_ALLOWED=NO

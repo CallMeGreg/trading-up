@@ -10,6 +10,7 @@ covers the artifacts you have to *produce* before you can paste that in.
 - [In-app purchase App Review screenshot](#in-app-purchase-app-review-screenshot)
 - [Privacy manifest](#privacy-manifest)
 - [Build upload](#build-upload)
+- [Separate test app (TestFlight)](#separate-test-app-testflight)
 - [Pre-submission checklist](#pre-submission-checklist)
 
 ---
@@ -155,6 +156,10 @@ starts talking to the network; it has to agree with the App Privacy answers in
 
 ## Build upload
 
+The commands in this section ship the **production** `TradingUp` scheme. For a
+test app that coexists with the App Store installation, use
+[the separate test-app workflow below](#separate-test-app-testflight).
+
 App Store Connect only accepts a **Distribution**-signed build, but you don't
 have to make that certificate by hand — `-allowProvisioningUpdates` lets Xcode
 issue a cloud-managed one and build the matching store provisioning profile on
@@ -269,6 +274,119 @@ see the checklist below.
 Export compliance is already answered: `INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO`
 is set in the project, so the "does your app use encryption" prompt doesn't
 appear on each upload.
+
+## Separate test app (TestFlight)
+
+`TradingUpTest` builds **Trading Up Test**, bundle ID
+`com.callmegreg.tradingup.test`. It installs alongside the unchanged production
+app (`com.callmegreg.tradingup`) with independent saves and preferences.
+**Do not change the existing App ID or production App Store Connect record.**
+Creating another TestFlight group under the production record is not enough:
+those builds still have the production bundle ID and replace that installation.
+
+### One-time Apple setup
+
+1. In [Apple Developer → Certificates, Identifiers & Profiles → Identifiers](https://developer.apple.com/account/resources/identifiers/list),
+   click **+ → App IDs → App**. Name it **Trading Up Test**, choose an
+   **Explicit** bundle ID, and enter **`com.callmegreg.tradingup.test`**. Register
+   it under the same team as production. In-App Purchase is enabled by default
+   for an explicit App ID; no shared App Group, iCloud container, or keychain
+   group is needed. Registration requires Account Holder or Admin access.
+2. In **App Store Connect → Apps → + → New App**, select **iOS** and enter
+   **Trading Up Test** (or another available test-only store name), your primary
+   language, bundle ID **`com.callmegreg.tradingup.test`**, and a unique SKU such
+   as **`trading-up-test`**. Create the record. This does **not** publish an app
+   to the App Store. Leave its public App Store version unsubmitted.
+3. Configure the [test purchase below](#test-app-purchases) to exercise the paid
+   content in TestFlight. The existing production product is not shared with
+   this new app.
+4. In Xcode, select the **`TradingUpTest` scheme**, the `TradingUp` target, and
+   your existing team under **Signing & Capabilities**. Use automatic signing
+   for the test configurations. Select **Any iOS Device** and choose
+   **Product → Archive**. In Organizer, confirm the archive's bundle ID is
+   **`com.callmegreg.tradingup.test`** before choosing **Distribute App**.
+   For just you and other App Store Connect users, choose **TestFlight Internal
+   Only**. That upload cannot later be submitted to the public App Store or
+   external testers. If you need external testers, use **App Store Connect →
+   Upload** instead, still with the test bundle ID.
+5. Once processing finishes, open the **new test app's TestFlight tab**. Supply
+   its test information, create an **Internal Testing** group, add the uploaded
+   build, and invite your own App Store Connect user. Enable automatic
+   distribution if you want later uploads delivered to the group automatically.
+   Accept the invitation in TestFlight on your phone and install **Trading Up
+   Test**. Keep the production app installed.
+
+Internal testing does not require Beta App Review. External testing requires
+the TestFlight review flow, including review of the first external build.
+TestFlight builds expire after **90 days**, so upload a newer test build before
+expiry. You do not need to submit or release this duplicate app publicly.
+
+### Test app purchases
+
+Under **Trading Up Test → Monetization → In-App Purchases**, create:
+
+| Field | Value |
+| --- | --- |
+| Type | Non-Consumable |
+| Reference name | Full Collection Unlock (Test) |
+| Product ID | **`com.callmegreg.tradingup.test.fullunlock`** |
+| Display name | Unlock the Full Collection |
+| Description | Unlocks sets 2-5 and the 250-card Master Collector finish. A one-time purchase. |
+| Price | $2.99 USD, matching the local test catalog |
+
+Complete its required localization, price, availability, tax/review information,
+and review screenshot until the product is **Ready to Submit**. You can reuse
+the existing [IAP review screenshot](#in-app-purchase-app-review-screenshot).
+The account's paid-app agreements, tax, and banking setup must be active.
+The product does not need public App Review approval to test in sandbox; do
+not submit the test app publicly just to test purchases. Apple says product
+metadata changes can take **up to an hour** to reach sandbox.
+
+TestFlight purchases use **sandbox transactions and do not charge real money**.
+You can purchase the test unlock there even if you already own production.
+Production ownership does not transfer, and Restore Purchases restores only
+the test app's sandbox entitlement. A separate Sandbox Apple Account is not
+required for an ordinary TestFlight purchase; it is useful for advanced sandbox
+testing and needed when testing the live sandbox from a development-signed
+Xcode build with StoreKit Configuration set to None.
+
+`TradingUpTest.storekit` only configures local Xcode StoreKit testing. It does
+**not** create a product in App Store Connect and does not supply products to
+TestFlight.
+
+### Subsequent test builds
+
+Use **`/build test`** to bump only the test app's build number, commit/PR/merge
+the bump, and create a signed test archive in Organizer. Plain `/build` remains
+production. Each environment has its own build-number sequence; numbers already
+uploaded to that app cannot be reused, including builds uploaded from another
+Mac that are absent from your local archives.
+
+For a manual test archive, first bump `CURRENT_PROJECT_VERSION` in the app's
+`Debug-Test` and `Release-Test` configurations, then use the same `TEAM_ID` as
+in [Build upload](#build-upload):
+
+```bash
+xcodebuild archive -project TradingUp.xcodeproj -scheme TradingUpTest \
+  -configuration Release-Test -destination "generic/platform=iOS" \
+  DEVELOPMENT_TEAM="$TEAM_ID" -allowProvisioningUpdates
+```
+
+Omitting `-archivePath` puts it in Organizer. **Never override the test scheme
+with `-configuration Release`**: that configuration still belongs to production.
+Before upload, inspect the archive's `Info.plist`:
+
+```bash
+/usr/libexec/PlistBuddy -c "Print :ApplicationProperties:CFBundleIdentifier" \
+  "/path/to/TradingUpTest.xcarchive/Info.plist"
+# Must print com.callmegreg.tradingup.test
+```
+
+Apple references: [register an App ID](https://developer.apple.com/help/account/identifiers/register-an-app-id/),
+[add an app record](https://developer.apple.com/help/app-store-connect/create-an-app-record/add-a-new-app/),
+[internal testers](https://developer.apple.com/help/app-store-connect/test-a-beta-version/add-internal-testers/),
+[sandbox testing](https://developer.apple.com/help/app-store-connect/test-in-app-purchases/overview-of-testing-in-sandbox/),
+and [create a non-consumable](https://developer.apple.com/help/app-store-connect/manage-in-app-purchases/create-consumable-or-non-consumable-in-app-purchases/).
 
 ## Pre-submission checklist
 
