@@ -8,15 +8,17 @@ final class EvolutionPipRenderTests: XCTestCase {
         try XCTUnwrap(CardDatabase.all.first { $0.set == set && $0.stage == 2 && $0.stageCount == 3 })
     }
 
-    private func render(_ series: CardSeries, tint: Color, glow: Bool) throws -> CGImage {
+    private func render(_ series: CardSeries, tint: Color, glow: Bool,
+                        s: CGFloat = 1, displayScale: CGFloat = 4) throws -> CGImage {
         let renderer = ImageRenderer(content:
-            SeriesPips(series: series, setTint: tint, s: 1, glow: glow)
+            SeriesPips(series: series, setTint: tint, s: s, glow: glow)
+                .environment(\.displayScale, displayScale)
                 .background(Color.black)
         )
-        renderer.scale = 4
+        renderer.scale = displayScale
         let image = try XCTUnwrap(renderer.uiImage)
-        XCTAssertEqual(image.size.width, 67, accuracy: 0.01)
-        XCTAssertEqual(image.size.height, 17, accuracy: 0.01)
+        XCTAssertEqual(image.size.width, 67 * s, accuracy: 1 / displayScale)
+        XCTAssertEqual(image.size.height, 17 * s, accuracy: 1 / displayScale)
         return try XCTUnwrap(image.cgImage)
     }
 
@@ -37,6 +39,28 @@ final class EvolutionPipRenderTests: XCTestCase {
         for channel in 0..<3 {
             XCTAssertEqual(actual[channel], expected[channel], accuracy: tolerance, file: file, line: line)
         }
+    }
+
+    private func colorBounds(in image: CGImage,
+                             matching matches: (UInt8, UInt8, UInt8) -> Bool) throws -> CGRect {
+        var bytes = [UInt8](repeating: 0, count: image.width * image.height * 4)
+        let context = try XCTUnwrap(CGContext(
+            data: &bytes, width: image.width, height: image.height,
+            bitsPerComponent: 8, bytesPerRow: image.width * 4,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ))
+        context.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
+        var bounds = CGRect.null
+        for y in 0..<image.height {
+            for x in 0..<image.width {
+                let index = (y * image.width + x) * 4
+                if matches(bytes[index], bytes[index + 1], bytes[index + 2]) {
+                    bounds = bounds.union(CGRect(x: x, y: y, width: 1, height: 1))
+                }
+            }
+        }
+        return try XCTUnwrap(bounds.isNull ? nil : bounds, "Expected matching rendered pixels")
     }
 
     func testFullHalfAndHollowFillsUseEverySetsTintWithoutChangingGeometry() throws {
@@ -72,6 +96,35 @@ final class EvolutionPipRenderTests: XCTestCase {
                 assertColor(try pixel(focused, x: 33.5, y: 2.4), matches: [255, 213, 74], tolerance: 12)
                 XCTAssertLessThan(try pixel(flat, x: 33.5, y: 2.4)[0], 50,
                                   "settled pips must not retain the current-card ring")
+            }
+        }
+    }
+
+    func testGoldOutlineIsConcentricAtThumbnailAndLargerScales() throws {
+        let middle = try middleCard(in: 1)
+        let tint = Color(red: 0, green: 0, blue: 1)
+        for card in CardDatabase.line(middle.lineId) {
+            for s: CGFloat in [76.0 / 230, 1, 1.5] {
+                for displayScale: CGFloat in [2, 3] {
+                    for owned in [false, true] {
+                        let instance = CardInstance(cardId: card.id)
+                        let series = CardSeries.gauntlet(card, showcase: owned ? [instance] : [],
+                                                        pendingCards: [instance])
+                        let flat = try render(series, tint: tint, glow: false,
+                                              s: s, displayScale: displayScale)
+                        let focused = try render(series, tint: tint, glow: true,
+                                                 s: s, displayScale: displayScale)
+                        let pip = try colorBounds(in: flat) { r, g, b in
+                            r < 60 && g < 60 && b > 180
+                        }
+                        let ring = try colorBounds(in: focused) { r, g, b in
+                            r > 200 && g > 150 && b < 120
+                        }
+                        let context = "stage \(card.stage), scale \(s), \(displayScale)x, owned \(owned)"
+                        XCTAssertEqual(ring.midX, pip.midX, accuracy: 0.5, context)
+                        XCTAssertEqual(ring.midY, pip.midY, accuracy: 0.5, context)
+                    }
+                }
             }
         }
     }

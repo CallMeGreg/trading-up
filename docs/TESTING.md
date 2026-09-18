@@ -372,7 +372,8 @@ pending-pack, and missing stages independently of the current-card gold outline
 across every set, including held duplicates, unrelated lines, single cards, and
 the matching VoiceOver descriptions. It also guards unchanged pip contexts outside
 the Gauntlet summary. `EvolutionPipRenderTests` checks the real half-fill and
-focus-outline rendering, including actual-size thumbnails in all five set colors.
+focus-outline rendering, including actual-size thumbnails in all five set colors
+and concentric ring/pip centers at thumbnail and larger sizes on 2x/3x displays.
 `ShareImageRenderTests` also checks that win sharing contains exactly one rendered
 image and no companion text or URL.
 `GauntletDecisionStateTests` covers the last-pack recovery window, successful
