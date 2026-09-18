@@ -7,12 +7,13 @@ import StoreKit
 ///
 /// Deliberately *outside* `Models/`: the pure game logic there stays Foundation-
 /// only and StoreKit-free, and the `tools/verify` harness never sees this file.
-/// StoreKit is the **source of truth** — the entitlement is re-verified from
-/// `Transaction.currentEntitlements` on every launch and on every transaction
+/// In production, StoreKit is the **source of truth** — the entitlement is
+/// re-verified from `Transaction.currentEntitlements` on every launch and transaction
 /// update — and the verified result is pushed into `GameState`, which is all the
 /// rest of the app reads. A last-known value is cached in `UserDefaults` purely
 /// so a returning owner doesn't see a paywall flash before the (fast, local)
-/// verification completes; it is a hint, never the authority.
+/// verification completes; it is a hint, never the authority. The isolated test
+/// app instead gets automatic, non-persisted access without contacting StoreKit.
 @Observable
 @MainActor
 final class PurchaseStore {
@@ -71,9 +72,8 @@ final class PurchaseStore {
     }
     #endif
 
-    /// The verified entitlement, mirrored here for the paywall's own UI.
-    /// `GameState.isFullVersionUnlocked` is the game-facing copy and is kept in
-    /// step through `apply(_:)`.
+    /// The effective entitlement, mirrored here for the paywall's own UI.
+    /// `GameState.isFullVersionUnlocked` is the game-facing copy, updated alongside it.
     private(set) var isFullVersionUnlocked: Bool
 
     /// True while a purchase or restore round-trip is in flight, so the paywall
@@ -85,18 +85,23 @@ final class PurchaseStore {
     private(set) var lastError: String?
 
     private let game: GameState
+    private let defaults: UserDefaults
     /// `@ObservationIgnored` (it's plumbing, not UI state) keeps this a plain
     /// stored property, and `nonisolated(unsafe)` lets `deinit` — a nonisolated
     /// context under this toolchain — cancel the lifetime listener. `deinit` runs
     /// only once no other reference survives, so that access is exclusive.
     @ObservationIgnored private nonisolated(unsafe) var updatesTask: Task<Void, Never>?
 
-    init(game: GameState) {
+    init(game: GameState, defaults: UserDefaults = .standard) {
         self.game = game
+        self.defaults = defaults
+        isFullVersionUnlocked = false
+
+        if applyAutomaticTestUnlock() { return }
 
         // Instant, cached hint so an owner's paid sets are open on cold launch,
         // before the async StoreKit check lands. Overwritten by `refresh()`.
-        var initial = UserDefaults.standard.bool(forKey: Self.cacheKey)
+        var initial = defaults.bool(forKey: Self.cacheKey)
         #if DEBUG
         initial = initial || Self.forcedUnlock
         #endif
@@ -125,6 +130,7 @@ final class PurchaseStore {
 
     /// Fetch the product so the paywall can show its localized price/title.
     func loadProducts() async {
+        if applyAutomaticTestUnlock() { return }
         do {
             let products = try await Product.products(for: [Self.fullUnlockProductID])
             fullUnlock = products.first
@@ -137,6 +143,7 @@ final class PurchaseStore {
     /// authoritative, locally-verified set of non-consumables the account owns.
     /// Runs on launch, after a purchase, and after a restore.
     func refresh() async {
+        if applyAutomaticTestUnlock() { return }
         #if DEBUG
         if Self.forcedUnlock { apply(true); return }
         #endif
@@ -153,11 +160,13 @@ final class PurchaseStore {
 
     // MARK: - Purchase / restore
 
-    /// Buy the full-version unlock. Returns true only once a verified transaction
-    /// has been recorded and the entitlement applied. `.pending` (Ask to Buy)
+    /// Buy the full-version unlock, or acknowledge the test app's automatic access.
+    /// Otherwise returns true only once a verified transaction has been recorded
+    /// and the entitlement applied. `.pending` (Ask to Buy)
     /// returns false here; the grant then arrives later via `Transaction.updates`.
     @discardableResult
     func purchaseFullUnlock() async -> Bool {
+        if applyAutomaticTestUnlock() { return true }
         guard let product = fullUnlock else {
             await loadProducts()
             if fullUnlock == nil { lastError = "The store is unavailable right now. Try again." }
@@ -194,6 +203,7 @@ final class PurchaseStore {
     /// an explicit Restore control, and `AppStore.sync()` forces the refresh
     /// (prompting for the store login if needed).
     func restore() async {
+        if applyAutomaticTestUnlock() { return }
         isWorking = true
         lastError = nil
         defer { isWorking = false }
@@ -207,17 +217,31 @@ final class PurchaseStore {
 
     // MARK: - Private
 
+    private func applyAutomaticTestUnlock() -> Bool {
+        #if TRADING_UP_TEST_APP
+        guard TestBuildAccess.allowsAutomaticUnlock(bundleIdentifier: Bundle.main.bundleIdentifier) else {
+            return false
+        }
+        // This is build-scoped access, not a purchase: never write the cached hint.
+        isFullVersionUnlocked = true
+        game.setFullVersionUnlocked(true)
+        return true
+        #else
+        return false
+        #endif
+    }
+
     private func handle(_ result: VerificationResult<Transaction>) async {
         guard case .verified(let transaction) = result else { return }
         await transaction.finish()
         await refresh()
     }
 
-    /// Single choke point that keeps the three copies of the entitlement — this
-    /// object, `GameState`, and the cached hint — in lockstep.
+    /// Keeps a StoreKit/debug entitlement and its cached hint in lockstep.
+    /// Automatic test access deliberately never uses this persistence path.
     private func apply(_ unlocked: Bool) {
         isFullVersionUnlocked = unlocked
         game.setFullVersionUnlocked(unlocked)
-        UserDefaults.standard.set(unlocked, forKey: Self.cacheKey)
+        defaults.set(unlocked, forKey: Self.cacheKey)
     }
 }

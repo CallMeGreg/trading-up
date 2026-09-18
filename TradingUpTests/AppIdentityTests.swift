@@ -27,4 +27,23 @@ final class AppIdentityTests: XCTestCase {
                        displayName)
         XCTAssertEqual(PurchaseStore.fullUnlockProductID, productID)
     }
+
+    func testAutomaticUnlockRequiresTestBuildAndExactTestBundleID() {
+        let isTestApp = Bundle.main.bundleIdentifier == "com.callmegreg.tradingup.test"
+        XCTAssertEqual(
+            TestBuildAccess.allowsAutomaticUnlock(bundleIdentifier: "com.callmegreg.tradingup.test"),
+            isTestApp,
+            "Even the test bundle ID must not qualify when compiled for production."
+        )
+
+        let rejectedIDs: [String?] = [
+            nil, "", "com.callmegreg.tradingup", "com.callmegreg.tradingup.tests",
+            "com.callmegreg.tradingup.test.tests", "com.callmegreg.tradingup.test.extra",
+            "com.callmegreg.tradingup.Test", "another.app.test",
+        ]
+        for bundleID in rejectedIDs {
+            XCTAssertFalse(TestBuildAccess.allowsAutomaticUnlock(bundleIdentifier: bundleID),
+                           "Unexpected automatic unlock for \(bundleID ?? "nil")")
+        }
+    }
 }

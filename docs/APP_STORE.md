@@ -182,9 +182,13 @@ Don't read it off an `Apple Development` certificate — the code in parentheses
 there is the individual's ID, which is a different value and will fail to sign.
 (On an `Apple Distribution` certificate it *is* the Team ID.)
 
-Every upload needs a build number App Store Connect has never seen — bump
-`CURRENT_PROJECT_VERSION` first if you're re-uploading. `MARKETING_VERSION` only
-changes when the public version number does.
+Every upload needs a build number App Store Connect has never seen for that app.
+Production and test share one build-number sequence: bump `CURRENT_PROJECT_VERSION`
+in all four app configurations together, above both apps' project values,
+Organizer archives, and any known uploads from another Mac. `/build` creates
+the matching signed production/test pair from the same source commit.
+`MARKETING_VERSION` stays equal across all four configurations and only changes
+when the public version number does.
 
 ```bash
 xcodebuild archive -project TradingUp.xcodeproj -scheme TradingUp \
@@ -297,9 +301,9 @@ those builds still have the production bundle ID and replace that installation.
    language, bundle ID **`com.callmegreg.tradingup.test`**, and a unique SKU such
    as **`trading-up-test`**. Create the record. This does **not** publish an app
    to the App Store. Leave its public App Store version unsubmitted.
-3. Configure the [test purchase below](#test-app-purchases) to exercise the paid
-   content in TestFlight. The existing production product is not shared with
-   this new app.
+3. No test IAP setup is needed to exercise paid content: the isolated test app
+   [automatically unlocks the full game](#test-app-purchases), even without an
+   App Store connection. The existing production product is not shared with it.
 4. In Xcode, select the **`TradingUpTest` scheme**, the `TradingUp` target, and
    your existing team under **Signing & Capabilities**. Use automatic signing
    for the test configurations. Select **Any iOS Device** and choose
@@ -323,47 +327,35 @@ expiry. You do not need to submit or release this duplicate app publicly.
 
 ### Test app purchases
 
-Under **Trading Up Test → Monetization → In-App Purchases**, create:
+`Debug-Test` and archived `Release-Test` builds automatically unlock the full
+game, including Gauntlet Mode, without loading products or contacting StoreKit.
+No test IAP record, sandbox purchase, or Restore Purchases step is needed.
+The automatic grant is never saved as a purchase entitlement and does not skip
+in-game progression.
 
-| Field | Value |
-| --- | --- |
-| Type | Non-Consumable |
-| Reference name | Full Collection Unlock (Test) |
-| Product ID | **`com.callmegreg.tradingup.test.fullunlock`** |
-| Display name | Unlock the Full Collection |
-| Description | Unlocks sets 2-5 and the 250-card Master Collector finish. A one-time purchase. |
-| Price | $2.99 USD, matching the local test catalog |
+This requires both the test-only compiler condition and the exact
+`com.callmegreg.tradingup.test` bundle ID. Production builds, including
+production-identity TestFlight builds, keep the normal StoreKit purchase gate.
+See [the isolation safeguards](DEVELOPMENT.md#test-app-versus-production).
 
-Complete its required localization, price, availability, tax/review information,
-and review screenshot until the product is **Ready to Submit**. You can reuse
-the existing [IAP review screenshot](#in-app-purchase-app-review-screenshot).
-The account's paid-app agreements, tax, and banking setup must be active.
-The product does not need public App Review approval to test in sandbox; do
-not submit the test app publicly just to test purchases. Apple says product
-metadata changes can take **up to an hour** to reach sandbox.
-
-TestFlight purchases use **sandbox transactions and do not charge real money**.
-You can purchase the test unlock there even if you already own production.
-Production ownership does not transfer, and Restore Purchases restores only
-the test app's sandbox entitlement. A separate Sandbox Apple Account is not
-required for an ordinary TestFlight purchase; it is useful for advanced sandbox
-testing and needed when testing the live sandbox from a development-signed
-Xcode build with StoreKit Configuration set to None.
-
-`TradingUpTest.storekit` only configures local Xcode StoreKit testing. It does
-**not** create a product in App Store Connect and does not supply products to
-TestFlight.
+The separate `com.callmegreg.tradingup.test.fullunlock` ID and
+`TradingUpTest.storekit` catalog remain available but are not used by the
+automatically unlocked test app. A local catalog does not create products in
+App Store Connect. To exercise purchase, restore, or refund behavior, use
+[the production scheme's local StoreKit setup on a Simulator](DEVELOPMENT.md#in-app-purchase-full-version-unlock).
 
 ### Subsequent test builds
 
-Use **`/build test`** to bump only the test app's build number, commit/PR/merge
-the bump, and create a signed test archive in Organizer. Plain `/build` remains
-production. Each environment has its own build-number sequence; numbers already
-uploaded to that app cannot be reused, including builds uploaded from another
-Mac that are absent from your local archives.
+Use **`/build`** to choose the next shared build number, commit/PR/merge the bump,
+and create **both** signed production and test archives in Organizer.
+`/build test` and `/build production` use the same paired workflow. Matching
+version/build numbers identify matching source, beginning with **1.2.2 (42)**.
+Numbers already used by either app are never reused for a new release, including
+uploads from another Mac that are absent from local archives.
 
-For a manual test archive, first bump `CURRENT_PROJECT_VERSION` in the app's
-`Debug-Test` and `Release-Test` configurations, then use the same `TEAM_ID` as
+For manual archives, first bump `CURRENT_PROJECT_VERSION` in **all four app
+configurations** to the same next number and keep `MARKETING_VERSION` aligned.
+Build production and test from that same commit, using the same `TEAM_ID` as
 in [Build upload](#build-upload):
 
 ```bash
@@ -380,6 +372,9 @@ Before upload, inspect the archive's `Info.plist`:
 /usr/libexec/PlistBuddy -c "Print :ApplicationProperties:CFBundleIdentifier" \
   "/path/to/TradingUpTest.xcarchive/Info.plist"
 # Must print com.callmegreg.tradingup.test
+/usr/libexec/PlistBuddy -c "Print :ApplicationProperties:CFBundleVersion" \
+  "/path/to/TradingUpTest.xcarchive/Info.plist"
+# Must match the production archive's build number.
 ```
 
 Apple references: [register an App ID](https://developer.apple.com/help/account/identifiers/register-an-app-id/),

@@ -29,7 +29,8 @@ Or just press `⌘U` in Xcode.
 
 | File | Covers |
 | --- | --- |
-| `AppIdentityTests.swift` | The running app's bundle ID, Home Screen name, test host, and full-unlock product ID agree for both production and the isolated test app |
+| `AppIdentityTests.swift` | App/test-host identities and purchase product IDs agree; automatic access requires the test build and exact test bundle ID |
+| `PurchaseStoreTests.swift` | Production starts purchase-gated; the test app unlocks immediately, stays unlocked without StoreKit, never caches its automatic grant, and preserves progression |
 | `DataIntegrityTests.swift` | The generated catalogue: 250 cards, unique names/ids, rarity splits |
 | `EconomyRulesTests.swift` | The economy knobs are exactly as designed (prices, fees, sellback rate) |
 | `GameplaySimulationTests.swift` | Buy/open/sell/grade flows against a seeded, reproducible RNG |
@@ -47,9 +48,15 @@ Or just press `⌘U` in Xcode.
 Both `TradingUp` and `TradingUpTest` run the same XCTest suite against their own
 app identity. `AppIdentityTests` checks the built app, not just project text.
 The fast configuration tests additionally guard all scheme actions (especially
-Archive), both StoreKit catalogs, separate test-runner IDs, version pairs, and
-equivalent compiler/build settings. They require macOS's `plutil`, not a
-simulator or third-party Python packages:
+Archive), both StoreKit catalogs, separate test-runner IDs, one shared version
+and build number across all four app configurations, and
+equivalent compiler/build settings except the explicitly allowlisted test-app
+condition. They reject that condition anywhere outside the app's `Debug-Test`
+and `Release-Test` settings, then compile and execute `TestBuildAccess` with and
+without `TRADING_UP_TEST_APP`, in both DEBUG and optimized non-DEBUG modes.
+Every combination rejects the production ID, missing IDs, and lookalike IDs;
+only the test condition plus the exact test ID grants access. They require
+macOS's `plutil` and Xcode's Swift compiler, not a simulator or third-party packages:
 
 ```bash
 python3 -B -m unittest discover -s tools -p test_app_identity.py
@@ -58,12 +65,19 @@ for SCHEME in TradingUp TradingUpTest; do
   xcodebuild test -project TradingUp.xcodeproj -scheme "$SCHEME" \
     -destination 'platform=iOS Simulator,name=iPhone 16' \
     -only-testing:TradingUpTests/AppIdentityTests \
+    -only-testing:TradingUpTests/PurchaseStoreTests \
     -only-testing:TradingUpTests/FullUnlockGateTests \
     -only-testing:TradingUpTests/SaveStoreTests \
     -only-testing:TradingUpTests/SaveFormatTests \
     CODE_SIGNING_ALLOWED=NO
 done
 ```
+
+`PurchaseStoreTests` uses isolated temporary saves and preferences. Its automatic
+access cases run only in the test app; the fresh-store and cached-purchase cases
+run in both identities. CI also compiles both `Release` and `Release-Test`.
+Keep production purchase testing on `TradingUp` with its local StoreKit catalog;
+`TradingUpTest` deliberately does not contact StoreKit.
 
 For an installation smoke test, use a disposable simulator: install both
 variants, confirm `simctl get_app_container <udid> <bundle-id> data` returns
