@@ -238,45 +238,84 @@ private struct ArtFrameKey: PreferenceKey {
 /// gold "this pull" pip in the pull modes (Classic, Gauntlet); the Binder is a
 /// browsing view with no card in hand, so it resolves with `pull: false`.
 ///
-/// The pip picture is identical in every mode — only the pool a solid pip counts
-/// against changes — so a player learns it once and it reads everywhere. See
-/// docs/mockups/evolution.
+/// Gauntlet summaries also supply the undecided pack, so available stages can
+/// read half-filled without counting as owned or revealing cards ahead of time.
 struct CardSeries {
+    enum Availability: Equatable {
+        case owned, inPack, missing
+    }
+
     /// Every card in the line, sorted by stage (length 1 for a single).
     let line: [Card]
     /// Stages (1-based) owned in the current context.
     let ownedStages: Set<Int>
     /// The stage to light as the gold "this pull" pip, or nil when browsing.
     let nowStage: Int?
+    /// Nil outside a pack-aware summary; an empty set means no stages remain in the pack.
+    let packStages: Set<Int>?
 
     /// Resolve the pips for `card` from an ownership test over the cards in its
     /// line. Pass `pull: true` in a mode with a card in hand (Classic, Gauntlet)
     /// to light the card's own stage gold; `false` in the Binder, where the
     /// current stage simply reads as owned.
-    init(for card: Card, pull: Bool, owns: (Card) -> Bool) {
+    init(for card: Card, pull: Bool, pendingCardIds: Set<String>? = nil, owns: (Card) -> Bool) {
         let line = CardDatabase.line(card.lineId)
         self.line = line
         self.ownedStages = Set(line.filter(owns).map(\.stage))
         self.nowStage = pull ? card.stage : nil
+        self.packStages = pendingCardIds.map { ids in
+            Set(line.filter { ids.contains($0.id) }.map(\.stage))
+        }
+    }
+
+    func availability(of stage: Int) -> Availability {
+        if ownedStages.contains(stage) { return .owned }
+        if packStages?.contains(stage) == true { return .inPack }
+        return .missing
     }
 
     /// Pips scoped to the current Gauntlet Showcase: a stage counts as owned when
     /// a copy of it stands in the Showcase this run. A pull mode, so the card in
     /// hand lights the gold "now" pip. Pass `pull: false` when comparing existing
     /// keepers so only stages actually standing in the Showcase count as present.
-    static func gauntlet(_ card: Card, showcase: [CardInstance], pull: Bool = true) -> CardSeries {
+    static func gauntlet(_ card: Card, showcase: [CardInstance],
+                         pendingCards: [CardInstance]? = nil, pull: Bool = true) -> CardSeries {
         let owned = Set(showcase.map(\.cardId))
-        return CardSeries(for: card, pull: pull) { owned.contains($0.id) }
+        return CardSeries(for: card, pull: pull,
+                          pendingCardIds: pendingCards.map { Set($0.map(\.cardId)) }) {
+            owned.contains($0.id)
+        }
+    }
+
+    var accessibilityText: String {
+        guard let packStages else {
+            if line.count == 1 { return "Single card" }
+            let held = line.filter { ownedStages.contains($0.stage) || nowStage == $0.stage }.count
+            return "Evolution line, \(held) of \(line.count) stages owned"
+        }
+        let available = packStages.subtracting(ownedStages).count
+        let packDescription = "\(available) additional stage\(available == 1 ? "" : "s") in pack"
+        let summary = line.count == 1 ? "Single card"
+            : "Evolution line, \(ownedStages.count) of \(line.count) stages in Showcase, \(packDescription)"
+        let stages = line.map { card in
+            let status: String
+            switch availability(of: card.stage) {
+            case .owned: status = "in Showcase"
+            case .inPack: status = "in pack"
+            case .missing: status = "missing"
+            }
+            return "\(card.name): \(status)" + (nowStage == card.stage ? ", this card" : "")
+        }
+        return summary + ". " + stages.joined(separator: ". ")
     }
 }
 
 /// The stage-pip cluster shown in a card header in place of the element label:
 /// one pip per stage in the card's line, glowing in the *set's* signature colour.
-/// Solid = a stage owned in context, gold = the card in hand this pull, hollow =
-/// a stage still missing; the short connector between two adjacent pips fills once
-/// both are present. A single (one pip) draws no connector, so "not a line" reads
-/// instantly. Everything scales from `s` (= card width / 230) like the rest of the
-/// card. See docs/mockups/evolution.
+/// Pack-aware summaries use solid = owned, half = in pack, hollow = missing,
+/// with a gold outline identifying this card independently of its fill.
+/// Other contexts retain their existing current-pull and owned-pip treatment.
+/// Everything scales from `s` (= card width / 230) like the rest of the card.
 struct SeriesPips: View {
     let series: CardSeries
     let setTint: Color
@@ -309,12 +348,14 @@ struct SeriesPips: View {
         .background(Capsule().fill(Palette.bg0.opacity(0.5)))
         .overlay(Capsule().strokeBorder(Color.white.opacity(0.07), lineWidth: 1))
         .accessibilityElement()
-        .accessibilityLabel(Text(accessibilityText))
+        .accessibilityLabel(Text(series.accessibilityText))
     }
 
     @ViewBuilder
     private func pip(for stage: Int) -> some View {
-        if glow && series.nowStage == stage {
+        if series.packStages != nil {
+            packPip(for: stage)
+        } else if glow && series.nowStage == stage {
             // "This pull" — a white core rimmed and haloed in gold. Only while the
             // pack is being opened; after the decision it settles to a set-tint pip.
             Circle().fill(.white)
@@ -334,16 +375,36 @@ struct SeriesPips: View {
         }
     }
 
+    private func packPip(for stage: Int) -> some View {
+        ZStack {
+            switch series.availability(of: stage) {
+            case .owned:
+                Circle().fill(setTint)
+                    .shadow(color: glow ? setTint.opacity(0.5) : .clear, radius: glow ? 2.5 * s : 0)
+            case .inPack:
+                Circle().fill(setTint)
+                    .mask(alignment: .leading) {
+                        Rectangle().frame(width: d / 2)
+                    }
+                    .overlay(Circle().strokeBorder(setTint, lineWidth: 1.5 * s))
+            case .missing:
+                Circle().strokeBorder(setTint.opacity(0.4), lineWidth: 1.5 * s)
+            }
+        }
+        .frame(width: d, height: d)
+        .overlay {
+            if glow && series.nowStage == stage {
+                Circle().stroke(Self.gold, lineWidth: 1.6 * s)
+                    .padding(-1.6 * s)
+                    .shadow(color: Self.gold.opacity(0.5), radius: 3.5 * s)
+            }
+        }
+    }
+
     private func connector(filled: Bool) -> some View {
         Capsule()
             .fill(filled ? setTint : setTint.opacity(0.30))
             .frame(width: 7 * s, height: 2 * s)
-    }
-
-    private var accessibilityText: String {
-        let held = series.line.filter { present($0.stage) }.count
-        if series.line.count == 1 { return "Single card" }
-        return "Evolution line, \(held) of \(series.line.count) stages owned"
     }
 }
 

@@ -233,4 +233,83 @@ final class EvolutionPipTests: XCTestCase {
         XCTAssertTrue(series.ownedStages.isEmpty)
         XCTAssertNil(series.nowStage)
     }
+
+    func testSummaryPipsDistinguishHeldAndPendingLinematesInEverySet() throws {
+        for set in 1...CardDatabase.setCount {
+            let base = try XCTUnwrap(CardDatabase.all.first {
+                $0.set == set && $0.stage == 1 && $0.stageCount == 3
+            })
+            let line = CardDatabase.line(base.lineId)
+            let showcase = [CardInstance(cardId: base.id)]
+            let pending = line.dropFirst().map { CardInstance(cardId: $0.id) }
+            for current in pending {
+                let series = CardSeries.gauntlet(current.card, showcase: showcase, pendingCards: pending)
+                XCTAssertEqual(series.line.map(\.id), line.map(\.id))
+                XCTAssertEqual(series.ownedStages, [1])
+                XCTAssertEqual(series.packStages, [2, 3])
+                XCTAssertEqual(series.nowStage, current.card.stage)
+                XCTAssertEqual(line.map { series.availability(of: $0.stage) }, [.owned, .inPack, .inPack])
+            }
+        }
+    }
+
+    func testSummaryPipsOnlyMatchCardsInTheirOwnLine() throws {
+        let card = try XCTUnwrap(CardDatabase.byId["S1-005"])
+        let pending = ["S1-004", "S1-005", "S1-003", "S2-006"].map { CardInstance(cardId: $0) }
+        let series = CardSeries.gauntlet(card, showcase: [], pendingCards: pending)
+        XCTAssertEqual(series.packStages, [1, 2])
+        XCTAssertEqual(series.availability(of: 3), .missing,
+                       "the same stage in another line or set does not complete this one")
+        XCTAssertEqual(series.nowStage, 2)
+    }
+
+    func testHeldDuplicatesStayOwnedInsideTheCurrentCardOutline() throws {
+        let card = try XCTUnwrap(CardDatabase.byId["S1-002"])
+        let showcase = [CardInstance(cardId: card.id), CardInstance(cardId: card.id, foil: true, grade: 9)]
+        let pending = [CardInstance(cardId: card.id), CardInstance(cardId: "S1-003")]
+        let series = CardSeries.gauntlet(card, showcase: showcase, pendingCards: pending)
+        XCTAssertEqual(series.ownedStages, [2])
+        XCTAssertEqual(series.packStages, [2, 3])
+        XCTAssertEqual(series.availability(of: 2), .owned)
+        XCTAssertEqual(series.nowStage, 2)
+        XCTAssertTrue(series.accessibilityText.contains("1 additional stage in pack"))
+        XCTAssertTrue(series.accessibilityText.contains("Cinderhound: in Showcase, this card"))
+    }
+
+    func testSummaryAccessibilityExplainsAvailabilityWithoutCountingPullsAsOwned() throws {
+        let card = try XCTUnwrap(CardDatabase.byId["S1-005"])
+        let series = CardSeries.gauntlet(card, showcase: [],
+                                        pendingCards: [CardInstance(cardId: "S1-004"), CardInstance(cardId: card.id)])
+        XCTAssertEqual(series.accessibilityText,
+                       "Evolution line, 0 of 3 stages in Showcase, 2 additional stages in pack. "
+                       + "Pebblit: in pack. Boulderkin: in pack, this card. Magmalith: missing")
+        let single = try XCTUnwrap(CardDatabase.all.first { $0.stageCount == 1 })
+        let singleSeries = CardSeries.gauntlet(single, showcase: [],
+                                              pendingCards: [CardInstance(cardId: single.id)])
+        XCTAssertEqual(singleSeries.line.count, 1)
+        XCTAssertEqual(singleSeries.accessibilityText, "Single card. \(single.name): in pack, this card")
+    }
+
+    func testEmptySummaryDoesNotImplyTheCurrentCardIsStillAvailable() throws {
+        let s = try sampleLine()
+        let series = CardSeries.gauntlet(s.top, showcase: [], pendingCards: [])
+        XCTAssertEqual(series.packStages, [])
+        XCTAssertEqual(series.nowStage, s.top.stage)
+        XCTAssertEqual(series.availability(of: s.top.stage), .missing)
+    }
+
+    func testOtherContextsDoNotOptIntoPendingPackPips() throws {
+        let s = try sampleLine()
+        let showcase = [CardInstance(cardId: s.base.id)]
+        let reveal = CardSeries.gauntlet(s.top, showcase: showcase)
+        let settled = CardSeries.gauntlet(s.base, showcase: showcase, pull: false)
+        let classic = CardSeries(for: s.top, pull: true) { $0.id == s.base.id }
+        let binder = CardSeries(for: s.top, pull: false) { $0.id == s.base.id }
+        for series in [reveal, settled, classic, binder] {
+            XCTAssertNil(series.packStages)
+        }
+        XCTAssertEqual(reveal.accessibilityText, classic.accessibilityText)
+        XCTAssertEqual(settled.accessibilityText, binder.accessibilityText)
+        XCTAssertNil(binder.nowStage)
+    }
 }
