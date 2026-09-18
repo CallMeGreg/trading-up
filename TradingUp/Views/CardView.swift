@@ -394,8 +394,9 @@ struct SeriesPips: View {
         .frame(width: d, height: d)
         .overlay {
             if glow && series.nowStage == stage {
-                Circle().stroke(Self.gold, lineWidth: 1.6 * s)
-                    .padding(-1.6 * s)
+                // Expand the path, not the layout, so fractional-size pips stay concentric.
+                Circle().inset(by: -1.6 * s)
+                    .stroke(Self.gold, lineWidth: 1.6 * s)
                     .shadow(color: Self.gold.opacity(0.5), radius: 3.5 * s)
             }
         }

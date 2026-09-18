@@ -546,7 +546,8 @@ any order.
 **Pack-summary evolution pips.** The existing card-header pips keep their set's
 color: **solid** means in the Showcase, **half-filled** means available among the
 undecided cards in this pack, and an **empty, dim outline** means missing. A
-**gold outline** identifies this card without replacing its fill. Showcase
+**gold outline**, concentric with its pip even at thumbnail size, identifies this
+card without replacing its fill. Showcase
 ownership takes precedence, so a pulled duplicate stays solid and never counts
 as another stage. Keeping or swapping in a card makes its stage solid on the
 remaining pulls; selling it makes that stage missing unless a held copy remains.
