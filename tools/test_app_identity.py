@@ -3,6 +3,7 @@
 import json
 from pathlib import Path
 import subprocess
+import tempfile
 import unittest
 import xml.etree.ElementTree as ET
 
@@ -13,6 +14,7 @@ VARIANTS = (
     ("TradingUp", "", "com.callmegreg.tradingup", "Trading Up"),
     ("TradingUpTest", "-Test", "com.callmegreg.tradingup.test", "Trading Up Test"),
 )
+TEST_APP_CONDITION = "TRADING_UP_TEST_APP"
 
 
 class AppIdentityConfigurationTests(unittest.TestCase):
@@ -55,7 +57,6 @@ class AppIdentityConfigurationTests(unittest.TestCase):
     def test_test_app_keeps_production_build_behavior(self):
         identity_keys = {
             "PRODUCT_BUNDLE_IDENTIFIER", "INFOPLIST_KEY_CFBundleDisplayName",
-            "CURRENT_PROJECT_VERSION", "MARKETING_VERSION",
         }
         for target in (None, "TradingUp", "TradingUpTests", "TradingUpUITests"):
             configs = self.configurations(target)
@@ -63,10 +64,75 @@ class AppIdentityConfigurationTests(unittest.TestCase):
             for mode in ("Debug", "Release"):
                 with self.subTest(target=target, mode=mode):
                     production, test = (configs[name] for name in (mode, f"{mode}-Test"))
+                    if target == "TradingUp":
+                        test = dict(test)
+                        self.assertEqual(test.pop("SWIFT_ACTIVE_COMPILATION_CONDITIONS"),
+                                         f"$(inherited) {TEST_APP_CONDITION}")
                     self.assertEqual(
                         {key: value for key, value in production.items() if key not in identity_keys},
                         {key: value for key, value in test.items() if key not in identity_keys},
                     )
+
+    def test_production_and_test_share_one_version_and_build_number(self):
+        configs = self.configurations("TradingUp")
+        for key in ("CURRENT_PROJECT_VERSION", "MARKETING_VERSION"):
+            with self.subTest(setting=key):
+                values = {name: settings[key] for name, settings in configs.items()}
+                self.assertEqual(len(set(values.values())), 1,
+                                 f"All app configurations must share {key}: {values}")
+
+    def test_automatic_unlock_condition_is_exclusive_to_test_app_configurations(self):
+        for target in (None, "TradingUp", "TradingUpTests", "TradingUpUITests"):
+            for name, settings in self.configurations(target).items():
+                with self.subTest(target=target, configuration=name):
+                    conditions = settings.get("SWIFT_ACTIVE_COMPILATION_CONDITIONS", "").split()
+                    expected = target == "TradingUp" and name in {"Debug-Test", "Release-Test"}
+                    self.assertEqual(TEST_APP_CONDITION in conditions, expected)
+                    self.assertNotIn(
+                        TEST_APP_CONDITION,
+                        str({key: value for key, value in settings.items()
+                             if key != "SWIFT_ACTIVE_COMPILATION_CONDITIONS"}),
+                        "The unlock condition must not be injected through another build setting.",
+                    )
+
+    def test_compiled_unlock_policy_requires_both_test_condition_and_exact_identity(self):
+        with tempfile.TemporaryDirectory(prefix="tu_test_build_access_") as directory:
+            main = Path(directory) / "main.swift"
+            executable = Path(directory) / "test_build_access"
+            main.write_text("""
+let expected = CommandLine.arguments[1] == "true"
+precondition(TestBuildAccess.allowsAutomaticUnlock(
+    bundleIdentifier: "com.callmegreg.tradingup.test") == expected)
+let rejectedIDs: [String?] = [
+    nil, "", "com.callmegreg.tradingup", "com.callmegreg.tradingup.tests",
+    "com.callmegreg.tradingup.test.tests", "com.callmegreg.tradingup.test.extra",
+    "com.callmegreg.tradingup.Test", "another.app.test",
+]
+for bundleID in rejectedIDs {
+    precondition(!TestBuildAccess.allowsAutomaticUnlock(bundleIdentifier: bundleID),
+                 "Unexpected automatic unlock for \\(bundleID ?? "nil")")
+}
+""")
+            for debug in (False, True):
+                for test_app in (False, True):
+                    with self.subTest(debug=debug, test_app=test_app):
+                        flags = ["-Onone" if debug else "-O"]
+                        if debug:
+                            flags += ["-D", "DEBUG"]
+                        if test_app:
+                            flags += ["-D", TEST_APP_CONDITION]
+                        compiled = subprocess.run(
+                            ["xcrun", "swiftc", *flags,
+                             str(ROOT / "TradingUp/Store/TestBuildAccess.swift"), str(main),
+                             "-o", str(executable)],
+                            capture_output=True, text=True,
+                        )
+                        self.assertEqual(compiled.returncode, 0, compiled.stderr)
+                        result = subprocess.run(
+                            [str(executable), "true" if test_app else "false"],
+                            capture_output=True, text=True,
+                        )
+                        self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_test_bundles_and_hosts_follow_the_app(self):
         for target, ending in (("TradingUpTests", "tests"), ("TradingUpUITests", "uitests")):

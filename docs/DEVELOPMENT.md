@@ -48,7 +48,8 @@ all 250 cards are embedded in the binary.
 
 Use **`TradingUpTest` for development and personal TestFlight builds**. Keep
 `TradingUp` for the shipping app. Both schemes compile the same app target and
-source files; only the app identity and version counters differ.
+source files and share version/build numbers; the test app has its own identity
+and automatic full-game access.
 
 | Setting | Production | Test app |
 | --- | --- | --- |
@@ -59,14 +60,25 @@ source files; only the app identity and version counters differ.
 | Home Screen name | Trading Up | Trading Up Test |
 | Full-unlock product ID | `com.callmegreg.tradingup.fullunlock` | `com.callmegreg.tradingup.test.fullunlock` |
 | Local StoreKit catalog | `TradingUp.storekit` | `TradingUpTest.storekit` |
+| Full-game access | Verified StoreKit purchase | Automatic, without StoreKit |
 
 The **bundle identifier**, not the build number or scheme name, lets iOS install
 both apps side by side. The existing production identifier is unchanged. Saves,
 Binder, Gauntlet progress/runs, preferences, and the cached purchase entitlement
 use each app's own sandbox, so the test app starts fresh without reading,
-migrating, or clearing production data. Production purchases do not unlock the
-test app; use its local or sandbox purchase instead. This is app/data isolation,
-not a separate backend deployment: the game still runs offline.
+migrating, or clearing production data. Production purchases are not shared with
+the test app; the test app automatically opens all paid content instead. This is
+app/data isolation, not a separate backend deployment: the game still runs offline.
+
+Automatic access requires **both** `TRADING_UP_TEST_APP` (defined only on the app
+target's `Debug-Test` and `Release-Test` configurations) **and** the exact bundle
+ID `com.callmegreg.tradingup.test`. Neither `DEBUG`, a TestFlight/sandbox receipt,
+an environment variable, nor a saved preference enables it. The grant happens
+before any StoreKit work, remains active across refreshes and new runs, and is
+never written to the cached purchase entitlement or game save. Classic set
+progression and Gauntlet milestones still apply. Production `Debug`/`Release`
+compile out the automatic grant; even a mistakenly added test compiler flag
+cannot enable it under the production bundle ID.
 
 For a physical iPhone, select `TradingUpTest` and the connected device. In the
 `TradingUp` target's **Signing & Capabilities**, select your team and automatic
@@ -79,19 +91,26 @@ For TestFlight, follow [the one-time Apple setup](APP_STORE.md#separate-test-app
 A test archive must use `Release-Test`; overriding it with plain `Release`
 would build the production identity even with the test scheme selected.
 
-Build numbers are independent. Update `CURRENT_PROJECT_VERSION` in **both app
-configurations for the selected environment**, not in the XCTest/UI-test
-targets or the other environment. The test app starts at build 1. Keep each
-environment's Debug/Release pair in sync for `MARKETING_VERSION` too. The
-`/build` skill cuts a production build; **`/build test`** cuts a test build and
-only considers that bundle ID's local archives when choosing its next number.
-Neither command uploads the archive automatically.
+**Build numbers are shared across production and test.** For each new release
+pair, choose one more than the highest build in either app's project settings
+or local Organizer archives, also accounting for any higher uploads from
+another Mac. Set `CURRENT_PROJECT_VERSION` to that number in **all four app
+configurations** (`Debug`, `Release`, `Debug-Test`, `Release-Test`), never in the
+XCTest/UI-test targets. Keep `MARKETING_VERSION` equal across all four too, and
+change it only when the public version changes.
 
-`Release-Test` has the same optimization and non-DEBUG behavior as `Release`;
-it does not enable cheat flags or bypass the purchase gate. Keep matching
-production/test build settings in sync; the configuration checks in
-[TESTING.md](TESTING.md#app-identity) guard against drift. The screenshot scheme
-deliberately stays on the production identity.
+The `/build` skill creates **both signed archives from the same source commit**,
+with one PR and one shared build-number bump. `/build production` and
+`/build test` are aliases for that paired workflow, not independent counters.
+Neither app is uploaded automatically. Starting with **1.2.2 (42)**, matching
+production/test build numbers identify the matching release pair; the older
+production 41 and test 5 sequences are historical.
+
+`Release-Test` has the same optimization as `Release` and does not define
+`DEBUG`. Its automatic full-game access is the sole intentional gameplay-access
+difference. Keep other matching production/test build settings in sync; the
+configuration checks in [TESTING.md](TESTING.md#app-identity) guard against drift.
+The screenshot scheme deliberately stays on the production identity.
 
 ## Project layout
 
@@ -123,6 +142,7 @@ TradingUp/
                              (the Gauntlet loop), BinderView; plus Shop, Collection, pack opening, PaywallView, etc.
   Store/
     PurchaseStore.swift      StoreKit 2 layer for the one-time full-version unlock (outside Models/)
+    TestBuildAccess.swift    Compile-time and exact-bundle-ID guard for automatic test-app access
   Audio/
     SoundManager.swift       Pooled Studio SFX + looping mode music; ambient audio/lifecycle handling
     AudioPreferences.swift   Independent Music/SFX levels and remembered one-tap mute
@@ -155,7 +175,7 @@ tools/
   seed_save.py               Writes a completed-collection save (late-game screenshots)
   check_icon.py              Checks the 1024² icon against App Store rules
   check_screenshots.py       Checks captured screenshots against App Store sizes
-  test_app_identity.py       Guards scheme routing, app identities, catalogs, and configuration parity
+  test_app_identity.py       Guards app identities, scheme routing, catalogs, build parity, and compiled test-unlock isolation
   verify/main.swift          The Foundation-only simulation harness (see TESTING.md)
 ```
 
@@ -215,7 +235,12 @@ to play in full (design rationale in `docs/DESIGN.md` §11). The moving parts:
   the verified entitlement into `GameState`. Product id
   `PurchaseStore.fullUnlockProductID` is the running app's bundle identifier
   plus `.fullunlock`: production remains `com.callmegreg.tradingup.fullunlock`;
-  the test app uses `com.callmegreg.tradingup.test.fullunlock`.
+  the test app's ID remains `com.callmegreg.tradingup.test.fullunlock`, but its
+  automatic access skips product loading, transaction listening, purchases, and
+  restores without caching a purchase.
+- **`TradingUp/Store/TestBuildAccess.swift`** — immutable, fail-closed eligibility
+  for the [isolated test app](#test-app-versus-production). This is not a mutable
+  `FeatureFlags` switch or a runtime setting.
 - **`GameState.isFullVersionUnlocked`** — the single game-facing flag. Sets above
   `GameState.freeSetCount` (the one knob for the size of the free slice, default
   `1`) gate *buying* packs on it, so `buyPack` / `buyBox` / `buyBoxPacks` refuse a
@@ -230,18 +255,23 @@ sets the entitlement directly. **The economy is untouched**, so the
 [verify harness](TESTING.md#the-simulation-harness-no-xcode-needed) needs no
 re-run for this feature.
 
-`TradingUpTest` already selects `TradingUpTest.storekit` for Xcode Run, so local
-purchase/restore testing needs no Apple account or App Store Connect setup.
-For the production scheme, select **Product ▸ Scheme ▸ Edit Scheme ▸ Run ▸
-Options ▸ StoreKit Configuration → `TradingUp.storekit`**. Use the catalog that
-matches the scheme, then buy in-app and use **Debug ▸ StoreKit ▸ Manage
+`TradingUpTest` needs no StoreKit connection, Apple account, or IAP product setup
+to play the full game, including archived `Release-Test` builds in TestFlight.
+Its local `TradingUpTest.storekit` catalog remains namespaced to the test app,
+but is not used while automatic access is active.
+
+To exercise the actual purchase gate, use the **production `TradingUp` scheme
+on a Simulator**, with no `TU_FORCE_UNLOCK` launch override. Select **Product ▸
+Scheme ▸ Edit Scheme ▸ Run ▸ Options ▸ StoreKit Configuration →
+`TradingUp.storekit`**, then buy in-app and use **Debug ▸ StoreKit ▸ Manage
 Transactions** to refund or reset between runs. These are simulated, free
 transactions, not real purchases.
 
-To test Apple's sandbox directly from Xcode, set StoreKit Configuration to
-**None** locally and use a Sandbox Apple Account. TestFlight always uses Apple's
-sandbox instead of the Xcode catalog, and therefore needs the
-[test app's own product configured in App Store Connect](APP_STORE.md#test-app-purchases).
+For production purchase testing against Apple's sandbox, set StoreKit
+Configuration to **None** locally and use a Sandbox Apple Account on a dedicated
+test device. Production-identity TestFlight builds still require the production
+product's sandbox entitlement; TestFlight alone never grants automatic access.
+Do not install that scheme over a production app whose data you want to preserve.
 
 ## Regenerating content
 
