@@ -513,7 +513,8 @@ private struct PullRow: View {
     var body: some View {
         HStack(spacing: 12) {
             CardView(card: inst.card, instance: inst, width: 76,
-                     series: .gauntlet(inst.card, showcase: run.showcase))
+                     series: .gauntlet(inst.card, showcase: run.showcase,
+                                      pendingCards: state.pendingCards))
             VStack(alignment: .leading, spacing: 6) {
                 Text(inst.card.name)
                     .font(.system(size: 14, weight: .heavy, design: .rounded))

@@ -543,6 +543,17 @@ summary, above the Sprytes, so its run-wide effect can inform keep/sell/swap cho
 The card-by-card reveal order is unchanged, and players can still decide items in
 any order.
 
+**Pack-summary evolution pips.** The existing card-header pips keep their set's
+color: **solid** means in the Showcase, **half-filled** means available among the
+undecided cards in this pack, and an **empty, dim outline** means missing. A
+**gold outline** identifies this card without replacing its fill. Showcase
+ownership takes precedence, so a pulled duplicate stays solid and never counts
+as another stage. Keeping or swapping in a card makes its stage solid on the
+remaining pulls; selling it makes that stage missing unless a held copy remains.
+Only the summary receives the whole pending pack: individual reveals do not
+give away unrevealed cards, and settled Showcase pips remain held-only. Card
+order, pip size, connectors, summary layout, and keep/sell/swap behavior are unchanged.
+
 **Shop planning.** Spendable cash stays separate from the expandable **earned last
 round** breakdown. Purchases must never rewrite historical payout amounts. The shop
 previews the next target, remaining Aura gap, and rip budget once, above the offers.

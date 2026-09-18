@@ -203,6 +203,45 @@ final class GauntletExperienceTests: XCTestCase {
         XCTAssertFalse(app.buttons["gauntletFinishPack"].isEnabled)
     }
 
+    func testSummaryPipsTurnSolidWhenAPendingLinemateIsKept() {
+        launch("catalyst")
+        revealPack()
+        let initial = app.descendants(matching: .any).matching(NSPredicate(
+            format: "label == %@",
+            "Evolution line, 1 of 3 stages in Showcase, 2 additional stages in pack. "
+                + "Emberpup: in Showcase. Cinderhound: in pack, this card. Pyrewolf: in pack"
+        )).firstMatch
+        XCTAssertTrue(initial.waitForExistence(timeout: 5))
+        app.buttons["gauntletAttuneCatalyst"].tap()
+        shot("half-fill-pending-linemates")
+        app.buttons["gauntletKeep-S1-002"].tap()
+        let updated = app.descendants(matching: .any).matching(NSPredicate(
+            format: "label == %@",
+            "Evolution line, 2 of 3 stages in Showcase, 1 additional stage in pack. "
+                + "Emberpup: in Showcase. Cinderhound: in Showcase. Pyrewolf: in pack, this card"
+        )).firstMatch
+        scrollTo(app.buttons["gauntletKeep-S1-003"], in: app.scrollViews["gauntletSummaryScroll"])
+        XCTAssertTrue(updated.waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["gauntletKeep-S1-002"].exists)
+        XCTAssertFalse(app.buttons["gauntletFinishPack"].isEnabled)
+        shot("half-fill-linemate-kept")
+    }
+
+    func testSummaryPipsBecomeMissingWhenAPendingLinemateIsSold() {
+        launch("catalyst")
+        revealPack()
+        app.buttons["gauntletAttuneCatalyst"].tap()
+        app.buttons["gauntletSell-S1-002"].tap()
+        let updated = app.descendants(matching: .any).matching(NSPredicate(
+            format: "label == %@",
+            "Evolution line, 1 of 3 stages in Showcase, 1 additional stage in pack. "
+                + "Emberpup: in Showcase. Cinderhound: missing. Pyrewolf: in pack, this card"
+        )).firstMatch
+        scrollTo(app.buttons["gauntletKeep-S1-003"], in: app.scrollViews["gauntletSummaryScroll"])
+        XCTAssertTrue(updated.waitForExistence(timeout: 5))
+        shot("half-fill-linemate-sold")
+    }
+
     @MainActor
     func testPlaysAFreshEasyRunThroughTheBinderReward() {
         startFreshEasyRun()

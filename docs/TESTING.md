@@ -353,14 +353,18 @@ part of the CI test plan.
 `GauntletDecisionTests.swift` covers exact whole-Showcase swap previews, broken and
 completed lines, duplicate stages, foil/grade/Trainer/Catalyst modifiers, grading
 affordability, discard-only swaps with no cash or cash-milestone gain, and stable
-round earnings after a purchase. `EvolutionPipTests` distinguishes held stages
-from the incoming gold pip, including duplicate stages and single cards.
+round earnings after a purchase. `EvolutionPipTests` distinguishes Showcase-owned,
+pending-pack, and missing stages independently of the current-card gold outline
+across every set, including held duplicates, unrelated lines, single cards, and
+the matching VoiceOver descriptions. It also guards unchanged pip contexts outside
+the Gauntlet summary. `EvolutionPipRenderTests` checks the real half-fill and
+focus-outline rendering, including actual-size thumbnails in all five set colors.
 `ShareImageRenderTests` also checks that win sharing contains exactly one rendered
 image and no companion text or URL.
 `GauntletDecisionStateTests` covers the last-pack recovery window, successful
 and unsuccessful grades, deferred result dismissal, explicit loss, mid-grade
 relaunch, Catalyst-first decisions, persisted discard swaps, duplicate decisions,
-and phase gates.
+phase gates, and pip updates after keep/sell/swap decisions.
 
 Run those alongside the existing Gauntlet regressions:
 
@@ -374,6 +378,7 @@ xcodebuild test -project TradingUp.xcodeproj -scheme TradingUp \
   -only-testing:TradingUpTests/GauntletDecisionTests \
   -only-testing:TradingUpTests/GauntletDecisionStateTests \
   -only-testing:TradingUpTests/EvolutionPipTests \
+  -only-testing:TradingUpTests/EvolutionPipRenderTests \
   -only-testing:TradingUpTests/ShareImageRenderTests \
   CODE_SIGNING_ALLOWED=NO
 ```
@@ -406,7 +411,8 @@ also follows the remaining-rip counter from the round through the sealed pack,
 individual reveals, and summary, and verifies that removed controls/copy stay absent.
 It checks action-only next-round labels, preserved earned-interest history,
 swap-series progress and buff/debuff-aware current prices, Catalyst-first placement,
-and opening/dismissing the image-only system share sheet after a real win.
+pending-linemate pip updates after keeping or selling, and opening/dismissing the
+image-only system share sheet after a real win.
 The share activity's Copy action must produce an image with no companion string;
 `EndingFlowTests` checks that same contract for a Classic win.
 Each relevant screen is attached as a real Simulator screenshot. The review pass

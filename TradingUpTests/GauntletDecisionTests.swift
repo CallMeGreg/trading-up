@@ -292,6 +292,52 @@ final class GauntletDecisionStateTests: XCTestCase {
         XCTAssertTrue(state.revealActive, "Spryte choices still need to be resolved")
     }
 
+    func testSummaryPipsFollowKeepAndSellDecisionsOnLinemates() throws {
+        for keep in [true, false] {
+            let state = seed(DebugGauntletScenario.catalyst.snapshot)
+            let incoming = try XCTUnwrap(state.pendingCards.first { $0.cardId == "S1-002" })
+            let sibling = try XCTUnwrap(state.pendingCards.first { $0.cardId == "S1-003" })
+            let before = CardSeries.gauntlet(sibling.card, showcase: try XCTUnwrap(state.run).showcase,
+                                             pendingCards: state.pendingCards)
+            XCTAssertEqual(before.availability(of: 2), .inPack)
+            if keep { state.keep(incoming) } else { state.sell(incoming) }
+            let after = CardSeries.gauntlet(sibling.card, showcase: try XCTUnwrap(state.run).showcase,
+                                            pendingCards: state.pendingCards)
+            XCTAssertEqual(after.availability(of: 2), keep ? .owned : .missing)
+            XCTAssertEqual(after.packStages, [3])
+            XCTAssertEqual(after.availability(of: 3), .inPack)
+        }
+    }
+
+    func testSellingAPendingDuplicateDoesNotEraseTheHeldStage() throws {
+        var snapshot = DebugGauntletScenario.catalyst.snapshot
+        snapshot.run.keep(CardInstance(cardId: "S1-002", foil: true))
+        let state = seed(snapshot)
+        let duplicate = try XCTUnwrap(state.pendingCards.first { $0.cardId == "S1-002" })
+        let sibling = try XCTUnwrap(state.pendingCards.first { $0.cardId == "S1-003" })
+        state.sell(duplicate)
+        let series = CardSeries.gauntlet(sibling.card, showcase: try XCTUnwrap(state.run).showcase,
+                                         pendingCards: state.pendingCards)
+        XCTAssertEqual(series.availability(of: 2), .owned)
+        XCTAssertEqual(series.packStages, [3])
+    }
+
+    func testSwappingUpdatesHeldAndPendingStagesWithoutCountingTheDiscard() throws {
+        var snapshot = DebugGauntletScenario.swap.snapshot
+        snapshot.pendingCards = ["S1-004", "S1-006"].map { CardInstance(cardId: $0) }
+        let state = seed(snapshot)
+        let duplicate = try XCTUnwrap(state.pendingCards.first)
+        let incoming = try XCTUnwrap(state.pendingCards.last)
+        let slot = try XCTUnwrap(state.run?.showcase.firstIndex { $0.cardId == duplicate.cardId })
+        state.swap(incoming, forShowcaseIndex: slot)
+        let series = CardSeries.gauntlet(duplicate.card, showcase: try XCTUnwrap(state.run).showcase,
+                                         pendingCards: state.pendingCards)
+        XCTAssertEqual(series.ownedStages, [2, 3])
+        XCTAssertEqual(series.packStages, [1])
+        XCTAssertEqual(series.availability(of: 1), .inPack)
+        XCTAssertEqual(state.run?.cash, snapshot.run.cash)
+    }
+
     func testRipsAndRoundResolutionCannotRunBehindTheRevealOrInsideTheShop() throws {
         let state = seed(DebugGauntletScenario.swap.snapshot)
         for card in state.pendingCards { state.sell(card) }
