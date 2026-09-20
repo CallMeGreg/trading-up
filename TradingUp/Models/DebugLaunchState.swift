@@ -47,6 +47,10 @@ enum DebugLaunchState {
         switch state {
         case "almost-won":
             return almostWon(missing: (missing?.isEmpty == false) ? missing : nil, cash: cash)
+        case "collectors":
+            return collectorScenario(finalCard: false, cash: cash)
+        case "collector-final-card":
+            return collectorScenario(finalCard: true, cash: cash)
         default:
             return nil
         }
@@ -90,6 +94,23 @@ enum DebugLaunchState {
         // Set cash last so the seeded bankroll is exactly what was asked for,
         // rather than that plus the pre-claim bonuses just banked above.
         core.cash = cash ?? 2_000
+        return core
+    }
+
+    static func collectorScenario(finalCard: Bool, cash: Double? = nil) -> GameCore {
+        var core = finalCard ? almostWon(missing: "S1-050") : GameCore()
+        core.welcomeSeen = true
+        if !finalCard {
+            core.instances = CardDatabase.cards(inSet: 1).filter { $0.id != "S1-050" }
+                .map { CardInstance(cardId: $0.id) }
+            _ = core.checkBonuses()
+        }
+        for rarity in [Rarity.common, .uncommon, .rare] {
+            let count = rarity == .common ? 6 : (rarity == .uncommon ? 4 : 2)
+            let cards = CardDatabase.cards(inSet: 1).filter { $0.rarity == rarity }.prefix(count)
+            core.instances += cards.map { CardInstance(cardId: $0.id) }
+        }
+        core.cash = cash ?? 250
         return core
     }
 }

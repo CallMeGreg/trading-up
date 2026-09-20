@@ -254,7 +254,7 @@ struct PackCounter: Equatable {
 }
 
 /// Live per-card state on the pack summary. Boxes don't use this (bulk flow).
-enum PackSlot: Equatable { case newCard, keeperExisting, pendingDup, keptDup, sold }
+enum PackSlot: Equatable { case newCard, keeperExisting, pendingDup, keptDup, reserved, sold }
 
 private struct SummaryView: View {
     @Environment(GameState.self) var game: GameState
@@ -283,6 +283,7 @@ private struct SummaryView: View {
     /// The PSA reveal to show after a grade roll, mirroring the Collection flow.
     @State private var gradeResult: GradeResult?
     @State private var announcedBonuses = false
+    @State private var actionError: String?
 
     /// Lazily computed and cached: the first read takes the snapshot, later
     /// reads return it, so a card's kind stays stable as the collection changes.
@@ -308,7 +309,11 @@ private struct SummaryView: View {
 
     // Pack duplicates the player hasn't yet sold or explicitly kept.
     private var pendingDuplicates: [CardInstance] {
-        result.pulled.filter { baseKind[$0.id] == .duplicate && !soldIds.contains($0.id) && !keptIds.contains($0.id) }
+        let reserved = game.collectorReservedInstanceIDs
+        return result.pulled.filter {
+            baseKind[$0.id] == .duplicate && !soldIds.contains($0.id)
+                && !keptIds.contains($0.id) && !reserved.contains($0.id)
+        }
     }
     private var pendingProceeds: Double { pendingDuplicates.reduce(0) { $0 + $1.sellValue } }
 
@@ -323,7 +328,7 @@ private struct SummaryView: View {
         var ids = result.preOwnedIds
         for inst in result.pulled {
             switch slot(for: inst) {
-            case .newCard, .keeperExisting, .keptDup: ids.insert(inst.cardId)
+            case .newCard, .keeperExisting, .keptDup, .reserved: ids.insert(inst.cardId)
             case .pendingDup, .sold:                  break
             }
         }
@@ -383,6 +388,13 @@ private struct SummaryView: View {
                 GradeRevealOverlay(result: r) { gradeResult = nil }
             }
         }
+        .alert("This copy is protected", isPresented: Binding(
+            get: { actionError != nil }, set: { if !$0 { actionError = nil } }
+        )) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(actionError ?? "")
+        }
     }
 
     // MARK: Grids
@@ -414,8 +426,9 @@ private struct SummaryView: View {
                                  onKeep: { decideKeep(inst) },
                                  onSell: { decideSell(inst) },
                                  gradeTitle: gradeTitle(for: inst),
-                                 gradeEnabled: game.canAffordGrade(set: set),
-                                 onGrade: { decideGrade(inst) })
+                                 gradeEnabled: game.canGrade(displayInstance(inst)),
+                                 onGrade: { decideGrade(inst) },
+                                 savedFor: game.collectorReservation(for: inst)?.collector.name)
                 }
             }
         }
@@ -466,13 +479,16 @@ private struct SummaryView: View {
                               systemImage: "dollarsign.circle.fill", tint: green) {
                         Haptics.play(.success); Sound.play(.bulkSell); game.sellDuplicates(from: result); onDone()
                     }
+                    .accessibilityIdentifier("packSellDuplicates")
                     BigButton(title: "Keep All", systemImage: "tray.and.arrow.down.fill", tint: blue) {
                         Haptics.play(.light); Sound.play(.keepCard); onDone()
                     }
+                    .accessibilityIdentifier("packKeepAll")
                 } else {
                     BigButton(title: "Add to Collection", systemImage: "checkmark.circle.fill", tint: blue) {
                         Haptics.play(.light); Sound.play(.keepCard); onDone()
                     }
+                    .accessibilityIdentifier("packAddToCollection")
                 }
             } else {
                 let pending = pendingDuplicates
@@ -482,22 +498,37 @@ private struct SummaryView: View {
                               systemImage: "dollarsign.circle.fill", tint: green) {
                         sellAllPending()
                     }
+                    .accessibilityIdentifier("packSellDuplicates")
                     BigButton(title: "Keep All", systemImage: "tray.and.arrow.down.fill", tint: blue) {
                         Haptics.play(.light); Sound.play(.keepCard); onDone()
                     }
+                    .accessibilityIdentifier("packKeepAll")
                 } else {
                     BigButton(title: "Add to Collection", systemImage: "checkmark.circle.fill", tint: blue) {
                         Haptics.play(.light); Sound.play(.keepCard); onDone()
                     }
+                    .accessibilityIdentifier("packAddToCollection")
                 }
             }
             if showSpreadHint { spreadHint }
+            if !game.collectorProgress.trackedGoals.isEmpty {
+                let names = Set(game.collectorTrackedPreviews.map { $0.deal.collector.name }).sorted().joined(separator: " & ")
+                let message = "Spare cards saved for \(names) stay out of sales. Visit Collectors after this pack."
+                Label(message, systemImage: "bookmark.fill")
+                    .font(.caption)
+                    .foregroundStyle(Palette.tapCue)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(message)
+                    .accessibilityIdentifier("collectorPackProtection")
+            }
         }
     }
 
     // MARK: Classification + live state
 
     private func slot(for inst: CardInstance) -> PackSlot {
+        if game.collectorReservedInstanceIDs.contains(inst.id) { return .reserved }
         switch baseKind[inst.id] ?? .duplicate {
         case .newCard:        return .newCard
         case .keeperExisting: return .keeperExisting
@@ -540,7 +571,7 @@ private struct SummaryView: View {
 
     private func decideSell(_ inst: CardInstance) {
         guard game.sell(inst.id) != nil else {
-            withAnimation(.easeOut(duration: 0.2)) { _ = keptIds.insert(inst.id) }
+            protectedCopyError()
             return
         }
         Haptics.play(.success)
@@ -562,6 +593,10 @@ private struct SummaryView: View {
     /// freshly slabbed card is a keeper, so its Keep/Sell choice falls away — and the
     /// reveal overlay shows the PSA result. A sold card can't reach here (no tab).
     private func decideGrade(_ inst: CardInstance) {
+        guard game.canGrade(displayInstance(inst)) else {
+            protectedCopyError()
+            return
+        }
         guard let r = game.grade(inst.id) else { Haptics.play(.error); Sound.play(.blocked); return }
         Haptics.play(.rigid)
         Sound.play(.gradeStart)
@@ -588,20 +623,29 @@ private struct SummaryView: View {
     /// (auto-keeping) path. Any rarity can be graded, matching the Collection.
     private func gradeTitle(for inst: CardInstance) -> String? {
         let state = slot(for: inst)
-        guard displayInstance(inst).grade == nil, state != .sold, state != .keptDup else { return nil }
+        guard displayInstance(inst).grade == nil, state != .sold, state != .keptDup, state != .reserved else { return nil }
         let fee = Economy.gradeFee(set: set)
         return fee == fee.rounded() ? "$\(Int(fee))" : fee.moneyShort
     }
 
     private func sellAllPending() {
-        Haptics.play(.success)
-        Sound.play(.bulkSell)
+        var failed = false
         withAnimation(.easeOut(duration: 0.25)) {
-            for inst in pendingDuplicates where game.sell(inst.id) != nil {
-                soldIds.insert(inst.id)
+            for inst in pendingDuplicates {
+                if game.sell(inst.id) != nil { soldIds.insert(inst.id) }
+                else { failed = true }
             }
         }
+        guard !failed else { protectedCopyError(); return }
+        Haptics.play(.success)
+        Sound.play(.bulkSell)
         onDone()
+    }
+
+    private func protectedCopyError() {
+        Haptics.play(.error)
+        Sound.play(.blocked)
+        actionError = "This copy can no longer be used for that action. Tracked spares stay saved until you untrack their goal in Collectors, after finishing this pack."
     }
 }
 
@@ -660,6 +704,7 @@ private struct PackCardSlot: View {
     /// the action stays discoverable, but tapping it does nothing.
     var gradeEnabled: Bool = true
     var onGrade: () -> Void = {}
+    var savedFor: String? = nil
 
     @State private var pulse = false
 
@@ -694,6 +739,15 @@ private struct PackCardSlot: View {
                     actionButton(title: "Keep", tint: Color(hex: "3b82f6"), action: onKeep)
                     actionButton(title: "Sell \(inst.sellValue.moneyShort)", tint: Palette.money, action: onSell)
                 }
+            } else if slot == .reserved, let savedFor {
+                Label("Saved for \(savedFor)", systemImage: "bookmark.fill")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Palette.tapCue)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("\(inst.card.name), saved for \(savedFor). Protected from selling and grading.")
+                    .accessibilityIdentifier("collectorSaved-\(inst.cardId)")
             }
         }
         .animation(.easeInOut(duration: 0.2), value: slot)

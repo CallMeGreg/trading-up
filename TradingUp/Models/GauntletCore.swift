@@ -135,7 +135,7 @@ struct GauntletRun: Codable {
     /// The completion bonus a full evolution line in `set` earns this run: the set's
     /// base curve plus any flat Trainer/Catalyst boost. Scales up for later sets.
     func evoLineBonus(forSet set: Int) -> Double { GauntletEconomy.evoLineBonus(set: set) + mods.evoLineBonusBonus }
-    var sellbackRate: Double { min(Economy.sellbackRate + mods.sellbackBonus, GauntletEconomy.maxSellbackRate) }
+    var sellbackRate: Double { min(GauntletEconomy.baseSellbackRate + mods.sellbackBonus, GauntletEconomy.maxSellbackRate) }
     var foilChance: Double { Economy.foilChance + mods.foilChanceBonus }
     var ultraChance: Double { Economy.ultraHitChance + mods.ultraChanceBonus }
     func gradeFee(for card: Card) -> Double { Economy.gradeFee(set: card.set) * mods.gradeFeeMult }

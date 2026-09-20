@@ -13,12 +13,14 @@
 
 You are a card collector with **$100** starting cash. Buy packs, open them in an
 exciting reveal, and try to **collect all 250 creatures** across 5 sets. Sell
-duplicates back to the shop, gamble on **card grading** for value swings, and chase
-**foils** and **ultra rares**. Run out of money with nothing left worth selling and
-you lose. Complete the collection and you win.
+duplicates back to the shop, fulfil **collector requests**, or barter spare cards
+for a **specific missing Spryte**. Grading adds value swings; foils and ultra rares
+remain chase pulls. Run out of money and legal recovery plays and you lose.
+Complete the collection and you win.
 
-It's a *slot‑machine‑meets‑collection* loop: the pack opening is the dopamine, the
-economy is the strategy, the 250‑card completion is the goal.
+Random packs supply the ingredients; choosing what to sell, reserve, grade, and
+trade supplies the strategy. Ordinary duplicates should advance a plan rather
+than always being an automatic cash-out.
 
 As of **v2.0.0** this loop is **Classic Mode**, reached from a new main menu that also
 hosts **Gauntlet Mode** and the **Binder** — see §13.
@@ -210,7 +212,7 @@ higher‑set cards are always worth more. Approximate resulting bands:
 ### Sell‑back spread (the shop lowballs the buylist)
 Every card has a **market value** (`currentValue`) — that's what drives your collection
 value, net worth, and the "Value" readouts. But when you **sell** a duplicate, the shop
-only pays **75%** of that market value (`sellbackRate = 0.75`; `sellValue = 0.75 ×
+only pays **60%** of that market value (`sellbackRate = 0.60`; `sellValue = 0.60 ×
 currentValue`), exactly like a real card shop buylisting below market.
 
 This spread is the **main source of losing risk**. Because liquidation is now
@@ -220,27 +222,21 @@ duplicates, the endgame of each set becomes a squeeze: gamble to complete it bef
 run dry. Collection value / net worth stay at **full** market value (aspirational); the
 spread only bites at the moment of sale.
 
-**Why 75% and not 65%.** The rate was 65% while booster boxes were on the shelf. Boxes
-were the faucet that paid for that spread: their guaranteed ultras and foils converted
-cash into set progress fast enough that a 35% haircut on every sale was survivable.
-Taking boxes off the shelf (§8) removed the faucet and left the drain, and measured
-win rates collapsed — thoughtful play fell from 69% to 27%, and the gap between
-thoughtful and reckless play shrank from 25 points to 7, i.e. the game stopped
-rewarding skill. Narrowing the spread to 75% makes a packs‑only shop work again:
-thoughtful play wins **~59%**, reckless spam‑and‑dump busts **~61%**, and the skill gap
-is back to **20 points**.
-Sell‑back rate is the right knob because the grading threshold is
-`fee / (0.5 × sellbackRate)` — a higher rate raises the payoff of grading *and* lowers
-the bar for which cards are worth grading, so it compounds for players who grade
-before they sell. A bigger set‑completion bonus was measured too and rejected: it fixes
-winnability but pays reckless and thoughtful play equally, flattening the skill gap to
-1–2 points.
+**Why a wider spread now.** The former packs-only economy paid 75% and chiefly
+rewarded grading before selling. Collector requests and targeted trades (§9.1)
+introduce two stronger alternatives: supply a finite commission for cash, or
+spend duplicates to remove a particular collection gap. Leaving the old cash-out
+rate and generous commissions together made the focused reference policy win
+almost every run. The new rate makes immediate liquidity a real opportunity cost.
 
-This is deliberately a **tighter game than the boxes era**, which sat at a 69%
-thoughtful win rate. The knob is sensitive — roughly 3 points of thoughtful win rate
-per point of sell‑back (0.76 → 62%, 0.77 → 66%, 0.78 → 69%) — so the harness's
-winnability floor is **55%**, not 60%. Move the rate in single points and re‑run
-`tools/verify` in the same change.
+Request budgets and trade limits, not repeatable income or daily resets, bound
+the new advantages. The target is **about 75% full-game wins for focused play and
+10% for careless cash-out play**, measured by reachable policies in
+`tools/verify/classic_sim.swift`; these are simulation targets, not promised human
+win rates. Grading still helps, but it is no longer the whole strategy.
+
+**Gauntlet is unchanged:** its separate `GauntletEconomy.baseSellbackRate` remains
+75%. Classic balance changes must not move that rate.
 
 ### Foils
 - **1% chance per card**, rolled independently for all 6 cards in a pack.
@@ -278,8 +274,9 @@ pack price in S1 but only ~0.03× in S5) — so it's attractive to grade your va
 dupes before selling them. But the **downside scales with the card**: a low PSA grade
 multiplies value *down* (grade 2 = 0.10×), so grading a pricey card that tanks is a much
 bigger absolute loss. Rule of thumb: grade before selling once a card's value clears
-`fee / (0.5 × sellbackRate)`. Grading valuable duplicates before dumping them is the
-clearest **skill edge** thoughtful play has over careless spamming.
+`fee / (0.5 × sellbackRate)`. Grading valuable, unreserved duplicates before selling remains a useful edge;
+normal copies saved for a request or trade cannot be graded until that goal is
+untracked.
 
 Foil × grade stack, e.g. a foil rare that grades PSA 10 = base **×3 ×5 = ×15**.
 
@@ -291,9 +288,9 @@ Foil × grade stack, e.g. a foil rare that grades PSA 10 = base **×3 ×5 = ×15
 > only. The rules below still describe the model exactly as `GameCore` and `Economy`
 > implement it — the mechanics and their tests are deliberately kept intact so the
 > feature can be re‑enabled or redesigned without rebuilding it. Anything below is
-> **not** part of the shipping game today. Note that removing boxes is what forced the
-> sell‑back rate from 65% to 75% (§6); re‑enabling them means re‑running the balance
-> checks in `tools/verify`, not just flipping the flag.
+> **not** part of the shipping game today. The collector economy and its win-rate
+> targets assume a packs-only shop; re-enabling boxes means re-running and
+> retuning the balance checks, not just flipping the flag.
 
 A bulk buy with **guaranteed hits** — the reason to buy is the guaranteed chase cards
 and one big multi‑pack open, **not** a bulk discount.
@@ -314,13 +311,77 @@ and one big multi‑pack open, **not** a bulk discount.
 - **Complete an evolution line** → cash bonus:
   - 2‑stage line = **1.0× pack price** of its set · 3‑stage line = **2.0× pack price**.
 - **Complete a full set (all 50)** → cash bonus = **15× that set's pack price**
-  (S1 $150 … S5 $4,800) — a meaningful reward that helps toward the next set without
+  (S1 $150 … S5 $6,000) — a meaningful reward that helps toward the next set without
   fully bankrolling infinite spending (it was 30×, which snowballed too hard).
 
 Classic celebrates completed evolution lines with temporary banners during the
 pack reveal. Pack summaries do not repeat those banners unless **Auto open packs**
 skipped the reveal; in that case the summary shows the earned evolution bonuses
 as well. Full-set completion bonuses always appear in the summary.
+
+### 9.1 Collector requests and NPC trading
+
+**Design goal:** make ordinary pulls useful to a chosen plan while keeping
+liquidity scarce. Classic's **Collectors** tab and compact Shop shortcut expose
+three local NPCs. No accounts, network trading, clocks, expiration, refresh
+currency, or paid random rewards are involved.
+
+| Collector | Offer in each unlocked set | Reward | Run-long limit |
+| --- | --- | --- | --- |
+| **Mira** | Three, then four, then five different common duplicates | Half that set's pack price per request | Three requests per set |
+| **Rowan** | A named base and middle-stage duplicate from an evolution family; the next family follows a completed request | That set's pack price per request | Three requests per set |
+| **Tess** | A bundle of different normal duplicates from the target's set | One **chosen, missing** Spryte, non-foil and ungraded | Two trades per set |
+
+Mira and Rowan show their next request, its exact requirements, live progress,
+and fixed payout. Their combined maximum payout is **4.5 pack prices per set**.
+Completing a request advances that collector's sequence; leaving or untracking
+never changes the offer. Requests are separate from automatic evolution/set
+bonuses and consume real spare copies.
+
+Tess's target picker lists missing cards, not another random selection. The
+price depends on the target's rarity:
+
+| Target | Same-set duplicate bundle |
+| --- | --- |
+| Common | Three different commons |
+| Uncommon | Three different commons and one uncommon |
+| Rare | Three different commons and two different uncommons |
+| Ultra rare | Three different commons, two different uncommons, and two different rares |
+
+There is no cash fee. The cost is the copies and one of the set's two trades.
+Those copies might otherwise fund packs, grading, or requests. Two trades do
+not guarantee all three ultras, preserving a reason to rip and making the
+target choice matter. Received cards count toward progression, evolution/set
+bonuses, and the 250-card win, but not pack-pull statistics. Owning the target
+already or exhausting the set's trades makes that offer unavailable.
+
+**Track up to two goals globally**, including named-card trades. Tracking
+reserves the needed eligible extras as they arrive; goals receive overlapping
+copies in tracking order, never double-counting an instance. Extra copies beyond
+the goal's needs remain free. Bulk selling, individual selling, and grading
+protect reserved copies. The pack summary and card details identify the collector
+holding a copy; untracking releases it without discarding the offer. Pulling a
+tracked trade target naturally releases that goal without spending a trade.
+
+**Safety and clarity:** only non-foil, ungraded duplicates qualify, with the
+highest-value copy of every identity always left behind. The all-time Binder
+is never consumed. A review shows the exact outgoing copies, their alternative
+shop payout, and the cash or named-card reward. Confirmation revalidates the
+offer and exact instance IDs atomically. A stale/double submission or failed
+save pays nothing and consumes nothing. Receipts include earned bonuses; win
+and loss screens wait until the receipt is dismissed, just as they wait for a
+pack summary. Deals cannot interrupt an open pack.
+
+Set access follows the existing collection thresholds and full-game unlock.
+Set 1's collectors are fully free. A previously tracked paid-set goal can still
+be untracked after an entitlement change, but no paid-set deal can be completed
+without access. A valid collector action also keeps a cash-starved run alive;
+the loss check must not cover the board while a legal deal remains.
+
+Progress is additive in `GameCore.collectors`: completed request IDs, per-set
+trade counts, and ordered tracked goals. Old saves begin with fresh offers
+without losing cash, cards, or prior bonuses. New Game resets the offers along
+with the run, never the permanent Binder.
 
 ---
 
@@ -331,26 +392,33 @@ as well. Full-set completion bonuses always appear in the summary.
   unique card (you'd lose collection progress), so what's left to raise is your
   duplicates — sold at the buylist price, or graded first when even the luckiest
   roll would more than cover its own fee. Once that optimistic total still falls
-  short of $10, the run is provably finished and the loss screen appears
-  immediately, rather than making you sell out card-by-card first. A loss screen
+  short of $10 **and no accessible collector deal can be completed**, the run
+  ends rather than making you sell out card-by-card first. Reservations do not
+  cause a false loss: untracking is free, so recovery checks include those copies.
+  A loss screen
   shows: cards collected per set, and total unique cards.
   - **This is now genuinely reachable.** The **sell‑back spread** (§6), the **steep
     per‑set price curve** (§3), and the **trimmed set‑completion bonus** (§9) together
-    mean careless play — spamming the cheapest set and dumping every dupe at 75% — can
-    bleed you dry before a set completes. In simulation that reckless loop **busts ~61%**
-    of the time.
+    mean careless play — working incomplete sets but dumping every duplicate at
+    60% without requests, trades, or grading — is intended to **win about 10%**
+    of full runs.
 - **Win:** collect all **250** unique creatures. A winner's screen shows full stats:
   per‑set completion, foils, best grades, peak cash, packs opened, etc.
-  - Thoughtful play — pacing your buys, keeping a cash cushion, and **grading valuable
-    dupes before selling** — still **wins ~59%** of the time. The gap between the two is
-    the point: skill, not grinding, is what carries you through.
+  - Focused play — reserving useful spares, completing requests, choosing scarce
+    trade targets, and grading valuable unreserved duplicates — is intended to
+    **win about 75%** of full runs.
   - **Winning is not an exit.** The celebration is shown once; dismissing it keeps the
     completed collection intact and browsable. Starting over is always a separate,
     confirmed action — the reward for finishing shouldn't be losing what you finished.
 
-**Difficulty target: moderate.** Thoughtful play usually wins; careless play can
-bankrupt you. Balance knobs all live in `Economy.swift`; the simulations that hold this
-target live in `tools/verify/main.swift` (strategy sims + economy‑knob assertions).
+**Difficulty target: planning is decisive.** The verify harness enforces 70–80%
+focused wins, 5–15% careless wins, and at least a 60-point gap over 1,000 runs per
+main policy. It also reports grading-only, requests-only, and trades-only
+ablations and rejects simulations that declare a loss with a legal recovery
+remaining. These policies cannot see future pulls or grade results. Tuning lives
+in `Economy.swift` and `CollectorEconomy` in `Collector.swift`; policy definitions
+live in `tools/verify/classic_sim.swift`. See [TESTING.md](TESTING.md#classic-collector-balance)
+for the measured snapshot and reproduction command.
 
 ---
 
@@ -360,7 +428,7 @@ Trading Up ships **free**, with a single one-time **non-consumable** in-app
 purchase — *Unlock the full collection* — that opens sets 2–5, the 250-card
 Master Collector win, and **Gauntlet Mode** (§13). **Set 1 · Emberfall is free to
 play in full**: the whole
-loop (rip, sell, grade, evolution-line bonuses, the set-completion payout) plays
+loop (rip, sell, grade, collector requests, trades, evolution-line bonuses, the set-completion payout) plays
 out across its 50 cards before the paywall is ever reached.
 
 **What the purchase changes — and, deliberately, what it doesn't:**
@@ -462,9 +530,9 @@ roll‑ups.
 > tiers, not more powerful levels (§14.3). Gauntlet is gated behind the full-game unlock (§11).
 
 Gauntlet distils Classic to its strategic spine. Classic is, underneath, one tension:
-**value vs. liquidity** under a completion deadline — a card is worth more kept than sold
-(the 75% sell-back spread, §6), but you need cash to keep ripping, and grading (§7) is the
-skill lever that wrings extra value from the same pulls. Gauntlet concentrates that
+**value vs. liquidity** — a card is worth more kept than sold, but you need cash to
+keep ripping. Classic now also rewards requests and trades (§9.1); Gauntlet retains
+its independent **75%** base sell-back rate and grading (§7). Gauntlet concentrates that
 tension into a short, escalating, **engine-building run**: you rip toward a rising
 Aura target, and every pull is a live **keep-for-score vs. sell-for-fuel** decision.
 Same DNA as Classic, roguelite pacing.

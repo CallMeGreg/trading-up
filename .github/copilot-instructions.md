@@ -52,9 +52,12 @@ icon and marketing renders shell out to `rsvg-convert` (`brew install librsvg`).
 
 - `TradingUp/Models/` is pure, testable game logic (Foundation only, no SwiftUI).
   Keep it that way — the simulation harness compiles these files directly.
-- **Almost all balance knobs live in `TradingUp/Models/Economy.swift`**: starting
+- **Core Classic balance knobs live in `TradingUp/Models/Economy.swift`**: starting
   cash, pack prices and composition, foil chance, grade odds and multipliers,
   bonuses.
+- `TradingUp/Models/Collector.swift` owns Classic request
+  rewards, trade bundles, and tracking limits. Gauntlet keeps its independent
+  sell-back rate in `GauntletEconomy.swift`; do not move it with Classic tuning.
 - `TradingUp/Views/` is SwiftUI only. Don't put game rules here.
 - `TradingUp/Models/FeatureFlags.swift` holds build‑time switches. Flags are
   covered by tests in **both** states; keep it that way when adding one.
@@ -68,13 +71,15 @@ Run the smallest thing that covers the change.
 xcodebuild test -project TradingUp.xcodeproj -scheme TradingUp \
   -destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO
 
-# Simulation harness — no Xcode needed, runs in seconds
-swiftc TradingUp/Models/Card.swift TradingUp/Models/Economy.swift \
+# Simulation harness — no Xcode needed
+swiftc -O TradingUp/Models/Card.swift TradingUp/Models/Economy.swift \
+  TradingUp/Models/Collector.swift \
   TradingUp/Models/FeatureFlags.swift TradingUp/Models/GameCore.swift \
   TradingUp/Models/Persistence.swift TradingUp/Models/GauntletEconomy.swift \
   TradingUp/Models/Trainer.swift TradingUp/Models/Catalyst.swift \
   TradingUp/Models/GauntletCore.swift TradingUp/Generated/CardData.swift \
-  tools/verify/gauntlet_sim.swift tools/verify/main.swift -o /tmp/tu_verify && /tmp/tu_verify
+  tools/verify/classic_sim.swift tools/verify/gauntlet_sim.swift \
+  tools/verify/main.swift -o /tmp/tu_verify && /tmp/tu_verify
 ```
 
 **Any economy change must re‑run the verify harness.** It enforces the intended

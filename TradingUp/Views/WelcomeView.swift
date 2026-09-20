@@ -67,12 +67,12 @@ struct WelcomeView: View {
             VStack(alignment: .leading, spacing: d.infoRows) {
                 infoRow(d, "📦", "Buy & open packs",
                         "Six cards a pack — 3 common, 2 uncommon, and a rare or ultra.")
-                infoRow(d, "💰", "Sell your extras",
-                        "Turn duplicate copies into cash. You can never sell the last copy of a card, though.")
+                infoRow(d, "🤝", "Plan with collectors",
+                        "Track two goals for cash or a missing card. Give normal spares — your last and best copies stay safe.")
+                infoRow(d, "💰", "Sell or grade extras",
+                        "The shop pays \(Int((Economy.sellbackRate * 100).rounded()))% of market value. Grading costs cash and can raise or lower value. Tracked spares stay protected.")
                 infoRow(d, "🎁", "Cash in bonuses",
                         "Complete evolution lines and full sets for payouts. New sets unlock as your collection grows.")
-                infoRow(d, "🔍", "Grade rares & ultras",
-                        "Pay to grade a rare or ultra and roll a PSA score — it can multiply the card's value or leave it worth far less.")
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .panel(d.panelPad)
@@ -83,7 +83,7 @@ struct WelcomeView: View {
                         Palette.money)
                 Rectangle().fill(Palette.stroke).frame(height: 1)
                 goalRow(d, "💸", "How you lose",
-                        "Can't afford the \(game.cheapestPackPrice.money) cheapest pack — even after selling every duplicate you own.",
+                        "Can't afford the \(game.cheapestPackPrice.money) cheapest pack after selling extras, with no ready collector deals to help.",
                         Color(hex: "e0663b"))
             }
             .frame(maxWidth: .infinity, alignment: .leading)

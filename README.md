@@ -26,10 +26,10 @@ pack and turning it over one card at a time.
 
 Buy a pack, rip it, and find out what you got. Six cards — three commons, two
 uncommons, and a rare or an ultra rare — with a 1% shot at a shimmering foil on
-any of them. New pulls go straight into your binder. Extras become cash, at the
-shop's price rather than yours.
+any of them. New pulls go straight into your binder. Extras can become cash, fulfil a
+collector's request, or help you trade for the Spryte you're missing.
 
-Between those two ends is a real economy — pack odds, a buylist spread, grading
+Between those two ends is a real economy — pack odds, collector deals, a buylist spread, grading
 variance and set bonuses — that you can actually play against instead of just
 watching. Collect all **250 Sprytes** and you're a Master Collector. Run out of
 cash with nothing left worth selling and you're tapped out.
@@ -91,10 +91,23 @@ On the pack summary, brand‑new cards are flagged **✦ NEW**. Tap any duplicat
 keep or sell it individually, or use **Sell Duplicates** / **Keep All** at the
 bottom — the sell total updates live as you decide each card.
 
-The shop buys at a **buylist spread**: you get **75%** of a card's market value.
+The shop buys at a **buylist spread**: you get **60%** of a card's market value.
 Churning packs and dumping dupes slowly bleeds money, and that spread is the
 game's main risk. You can **never sell your last copy** of a card, so your
 collection is always safe.
+
+### 🤝 Meet the collectors
+
+Visit **Collectors** to give your extras a purpose. **Mira** pays for starter
+collections; **Rowan** wants specific evolution-family cards. **Tess** offers a
+card you choose from the ones you're missing, in exchange for a bundle of spare
+cards from the same set. You get **two trades per set**, so choose what matters.
+
+Track up to **two goals** to save useful duplicates automatically. Saved copies
+stay out of bulk sales and grading until you untrack the goal. Only ordinary,
+ungraded extras go into deals: your best copies, foils, graded cards, and permanent
+Binder stay safe. Review exactly what you give and get before confirming.
+Offers never expire, and all three collectors work offline.
 
 ### 🏅 Grade your best
 
@@ -114,7 +127,7 @@ bonus; completing a whole **set** pays a big one (15× the pack price).
 ### 🏆 Win or go broke
 
 **Win** by collecting all 250 cards. **Lose** if your cash drops below $10 — the
-cheapest pack — with no way to raise it, even by selling every duplicate you own.
+cheapest pack — with no way to raise it and no collector deal left to complete.
 Winning is a celebration, not an ending: dismiss the win screen and your completed
 collection stays yours to browse. Starting over is always an explicit, confirmed
 choice.
@@ -138,7 +151,7 @@ rarity spread, and unlocks as your collection grows.
 ## No catches
 
 - **Set 1 is free to play in full** — the whole 50‑card loop: rip, sell, grade,
-  evolution‑line bonuses and the set‑completion payout. One optional **one‑time
+  collector requests, trades, evolution‑line bonuses and the set‑completion payout. One optional **one‑time
   purchase** unlocks the other four sets and the 250‑card Master Collector
   finish. That's the only thing you can ever buy.
 - **No ads, no tracking, no subscriptions.**

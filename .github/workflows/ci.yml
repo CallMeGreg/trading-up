@@ -24,7 +24,7 @@ jobs:
         run: python3 -B -m unittest discover -s tools -p test_app_identity.py
       - name: Compile and run tools/verify/main.swift
         run: |
-          swiftc -O TradingUp/Models/Card.swift TradingUp/Models/Economy.swift TradingUp/Models/FeatureFlags.swift TradingUp/Models/GameCore.swift TradingUp/Models/Persistence.swift TradingUp/Models/GauntletEconomy.swift TradingUp/Models/Trainer.swift TradingUp/Models/Catalyst.swift TradingUp/Models/GauntletCore.swift TradingUp/Generated/CardData.swift tools/verify/gauntlet_sim.swift tools/verify/main.swift -o /tmp/tu_verify
+          swiftc -O TradingUp/Models/Card.swift TradingUp/Models/Economy.swift TradingUp/Models/FeatureFlags.swift TradingUp/Models/Collector.swift TradingUp/Models/GameCore.swift TradingUp/Models/Persistence.swift TradingUp/Models/GauntletEconomy.swift TradingUp/Models/Trainer.swift TradingUp/Models/Catalyst.swift TradingUp/Models/GauntletCore.swift TradingUp/Generated/CardData.swift tools/verify/classic_sim.swift tools/verify/gauntlet_sim.swift tools/verify/main.swift -o /tmp/tu_verify
           /tmp/tu_verify
 
   build:

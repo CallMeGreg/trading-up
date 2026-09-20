@@ -44,7 +44,7 @@ struct RunMods: Codable, Hashable {
     var evoLineBonusBonus = 0.0    // adds to the completed-evolution-line bonus
     var foilChanceBonus = 0.0      // added to Economy.foilChance on rips
     var ultraChanceBonus = 0.0     // added to Economy.ultraHitChance on rips
-    var sellbackBonus = 0.0        // added to Economy.sellbackRate (capped)
+    var sellbackBonus = 0.0        // added to GauntletEconomy.baseSellbackRate (capped)
     var gradeLuckBonus = 0.0       // 0…1 chance to roll a grade with advantage
     var gradeFeeMult = 1.0         // scales the grading fee
     var stipendMult = 1.0          // scales the round-clear stipend
@@ -245,6 +245,7 @@ enum GauntletSkillTuning {
 /// optimised build clears Hard, careless play busts, and grinding is never
 /// required. See docs/DESIGN.md §14.
 enum GauntletEconomy {
+    static let baseSellbackRate = 0.75
 
     // MARK: Run shape (per tier) — docs/DESIGN.md §14.5
 

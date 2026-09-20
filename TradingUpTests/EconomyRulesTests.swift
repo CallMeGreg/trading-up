@@ -9,7 +9,8 @@ final class EconomyRulesTests: XCTestCase {
     func testPackPricesAndGradeFees() {
         XCTAssertEqual(Economy.packPrices, [10, 30, 75, 160, 400], "steeper pack prices")
         XCTAssertEqual(Economy.gradeFees, [2, 4, 6, 8, 10], "flat grade-fee ramp")
-        XCTAssertEqual(Economy.sellbackRate, 0.75, accuracy: 1e-9, "shop buys dupes at 75% of market")
+        XCTAssertEqual(Economy.sellbackRate, 0.60, accuracy: 1e-9, "Classic quick sales pay 60% of market")
+        XCTAssertEqual(GauntletEconomy.baseSellbackRate, 0.75, accuracy: 1e-9, "Classic tuning must not change Gauntlet")
     }
 
     func testBoxAndBonusMultipliers() {
@@ -49,7 +50,7 @@ final class EconomyRulesTests: XCTestCase {
         let before = core.cash
         let got = core.sell(instanceId: core.instances[1].id)
         XCTAssertNotNil(got)
-        XCTAssertEqual(got!, Economy.sellback(market), accuracy: 1e-9, "a dupe should sell for 75% of market value")
+        XCTAssertEqual(got!, Economy.sellback(market), accuracy: 1e-9, "a dupe should sell for 60% of market value")
         XCTAssertEqual(core.cash, before + Economy.sellback(market), accuracy: 1e-9)
     }
 

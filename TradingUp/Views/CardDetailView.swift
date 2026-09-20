@@ -96,39 +96,56 @@ struct CardDetailView: View {
     }
 
     private func copyRow(_ inst: CardInstance) -> some View {
-        HStack(alignment: .center, spacing: 10) {
-            VStack(alignment: .leading, spacing: 5) {
-                HStack(spacing: 5) {
-                    if inst.foil { badge("★ FOIL", Color(hex: "ff8ad6")) }
-                    if let g = inst.grade { badge("PSA \(g)", gradeColor(g)) }
-                    if !inst.foil && inst.grade == nil {
-                        Text("Standard").font(.system(size: 11, weight: .semibold)).foregroundStyle(Palette.subtle)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .center, spacing: 10) {
+                VStack(alignment: .leading, spacing: 5) {
+                    HStack(spacing: 5) {
+                        if inst.foil { badge("★ FOIL", Color(hex: "ff8ad6")) }
+                        if let g = inst.grade { badge("PSA \(g)", gradeColor(g)) }
+                        if !inst.foil && inst.grade == nil {
+                            Text("Standard").font(.system(size: 11, weight: .semibold)).foregroundStyle(Palette.subtle)
+                        }
                     }
+                    Text(inst.currentValue.money)
+                        .font(.system(size: 16, weight: .heavy, design: .rounded))
+                        .foregroundStyle(Palette.money)
                 }
-                Text(inst.currentValue.money)
-                    .font(.system(size: 16, weight: .heavy, design: .rounded))
-                    .foregroundStyle(Palette.money)
+                Spacer(minLength: 0)
+                switch copyActionMode {
+                case .grade:
+                    if inst.grade == nil {
+                        miniButton("Grade \(Economy.gradeFee(set: card.set).money)", "seal.fill",
+                                   Color(hex: "6d5cf7"),
+                                   enabled: game.canGrade(inst)) {
+                            if let r = game.grade(inst.id) {
+                                Haptics.play(.rigid); Sound.play(.gradeStart); gradeResult = r
+                            } else { Haptics.play(.error); Sound.play(.blocked) }
+                        }
+                        .accessibilityIdentifier("gradeCopy-\(inst.id)")
+                    } else {
+                        actionStatus("Already Graded", "checkmark.seal.fill")
+                    }
+                case .sell:
+                    miniButton("Sell \(inst.sellValue.moneyShort)", "dollarsign.circle.fill", Color(hex: "2fae63"),
+                               enabled: game.isSellable(inst)) {
+                        if game.sell(inst.id) != nil { Haptics.play(.success); Sound.play(.coin) }
+                        else { Haptics.play(.error); Sound.play(.blocked) }
+                    }
+                    .accessibilityIdentifier("sellCopy-\(inst.id)")
+                }
             }
-            Spacer(minLength: 0)
-            switch copyActionMode {
-            case .grade:
-                if inst.grade == nil {
-                    miniButton("Grade \(Economy.gradeFee(set: card.set).money)", "seal.fill",
-                               Color(hex: "6d5cf7"),
-                               enabled: game.canAffordGrade(set: card.set)) {
-                        if let r = game.grade(inst.id) {
-                            Haptics.play(.rigid); Sound.play(.gradeStart); gradeResult = r
-                        } else { Haptics.play(.error); Sound.play(.blocked) }
-                    }
-                } else {
-                    actionStatus("Already Graded", "checkmark.seal.fill")
+            if let reservation = game.collectorReservation(for: inst) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Label("Saved for \(reservation.collector.name) · \(reservation.title)", systemImage: "bookmark.fill")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Palette.tapCue)
+                    Text("Untrack this goal in Collectors to sell or grade this copy. The offer will still be there.")
+                        .font(.caption)
+                        .foregroundStyle(Palette.subtle)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-            case .sell:
-                miniButton("Sell \(inst.sellValue.moneyShort)", "dollarsign.circle.fill", Color(hex: "2fae63"),
-                           enabled: game.isSellable(inst)) {
-                    if game.sell(inst.id) != nil { Haptics.play(.success); Sound.play(.coin) }
-                    else { Haptics.play(.error); Sound.play(.blocked) }
-                }
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier("collectorHeldCopy-\(inst.id)")
             }
         }
         .padding(.vertical, 4)

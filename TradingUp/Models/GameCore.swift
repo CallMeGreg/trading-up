@@ -216,6 +216,7 @@ struct GameCore: Codable {
     /// whether the celebration overlay is still being presented.
     var winAcknowledged = false
     var welcomeSeen = false
+    var collectors = CollectorProgress()
 
     init() {}
 
@@ -235,6 +236,7 @@ struct GameCore: Codable {
         hasWon          = try c.decodeIfPresent(Bool.self,           forKey: .hasWon)          ?? false
         winAcknowledged = try c.decodeIfPresent(Bool.self,           forKey: .winAcknowledged) ?? false
         welcomeSeen     = try c.decodeIfPresent(Bool.self,           forKey: .welcomeSeen)     ?? false
+        collectors      = try c.decodeIfPresent(CollectorProgress.self, forKey: .collectors) ?? CollectorProgress()
     }
 
     // MARK: Resetting
@@ -267,7 +269,10 @@ struct GameCore: Codable {
         var out = self
         let kept = instances.filter { CardDatabase.exists($0.cardId) }
         let dropped = instances.count - kept.count
-        guard dropped > 0 else { return (out, 0) }
+        guard dropped > 0 else {
+            out.refreshCollectorGoals()
+            return (out, 0)
+        }
         out.instances = kept
         // Re-open bonuses whose line/set the player no longer completes, so the
         // reward isn't permanently stranded if they re-collect the cards.
@@ -279,6 +284,7 @@ struct GameCore: Codable {
             let cards = CardDatabase.cards(inSet: set)
             return !cards.isEmpty && cards.allSatisfy { owned.contains($0.id) }
         }
+        out.refreshCollectorGoals()
         return (out, dropped)
     }
 
@@ -290,8 +296,10 @@ struct GameCore: Codable {
     func count(of cardId: String) -> Int { instances.reduce(0) { $0 + ($1.cardId == cardId ? 1 : 0) } }
     func owns(_ cardId: String) -> Bool { instances.contains { $0.cardId == cardId } }
 
-    /// A copy is sellable only if it is not the last remaining copy of that card.
-    func isSellable(_ inst: CardInstance) -> Bool { count(of: inst.cardId) > 1 }
+    /// Last copies and copies reserved for tracked collector goals stay protected.
+    func isSellable(_ inst: CardInstance) -> Bool {
+        count(of: inst.cardId) > 1 && !collectorReservedInstanceIDs.contains(inst.id)
+    }
     var sellableInstances: [CardInstance] { instances.filter { isSellable($0) } }
 
     /// Every copy the player could actually part with — all but one of each
@@ -299,7 +307,8 @@ struct GameCore: Codable {
     /// sellable, since either one may go) this is the set that can be sold
     /// *together*, so it's what any "how much is left to raise" sum has to use.
     /// The cheapest copy of each card is the one left behind, because that's
-    /// the choice that maximises what the rest are worth.
+    /// the choice that maximises what the rest are worth. Recovery deliberately
+    /// includes reserved copies: the player can release them by untracking.
     var sellableExtras: [CardInstance] {
         Dictionary(grouping: instances, by: { $0.cardId }).values.flatMap { copies in
             copies.count > 1
@@ -381,10 +390,16 @@ struct GameCore: Codable {
     /// Only requiring "no duplicates left" wasn't enough — a player sitting on
     /// a handful of commons worth pennies could be mathematically finished yet
     /// still be shown a live shop, with nothing to do but sell those last few
-    /// cards one at a time before the game would admit it.
+    /// cards one at a time before the game would admit it. A legal collector
+    /// deal also keeps the run open; paid-set deals count only with access.
     var isGameOver: Bool {
+        isGameOver(collectorSetLimit: CardDatabase.setCount)
+    }
+
+    func isGameOver(collectorSetLimit: Int) -> Bool {
         guard !hasWon else { return false }
         return maxRaisableCash < Economy.cheapestPackPrice
+            && !hasAvailableCollectorDeal(setLimit: collectorSetLimit)
     }
 
     // MARK: Welcome / onboarding
@@ -553,10 +568,11 @@ struct GameCore: Codable {
     func duplicateSummary(of cardIds: Set<String>) -> (count: Int, proceeds: Double) {
         var count = 0
         var proceeds = 0.0
+        let reserved = collectorReservedInstanceIDs
         for cardId in cardIds {
             let copies = instances(of: cardId).sorted { $0.currentValue > $1.currentValue }
             guard copies.count > 1 else { continue }
-            for extra in copies.dropFirst() {   // keep copies[0] (best), the rest are extras
+            for extra in copies.dropFirst() where !reserved.contains(extra.id) {
                 count += 1
                 proceeds += extra.sellValue
             }
@@ -590,6 +606,7 @@ struct GameCore: Codable {
         guard let idx = instances.firstIndex(where: { $0.id == instanceId }) else { return nil }
         let inst = instances[idx]
         guard inst.card.rarity.canBeGraded, inst.grade == nil else { return nil }
+        guard !collectorReservedInstanceIDs.contains(inst.id) else { return nil }
         let fee = Economy.gradeFee(set: inst.card.set)
         guard cash >= fee else { return nil }
         let oldValue = inst.currentValue
@@ -633,6 +650,7 @@ struct GameCore: Codable {
 
         updatePeak()
         if uniqueCount >= CardDatabase.all.count { hasWon = true }
+        refreshCollectorGoals()
         return events
     }
 

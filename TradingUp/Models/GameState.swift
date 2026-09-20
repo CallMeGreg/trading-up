@@ -18,6 +18,7 @@ final class GameState {
     /// slides in on top of it. Purely presentation state: never persisted, and
     /// deliberately kept out of the pure `GameCore`.
     private(set) var revealInFlight = false
+    private(set) var collectorReceiptInFlight = false
 
     private var rng = AppRNG()
     private let store: SaveStore
@@ -36,7 +37,7 @@ final class GameState {
     static let freeSetCount = 1
 
     /// Whether the one-time full-version unlock is active. Sets above
-    /// `freeSetCount` gate *buying packs* on this; Set 1 is always free, and
+    /// `freeSetCount` gate buying packs and collector deals on this; Set 1 is always free, and
     /// cards already owned in paid sets stay viewable regardless.
     ///
     /// StoreKit is the source of truth: the `Store` layer verifies
@@ -119,16 +120,16 @@ final class GameState {
     var shouldShowWin: Bool { core.shouldShowWin }
     /// Whether the win celebration should actually be on screen *right now*.
     /// Distinct from the model's `shouldShowWin`: the overlay also waits for any
-    /// pack/box reveal to finish, so the collection-completing pull plays all
-    /// the way through — reveal, then pack summary — before the win takes over.
-    var presentsWin: Bool { core.shouldShowWin && !revealInFlight }
+    /// pack/box reveal or collector receipt to finish, so the final acquisition
+    /// gets its own complete presentation before the win takes over.
+    var presentsWin: Bool { core.shouldShowWin && !revealInFlight && !collectorReceiptInFlight }
     /// Game Over, gated the same way, so the final affordable pack still gets
     /// revealed before the losing screen appears.
-    var presentsGameOver: Bool { core.isGameOver && !revealInFlight }
+    var presentsGameOver: Bool { isGameOver && !revealInFlight && !collectorReceiptInFlight }
     /// A personalized, shareable fingerprint of the (winning) run, driving the
     /// one-of-a-kind collector card on the win screen.
     var runSignature: RunSignature { RunSignature.make(from: core) }
-    var isGameOver: Bool { core.isGameOver }
+    var isGameOver: Bool { core.isGameOver(collectorSetLimit: collectorSetLimit) }
     var shouldShowWelcome: Bool { core.shouldShowWelcome }
     /// Whether the Classic run has meaningful progress worth confirming before a
     /// reset — i.e. at least one pack has been opened. A brand-new game (Welcome
@@ -155,6 +156,63 @@ final class GameState {
     func owns(_ id: String) -> Bool { core.owns(id) }
     func count(of id: String) -> Int { core.count(of: id) }
     func isSellable(_ inst: CardInstance) -> Bool { core.isSellable(inst) }
+
+    // MARK: Collectors
+
+    var collectorSetLimit: Int { isFullVersionUnlocked ? CardDatabase.setCount : Self.freeSetCount }
+    var collectorProgress: CollectorProgress { core.collectors }
+    var collectorTrackedPreviews: [CollectorPreview] { core.collectorTrackedPreviews }
+    var collectorReservedInstanceIDs: Set<UUID> { core.collectorReservedInstanceIDs }
+    var collectorReadyCount: Int {
+        let goals = (1...collectorSetLimit).flatMap { core.collectorRequests(inSet: $0).map(\.goal) }
+            + core.collectors.trackedGoals.filter {
+                if case .trade = $0 { return true }
+                return false
+            }
+        return goals.filter {
+            guard let preview = core.collectorPreview(for: $0) else { return false }
+            return !requiresFullUnlock(set: preview.deal.set) && preview.isReady
+        }.count
+    }
+
+    func collectorRequests(inSet set: Int) -> [CollectorDeal] { core.collectorRequests(inSet: set) }
+    func collectorTradeTargets(inSet set: Int) -> [Card] { core.collectorTradeTargets(inSet: set) }
+    func collectorTradesRemaining(inSet set: Int) -> Int { core.collectorTradesRemaining(inSet: set) }
+    func collectorPreview(for goal: CollectorGoal) -> CollectorPreview? { core.collectorPreview(for: goal) }
+    func collectorReservation(for instance: CardInstance) -> CollectorDeal? { core.collectorReservation(for: instance) }
+    func canGrade(_ instance: CardInstance) -> Bool {
+        instance.grade == nil && canAffordGrade(set: instance.card.set)
+            && !collectorReservedInstanceIDs.contains(instance.id)
+    }
+
+    func setCollectorGoalTracked(_ goal: CollectorGoal, tracked: Bool) throws {
+        guard !revealInFlight else { throw CollectorError.finishPack }
+        guard !collectorReceiptInFlight else { throw CollectorError.finishDeal }
+        if tracked {
+            guard let deal = core.collectorDeal(for: goal) else { throw CollectorError.unavailable }
+            guard !requiresFullUnlock(set: deal.set) else { throw CollectorError.lockedSet }
+        }
+        var updated = core
+        try updated.setCollectorGoalTracked(goal, tracked: tracked)
+        guard store.save(updated) else { throw CollectorError.couldNotSave }
+        core = updated
+    }
+
+    func completeCollectorDeal(_ goal: CollectorGoal, expectedInstanceIDs: Set<UUID>) throws -> CollectorReceipt {
+        guard !revealInFlight else { throw CollectorError.finishPack }
+        guard !collectorReceiptInFlight else { throw CollectorError.finishDeal }
+        guard let deal = core.collectorDeal(for: goal) else { throw CollectorError.unavailable }
+        guard !requiresFullUnlock(set: deal.set) else { throw CollectorError.lockedSet }
+        var updated = core
+        let receipt = try updated.completeCollectorDeal(goal, expectedInstanceIDs: expectedInstanceIDs)
+        guard store.save(updated) else { throw CollectorError.couldNotSave }
+        core = updated
+        collectorReceiptInFlight = true
+        recordBinder()
+        return receipt
+    }
+
+    func endCollectorReceipt() { collectorReceiptInFlight = false }
 
     // MARK: Mutations (autosave)
 
@@ -230,6 +288,7 @@ final class GameState {
 
     func newGame() {
         core = core.startingNewRun()
+        collectorReceiptInFlight = false
         save()
     }
 
