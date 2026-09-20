@@ -11,7 +11,7 @@ The split exists because the interesting properties of this game are
 *statistical* — pack expected value, grade odds, how often reckless play goes
 bust. Those need tens of thousands of simulated runs, which is the wrong shape
 for a unit‑test suite, so they live in a standalone harness that compiles the
-pure model files with `swiftc` and runs in seconds.
+pure model files with `swiftc`, without an iOS simulator.
 
 ---
 
@@ -33,6 +33,7 @@ Or just press `⌘U` in Xcode.
 | `PurchaseStoreTests.swift` | Production starts purchase-gated; the test app unlocks immediately, stays unlocked without StoreKit, never caches its automatic grant, and preserves progression |
 | `DataIntegrityTests.swift` | The generated catalogue: 250 cards, unique names/ids, rarity splits |
 | `EconomyRulesTests.swift` | The economy knobs are exactly as designed (prices, fees, sellback rate) |
+| `CollectorTests.swift` | Finite collector requests/trades, protected reservations, exact confirmations, bonus payouts, additive saves, transaction rollback, entitlement-aware recovery, and receipt sequencing |
 | `GameplaySimulationTests.swift` | Buy/open/sell/grade flows against a seeded, reproducible RNG |
 | `SaveFormatTests.swift` | Old saves decode, schema changes stay additive, retired cards are stripped |
 | `SaveStoreTests.swift` | Unreadable saves are quarantined on disk, never deleted |
@@ -195,6 +196,7 @@ Only the Swift toolchain from Command Line Tools is required:
 swiftc -O TradingUp/Models/Card.swift \
        TradingUp/Models/Economy.swift \
        TradingUp/Models/FeatureFlags.swift \
+       TradingUp/Models/Collector.swift \
        TradingUp/Models/GameCore.swift \
        TradingUp/Models/Persistence.swift \
        TradingUp/Models/GauntletEconomy.swift \
@@ -202,6 +204,7 @@ swiftc -O TradingUp/Models/Card.swift \
        TradingUp/Models/Catalyst.swift \
        TradingUp/Models/GauntletCore.swift \
        TradingUp/Generated/CardData.swift \
+       tools/verify/classic_sim.swift \
        tools/verify/gauntlet_sim.swift \
        tools/verify/main.swift \
        -o /tmp/tu_verify && /tmp/tu_verify
@@ -218,8 +221,8 @@ It prints `ALL CHECKS PASSED ✅` on success, and checks, among other things:
 - the **economy knobs** are set as designed — steep pack prices `[10,30,75,160,400]`,
   flat grade fees `[2,4,6,8,10]`, booster box at 11× pack price (still modelled even
   though the shop no longer sells one), set‑completion bonus at 15× pack price, and a
-  **75% sell‑back rate**;
-- the **sell‑back spread** works — a duplicate sells for 75% of market value, and
+  **60% Classic sell-back rate** (Gauntlet remains at 75%);
+- the **sell‑back spread** works — a Classic duplicate sells for 60% of market value, and
   buying into an already‑complete set then dumping the dupes is a **net loss** (the
   core losing risk);
 - the **save format is forward‑compatible** — a payload missing newer keys (or missing
@@ -228,17 +231,97 @@ It prints `ALL CHECKS PASSED ✅` on success, and checks, among other things:
   crashing, and an unreadable save is **quarantined on disk, never deleted**;
 - **winning doesn't erase your collection** — the celebration shows once, and dismissing
   it leaves the finished collection browsable;
-- **strategy simulations** hold the "moderate" difficulty target — reckless
-  spam‑and‑dump play **busts ~61%** of the time, while thoughtful play (pace buys, grade
-  valuable dupes before selling) still **wins ~59%**, a clear skill gap. The simulated
-  shop respects `FeatureFlags.removeBoosterBoxes`, so these numbers describe the game
-  as it actually ships;
+- **strategy simulations** hold Classic's collector target: focused play wins
+  **70–80%**, careless cash-out play **5–15%**, and the gap is at least 60 percentage
+  points over 1,000 runs per main policy. The benchmark asserts a packs-only shop;
+  re-enabling boxes requires retuning it, not presenting these rates as applicable;
 - selling protects your last copy; the game‑over check is correct;
 - collecting all 250 triggers the win and pays every evolution/set bonus exactly
   once.
 
 That last one is the reason to run this harness after *any* balance change: it's
 the only thing that will tell you the game is still winnable and still losable.
+
+### Classic collector balance
+
+After compiling the harness above, run `/tmp/tu_verify --classic-only` to skip
+unrelated data, grading-distribution, and Gauntlet checks. The fixed validation
+seed is `0xC011EC70`; initial tuning used the separate `0xA11CE` seed range.
+The complete harness runs this same benchmark in CI.
+
+`tools/verify/classic_sim.swift` executes the shipping model, including actual
+normal-copy requirements, two-goal reservations, finite rewards, same-set trade
+limits, and grade fees. All policies work the cheapest unlocked incomplete set,
+falling back to an affordable pack when liquidity is short; they do not read
+future RNG state. Failed runs must really be out of legal recovery actions,
+not just unable to afford their preferred set.
+
+| Policy | Decisions |
+| --- | --- |
+| Careless | Sell all extras without grading or using collectors. |
+| Grading only | Grade economically worthwhile extras, then sell; ignore collectors. |
+| Requests only | Complete available cash requests, track close requirements, sell unreserved extras; no grading or trades. |
+| Trades only | Reserve for scarce missing-card targets and trade when ready; no grading or cash requests. |
+| Focused | Complete requests, track a close request and a scarce missing-card trade, grade valuable unreserved extras, and release reservations to recover liquidity when necessary. |
+
+The main policies each use 1,000 trials; ablations use 200. The guardrails are
+sampling bands around the requested 75% / 10% targets, not claims about human
+players or globally optimal play. Cap hits and premature-loss counts must be
+zero. Do not hide a failed run by changing its outcome or choosing a seed after
+seeing the result.
+
+Measured with the shipping 60% quick-sale rate, half-pack Mira payouts,
+one-pack Rowan payouts, and two trades per set:
+
+| Policy | Wins | Mean packs opened | Mean requests / trades |
+| --- | --- | --- | --- |
+| Careless | **125 / 1,000 (12.5%)** | 127.4 | 0 / 0 |
+| Grading only | 47 / 200 (23.5%) | 143.9 | 0 / 0 |
+| Requests only | 69 / 200 (34.5%) | 161.3 | 19.0 / 0 |
+| Trades only | 61 / 200 (30.5%) | 140.1 | 0 / 7.5 |
+| Focused | **769 / 1,000 (76.9%)** | 165.9 | 21.1 / 9.3 |
+
+The focused/careless gap is **64.4 percentage points**. Every policy resolved
+without a cap hit or premature loss. Means include losses, not just winning
+runs. The separate initial 1,000-run careless sample at seed `0xA11CE` won
+11.5%; the table uses the independent validation range above. Combining
+requests, trades, and grading matters considerably more than any one isolated
+mechanic. The full harness also passed its unchanged Gauntlet guardrails.
+
+### Collector correctness and presentation
+
+`CollectorTests` and `CollectorStateTests` cover last/best-copy protection,
+non-foil/ungraded eligibility, distinct identities, overlapping reservations,
+bulk selling and grading protection, finite request/trade limits, stale and
+double submissions, old saves, reset behavior, recovery, access gates, failed
+save rollback, permanent Binder awards, and final-card receipt sequencing.
+
+```bash
+xcodebuild test -project TradingUp.xcodeproj -scheme TradingUpTest \
+  -destination 'platform=iOS Simulator,name=iPhone 16' \
+  -only-testing:TradingUpTests/CollectorTests \
+  -only-testing:TradingUpTests/CollectorStateTests \
+  -only-testing:TradingUpTests/EconomyRulesTests \
+  -only-testing:TradingUpTests/SaveFormatTests \
+  -only-testing:TradingUpTests/FullUnlockGateTests CODE_SIGNING_ALLOWED=NO
+```
+
+DEBUG fixtures `TU_TEST_STATE=collectors` and
+`TU_TEST_STATE=collector-final-card` provide ready requests/trades and a 249-card
+collection respectively. Both hold out `S1-050`, include ordinary spare copies,
+and start at $250 (overridable with `TU_TEST_CASH`). They do not exist in Release.
+`CollectorExperienceTests` exercises the actual board, confirmations, receipts,
+protected bulk sales, tracking capacity, frozen reveal counts, later-set routing,
+and last-card win using these fixtures. It also checks large Dynamic Type, the
+largest accessibility text size, and landscape, saving screenshots as test
+attachments. Run on a small iPhone and an iPad as well as the standard phone:
+
+```bash
+xcodebuild test -project TradingUp.xcodeproj -scheme TradingUpScreenshots \
+  -destination 'platform=iOS Simulator,name=iPhone 16' \
+  -only-testing:TradingUpUITests/CollectorExperienceTests \
+  CODE_SIGNING_ALLOWED=NO
+```
 
 ## CI
 

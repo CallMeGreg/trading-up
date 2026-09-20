@@ -18,6 +18,19 @@ func check(_ cond: Bool, _ msg: String) {
     if cond { print("  ✓ \(msg)") } else { print("  ✗ FAIL: \(msg)"); failures += 1 }
 }
 
+func verifyClassicBalance() {
+    do {
+        try ClassicSim.verify(trials: 1_000, seed: 0xC011EC70, check: check)
+    } catch {
+        check(false, "Classic simulation error: \(error)")
+    }
+}
+
+if CommandLine.arguments.contains("--classic-only") {
+    verifyClassicBalance()
+    exit(failures == 0 ? 0 : 1)
+}
+
 print("== Data integrity ==")
 check(CardDatabase.all.count == 250, "250 cards loaded (CardData.swift matches Card type)")
 check(Set(CardDatabase.all.map { $0.name }).count == 250, "all names unique")
@@ -523,7 +536,8 @@ print("\n== Economy knobs (tempo & risk) ==")
 do {
     check(Economy.packPrices == [10, 30, 75, 160, 400], "steeper pack prices [10,30,75,160,400]")
     check(Economy.gradeFees == [2, 4, 6, 8, 10], "flat grade-fee ramp [2,4,6,8,10]")
-    check(abs(Economy.sellbackRate - 0.75) < 1e-9, "shop buys dupes at 75% of market")
+    check(abs(Economy.sellbackRate - 0.60) < 1e-9, "Classic quick-sale rate is 60% of market")
+    check(abs(GauntletEconomy.baseSellbackRate - 0.75) < 1e-9, "Gauntlet's base sell-back stays 75%")
     var boxesOK = true, bonusOK = true
     for s in 1...5 {
         if abs(Economy.boxPrice(set: s) - Economy.packPrice(set: s) * 11) > 1e-9 { boxesOK = false }
@@ -548,7 +562,7 @@ do {
     let market = core.instances[1].currentValue
     let before = core.cash
     let got = core.sell(instanceId: core.instances[1].id)
-    check(got != nil && abs(got! - Economy.sellback(market)) < 1e-9, "a dupe sells for 75% of its market value")
+    check(got != nil && abs(got! - Economy.sellback(market)) < 1e-9, "a dupe sells for 60% of its market value")
     check(abs(core.cash - (before + Economy.sellback(market))) < 1e-9, "cash rises by the discounted proceeds")
 
     // Buying into an already-completed set and dumping every dupe returns less than you
@@ -564,90 +578,7 @@ do {
           String(format: "churn a pack into a full set = net loss (%+.2f)", churn.cash - cashBefore))
 }
 
-// Play a full game with a fixed strategy, always working the cheapest unlocked,
-// incomplete set. While booster boxes are on the shelf it buys one whenever
-// affordable (boxes complete sets fastest via their ultra/foil guarantees);
-// with `FeatureFlags.removeBoosterBoxes` on it buys packs only, so these runs
-// keep describing the game players can actually reach. `.reckless` dumps every
-// dupe raw; `.thoughtful` first grades the high-value dupes it's about to sell —
-// grading is +EV on pricey cards thanks to the cheap flat fee, so it squeezes
-// extra cash out of the same pulls. Crude proxies, but they bracket careless vs.
-// considered play.
-enum Style { case reckless, thoughtful }
-
-func playStrategy(seed: UInt64, style: Style) -> (won: Bool, lost: Bool, capped: Bool) {
-    var rng = SeededRNG(seed)
-    var core = GameCore()
-    // Grade before selling only when the ~1.5× grade EV clears the fee:
-    // s·(1.5v) − fee > s·v  ⇔  v > fee/(0.5·s).
-    let gradeThreshold = { (fee: Double) in fee / (0.5 * Economy.sellbackRate) }
-    for _ in 0..<200_000 {
-        if core.hasWon { return (true, false, false) }
-        if core.isGameOver { return (false, true, false) }
-
-        // Liquidate duplicates (thoughtful grades the valuable ones first).
-        if style == .thoughtful {
-            for cardId in core.uniqueOwnedIds {
-                let copies = core.instances(of: cardId).sorted { $0.currentValue > $1.currentValue }
-                guard copies.count > 1 else { continue }
-                for extra in copies.dropFirst() {
-                    if extra.card.rarity.canBeGraded, extra.grade == nil,
-                       extra.currentValue > gradeThreshold(Economy.gradeFee(set: extra.card.set)),
-                       core.cash >= Economy.gradeFee(set: extra.card.set) {
-                        _ = core.grade(instanceId: extra.id, using: &rng)
-                    }
-                    _ = core.sell(instanceId: extra.id)
-                }
-            }
-        } else {
-            _ = core.sellDuplicates(of: core.uniqueOwnedIds)
-        }
-
-        let incomplete = (1...CardDatabase.setCount)
-            .filter { core.isUnlocked(set: $0) && core.ownedCount(inSet: $0) < 50 }
-        guard let target = incomplete.first else { return (core.hasWon, core.isGameOver, false) }
-        if FeatureFlags.boosterBoxesAvailable, core.cash >= Economy.boxPrice(set: target) {
-            _ = core.buyBox(set: target, using: &rng)
-        } else if core.cash >= Economy.packPrice(set: target) {
-            _ = core.buyPack(set: target, using: &rng)
-        } else if let cheap = incomplete.first(where: { core.cash >= Economy.packPrice(set: $0) }) {
-            _ = core.buyPack(set: cheap, using: &rng)
-        } else {
-            return (false, true, false)             // stuck: can't afford to progress → lost
-        }
-    }
-    return (core.hasWon, core.isGameOver, true)     // hit the safety cap (should not happen)
-}
-
-print("\n== Strategy simulations (risk & winnability) ==")
-print("  shop sells: packs" + (FeatureFlags.boosterBoxesAvailable ? " + booster boxes" : " only"))
-do {
-    let n = 200
-    var recklessBust = 0.0, recklessWin = 0.0, thoughtfulWin = 0.0
-    for (label, style) in [("Reckless (spam the cheapest set, dump raw)", Style.reckless),
-                           ("Thoughtful (reserve + grade dupes)", Style.thoughtful)] {
-        var wins = 0, losses = 0, capped = 0
-        for s in 0..<n {
-            let r = playStrategy(seed: 0xA11CE &+ UInt64(s), style: style)
-            if r.capped { capped += 1 } else if r.won { wins += 1 } else if r.lost { losses += 1 }
-        }
-        let winPct = Double(wins) / Double(n) * 100
-        let lossPct = Double(losses) / Double(n) * 100
-        let capNote = capped > 0 ? ", \(capped) capped" : ""
-        print("  \(label): win \(Int(winPct.rounded()))%  bust \(Int(lossPct.rounded()))%  (n=\(n)\(capNote))")
-        check(capped == 0, "\(label): all games resolve (no runaway)")
-        if style == .reckless { recklessBust = lossPct; recklessWin = winPct } else { thoughtfulWin = winPct }
-    }
-    // "Moderate": careless spam-and-dump carries real bankruptcy risk (currently ~61%) …
-    check(recklessBust >= 25, "reckless spam-and-dump can bankrupt you (bust ≥ 25%)")
-    // … considered play (grade valuable dupes before selling) still usually wins (~59%).
-    // The floor is 55, not 60: at a 75% sell-back rate on a packs-only shop the model
-    // puts thoughtful play at 59%, which still clears "usually wins" with room for
-    // model drift. Raising it back to 60 means raising the sell-back rate to ~0.76.
-    check(thoughtfulWin >= 55, "thoughtful play still usually wins (win ≥ 55%)")
-    // … and skill is worth a lot: grading meaningfully lifts the win rate over reckless.
-    check(thoughtfulWin - recklessWin >= 10, "grading dupes is a real edge (win gap ≥ 10 pts)")
-}
+verifyClassicBalance()
 
 print("\n== Gauntlet: Aura engine & knobs ==")
 do {

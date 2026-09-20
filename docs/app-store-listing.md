@@ -116,12 +116,14 @@ Start with $100. Finish with all 250.
 
 Trading Up is a collecting-and-economy game built around the best part of trading cards: tearing open a fresh pack and turning it over one card at a time.
 
-Buy a pack, rip it, and find out what you got. Six cards - three commons, two uncommons, and a rare or an ultra rare - with a 1% shot at a shimmering foil on any of them. New pulls go straight into your binder. Extras become cash, at the shop's price rather than yours.
+Buy a pack, rip it, and find out what you got. Six cards - three commons, two uncommons, and a rare or an ultra rare - with a 1% shot at a shimmering foil on any of them. New pulls go straight into your binder. Extras can become cash, fulfil a collector's request, or help you trade for a missing Spryte.
 
 THE LOOP
 
 - Rip packs. Every pack opens card by card, and the hit slot is always saved for last.
-- Sell your extras. The shop buys duplicates back at 75% of market value, and that spread is the thing that will bankrupt you.
+- Make a plan. Mira and Rowan pay for collector requests; Tess trades spare bundles for a missing card you choose. You have two trades per set, so each target matters.
+- Save useful copies. Track two goals to protect their duplicates from bulk sales and grading. Deals use only ordinary, ungraded extras, never your best copy. Offers never expire and work offline.
+- Sell your extras. Quick sales pay 60% of market value. Cash now competes with keeping useful duplicates for your next deal.
 - Grade your best. Pay a fee, roll a PSA score. A 10 is a 5x payday and a 1 is a freak 10x jackpot, but anything from 2 to 7 is worth less than the card you put in.
 - Cash in bonuses. Complete an evolution line for a payout; complete a whole set for a much bigger one.
 
@@ -131,11 +133,11 @@ Emberfall, Tidecaller, Verdspire, Voltcrest and Umbral Reach - the world of the 
 
 WIN OR GO BROKE
 
-Collect all 250 cards and you're a Master Collector. Fall below the price of the cheapest pack with no way left to raise it and you're tapped out. Between those two ends is a real economy - pack odds, a buylist spread, grading variance and set bonuses - that you can actually play against instead of just watching.
+Collect all 250 cards and you're a Master Collector. Fall below the price of the cheapest pack with no way left to raise it and no collector deal left to complete, and you're tapped out. Between those two ends is a real economy - pack odds, collector deals, a buylist spread, grading variance and set bonuses - that you can actually play against instead of just watching.
 
 NO CATCHES
 
-- Set 1 - Emberfall is free to play in full: rip, sell, grade and chase the set bonus across all 50 cards. One optional one-time purchase unlocks the other four sets and the 250-card finish - the only thing you can ever buy.
+- Set 1 - Emberfall is free to play in full: rip, sell, grade, fulfil requests, trade and chase the set bonus across all 50 cards. One optional one-time purchase unlocks the other four sets and the 250-card finish - the only thing you can ever buy.
 - No ads, no tracking, no subscriptions.
 - No real-money packs and no gambling. You never spend real money on a random pull; the only currency inside the game is fictional.
 - No account, no sign-in, and no data collected. Your collection lives on your device and nowhere else.

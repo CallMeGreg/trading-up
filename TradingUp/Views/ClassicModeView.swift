@@ -12,12 +12,18 @@ struct ClassicModeView: View {
     /// Which tab is on screen. Bound so the app can steer the player — e.g. onto
     /// the Shop right after they start a run.
     @State private var selectedTab: AppTab = .shop
+    @State private var collectorBadgeCount = 0
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            ShopView(onHome: { Sound.play(.uiBack); dismiss() })
+            ShopView(onHome: { Sound.play(.uiBack); dismiss() },
+                     onCollectors: { selectedTab = .collectors })
                 .tabItem { Label("Shop", systemImage: "bag.fill") }
                 .tag(AppTab.shop)
+            CollectorsView(isSelected: selectedTab == .collectors, onShop: { selectedTab = .shop })
+                .tabItem { Label("Collectors", systemImage: "person.2.fill") }
+                .badge(collectorBadgeCount)
+                .tag(AppTab.collectors)
             CollectionView()
                 .tabItem { Label("Collection", systemImage: "square.grid.3x3.fill") }
                 .tag(AppTab.collection)
@@ -27,6 +33,9 @@ struct ClassicModeView: View {
         }
         .tint(Palette.money)
         .onChange(of: selectedTab) { _, _ in Sound.play(.uiTap) }
+        .onChange(of: game.collectorReadyCount, initial: true) { _, _ in refreshCollectorBadge() }
+        .onChange(of: game.revealInFlight) { _, _ in refreshCollectorBadge() }
+        .onChange(of: game.collectorReceiptInFlight) { _, _ in refreshCollectorBadge() }
         // "Start Collecting" is the only way out of the welcome intro, so its
         // dismissal marks the start of a run — first launch, after a download,
         // or a reset. Drop the player on the Shop, where a run begins, even if
@@ -49,11 +58,8 @@ struct ClassicModeView: View {
     /// two separate presentations.
     private var activeOverlay: AppOverlay? {
         if game.shouldShowWelcome { return .welcome }
-        // A pack/box reveal owns the screen until the player finishes its
-        // summary. Win and Game Over both wait for it (`presentsWin` /
-        // `presentsGameOver`), so a collection-completing — or wallet-emptying —
-        // pull plays out fully instead of being cut off by the overlay sliding
-        // in on top of the reveal.
+        // Pack summaries and collector receipts own the screen until fully
+        // dismissed. The model defers both endings through those transitions.
         if game.presentsWin { return .win }
         if game.presentsGameOver { return .lose }
         return nil
@@ -64,6 +70,12 @@ struct ClassicModeView: View {
     private var overlayBinding: Binding<AppOverlay?> {
         Binding(get: { activeOverlay }, set: { _ in })
     }
+
+    private func refreshCollectorBadge() {
+        // The tab bar can peek through the same cover transitions as the Shop.
+        guard !game.revealInFlight, !game.collectorReceiptInFlight else { return }
+        collectorBadgeCount = game.collectorReadyCount
+    }
 }
 
 enum AppOverlay: Int, Identifiable {
@@ -73,5 +85,5 @@ enum AppOverlay: Int, Identifiable {
 
 /// The main tabs, so `ClassicModeView` can drive selection programmatically.
 enum AppTab: Hashable {
-    case shop, collection, stats
+    case shop, collectors, collection, stats
 }

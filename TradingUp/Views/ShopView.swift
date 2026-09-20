@@ -6,6 +6,7 @@ struct ShopView: View {
     /// Sends the player back to the main menu. Provided by `ClassicModeView`; the
     /// Shop's wallet header hosts the only home button in Classic mode.
     var onHome: (() -> Void)? = nil
+    var onCollectors: (() -> Void)? = nil
     @State private var pending: PendingOpen?
     /// Collection counts captured at purchase time. While a reveal is on screen
     /// the shop shows these frozen values so the fullScreenCover sliding in/out
@@ -31,6 +32,9 @@ struct ShopView: View {
                                         onBuyPack: { buyPack(set) },
                                         onBuyBox: { buyBox(set) },
                                         onUnlock: { showPaywall = true })
+                            if set == 1, let onCollectors {
+                                collectorsShortcut(onCollectors)
+                            }
                         }
                     }
                     .padding(.horizontal, 16)
@@ -38,6 +42,7 @@ struct ShopView: View {
                     .padding(.bottom, 20)
                     .readableWidth()
                 }
+                .accessibilityIdentifier("classicShop")
             }
             .background(Palette.screen.ignoresSafeArea())
             .toolbar(.hidden, for: .navigationBar)
@@ -47,6 +52,48 @@ struct ShopView: View {
         }
         .fullScreenCover(isPresented: $showInfo) { WelcomeView(isReference: true) }
         .sheet(isPresented: $showPaywall) { PaywallView() }
+    }
+
+    private func collectorsShortcut(_ action: @escaping () -> Void) -> some View {
+        let ready = freeze?.collectorReadyCount ?? game.collectorReadyCount
+        let tracked = freeze?.collectorTrackedCount ?? game.collectorProgress.trackedGoals.count
+        let status = ready > 0
+            ? "\(ready) offer\(ready == 1 ? "" : "s") ready · Put your spares to work"
+            : tracked > 0
+                ? "\(tracked) tracked goal\(tracked == 1 ? "" : "s") · Your spares stay saved"
+                : "Cash requests & missing-card trades"
+        return Button {
+            guard !isRevealInFlight else { return }
+            Haptics.play(.light)
+            action()
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "person.2.fill")
+                    .font(.title3)
+                    .foregroundStyle(Palette.money)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Collectors").font(.subheadline.bold()).foregroundStyle(Palette.text)
+                    Text(status)
+                        .font(.caption)
+                        .foregroundStyle(Palette.subtle)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.right")
+                    .font(.caption.bold())
+                    .foregroundStyle(Palette.money)
+            }
+            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 7)
+            .background(RoundedRectangle(cornerRadius: 14).fill(Palette.money.opacity(0.07)))
+            .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Palette.money.opacity(0.2)))
+        }
+        .buttonStyle(.plain)
+        .disabled(isRevealInFlight)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Collectors. \(status)")
+        .accessibilityIdentifier("shopCollectors")
     }
 
     private func buyPack(_ set: Int) {
@@ -131,7 +178,7 @@ struct ShopView: View {
     }
 }
 
-/// A snapshot of the wallet + collection counts the Shop displays, captured just
+/// A snapshot of the wallet, collection, and collector counts, captured just
 /// before a pack/box is opened. Held while the reveal is on screen so the
 /// underlying shop doesn't reveal the pull's new-unique count — or, via the
 /// bankroll jumping on an evolution/set-completion bonus, that the pack completed
@@ -142,12 +189,16 @@ struct ShopFreeze {
     let netWorth: Double
     let uniqueCount: Int
     let ownedInSet: [Int: Int]
+    let collectorReadyCount: Int
+    let collectorTrackedCount: Int
 
     @MainActor
     init(_ game: GameState) {
         cash = game.cash
         netWorth = game.netWorth
         uniqueCount = game.uniqueCount
+        collectorReadyCount = game.collectorReadyCount
+        collectorTrackedCount = game.collectorProgress.trackedGoals.count
         var owned: [Int: Int] = [:]
         for set in 1...CardDatabase.setCount { owned[set] = game.ownedCount(inSet: set) }
         ownedInSet = owned

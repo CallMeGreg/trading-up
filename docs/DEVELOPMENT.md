@@ -121,11 +121,12 @@ TradingUp/
     Card.swift               Card, Rarity, Element, CardDatabase
     Economy.swift            Prices, grading table, value math — all tuning lives here
     GameCore.swift           Deterministic game state: buy / open / sell / grade / bonuses
+    Collector.swift          Classic NPC requests, protected goals, exact-copy barter, and CollectorEconomy tuning
     Persistence.swift        Versioned save envelope, load hygiene, corrupt-save quarantine
     GameState.swift          @Observable wrapper: randomness + autosave; owns the full-version entitlement gate and the Binder
     Binder.swift             All-time showcase model: best copy ever owned of each Spryte (survives New Game)
     BinderStore.swift        Versioned store for the Binder, in its own file separate from the run save
-    GauntletEconomy.swift    Gauntlet balance knobs: tier config, target curve, interest, RunMods aggregator + GauntletSkillTuning (Trainer skill → advantage seam)
+    GauntletEconomy.swift    Gauntlet balance knobs: independent sell-back rate, tier config, target curve, interest, RunMods aggregator + GauntletSkillTuning (Trainer skill → advantage seam)
     Trainer.swift            Gauntlet Trainers: per-run archetypes defined by a 5-skill graph (Energy/Aura/Selling/Grading/Inventory); only the Rookie is free, five specialists unlock on milestones, and mystery Red unlocks on beating Hard with all others
     Catalyst.swift           Gauntlet Catalysts: run-long buff cards, one per element lane
     GauntletCore.swift       Deterministic Gauntlet run state machine: rip (per-element pack rail) / keep / grade / shop / round resolution
@@ -177,6 +178,7 @@ tools/
   check_screenshots.py       Checks captured screenshots against App Store sizes
   test_app_identity.py       Guards app identities, scheme routing, catalogs, build parity, and compiled test-unlock isolation
   verify/main.swift          The Foundation-only simulation harness (see TESTING.md)
+  verify/classic_sim.swift   Reachable Classic policies, collector ablations, and 75% / 10% balance guardrails
 ```
 
 ## Where to tweak the game
@@ -189,6 +191,16 @@ chance, grade odds/multipliers, box guarantees, bonuses) live in
 Re‑run the [verify harness](TESTING.md#the-simulation-harness-no-xcode-needed)
 after any economy change — it enforces the target difficulty curve, not just
 correctness.
+
+**Classic collectors** live in `Models/Collector.swift`. `CollectorEconomy`
+controls finite request rewards, per-set trade limits, and tracked-goal capacity.
+Offers are rebuilt deterministically from the catalogue and saved completion
+IDs; viewing or reopening the board cannot reroll them. The pure engine owns
+eligibility, distinct-card requirements, reservation allocation, previews, and
+atomic exchange. `GameState` adds entitlement/reveal gates and commits collector
+mutations to disk before publishing them. The UI must use those previews, not
+reimplement card selection. An old save defaults the additive `collectors`
+payload without resetting the run.
 
 **Gauntlet Mode has its own knobs, kept out of `Economy.swift`.** Tier configs, the
 target-Aura curve, interest rate/ceiling, stipend curve, and the `RunMods` aggregator
