@@ -145,6 +145,87 @@ final class GauntletDecisionStateTests: XCTestCase {
         state.finishReveal()
     }
 
+    func testShopReadinessChecksTheUpcomingTargetNotTheCompletedRound() throws {
+        var snapshot = DebugGauntletScenario.shop.snapshot
+        snapshot.run.showcase = [CardInstance(cardId: "S1-050", grade: 9)]
+        let state = seed(snapshot)
+        let run = try XCTUnwrap(state.run)
+        XCTAssertEqual(state.phase, .shop)
+        XCTAssertEqual(run.round, 2)
+        XCTAssertGreaterThanOrEqual(run.showcaseAura, GauntletEconomy.target(run.tier, round: 1))
+        XCTAssertLessThan(run.showcaseAura, run.target)
+        XCTAssertFalse(state.nextRoundTargetMet)
+
+        state.continueFromShop()
+        XCTAssertEqual(state.phase, .ripping, "the cue must not gate starting an unmet round")
+        XCTAssertEqual(state.run?.round, 2)
+        XCTAssertTrue(state.canRip)
+        XCTAssertFalse(state.nextRoundTargetMet)
+    }
+
+    func testReadyShopSurvivesPurchasesAndResumeThenRechecksTheFollowingRound() throws {
+        let state = seed(DebugGauntletScenario.shop.snapshot)
+        XCTAssertEqual(state.run?.round, 2)
+        XCTAssertTrue(state.nextRoundTargetMet)
+        XCTAssertTrue(state.buySlot())
+        XCTAssertTrue(state.nextRoundTargetMet, "spending cash does not change the Aura requirement")
+        state.persistForExit()
+
+        let restored = loadState()
+        XCTAssertTrue(restored.nextRoundTargetMet)
+        let rips = try XCTUnwrap(restored.run?.ripsLeft)
+        let packs = restored.run?.packsRipped
+        restored.continueFromShop()
+        XCTAssertEqual(restored.phase, .shop)
+        XCTAssertEqual(restored.run?.round, 3, "one press banks only the primed round")
+        XCTAssertEqual(restored.run?.lastRipBank, GauntletEconomy.leftoverRipValue(round: 2, rips: rips))
+        XCTAssertEqual(restored.run?.packsRipped, packs)
+        XCTAssertFalse(restored.nextRoundTargetMet, "the next, higher target is no longer met")
+    }
+
+    func testShopReadinessIncludesTheExactTargetButStaysOffOutsideTheShop() throws {
+        XCTAssertFalse(loadState().nextRoundTargetMet, "there is no upcoming run yet")
+        var snapshot = DebugGauntletScenario.shop.snapshot
+        snapshot.run.showcase = [CardInstance(cardId: "S1-004")]
+        snapshot.run.attunedCatalysts = [
+            Catalyst(id: "exact-target", element: .grass, name: "Exact target", blurb: "",
+                     mods: RunMods(auraMult: snapshot.run.target / snapshot.run.showcaseAura),
+                     saleValue: 0)
+        ]
+        let state = seed(snapshot)
+        let run = try XCTUnwrap(state.run)
+        XCTAssertEqual(run.showcaseAura, run.target)
+        XCTAssertTrue(state.nextRoundTargetMet)
+
+        snapshot.phase = .ripping
+        snapshot.revealActive = true
+        let revealing = seed(snapshot)
+        XCTAssertEqual(revealing.phase, .ripping)
+        XCTAssertFalse(revealing.nextRoundTargetMet, "a met active-round target is not a shop cue")
+    }
+
+    func testChampionshipReadinessUsesTheFinalTargetAndClearsAfterTheWin() throws {
+        let top = try XCTUnwrap(CardDatabase.all.max { $0.baseValue < $1.baseValue })
+        for tier in GauntletTier.allCases {
+            var snapshot = DebugGauntletScenario.shop.snapshot
+            snapshot.run = GauntletRun(tier: tier, trainer: .neutral)
+            snapshot.run.round = snapshot.run.roundsTotal
+            snapshot.run.startRound()
+            snapshot.run.showcase = [CardInstance(cardId: "S1-050", grade: 9)]
+            let short = seed(snapshot)
+            XCTAssertTrue(try XCTUnwrap(short.run).isFinalRound)
+            XCTAssertFalse(short.nextRoundTargetMet)
+
+            snapshot.run.showcase = [CardInstance(cardId: top.id, foil: true, grade: 10)]
+            let ready = seed(snapshot)
+            XCTAssertTrue(ready.nextRoundTargetMet)
+            ready.continueFromShop()
+            XCTAssertEqual(ready.phase, .reward)
+            XCTAssertTrue(ready.run?.won ?? false)
+            XCTAssertFalse(ready.nextRoundTargetMet)
+        }
+    }
+
     func testLastRipLeavesAnAffordableGradeAvailableAndSavesTheChance() throws {
         let state = seed(DebugGauntletScenario.lastPack.snapshot)
         try settleLastPack(state)

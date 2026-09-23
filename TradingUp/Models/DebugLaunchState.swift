@@ -51,6 +51,15 @@ enum DebugLaunchState {
             return collectorScenario(finalCard: false, cash: cash)
         case "collector-final-card":
             return collectorScenario(finalCard: true, cash: cash)
+        case "collection-polish":
+            var core = collectorScenario(finalCard: false, cash: cash)
+            core.instances += [
+                CardInstance(cardId: "S1-001", foil: true),
+                CardInstance(cardId: "S1-004", grade: 10),
+                CardInstance(cardId: "S2-001"),
+                CardInstance(cardId: "S2-001")
+            ]
+            return core
         default:
             return nil
         }

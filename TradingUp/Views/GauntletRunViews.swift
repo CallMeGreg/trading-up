@@ -1322,6 +1322,8 @@ struct ShopScreen: View {
                           tint: run.isFinalRound ? GauntletTheme.championship : GauntletTheme.tint) {
                     Haptics.play(.medium); state.continueFromShop()
                 }
+                .shadow(color: state.nextRoundTargetMet ? Palette.money.opacity(0.65) : .clear,
+                        radius: 10)
                 .accessibilityIdentifier("gauntletNextRound")
                 .accessibilityLabel(nextRoundTitle)
             }

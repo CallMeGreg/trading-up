@@ -19,6 +19,7 @@ final class GameState {
     /// deliberately kept out of the pure `GameCore`.
     private(set) var revealInFlight = false
     private(set) var collectorReceiptInFlight = false
+    private(set) var duplicateSaleReviewInFlight = false
 
     private var rng = AppRNG()
     private let store: SaveStore
@@ -120,12 +121,16 @@ final class GameState {
     var shouldShowWin: Bool { core.shouldShowWin }
     /// Whether the win celebration should actually be on screen *right now*.
     /// Distinct from the model's `shouldShowWin`: the overlay also waits for any
-    /// pack/box reveal or collector receipt to finish, so the final acquisition
-    /// gets its own complete presentation before the win takes over.
-    var presentsWin: Bool { core.shouldShowWin && !revealInFlight && !collectorReceiptInFlight }
+    /// reveal, collector receipt, or sale confirmation to finish, so sheets
+    /// finish their transitions before an ending takes over.
+    var presentsWin: Bool {
+        core.shouldShowWin && !revealInFlight && !collectorReceiptInFlight && !duplicateSaleReviewInFlight
+    }
     /// Game Over, gated the same way, so the final affordable pack still gets
     /// revealed before the losing screen appears.
-    var presentsGameOver: Bool { isGameOver && !revealInFlight && !collectorReceiptInFlight }
+    var presentsGameOver: Bool {
+        isGameOver && !revealInFlight && !collectorReceiptInFlight && !duplicateSaleReviewInFlight
+    }
     /// A personalized, shareable fingerprint of the (winning) run, driving the
     /// one-of-a-kind collector card on the win screen.
     var runSignature: RunSignature { RunSignature.make(from: core) }
@@ -161,41 +166,19 @@ final class GameState {
 
     var collectorSetLimit: Int { isFullVersionUnlocked ? CardDatabase.setCount : Self.freeSetCount }
     var collectorProgress: CollectorProgress { core.collectors }
-    var collectorTrackedPreviews: [CollectorPreview] { core.collectorTrackedPreviews }
-    var collectorReservedInstanceIDs: Set<UUID> { core.collectorReservedInstanceIDs }
     var collectorReadyCount: Int {
-        let goals = (1...collectorSetLimit).flatMap { core.collectorRequests(inSet: $0).map(\.goal) }
-            + core.collectors.trackedGoals.filter {
-                if case .trade = $0 { return true }
-                return false
-            }
-        return goals.filter {
-            guard let preview = core.collectorPreview(for: $0) else { return false }
-            return !requiresFullUnlock(set: preview.deal.set) && preview.isReady
-        }.count
+        (1...collectorSetLimit).reduce(0) { $0 + collectorReadyCount(inSet: $1) }
+    }
+    func collectorReadyCount(inSet set: Int) -> Int {
+        requiresFullUnlock(set: set) ? 0 : core.collectorReadyCount(inSet: set)
     }
 
     func collectorRequests(inSet set: Int) -> [CollectorDeal] { core.collectorRequests(inSet: set) }
     func collectorTradeTargets(inSet set: Int) -> [Card] { core.collectorTradeTargets(inSet: set) }
     func collectorTradesRemaining(inSet set: Int) -> Int { core.collectorTradesRemaining(inSet: set) }
     func collectorPreview(for goal: CollectorGoal) -> CollectorPreview? { core.collectorPreview(for: goal) }
-    func collectorReservation(for instance: CardInstance) -> CollectorDeal? { core.collectorReservation(for: instance) }
     func canGrade(_ instance: CardInstance) -> Bool {
         instance.grade == nil && canAffordGrade(set: instance.card.set)
-            && !collectorReservedInstanceIDs.contains(instance.id)
-    }
-
-    func setCollectorGoalTracked(_ goal: CollectorGoal, tracked: Bool) throws {
-        guard !revealInFlight else { throw CollectorError.finishPack }
-        guard !collectorReceiptInFlight else { throw CollectorError.finishDeal }
-        if tracked {
-            guard let deal = core.collectorDeal(for: goal) else { throw CollectorError.unavailable }
-            guard !requiresFullUnlock(set: deal.set) else { throw CollectorError.lockedSet }
-        }
-        var updated = core
-        try updated.setCollectorGoalTracked(goal, tracked: tracked)
-        guard store.save(updated) else { throw CollectorError.couldNotSave }
-        core = updated
     }
 
     func completeCollectorDeal(_ goal: CollectorGoal, expectedInstanceIDs: Set<UUID>) throws -> CollectorReceipt {
@@ -279,6 +262,34 @@ final class GameState {
         return r
     }
 
+    func duplicateSalePreview(inSet set: Int) -> DuplicateSalePreview {
+        let ids = Set(CardDatabase.cards(inSet: set).map(\.id))
+        return DuplicateSalePreview(set: set, copies: core.sellableExtras.filter { ids.contains($0.cardId) })
+    }
+
+    func beginDuplicateSaleReview() { duplicateSaleReviewInFlight = true }
+    func endDuplicateSaleReview() { duplicateSaleReviewInFlight = false }
+
+    @discardableResult
+    func sellDuplicates(_ preview: DuplicateSalePreview) throws -> (count: Int, proceeds: Double) {
+        guard !revealInFlight, !collectorReceiptInFlight else { throw DuplicateSaleError.finishAction }
+        guard preview.count > 0 else { throw DuplicateSaleError.unavailable }
+        guard Set(duplicateSalePreview(inSet: preview.set).copies) == Set(preview.copies) else {
+            throw DuplicateSaleError.collectionChanged
+        }
+        var updated = core
+        var proceeds = 0.0
+        for copy in preview.copies {
+            guard let value = updated.sell(instanceId: copy.id) else {
+                throw DuplicateSaleError.collectionChanged
+            }
+            proceeds += value
+        }
+        guard store.save(updated) else { throw DuplicateSaleError.couldNotSave }
+        core = updated
+        return (preview.count, proceeds)
+    }
+
     @discardableResult
     func grade(_ instanceId: UUID) -> GradeResult? {
         let r = core.grade(instanceId: instanceId, using: &rng)
@@ -289,6 +300,7 @@ final class GameState {
     func newGame() {
         core = core.startingNewRun()
         collectorReceiptInFlight = false
+        duplicateSaleReviewInFlight = false
         save()
     }
 

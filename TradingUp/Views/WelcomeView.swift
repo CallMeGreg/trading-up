@@ -68,9 +68,9 @@ struct WelcomeView: View {
                 infoRow(d, "📦", "Buy & open packs",
                         "Six cards a pack — 3 common, 2 uncommon, and a rare or ultra.")
                 infoRow(d, "🤝", "Plan with collectors",
-                        "Track two goals for cash or a missing card. Give normal spares — your last and best copies stay safe.")
+                        "Exchange normal spares for cash or a missing card. Your last and best copies stay safe.")
                 infoRow(d, "💰", "Sell or grade extras",
-                        "The shop pays \(Int((Economy.sellbackRate * 100).rounded()))% of market value. Grading costs cash and can raise or lower value. Tracked spares stay protected.")
+                        "The shop pays \(Int((Economy.sellbackRate * 100).rounded()))% of market value. Grading costs cash and can raise or lower value.")
                 infoRow(d, "🎁", "Cash in bonuses",
                         "Complete evolution lines and full sets for payouts. New sets unlock as your collection grows.")
             }

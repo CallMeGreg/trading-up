@@ -32,15 +32,18 @@ struct StatsView: View {
                         ForEach(Scope.allCases) { Text($0.rawValue).tag($0) }
                     }
                     .pickerStyle(.segmented)
+                    .accessibilityIdentifier("statsScope")
 
                     collectionSection
                     haulSection
                     economySection
+                    collectorsSection
                     if scope == .allTime { runsSection }
                 }
                 .padding(16)
                 .readableWidth()
             }
+            .accessibilityIdentifier("classicStats")
             .background(Palette.screen.ignoresSafeArea())
             .toolbar(.hidden, for: .navigationBar)
         }
@@ -181,6 +184,15 @@ struct StatsView: View {
         ])
     }
 
+    private var collectorsSection: some View {
+        let run = scope == .run
+        return section("Collectors", [
+            LedgerItem("Requests Completed", "\(run ? game.collectorProgress.requestsCompleted : lifetime.collectorRequestsCompleted)"),
+            LedgerItem("Cards Traded For", "\(run ? game.collectorProgress.tradesCompleted : lifetime.collectorTradesCompleted)"),
+            LedgerItem("Request Earnings", (run ? game.collectorProgress.cashEarned : lifetime.collectorCashEarned).moneyShort),
+        ])
+    }
+
     // MARK: Building blocks
 
     private struct LedgerItem {
@@ -222,6 +234,7 @@ struct StatsView: View {
                 Text(item.value)
                     .font(.system(size: 13, weight: .bold, design: .monospaced))
                     .foregroundStyle(item.tint)
+                    .accessibilityIdentifier("stat-\(item.label)")
             }
             .padding(.vertical, 9)
             if idx < items.count - 1 {

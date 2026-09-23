@@ -33,7 +33,8 @@ Or just press `⌘U` in Xcode.
 | `PurchaseStoreTests.swift` | Production starts purchase-gated; the test app unlocks immediately, stays unlocked without StoreKit, never caches its automatic grant, and preserves progression |
 | `DataIntegrityTests.swift` | The generated catalogue: 250 cards, unique names/ids, rarity splits |
 | `EconomyRulesTests.swift` | The economy knobs are exactly as designed (prices, fees, sellback rate) |
-| `CollectorTests.swift` | Finite collector requests/trades, protected reservations, exact confirmations, bonus payouts, additive saves, transaction rollback, entitlement-aware recovery, and receipt sequencing |
+| `CollectorTests.swift` | Finite collector requests/trades, unreserved previews, exact confirmations, bonus payouts, run/lifetime trade stats, legacy saves, rollback, access-aware recovery, and receipt sequencing |
+| `CollectionSaleTests.swift` | Set-wide duplicate previews and confirmed sales, cheapest-copy retention and maximum proceeds, premium extras and ties, stale confirmations, persistence rollback, and reveal/receipt gates |
 | `GameplaySimulationTests.swift` | Buy/open/sell/grade flows against a seeded, reproducible RNG |
 | `SaveFormatTests.swift` | Old saves decode, schema changes stay additive, retired cards are stripped |
 | `SaveStoreTests.swift` | Unreadable saves are quarantined on disk, never deleted |
@@ -250,7 +251,7 @@ seed is `0xC011EC70`; initial tuning used the separate `0xA11CE` seed range.
 The complete harness runs this same benchmark in CI.
 
 `tools/verify/classic_sim.swift` executes the shipping model, including actual
-normal-copy requirements, two-goal reservations, finite rewards, same-set trade
+normal-copy requirements, finite rewards, same-set trade
 limits, and grade fees. All policies work the cheapest unlocked incomplete set,
 falling back to an affordable pack when liquidity is short; they do not read
 future RNG state. Failed runs must really be out of legal recovery actions,
@@ -260,9 +261,13 @@ not just unable to afford their preferred set.
 | --- | --- |
 | Careless | Sell all extras without grading or using collectors. |
 | Grading only | Grade economically worthwhile extras, then sell; ignore collectors. |
-| Requests only | Complete available cash requests, track close requirements, sell unreserved extras; no grading or trades. |
-| Trades only | Reserve for scarce missing-card targets and trade when ready; no grading or cash requests. |
-| Focused | Complete requests, track a close request and a scarce missing-card trade, grade valuable unreserved extras, and release reservations to recover liquidity when necessary. |
+| Requests only | Complete available cash requests, keep spares for close requirements, sell other extras; no grading or trades. |
+| Trades only | Keep spares for scarce missing-card targets and trade when ready; no grading or cash requests. |
+| Focused | Complete requests, keep spares for a close request and a scarce missing-card trade, grade other valuable extras, and liquidate kept spares to recover liquidity when necessary. |
+
+Keeping spares is a simulator policy decision, equivalent to a player choosing
+**Keep** or selectively selling cards. It does not create game-enforced
+reservations or prevent any sale or grade.
 
 The main policies each use 1,000 trials; ablations use 200. The guardrails are
 sampling bands around the requested 75% / 10% targets, not claims about human
@@ -291,16 +296,22 @@ mechanic. The full harness also passed its unchanged Gauntlet guardrails.
 ### Collector correctness and presentation
 
 `CollectorTests` and `CollectorStateTests` cover last/best-copy protection,
-non-foil/ungraded eligibility, distinct identities, overlapping reservations,
-bulk selling and grading protection, finite request/trade limits, stale and
-double submissions, old saves, reset behavior, recovery, access gates, failed
-save rollback, permanent Binder awards, and final-card receipt sequencing.
+non-foil/ungraded eligibility, distinct identities, overlapping previews without
+reservations, finite request/trade limits, stale and double submissions, ignored
+legacy tracking metadata, current-run/lifetime statistics, reset behavior,
+recovery, access gates, failed-save rollback, permanent Binder awards, and
+final-card receipt sequencing. `CollectionSaleTests` covers set-scoped sale
+previews, cheapest-copy retention and maximum proceeds, premium duplicates and
+equal-value ties, permanent Binder preservation, stale confirmations,
+autosave rollback, receipt/reveal blocking, and loss deferral until the sale
+confirmation finishes dismissing.
 
 ```bash
 xcodebuild test -project TradingUp.xcodeproj -scheme TradingUpTest \
   -destination 'platform=iOS Simulator,name=iPhone 16' \
   -only-testing:TradingUpTests/CollectorTests \
   -only-testing:TradingUpTests/CollectorStateTests \
+  -only-testing:TradingUpTests/CollectionSaleTests \
   -only-testing:TradingUpTests/EconomyRulesTests \
   -only-testing:TradingUpTests/SaveFormatTests \
   -only-testing:TradingUpTests/FullUnlockGateTests CODE_SIGNING_ALLOWED=NO
@@ -309,10 +320,14 @@ xcodebuild test -project TradingUp.xcodeproj -scheme TradingUpTest \
 DEBUG fixtures `TU_TEST_STATE=collectors` and
 `TU_TEST_STATE=collector-final-card` provide ready requests/trades and a 249-card
 collection respectively. Both hold out `S1-050`, include ordinary spare copies,
-and start at $250 (overridable with `TU_TEST_CASH`). They do not exist in Release.
+and start at $250 (overridable with `TU_TEST_CASH`).
+`TU_TEST_STATE=collection-polish` adds foil/graded extras and a second-set
+duplicate for set-wide selling and card-detail preference checks. These fixtures
+do not exist in Release.
 `CollectorExperienceTests` exercises the actual board, confirmations, receipts,
-protected bulk sales, tracking capacity, frozen reveal counts, later-set routing,
-and last-card win using these fixtures. It also checks large Dynamic Type, the
+five-pack selection, tab-only navigation, run/lifetime trade stats, remembered
+Grade/Sell selection, confirmed set-wide sales independent of filters, and
+last-card win using these fixtures. It also checks large Dynamic Type, the
 largest accessibility text size, and landscape, saving screenshots as test
 attachments. Run on a small iPhone and an iPad as well as the standard phone:
 
@@ -511,6 +526,9 @@ It checks action-only next-round labels, preserved earned-interest history,
 swap-series progress and buff/debuff-aware current prices, Catalyst-first placement,
 pending-linemate pip updates after keeping or selling, and opening/dismissing the
 image-only system share sheet after a real win.
+`GauntletDecisionTests` also checks that the shop's ready glow uses the upcoming
+target rather than the cleared one, including equality, phase gating, shop
+purchases, resume, banking, and every tier's Championship.
 The share activity's Copy action must produce an image with no companion string;
 `EndingFlowTests` checks that same contract for a Classic win.
 Each relevant screen is attached as a real Simulator screenshot. The review pass

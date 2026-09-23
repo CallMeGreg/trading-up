@@ -222,6 +222,14 @@ duplicates, the endgame of each set becomes a squeeze: gamble to complete it bef
 run dry. Collection value / net worth stay at **full** market value (aspirational); the
 spread only bites at the moment of sale.
 
+The Collection tab's **Sell all dupes** action covers the selected set, regardless
+of active filters. An in-theme confirmation shows the count and payout before
+anything changes. It keeps the cheapest copy of every card to maximize the
+payout; all other copies, including foil and graded extras, are sold. Other sets and the
+permanent Binder stay untouched. Canceling does nothing; a changed collection or
+failed save cancels the transaction rather than selling a different bundle.
+Card details remember the last **Grade / Sell Extras** selection across cards.
+
 **Why a wider spread now.** The former packs-only economy paid 75% and chiefly
 rewarded grading before selling. Collector requests and targeted trades (§9.1)
 introduce two stronger alternatives: supply a finite commission for cash, or
@@ -274,9 +282,8 @@ pack price in S1 but only ~0.03× in S5) — so it's attractive to grade your va
 dupes before selling them. But the **downside scales with the card**: a low PSA grade
 multiplies value *down* (grade 2 = 0.10×), so grading a pricey card that tanks is a much
 bigger absolute loss. Rule of thumb: grade before selling once a card's value clears
-`fee / (0.5 × sellbackRate)`. Grading valuable, unreserved duplicates before selling remains a useful edge;
-normal copies saved for a request or trade cannot be graded until that goal is
-untracked.
+`fee / (0.5 × sellbackRate)`. Grading valuable duplicates before selling remains a
+useful edge, but a graded copy no longer qualifies for a collector exchange.
 
 Foil × grade stack, e.g. a foil rare that grades PSA 10 = base **×3 ×5 = ×15**.
 
@@ -322,8 +329,11 @@ as well. Full-set completion bonuses always appear in the summary.
 ### 9.1 Collector requests and NPC trading
 
 **Design goal:** make ordinary pulls useful to a chosen plan while keeping
-liquidity scarce. Classic's **Collectors** tab and compact Shop shortcut expose
-three local NPCs. No accounts, network trading, clocks, expiration, refresh
+liquidity scarce. Classic's **Collectors** tab exposes three local NPCs. The
+bottom tabs are the only navigation between Shop and Collectors. Five pack
+buttons select sets at the top of the compact offer board; locked sets are gray,
+and ready-offer badges make other sets discoverable without a menu. No
+accounts, network trading, clocks, expiration, refresh
 currency, or paid random rewards are involved.
 
 | Collector | Offer in each unlocked set | Reward | Run-long limit |
@@ -334,7 +344,7 @@ currency, or paid random rewards are involved.
 
 Mira and Rowan show their next request, its exact requirements, live progress,
 and fixed payout. Their combined maximum payout is **4.5 pack prices per set**.
-Completing a request advances that collector's sequence; leaving or untracking
+Completing a request advances that collector's sequence; leaving the board
 never changes the offer. Requests are separate from automatic evolution/set
 bonuses and consume real spare copies.
 
@@ -355,13 +365,12 @@ target choice matter. Received cards count toward progression, evolution/set
 bonuses, and the 250-card win, but not pack-pull statistics. Owning the target
 already or exhausting the set's trades makes that offer unavailable.
 
-**Track up to two goals globally**, including named-card trades. Tracking
-reserves the needed eligible extras as they arrive; goals receive overlapping
-copies in tracking order, never double-counting an instance. Extra copies beyond
-the goal's needs remain free. Bulk selling, individual selling, and grading
-protect reserved copies. The pack summary and card details identify the collector
-holding a copy; untracking releases it without discarding the offer. Pulling a
-tracked trade target naturally releases that goal without spending a trade.
+Offers do **not** reserve cards. Players can keep useful spares for a future
+exchange or sell/grade them normally. Multiple previews can show the same spare,
+but confirmation always revalidates the live bundle, so a copy cannot be spent
+twice. Pulling a chosen trade target removes that offer without spending a trade.
+The ready count includes each cash request and at most one Tess trade per set,
+even when several missing cards are affordable.
 
 **Safety and clarity:** only non-foil, ungraded duplicates qualify, with the
 highest-value copy of every identity always left behind. The all-time Binder
@@ -373,15 +382,16 @@ and loss screens wait until the receipt is dismissed, just as they wait for a
 pack summary. Deals cannot interrupt an open pack.
 
 Set access follows the existing collection thresholds and full-game unlock.
-Set 1's collectors are fully free. A previously tracked paid-set goal can still
-be untracked after an entitlement change, but no paid-set deal can be completed
-without access. A valid collector action also keeps a cash-starved run alive;
+Set 1's collectors are fully free, and no paid-set deal can be completed without
+access. A valid collector action also keeps a cash-starved run alive;
 the loss check must not cover the board while a legal deal remains.
 
 Progress is additive in `GameCore.collectors`: completed request IDs, per-set
-trade counts, and ordered tracked goals. Old saves begin with fresh offers
-without losing cash, cards, or prior bonuses. New Game resets the offers along
-with the run, never the permanent Binder.
+trade counts, and cash earned from requests. Saves predating collectors begin
+with fresh offers without losing cash, cards, or prior bonuses. Older tracking
+metadata is ignored and no longer holds any copies. Existing request completions
+recover their cash-earnings total when that new field is absent. New Game resets
+the offers along with the run, never the permanent Binder or lifetime trade stats.
 
 ---
 
@@ -393,8 +403,7 @@ with the run, never the permanent Binder.
   duplicates — sold at the buylist price, or graded first when even the luckiest
   roll would more than cover its own fee. Once that optimistic total still falls
   short of $10 **and no accessible collector deal can be completed**, the run
-  ends rather than making you sell out card-by-card first. Reservations do not
-  cause a false loss: untracking is free, so recovery checks include those copies.
+  ends rather than making you sell out card-by-card first.
   A loss screen
   shows: cards collected per set, and total unique cards.
   - **This is now genuinely reachable.** The **sell‑back spread** (§6), the **steep
@@ -404,8 +413,8 @@ with the run, never the permanent Binder.
     of full runs.
 - **Win:** collect all **250** unique creatures. A winner's screen shows full stats:
   per‑set completion, foils, best grades, peak cash, packs opened, etc.
-  - Focused play — reserving useful spares, completing requests, choosing scarce
-    trade targets, and grading valuable unreserved duplicates — is intended to
+  - Focused play — keeping useful spares, completing requests, choosing scarce
+    trade targets, and grading other valuable duplicates — is intended to
     **win about 75%** of full runs.
   - **Winning is not an exit.** The celebration is shown once; dismissing it keeps the
     completed collection intact and browsable. Starting over is always a separate,
@@ -419,6 +428,12 @@ remaining. These policies cannot see future pulls or grade results. Tuning lives
 in `Economy.swift` and `CollectorEconomy` in `Collector.swift`; policy definitions
 live in `tools/verify/classic_sim.swift`. See [TESTING.md](TESTING.md#classic-collector-balance)
 for the measured snapshot and reproduction command.
+
+The Stats tab's **Collectors** section reports requests completed, cards traded
+for, and cash earned from requests in both **This Run** and **All Time**. All Time
+includes the live run and folds it into stored totals exactly once on reset.
+Legacy saves retain current-run collector completions; collector totals from
+runs already reset before these statistics existed cannot be reconstructed.
 
 ---
 
@@ -627,7 +642,9 @@ order, pip size, connectors, summary layout, and keep/sell/swap behavior are unc
 round** breakdown. Purchases must never rewrite historical payout amounts. The shop
 previews the next target, remaining Aura gap, and rip budget once, above the offers.
 The next-round button is an action-only label, including the Championship; it
-doesn't repeat those stats. There is no next-interest forecast, but interest already
+doesn't repeat those stats. It glows green whenever the upcoming round's target
+is already met, including on shop entry or resume. The glow is steady, so Reduce
+Motion needs no animation exception. There is no next-interest forecast, but interest already
 earned remains in the payout breakdown and still accrues normally. Affordable pack unlocks and
 the cheapest next set sit beside the slot-upgrade choices; pricier sets remain under
 **More pack sets**, and every set can still unlock independently. Unlocked rows show

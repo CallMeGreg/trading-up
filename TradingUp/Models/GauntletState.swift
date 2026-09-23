@@ -482,6 +482,13 @@ final class GauntletState {
         autosaveRun()
     }
 
+    /// The clear already advanced `run.round`, so this checks the upcoming target,
+    /// not the completed round shown in the shop's payout summary.
+    var nextRoundTargetMet: Bool {
+        guard phase == .shop, let run else { return false }
+        return run.auraShortfall == 0
+    }
+
     /// Leave the between-round shop and begin the next round (already primed by the
     /// clear). If the standing Showcase already clears the next bar, it resolves at
     /// once — banking the round's rips (req 5/6).

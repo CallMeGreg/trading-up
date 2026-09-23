@@ -103,11 +103,15 @@ collections; **Rowan** wants specific evolution-family cards. **Tess** offers a
 card you choose from the ones you're missing, in exchange for a bundle of spare
 cards from the same set. You get **two trades per set**, so choose what matters.
 
-Track up to **two goals** to save useful duplicates automatically. Saved copies
-stay out of bulk sales and grading until you untrack the goal. Only ordinary,
-ungraded extras go into deals: your best copies, foils, graded cards, and permanent
-Binder stay safe. Review exactly what you give and get before confirming.
-Offers never expire, and all three collectors work offline.
+Choose a set's pack at the top of **Collectors** to see its offers. Keep useful
+extras for an exchange, or turn them into cash. Only ordinary, ungraded extras go
+into deals: your best copies, foils, graded cards, and permanent Binder stay safe.
+Review exactly what you give and get before confirming. Offers never expire,
+and all three collectors work offline.
+
+Ready to cash out a set's extras? **Sell all dupes** in **Collection** shows the
+payout and asks you to confirm. Your cheapest copy of each card stays; the other
+copies are sold to maximize the payout.
 
 ### 🏅 Grade your best
 

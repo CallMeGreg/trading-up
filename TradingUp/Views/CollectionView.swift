@@ -5,6 +5,7 @@ struct CollectionView: View {
     @State private var set = 1
     @State private var selected: Card?
     @State private var activeFilters: Set<CardFilter> = []
+    @State private var duplicateSale: DuplicateSalePreview?
 
     private var cards: [Card] { CardDatabase.cards(inSet: set) }
     private var owned: Int { game.ownedCount(inSet: set) }
@@ -29,6 +30,7 @@ struct CollectionView: View {
                     ForEach(1...CardDatabase.setCount, id: \.self) { Text("\($0)").tag($0) }
                 }
                 .pickerStyle(.segmented)
+                .accessibilityIdentifier("collectionSetPicker")
                 .padding(.horizontal, 16)
 
                 VStack(spacing: 6) {
@@ -46,6 +48,7 @@ struct CollectionView: View {
                 .padding(.horizontal, 16)
 
                 filterBar
+                sellDuplicatesButton
 
                 ScrollView {
                     if filteredCards.isEmpty {
@@ -59,6 +62,7 @@ struct CollectionView: View {
                         .padding(16)
                     }
                 }
+                .accessibilityIdentifier("collectionGrid")
             }
             .padding(.top, 8)
             .readableWidth(900)
@@ -66,6 +70,10 @@ struct CollectionView: View {
             .toolbar(.hidden, for: .navigationBar)
             .sheet(item: $selected) { card in
                 CardDetailView(card: card)
+            }
+            .fullScreenCover(item: $duplicateSale, onDismiss: game.endDuplicateSaleReview) { preview in
+                DuplicateSaleConfirmation(preview: preview)
+                    .presentationBackground(.clear)
             }
         }
     }
@@ -79,6 +87,36 @@ struct CollectionView: View {
             }
         }
         .padding(.horizontal, 16)
+    }
+
+    private var sellDuplicatesButton: some View {
+        let preview = game.duplicateSalePreview(inSet: set)
+        return Button {
+            Haptics.play(.light)
+            Sound.play(.panelOpen)
+            game.beginDuplicateSaleReview()
+            duplicateSale = preview
+        } label: {
+            HStack(spacing: 8) {
+                Label("Sell all dupes", systemImage: "dollarsign.circle.fill")
+                Spacer(minLength: 0)
+                Text("\(preview.count) · \(preview.proceeds.moneyShort)")
+                    .monospacedDigit()
+            }
+            .font(.system(size: 13, weight: .bold))
+            .foregroundStyle(preview.count > 0 ? Palette.money : Palette.subtle)
+            .padding(.horizontal, 12)
+            .frame(minHeight: 44)
+            .background(RoundedRectangle(cornerRadius: 11).fill(Palette.panel))
+            .overlay(RoundedRectangle(cornerRadius: 11).strokeBorder(Palette.stroke))
+        }
+        .buttonStyle(.plain)
+        .disabled(preview.count == 0)
+        .padding(.horizontal, 16)
+        .accessibilityLabel("Sell all dupes in \(CardDatabase.setName(set))")
+        .accessibilityValue("\(preview.count) duplicate\(preview.count == 1 ? "" : "s"), \(preview.proceeds.money)")
+        .accessibilityHint("Reviews all duplicates in this set, regardless of filters. Your cheapest copy of each card stays; other copies are sold.")
+        .accessibilityIdentifier("collectionSellDuplicates")
     }
 
     private var emptyState: some View {
@@ -104,6 +142,7 @@ struct CollectionView: View {
     private func slot(for card: Card) -> some View {
         if game.owns(card.id) {
             let best = bestInstance(card)
+            let n = game.count(of: card.id)
             Button {
                 Haptics.play(.light)
                 selected = card
@@ -112,7 +151,6 @@ struct CollectionView: View {
                     CardView(card: card, instance: best, width: 104,
                              series: CardSeries(for: card, pull: true) { game.owns($0.id) },
                              pipsGlow: false)
-                    let n = game.count(of: card.id)
                     if n > 1 {
                         Text("×\(n)")
                             .font(.system(size: 11, weight: .black))
@@ -120,13 +158,86 @@ struct CollectionView: View {
                             .padding(.horizontal, 6).padding(.vertical, 2)
                             .background(Capsule().fill(Palette.bg0.opacity(0.85)))
                             .overlay(Capsule().strokeBorder(Palette.stroke, lineWidth: 1))
-                            .offset(x: -6, y: 6)
+                            .offset(x: -6, y: best?.grade == nil ? 24 : 44)
                     }
                 }
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("\(card.name), \(n) \(n == 1 ? "copy" : "copies")")
+            .accessibilityIdentifier("collectionCard-\(card.id)")
         } else {
             LockedCardView(card: card, width: 104)
+        }
+    }
+
+    private struct DuplicateSaleConfirmation: View {
+        @Environment(GameState.self) private var game: GameState
+        @Environment(\.dismiss) private var dismiss
+        let preview: DuplicateSalePreview
+        @State private var selling = false
+        @State private var errorMessage: String?
+
+        var body: some View {
+            ZStack {
+                Color.black.opacity(0.55)
+                    .ignoresSafeArea()
+                    .onTapGesture(perform: cancel)
+                    .accessibilityHidden(true)
+                ViewThatFits(in: .vertical) {
+                    confirmation
+                    ScrollView { confirmation }
+                }
+                .frame(maxWidth: 380)
+                .padding(28)
+            }
+            .interactiveDismissDisabled()
+            .alert("Couldn't sell duplicates", isPresented: Binding(
+                get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } }
+            )) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(errorMessage ?? "")
+            }
+        }
+
+        private var confirmation: some View {
+            ActionPopupCard(
+                eyebrow: "HEADS UP",
+                title: "Sell all \(preview.count) dupes?",
+                message: "Sell every extra copy in \(CardDatabase.setName(preview.set)) for \(preview.proceeds.money), regardless of filters. Your cheapest copy of each card stays; other copies are sold. Foil and graded extras are included. Other sets are untouched. This can't be undone.",
+                eyebrowColor: Color(hex: "ff6b6b"),
+                railColors: PopupActionButton.danger
+            ) {
+                HStack(spacing: 10) {
+                    PopupActionButton(label: "Cancel", icon: nil, style: .ghost, action: cancel)
+                        .accessibilityIdentifier("collectionCancelSellDuplicates")
+                    PopupActionButton(label: "Sell dupes", icon: "dollarsign.circle.fill",
+                                      style: .filled(PopupActionButton.danger), action: sell)
+                        .disabled(selling)
+                        .accessibilityIdentifier("collectionConfirmSellDuplicates")
+                }
+            }
+        }
+
+        private func cancel() {
+            Sound.play(.uiBack)
+            dismiss()
+        }
+
+        private func sell() {
+            guard !selling else { return }
+            selling = true
+            do {
+                try game.sellDuplicates(preview)
+                Haptics.play(.success)
+                Sound.play(.bulkSell)
+                dismiss()
+            } catch {
+                selling = false
+                Haptics.play(.error)
+                Sound.play(.blocked)
+                errorMessage = error.localizedDescription
+            }
         }
     }
 

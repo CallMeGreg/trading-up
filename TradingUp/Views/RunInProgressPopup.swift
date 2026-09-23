@@ -27,48 +27,11 @@ struct RunInProgressCard: View {
     var onConfirm: (MenuRoute) -> Void
     var onCancel: () -> Void
 
-    private static let danger = [Color(hex: "ff5a5f"), Color(hex: "df342d")]
-
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(eyebrow)
-                .font(.system(size: 11.5, weight: .heavy))
-                .tracking(1.1)
-                .foregroundStyle(eyebrowColor)
-
-            Text(title)
-                .font(.system(size: 19, weight: .heavy, design: .rounded))
-                .foregroundStyle(.white)
-                .lineLimit(2).minimumScaleFactor(0.85)
-                .fixedSize(horizontal: false, vertical: true)
-
-            Text(message)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(Palette.subtle)
-                .fixedSize(horizontal: false, vertical: true)
-
+        ActionPopupCard(eyebrow: eyebrow, title: title, message: message,
+                        eyebrowColor: eyebrowColor, railColors: railColors) {
             buttons
-                .padding(.top, 14)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.vertical, 17)
-        .padding(.leading, 20)
-        .padding(.trailing, 16)
-        .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Palette.panel)
-                .overlay(alignment: .leading) {
-                    Capsule()
-                        .fill(LinearGradient(colors: railColors, startPoint: .top, endPoint: .bottom))
-                        .frame(width: 5)
-                        .padding(.vertical, 14)
-                }
-                .overlay(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .strokeBorder(Palette.stroke, lineWidth: 1)
-                )
-        )
-        .shadow(color: .black.opacity(0.5), radius: 22, y: 12)
     }
 
     // MARK: Buttons
@@ -80,61 +43,19 @@ struct RunInProgressCard: View {
         case .resume:
             // Continue sits on the right (the affirmative action).
             HStack(spacing: 10) {
-                popupButton(label: "New Run", icon: "arrow.counterclockwise",
-                            style: .ghost) { onNewRun(mode) }
-                popupButton(label: "Continue", icon: "play.fill",
-                            style: .filled(modeGradient(mode))) { onContinue(mode) }
+                PopupActionButton(label: "New Run", icon: "arrow.counterclockwise",
+                                  style: .ghost) { onNewRun(mode) }
+                PopupActionButton(label: "Continue", icon: "play.fill",
+                                  style: .filled(modeGradient(mode))) { onContinue(mode) }
             }
         case .confirm:
             // The destructive action sits on the right, in the danger gradient.
             HStack(spacing: 10) {
-                popupButton(label: "Cancel", icon: nil,
-                            style: .ghost) { onCancel() }
-                popupButton(label: "Start New Run", icon: "arrow.counterclockwise",
-                            style: .filled(Self.danger)) { onConfirm(mode) }
+                PopupActionButton(label: "Cancel", icon: nil,
+                                  style: .ghost) { onCancel() }
+                PopupActionButton(label: "Start New Run", icon: "arrow.counterclockwise",
+                                  style: .filled(PopupActionButton.danger)) { onConfirm(mode) }
             }
-        }
-    }
-
-    private enum PillStyle {
-        case ghost
-        case filled([Color])
-    }
-
-    private func popupButton(label: String, icon: String?, style: PillStyle,
-                             action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 7) {
-                if let icon {
-                    Image(systemName: icon).font(.system(size: 13, weight: .bold))
-                }
-                Text(label)
-                    .font(.system(size: 15, weight: .bold, design: .rounded))
-                    .lineLimit(1).minimumScaleFactor(0.8)
-            }
-            .foregroundStyle(.white)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 11)
-            .background(pillBackground(style))
-        }
-        .buttonStyle(PopupPressStyle())
-        .accessibilityIdentifier(label)
-        .accessibilityLabel(label)
-    }
-
-    @ViewBuilder
-    private func pillBackground(_ style: PillStyle) -> some View {
-        switch style {
-        case .ghost:
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Palette.panelHi)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .strokeBorder(Palette.stroke, lineWidth: 1)
-                )
-        case .filled(let colors):
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(LinearGradient(colors: colors, startPoint: .leading, endPoint: .trailing))
         }
     }
 
@@ -177,7 +98,7 @@ struct RunInProgressCard: View {
     private var railColors: [Color] {
         switch step {
         case .resume(let m): return [accent(m), accent(m).opacity(0.6)]
-        case .confirm:       return Self.danger
+        case .confirm:       return PopupActionButton.danger
         }
     }
 
@@ -193,6 +114,100 @@ struct RunInProgressCard: View {
         mode == .classic
             ? [Color(hex: "2fb673"), Color(hex: "56d98a")]
             : [Color(hex: "6d5cf7"), Color(hex: "b06cf7")]
+    }
+}
+
+struct ActionPopupCard<Actions: View>: View {
+    let eyebrow: String
+    let title: String
+    let message: String
+    let eyebrowColor: Color
+    let railColors: [Color]
+    @ViewBuilder var actions: Actions
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(eyebrow)
+                .font(.system(size: 11.5, weight: .heavy))
+                .tracking(1.1)
+                .foregroundStyle(eyebrowColor)
+            Text(title)
+                .font(.system(size: 19, weight: .heavy, design: .rounded))
+                .foregroundStyle(.white)
+                .lineLimit(2).minimumScaleFactor(0.85)
+                .fixedSize(horizontal: false, vertical: true)
+            Text(message)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(Palette.subtle)
+                .fixedSize(horizontal: false, vertical: true)
+            actions.padding(.top, 14)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, 17)
+        .padding(.leading, 20)
+        .padding(.trailing, 16)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Palette.panel)
+                .overlay(alignment: .leading) {
+                    Capsule()
+                        .fill(LinearGradient(colors: railColors, startPoint: .top, endPoint: .bottom))
+                        .frame(width: 5)
+                        .padding(.vertical, 14)
+                }
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .strokeBorder(Palette.stroke, lineWidth: 1)
+                )
+        )
+        .shadow(color: .black.opacity(0.5), radius: 22, y: 12)
+    }
+}
+
+struct PopupActionButton: View {
+    enum Style {
+        case ghost
+        case filled([Color])
+    }
+
+    static let danger = [Color(hex: "ff5a5f"), Color(hex: "df342d")]
+    let label: String
+    let icon: String?
+    let style: Style
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 7) {
+                if let icon {
+                    Image(systemName: icon).font(.system(size: 13, weight: .bold))
+                }
+                Text(label)
+                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .lineLimit(1).minimumScaleFactor(0.8)
+            }
+            .foregroundStyle(.white)
+            .frame(maxWidth: .infinity, minHeight: 44)
+            .background(pillBackground)
+        }
+        .buttonStyle(PopupPressStyle())
+        .accessibilityIdentifier(label)
+        .accessibilityLabel(label)
+    }
+
+    @ViewBuilder private var pillBackground: some View {
+        switch style {
+        case .ghost:
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Palette.panelHi)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .strokeBorder(Palette.stroke, lineWidth: 1)
+                )
+        case .filled(let colors):
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(LinearGradient(colors: colors, startPoint: .leading, endPoint: .trailing))
+        }
     }
 }
 

@@ -156,6 +156,30 @@ final class SaveFormatTests: XCTestCase {
         XCTAssertEqual(empty?.runsWon, 0)
         XCTAssertNil(empty?.bestRunPacks)
         XCTAssertEqual(empty?.peakCash, Economy.startingCash)
+        XCTAssertEqual(empty?.collectorRequestsCompleted, 0)
+        XCTAssertEqual(empty?.collectorTradesCompleted, 0)
+        XCTAssertEqual(empty?.collectorCashEarned, 0)
+    }
+
+    func testCollectorLifetimeTotalsAccumulateAndRoundTrip() throws {
+        var first = GameCore()
+        first.collectors.completedRequestIDs = ["1-mira-0", "1-rowan-0"]
+        first.collectors.tradesCompletedBySet = [1: 2, 2: 1]
+        first.collectors.cashEarned = 15
+        var second = first.startingNewRun()
+        second.collectors.completedRequestIDs = ["1-mira-0"]
+        second.collectors.tradesCompletedBySet = [1: 1]
+        second.collectors.cashEarned = 5
+        let display = second.lifetimeIncludingCurrentRun
+        XCTAssertEqual(display.collectorRequestsCompleted, 3)
+        XCTAssertEqual(display.collectorTradesCompleted, 4)
+        XCTAssertEqual(display.collectorCashEarned, 20)
+        XCTAssertEqual(second.lifetime.collectorRequestsCompleted, 2)
+        let restored = try JSONDecoder().decode(GameCore.self, from: JSONEncoder().encode(second))
+        XCTAssertEqual(restored.lifetimeIncludingCurrentRun.collectorRequestsCompleted, 3)
+        XCTAssertEqual(restored.lifetimeIncludingCurrentRun.collectorTradesCompleted, 4)
+        XCTAssertEqual(restored.lifetimeIncludingCurrentRun.collectorCashEarned, 20)
+        XCTAssertEqual(restored.startingNewRun().lifetime.collectorCashEarned, 20)
     }
 
     func testGameCoreDecodesMissingLifetimeToDefaults() {

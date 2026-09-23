@@ -103,6 +103,9 @@ struct LifetimeStats: Codable {
     var cardsSold = 0
     var moneySpent = 0.0
     var moneyEarned = 0.0
+    var collectorRequestsCompleted = 0
+    var collectorTradesCompleted = 0
+    var collectorCashEarned = 0.0
     var bestGrade = 0
     var peakCash = Economy.startingCash
     var peakCardValue = 0.0
@@ -128,6 +131,9 @@ struct LifetimeStats: Codable {
         cardsSold     = try c.decodeIfPresent(Int.self,    forKey: .cardsSold)     ?? 0
         moneySpent    = try c.decodeIfPresent(Double.self, forKey: .moneySpent)    ?? 0
         moneyEarned   = try c.decodeIfPresent(Double.self, forKey: .moneyEarned)   ?? 0
+        collectorRequestsCompleted = try c.decodeIfPresent(Int.self, forKey: .collectorRequestsCompleted) ?? 0
+        collectorTradesCompleted = try c.decodeIfPresent(Int.self, forKey: .collectorTradesCompleted) ?? 0
+        collectorCashEarned = try c.decodeIfPresent(Double.self, forKey: .collectorCashEarned) ?? 0
         bestGrade     = try c.decodeIfPresent(Int.self,    forKey: .bestGrade)     ?? 0
         peakCash      = try c.decodeIfPresent(Double.self, forKey: .peakCash)      ?? Economy.startingCash
         peakCardValue = try c.decodeIfPresent(Double.self, forKey: .peakCardValue) ?? 0
@@ -141,7 +147,7 @@ struct LifetimeStats: Codable {
     /// display — folding in the still-in-progress current run — and to
     /// permanently commit a finished run's stats when starting a new game.
     /// Sharing this one function for both means they can never drift apart.
-    func folding(_ run: Stats, won: Bool) -> LifetimeStats {
+    func folding(_ run: Stats, won: Bool, collectors: CollectorProgress = CollectorProgress()) -> LifetimeStats {
         var out = self
         out.runsStarted += 1
         if won { out.runsWon += 1 }
@@ -153,6 +159,9 @@ struct LifetimeStats: Codable {
         out.cardsSold += run.cardsSold
         out.moneySpent += run.moneySpent
         out.moneyEarned += run.moneyEarned
+        out.collectorRequestsCompleted += collectors.requestsCompleted
+        out.collectorTradesCompleted += collectors.tradesCompleted
+        out.collectorCashEarned += collectors.cashEarned
         out.bestGrade = max(out.bestGrade, run.bestGrade)
         out.peakCash = max(out.peakCash, run.peakCash)
         out.peakCardValue = max(out.peakCardValue, run.peakCardValue)
@@ -197,6 +206,31 @@ struct GradeResult {
     let fee: Double
     let oldValue: Double
     let newValue: Double
+}
+
+struct DuplicateSalePreview: Identifiable {
+    let set: Int
+    let copies: [CardInstance]
+    var id: Int { self.set }
+    var count: Int { copies.count }
+    var proceeds: Double { copies.reduce(0) { $0 + $1.sellValue } }
+}
+
+enum DuplicateSaleError: LocalizedError, Equatable {
+    case unavailable, collectionChanged, finishAction, couldNotSave
+
+    var errorDescription: String? {
+        switch self {
+        case .unavailable:
+            return "There are no duplicates to sell in this set."
+        case .collectionChanged:
+            return "Your copies changed. Nothing was sold. Review the duplicates again before confirming."
+        case .finishAction:
+            return "Finish your pack summary or collector receipt before selling duplicates."
+        case .couldNotSave:
+            return "Your progress couldn't be saved, so no cards or cash were changed. Please try again."
+        }
+    }
 }
 
 // MARK: - Game core (pure, deterministic, Foundation-only)
@@ -248,7 +282,7 @@ struct GameCore: Codable {
     /// `GameState`/persistence.
     func startingNewRun() -> GameCore {
         var fresh = GameCore()
-        fresh.lifetime = lifetime.folding(stats, won: hasWon)
+        fresh.lifetime = lifetime.folding(stats, won: hasWon, collectors: collectors)
         return fresh
     }
 
@@ -256,7 +290,7 @@ struct GameCore: Codable {
     /// (completed runs only) plus this still-in-progress run, previewed as if
     /// it ended right now. Never persisted — recomputed on read so it can
     /// never double-count against `startingNewRun()`.
-    var lifetimeIncludingCurrentRun: LifetimeStats { lifetime.folding(stats, won: hasWon) }
+    var lifetimeIncludingCurrentRun: LifetimeStats { lifetime.folding(stats, won: hasWon, collectors: collectors) }
 
     // MARK: Load hygiene
 
@@ -269,10 +303,7 @@ struct GameCore: Codable {
         var out = self
         let kept = instances.filter { CardDatabase.exists($0.cardId) }
         let dropped = instances.count - kept.count
-        guard dropped > 0 else {
-            out.refreshCollectorGoals()
-            return (out, 0)
-        }
+        guard dropped > 0 else { return (out, 0) }
         out.instances = kept
         // Re-open bonuses whose line/set the player no longer completes, so the
         // reward isn't permanently stranded if they re-collect the cards.
@@ -284,7 +315,6 @@ struct GameCore: Codable {
             let cards = CardDatabase.cards(inSet: set)
             return !cards.isEmpty && cards.allSatisfy { owned.contains($0.id) }
         }
-        out.refreshCollectorGoals()
         return (out, dropped)
     }
 
@@ -296,9 +326,9 @@ struct GameCore: Codable {
     func count(of cardId: String) -> Int { instances.reduce(0) { $0 + ($1.cardId == cardId ? 1 : 0) } }
     func owns(_ cardId: String) -> Bool { instances.contains { $0.cardId == cardId } }
 
-    /// Last copies and copies reserved for tracked collector goals stay protected.
+    /// The last copy of each card stays protected.
     func isSellable(_ inst: CardInstance) -> Bool {
-        count(of: inst.cardId) > 1 && !collectorReservedInstanceIDs.contains(inst.id)
+        count(of: inst.cardId) > 1
     }
     var sellableInstances: [CardInstance] { instances.filter { isSellable($0) } }
 
@@ -307,8 +337,7 @@ struct GameCore: Codable {
     /// sellable, since either one may go) this is the set that can be sold
     /// *together*, so it's what any "how much is left to raise" sum has to use.
     /// The cheapest copy of each card is the one left behind, because that's
-    /// the choice that maximises what the rest are worth. Recovery deliberately
-    /// includes reserved copies: the player can release them by untracking.
+    /// the choice that maximises what the rest are worth.
     var sellableExtras: [CardInstance] {
         Dictionary(grouping: instances, by: { $0.cardId }).values.flatMap { copies in
             copies.count > 1
@@ -566,18 +595,14 @@ struct GameCore: Codable {
     /// cards (every copy except the single most valuable one of each) and what
     /// they would sell for. Used to label the "Sell duplicates" action.
     func duplicateSummary(of cardIds: Set<String>) -> (count: Int, proceeds: Double) {
-        var count = 0
-        var proceeds = 0.0
-        let reserved = collectorReservedInstanceIDs
-        for cardId in cardIds {
-            let copies = instances(of: cardId).sorted { $0.currentValue > $1.currentValue }
-            guard copies.count > 1 else { continue }
-            for extra in copies.dropFirst() where !reserved.contains(extra.id) {
-                count += 1
-                proceeds += extra.sellValue
-            }
+        let copies = duplicateInstances(of: cardIds)
+        return (copies.count, copies.reduce(0) { $0 + $1.sellValue })
+    }
+
+    func duplicateInstances(of cardIds: Set<String>) -> [CardInstance] {
+        cardIds.sorted().flatMap { cardId in
+            instances(of: cardId).sorted { $0.currentValue > $1.currentValue }.dropFirst()
         }
-        return (count, proceeds)
     }
 
     /// Sells every duplicate copy across the given cards, always keeping the
@@ -587,14 +612,10 @@ struct GameCore: Codable {
     mutating func sellDuplicates(of cardIds: Set<String>) -> (count: Int, proceeds: Double) {
         var count = 0
         var proceeds = 0.0
-        for cardId in cardIds {
-            let copies = instances(of: cardId).sorted { $0.currentValue > $1.currentValue }
-            guard copies.count > 1 else { continue }
-            for extra in copies.dropFirst() {   // reuses sell(): keeps last-copy protection + stats
-                if let v = sell(instanceId: extra.id) {
-                    count += 1
-                    proceeds += v
-                }
+        for extra in duplicateInstances(of: cardIds) {
+            if let v = sell(instanceId: extra.id) {
+                count += 1
+                proceeds += v
             }
         }
         return (count, proceeds)
@@ -606,7 +627,6 @@ struct GameCore: Codable {
         guard let idx = instances.firstIndex(where: { $0.id == instanceId }) else { return nil }
         let inst = instances[idx]
         guard inst.card.rarity.canBeGraded, inst.grade == nil else { return nil }
-        guard !collectorReservedInstanceIDs.contains(inst.id) else { return nil }
         let fee = Economy.gradeFee(set: inst.card.set)
         guard cash >= fee else { return nil }
         let oldValue = inst.currentValue
@@ -650,7 +670,6 @@ struct GameCore: Codable {
 
         updatePeak()
         if uniqueCount >= CardDatabase.all.count { hasWon = true }
-        refreshCollectorGoals()
         return events
     }
 
