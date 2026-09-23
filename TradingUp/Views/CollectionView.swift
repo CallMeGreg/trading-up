@@ -115,7 +115,7 @@ struct CollectionView: View {
         .padding(.horizontal, 16)
         .accessibilityLabel("Sell all dupes in \(CardDatabase.setName(set))")
         .accessibilityValue("\(preview.count) duplicate\(preview.count == 1 ? "" : "s"), \(preview.proceeds.money)")
-        .accessibilityHint("Reviews all duplicates in this set, regardless of filters. Keeps your best copy of every card.")
+        .accessibilityHint("Reviews all duplicates in this set, regardless of filters. Your cheapest copy of each card stays; other copies are sold.")
         .accessibilityIdentifier("collectionSellDuplicates")
     }
 
@@ -204,7 +204,7 @@ struct CollectionView: View {
             ActionPopupCard(
                 eyebrow: "HEADS UP",
                 title: "Sell all \(preview.count) dupes?",
-                message: "Sell every extra copy in \(CardDatabase.setName(preview.set)) for \(preview.proceeds.money), regardless of filters. Your best copy of each card stays; other foil and graded copies can be sold. Other sets are untouched. This can't be undone.",
+                message: "Sell every extra copy in \(CardDatabase.setName(preview.set)) for \(preview.proceeds.money), regardless of filters. Your cheapest copy of each card stays; other copies are sold. Foil and graded extras are included. Other sets are untouched. This can't be undone.",
                 eyebrowColor: Color(hex: "ff6b6b"),
                 railColors: PopupActionButton.danger
             ) {

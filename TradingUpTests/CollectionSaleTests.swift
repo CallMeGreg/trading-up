@@ -28,24 +28,29 @@ final class CollectionSaleTests: XCTestCase {
         return GameState(core: core, store: store ?? SaveStore(directory: directory))
     }
 
-    func testPreviewDoesNotMutateAndSaleKeepsBestCopiesAndOtherSets() throws {
+    func testPreviewDoesNotMutateAndSaleKeepsCheapestCopiesAndOtherSets() throws {
         let state = game()
         let before = state.core.instances
         let cash = state.cash
         let best = try XCTUnwrap(before.first { $0.grade == 10 })
+        let cheapest = try XCTUnwrap(before.first { $0.grade == 2 })
+        let maximumProceeds = state.instances(of: "S1-001").reduce(0) { $0 + $1.sellValue } - cheapest.sellValue
         let otherSet = before.filter { $0.card.set == 2 }
         let preview = state.duplicateSalePreview(inSet: 1)
         XCTAssertEqual(state.core.instances, before, "opening or canceling a review never sells cards")
         XCTAssertEqual(state.cash, cash)
         XCTAssertEqual(preview.count, 3)
-        XCTAssertFalse(preview.copies.contains(best))
+        XCTAssertFalse(preview.copies.contains(cheapest))
+        XCTAssertTrue(preview.copies.contains(best), "the most valuable copy is sold, not retained")
+        XCTAssertEqual(preview.proceeds, maximumProceeds, accuracy: 0.0001)
         XCTAssertTrue(preview.copies.contains { $0.foil }, "bulk selling includes premium extras")
         XCTAssertTrue(preview.copies.contains { $0.grade != nil })
         let result = try state.sellDuplicates(preview)
         XCTAssertEqual(result.count, preview.count)
         XCTAssertEqual(result.proceeds, preview.proceeds, accuracy: 0.0001)
         XCTAssertEqual(state.cash, cash + preview.proceeds, accuracy: 0.0001)
-        XCTAssertEqual(state.instances(of: "S1-001"), [best])
+        XCTAssertEqual(state.instances(of: "S1-001"), [cheapest])
+        XCTAssertEqual(state.binder.best(for: "S1-001"), best, "the permanent Binder still records the best copy")
         XCTAssertEqual(state.count(of: "S1-002"), 1)
         XCTAssertEqual(state.core.instances.filter { $0.card.set == 2 }, otherSet)
         XCTAssertEqual(state.stats.cardsSold, 3)
@@ -55,6 +60,49 @@ final class CollectionSaleTests: XCTestCase {
         XCTAssertEqual(loaded.core.instances, state.core.instances)
         XCTAssertEqual(loaded.cash, state.cash)
         XCTAssertEqual(loaded.stats.cardsSold, 3)
+        XCTAssertEqual(loaded.binder.best(for: "S1-001"), best)
+    }
+
+    func testEveryCardKeepsItsCheapestCopyIncludingTiesAndLowGradeFoils() throws {
+        let copies = [
+            CardInstance(cardId: "S1-001"),
+            CardInstance(cardId: "S1-001", foil: true),
+            CardInstance(cardId: "S1-001", grade: 10),
+            CardInstance(cardId: "S1-002"),
+            CardInstance(cardId: "S1-002", foil: true, grade: 2),
+            CardInstance(cardId: "S1-002", grade: 10),
+            CardInstance(cardId: "S1-003"),
+            CardInstance(cardId: "S1-003"),
+            CardInstance(cardId: "S1-003"),
+            CardInstance(cardId: "S1-004", foil: true)
+        ]
+        let grouped = Dictionary(grouping: copies, by: \.cardId)
+        var maximumProceeds = 0.0
+        for owned in grouped.values {
+            maximumProceeds += owned.reduce(0) { $0 + $1.sellValue }
+                - (try XCTUnwrap(owned.map(\.sellValue).min()))
+        }
+
+        for order in [copies, Array(copies.reversed())] {
+            var core = GameCore()
+            core.instances = order
+            let state = GameState(core: core, store: SaveStore(directory: directory))
+            let cash = state.cash
+            let preview = state.duplicateSalePreview(inSet: 1)
+            XCTAssertEqual(preview.count, copies.count - grouped.count)
+            XCTAssertEqual(preview.proceeds, maximumProceeds, accuracy: 0.0001)
+            XCTAssertEqual(Set(preview.copies), Set(state.duplicateSalePreview(inSet: 1).copies))
+
+            let result = try state.sellDuplicates(preview)
+            XCTAssertEqual(result.proceeds, maximumProceeds, accuracy: 0.0001)
+            XCTAssertEqual(state.cash, cash + maximumProceeds, accuracy: 0.0001)
+            for (cardId, owned) in grouped {
+                let remaining = state.instances(of: cardId)
+                XCTAssertEqual(remaining.count, 1)
+                XCTAssertEqual(try XCTUnwrap(remaining.first).sellValue,
+                               try XCTUnwrap(owned.map(\.sellValue).min()), accuracy: 0.0001)
+            }
+        }
     }
 
     func testStaleOrRepeatedConfirmationCannotSellMoreCopies() throws {

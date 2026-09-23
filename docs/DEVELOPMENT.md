@@ -206,12 +206,14 @@ Legacy tracking metadata is ignored. Collector request/trade counts and request
 earnings feed both the current-run Stats section and additive lifetime totals;
 missing earnings in older saves are recovered from completed request IDs.
 
-**Classic collection actions** share the model's duplicate selection: retain the
-highest-value copy of each card and sell the others at the existing spread.
+**Classic set-wide collection sales** use `GameCore.sellableExtras`: retain the
+cheapest copy of each card and sell the others at the existing spread to maximize
+the payout. Pack-summary duplicate sales still retain the highest-value copy.
 `GameState.duplicateSalePreview(inSet:)` snapshots the whole selected set, never
 the UI's filters. Its confirmation uses the same `ActionPopupCard` and
 `PopupActionButton` styling as the new-run prompt. The confirmed sale rejects
-stale copies and commits to disk before publishing cards, cash, or stats.
+stale copies, sells the exact reviewed instance IDs, and commits to disk before
+publishing cards, cash, or stats.
 Endings wait for that confirmation to finish dismissing, since selling a
 recoverable duplicate below pack price can end the run.
 The card-detail Grade/Sell selection is a UI preference stored under

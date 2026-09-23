@@ -264,7 +264,7 @@ final class GameState {
 
     func duplicateSalePreview(inSet set: Int) -> DuplicateSalePreview {
         let ids = Set(CardDatabase.cards(inSet: set).map(\.id))
-        return DuplicateSalePreview(set: set, copies: core.duplicateInstances(of: ids))
+        return DuplicateSalePreview(set: set, copies: core.sellableExtras.filter { ids.contains($0.cardId) })
     }
 
     func beginDuplicateSaleReview() { duplicateSaleReviewInFlight = true }
@@ -278,10 +278,16 @@ final class GameState {
             throw DuplicateSaleError.collectionChanged
         }
         var updated = core
-        let result = updated.sellDuplicates(of: Set(preview.copies.map(\.cardId)))
+        var proceeds = 0.0
+        for copy in preview.copies {
+            guard let value = updated.sell(instanceId: copy.id) else {
+                throw DuplicateSaleError.collectionChanged
+            }
+            proceeds += value
+        }
         guard store.save(updated) else { throw DuplicateSaleError.couldNotSave }
         core = updated
-        return result
+        return (preview.count, proceeds)
     }
 
     @discardableResult

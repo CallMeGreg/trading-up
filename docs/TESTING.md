@@ -34,7 +34,7 @@ Or just press `⌘U` in Xcode.
 | `DataIntegrityTests.swift` | The generated catalogue: 250 cards, unique names/ids, rarity splits |
 | `EconomyRulesTests.swift` | The economy knobs are exactly as designed (prices, fees, sellback rate) |
 | `CollectorTests.swift` | Finite collector requests/trades, unreserved previews, exact confirmations, bonus payouts, run/lifetime trade stats, legacy saves, rollback, access-aware recovery, and receipt sequencing |
-| `CollectionSaleTests.swift` | Set-wide duplicate previews and confirmed sales, best-copy protection, premium extras, stale confirmations, persistence rollback, and reveal/receipt gates |
+| `CollectionSaleTests.swift` | Set-wide duplicate previews and confirmed sales, cheapest-copy retention and maximum proceeds, premium extras and ties, stale confirmations, persistence rollback, and reveal/receipt gates |
 | `GameplaySimulationTests.swift` | Buy/open/sell/grade flows against a seeded, reproducible RNG |
 | `SaveFormatTests.swift` | Old saves decode, schema changes stay additive, retired cards are stripped |
 | `SaveStoreTests.swift` | Unreadable saves are quarantined on disk, never deleted |
@@ -301,7 +301,8 @@ reservations, finite request/trade limits, stale and double submissions, ignored
 legacy tracking metadata, current-run/lifetime statistics, reset behavior,
 recovery, access gates, failed-save rollback, permanent Binder awards, and
 final-card receipt sequencing. `CollectionSaleTests` covers set-scoped sale
-previews, best-copy retention, premium duplicates, stale confirmations,
+previews, cheapest-copy retention and maximum proceeds, premium duplicates and
+equal-value ties, permanent Binder preservation, stale confirmations,
 autosave rollback, receipt/reveal blocking, and loss deferral until the sale
 confirmation finishes dismissing.
 

@@ -149,6 +149,9 @@ final class CollectorExperienceTests: XCTestCase {
         let cancel = app.buttons["collectionCancelSellDuplicates"]
         XCTAssertTrue(cancel.waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts.matching(NSPredicate(
+            format: "label CONTAINS %@",
+            "Your cheapest copy of each card stays; other copies are sold.")).firstMatch.exists)
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(
             format: "label CONTAINS 'Other sets are untouched'")).firstMatch.exists)
         shot("collection-confirm-sell-dupes")
         cancel.tap()

@@ -110,7 +110,8 @@ Review exactly what you give and get before confirming. Offers never expire,
 and all three collectors work offline.
 
 Ready to cash out a set's extras? **Sell all dupes** in **Collection** shows the
-payout and asks you to confirm, always keeping your most valuable copy of each card.
+payout and asks you to confirm. Your cheapest copy of each card stays; the other
+copies are sold to maximize the payout.
 
 ### 🏅 Grade your best
 

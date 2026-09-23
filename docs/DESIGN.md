@@ -224,8 +224,8 @@ spread only bites at the moment of sale.
 
 The Collection tab's **Sell all dupes** action covers the selected set, regardless
 of active filters. An in-theme confirmation shows the count and payout before
-anything changes. It keeps the highest-value copy of every card; all other
-copies, including foil and graded extras, can be sold. Other sets and the
+anything changes. It keeps the cheapest copy of every card to maximize the
+payout; all other copies, including foil and graded extras, are sold. Other sets and the
 permanent Binder stay untouched. Canceling does nothing; a changed collection or
 failed save cancels the transaction rather than selling a different bundle.
 Card details remember the last **Grade / Sell Extras** selection across cards.
