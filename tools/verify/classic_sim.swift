@@ -62,13 +62,11 @@ enum ClassicSim {
             if policy.usesCollectors {
                 try useCollectors(core: &core, target: target, requests: policy.requests, trades: policy.trades)
                 if core.hasWon { return outcome() }
-                try trackGoals(core: &core, target: target, requests: policy.requests, trades: policy.trades)
             }
-            liquidate(core: &core, grade: policy.grades, rng: &rng)
+            let keeping = collectorCopiesToKeep(core: core, target: target,
+                                               requests: policy.requests, trades: policy.trades)
+            liquidate(core: &core, keeping: keeping, grade: policy.grades, rng: &rng)
             if core.cash < Economy.cheapestPackPrice {
-                for goal in core.collectors.trackedGoals {
-                    try core.setCollectorGoalTracked(goal, tracked: false)
-                }
                 if policy.usesCollectors {
                     try useCollectors(core: &core, target: target, requests: policy.requests, trades: policy.trades)
                 }
@@ -85,9 +83,6 @@ enum ClassicSim {
     }
 
     private static func useCollectors(core: inout GameCore, target: Int, requests useRequests: Bool, trades: Bool) throws {
-        for goal in core.collectors.trackedGoals {
-            try core.setCollectorGoalTracked(goal, tracked: false)
-        }
         for _ in 0..<50 {
             let requests = (useRequests ? Array(1...CardDatabase.setCount) : [])
                 .flatMap { core.collectorRequests(inSet: $0) }
@@ -111,7 +106,8 @@ enum ClassicSim {
         throw SimulationError.dealLoop
     }
 
-    private static func trackGoals(core: inout GameCore, target: Int, requests useRequests: Bool, trades: Bool) throws {
+    private static func collectorCopiesToKeep(core: GameCore, target: Int,
+                                             requests useRequests: Bool, trades: Bool) -> Set<UUID> {
         let requests = (useRequests ? core.collectorRequests(inSet: target) : [])
             .compactMap { core.collectorPreview(for: $0.goal) }
         let sorted = requests.sorted {
@@ -121,15 +117,17 @@ enum ClassicSim {
         }
         var goals = sorted.map { $0.deal.goal }
         if trades, let trade = preferredTrade(core: core, set: target) {
-            if goals.count >= CollectorEconomy.maximumTrackedGoals {
-                goals = [goals[0], trade]
-            } else {
-                goals.append(trade)
+            goals = Array(goals.prefix(1)) + [trade]
+        }
+        // Model a player keeping spares for a close request and a trade, not a
+        // game-enforced reservation. Every copy remains sellable and gradeable.
+        var keeping: Set<UUID> = []
+        for goal in goals.prefix(2) {
+            if let preview = core.collectorPreview(for: goal, excluding: keeping) {
+                keeping.formUnion(preview.suppliedIDs)
             }
         }
-        for goal in goals.prefix(CollectorEconomy.maximumTrackedGoals) {
-            try core.setCollectorGoalTracked(goal, tracked: true)
-        }
+        return keeping
     }
 
     private static func preferredTrade(core: GameCore, set: Int) -> CollectorGoal? {
@@ -146,11 +144,11 @@ enum ClassicSim {
         }.first.map { .trade($0.id) }
     }
 
-    private static func liquidate<G: RandomNumberGenerator>(core: inout GameCore, grade: Bool, rng: inout G) {
-        let reserved = core.collectorReservedInstanceIDs
+    private static func liquidate<G: RandomNumberGenerator>(core: inout GameCore, keeping: Set<UUID> = [],
+                                                           grade: Bool, rng: inout G) {
         for id in core.uniqueOwnedIds.sorted() {
             let copies = core.instances(of: id).sorted { $0.currentValue > $1.currentValue }
-            for extra in copies.dropFirst() where !reserved.contains(extra.id) {
+            for extra in copies.dropFirst() where !keeping.contains(extra.id) {
                 let fee = Economy.gradeFee(set: extra.card.set)
                 if grade, extra.grade == nil, extra.currentValue > fee / (0.5 * Economy.sellbackRate),
                    core.cash >= fee {

@@ -56,7 +56,7 @@ icon and marketing renders shell out to `rsvg-convert` (`brew install librsvg`).
   cash, pack prices and composition, foil chance, grade odds and multipliers,
   bonuses.
 - `TradingUp/Models/Collector.swift` owns Classic request
-  rewards, trade bundles, and tracking limits. Gauntlet keeps its independent
+  rewards, trade bundles, and per-set deal limits. Gauntlet keeps its independent
   sell-back rate in `GauntletEconomy.swift`; do not move it with Classic tuning.
 - `TradingUp/Views/` is SwiftUI only. Don't put game rules here.
 - `TradingUp/Models/FeatureFlags.swift` holds build‑time switches. Flags are

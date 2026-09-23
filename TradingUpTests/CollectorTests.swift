@@ -49,6 +49,9 @@ final class CollectorTests: XCTestCase {
         XCTAssertTrue(core.instances.contains(graded))
         XCTAssertNil(receipt.received)
         XCTAssertEqual(core.collectors.requestsCompleted, 1)
+        XCTAssertEqual(core.collectors.cashEarned, offer.cashReward)
+        XCTAssertEqual(core.lifetimeIncludingCurrentRun.collectorRequestsCompleted, 1)
+        XCTAssertEqual(core.lifetimeIncludingCurrentRun.collectorCashEarned, offer.cashReward)
         XCTAssertEqual(core.stats.cardsPulled, 0)
     }
 
@@ -80,42 +83,41 @@ final class CollectorTests: XCTestCase {
         XCTAssertFalse(preview.isReady)
     }
 
-    func testTrackingProtectsBulkSaleAndGradingUntilReleased() throws {
+    func testPreviewsDoNotReserveSparesFromSellingOrGrading() throws {
         var core = GameCore()
         let offer = try request(.mira, core: core)
         supply(offer, to: &core)
-        try core.setCollectorGoalTracked(offer.goal, tracked: true)
-        let reserved = core.collectorReservedInstanceIDs
-        XCTAssertEqual(reserved.count, 3)
-        XCTAssertEqual(core.duplicateSummary(of: core.uniqueOwnedIds).count, 0)
-        XCTAssertEqual(core.sellDuplicates(of: core.uniqueOwnedIds).count, 0)
+        let preview = try XCTUnwrap(core.collectorPreview(for: offer.goal))
+        XCTAssertEqual(preview.supplied.count, 3)
+        XCTAssertTrue(preview.supplied.allSatisfy { core.isSellable($0) })
+        XCTAssertEqual(core.duplicateSummary(of: core.uniqueOwnedIds).count, 3)
+        var selling = core
+        XCTAssertEqual(selling.sellDuplicates(of: selling.uniqueOwnedIds).count, 3)
+        XCTAssertEqual(selling.uniqueOwnedIds, core.uniqueOwnedIds)
         var rng = SeededRNG(4)
-        for id in reserved {
-            XCTAssertNil(core.sell(instanceId: id))
-            XCTAssertNil(core.grade(instanceId: id, using: &rng))
+        for id in preview.suppliedIDs {
+            XCTAssertNotNil(core.grade(instanceId: id, using: &rng))
         }
-        try core.setCollectorGoalTracked(offer.goal, tracked: false)
-        XCTAssertTrue(core.collectorReservedInstanceIDs.isEmpty)
-        XCTAssertEqual(core.sellDuplicates(of: core.uniqueOwnedIds).count, 3)
-        XCTAssertNotNil(core.collectorDeal(for: offer.goal), "untracking must not discard the offer")
+        XCTAssertNotNil(core.collectorDeal(for: offer.goal), "previewing never consumes an offer")
     }
 
-    func testTrackingCapsAtTwoAndSharedCopiesAreNotDoubleCounted() throws {
+    func testIndependentOffersCannotSpendTheSameCopyTwice() throws {
         var core = GameCore()
         let mira = try request(.mira, core: core)
         let rowan = try request(.rowan, core: core)
         supply(mira, to: &core)
         supply(rowan, to: &core)
-        try core.setCollectorGoalTracked(mira.goal, tracked: true)
-        try core.setCollectorGoalTracked(rowan.goal, tracked: true)
-        let previews = core.collectorTrackedPreviews
-        XCTAssertEqual(previews.count, 2)
-        XCTAssertTrue(previews[0].suppliedIDs.isDisjoint(with: previews[1].suppliedIDs))
-        XCTAssertThrowsError(try core.setCollectorGoalTracked(.trade("S1-050"), tracked: true)) {
-            XCTAssertEqual($0 as? CollectorError, .trackingFull)
+        let first = try XCTUnwrap(core.collectorPreview(for: mira.goal))
+        let second = try XCTUnwrap(core.collectorPreview(for: rowan.goal))
+        XCTAssertFalse(first.suppliedIDs.isDisjoint(with: second.suppliedIDs))
+        let disjoint = try XCTUnwrap(core.collectorPreview(for: rowan.goal, excluding: first.suppliedIDs))
+        XCTAssertTrue(first.suppliedIDs.isDisjoint(with: disjoint.suppliedIDs))
+        _ = try core.completeCollectorDeal(mira.goal, expectedInstanceIDs: first.suppliedIDs)
+        let before = core.instances
+        XCTAssertThrowsError(try core.completeCollectorDeal(rowan.goal, expectedInstanceIDs: second.suppliedIDs)) {
+            XCTAssertEqual($0 as? CollectorError, .changedOffer)
         }
-        try core.setCollectorGoalTracked(mira.goal, tracked: true)
-        XCTAssertEqual(core.collectors.trackedGoals.count, 2, "tracking twice is idempotent")
+        XCTAssertEqual(core.instances, before)
     }
 
     func testStaleConfirmationAndDoubleSubmissionAreAtomic() throws {
@@ -136,6 +138,8 @@ final class CollectorTests: XCTestCase {
         XCTAssertThrowsError(try core.completeCollectorDeal(offer.goal, expectedInstanceIDs: preview.suppliedIDs))
         XCTAssertEqual(core.cash, afterCash)
         XCTAssertEqual(core.instances, afterInstances)
+        XCTAssertEqual(core.collectors.requestsCompleted, 1)
+        XCTAssertEqual(core.collectors.cashEarned, offer.cashReward, "failed confirmations never inflate stats")
         XCTAssertEqual(try request(.mira, core: core).sequence, 2)
     }
 
@@ -165,6 +169,9 @@ final class CollectorTests: XCTestCase {
         XCTAssertNil(receipt.received?.grade)
         XCTAssertEqual(core.uniqueCount, before + 1)
         XCTAssertEqual(core.stats.cardsPulled, 0, "trades are not pack pulls")
+        XCTAssertEqual(core.collectors.tradesCompleted, 1)
+        XCTAssertEqual(core.lifetimeIncludingCurrentRun.collectorTradesCompleted, 1)
+        XCTAssertEqual(core.collectors.cashEarned, 0, "trade bonuses are not request earnings")
         XCTAssertEqual(core.collectorTradesRemaining(inSet: 1), CollectorEconomy.tradesPerSet - 1)
         XCTAssertNil(core.collectorDeal(for: goal), "already-owned cards are not trade targets")
     }
@@ -192,17 +199,32 @@ final class CollectorTests: XCTestCase {
         XCTAssertTrue(core.checkBonuses().isEmpty)
     }
 
-    func testPullingTrackedTradeTargetReleasesReservations() throws {
+    func testPullingTradeTargetRemovesOfferWithoutSpendingTrade() throws {
         var core = GameCore()
         let goal = CollectorGoal.trade("S1-050")
         supply(try XCTUnwrap(core.collectorDeal(for: goal)), to: &core)
-        try core.setCollectorGoalTracked(goal, tracked: true)
-        XCTAssertFalse(core.collectorReservedInstanceIDs.isEmpty)
+        XCTAssertNotNil(core.collectorPreview(for: goal))
+        let duplicates = core.duplicateSummary(of: core.uniqueOwnedIds).count
         core.instances.append(CardInstance(cardId: "S1-050"))
         _ = core.checkBonuses()
-        XCTAssertTrue(core.collectors.trackedGoals.isEmpty)
-        XCTAssertTrue(core.collectorReservedInstanceIDs.isEmpty)
+        XCTAssertNil(core.collectorPreview(for: goal))
+        XCTAssertEqual(core.duplicateSummary(of: core.uniqueOwnedIds).count, duplicates)
         XCTAssertEqual(core.collectorTradesRemaining(inSet: 1), CollectorEconomy.tradesPerSet)
+    }
+
+    func testReadyCountIncludesTessOnceWithoutSelectingATarget() throws {
+        var core = GameCore()
+        XCTAssertEqual(core.collectorReadyCount(inSet: 1), 0)
+        supply(try XCTUnwrap(core.collectorDeal(for: .trade("S1-050"))), to: &core)
+        XCTAssertGreaterThan(core.collectorTradeTargets(inSet: 1).count, 1)
+        let requests = core.collectorRequests(inSet: 1).filter {
+            core.collectorPreview(for: $0.goal)?.isReady == true
+        }.count
+        XCTAssertEqual(core.collectorReadyCount(inSet: 1), requests + 1)
+        XCTAssertEqual(core.collectorReadyCount(inSet: 2), 0)
+        XCTAssertEqual(core.collectorReadyCount(inSet: 0), 0)
+        core.collectors.tradesCompletedBySet[1] = CollectorEconomy.tradesPerSet
+        XCTAssertEqual(core.collectorReadyCount(inSet: 1), requests)
     }
 
     func testReadyCollectorDealPreventsPrematureBankruptcy() throws {
@@ -220,11 +242,12 @@ final class CollectorTests: XCTestCase {
         var core = GameCore()
         let offer = try request(.mira, core: core)
         supply(offer, to: &core)
-        try core.setCollectorGoalTracked(offer.goal, tracked: true)
+        let preview = try XCTUnwrap(core.collectorPreview(for: offer.goal))
+        _ = try core.completeCollectorDeal(offer.goal, expectedInstanceIDs: preview.suppliedIDs)
         let encoded = try JSONEncoder().encode(SaveFile(core: core))
         let restored = try JSONDecoder().decode(SaveFile.self, from: encoded).core
         XCTAssertEqual(restored.collectors, core.collectors)
-        XCTAssertEqual(restored.collectorReservedInstanceIDs, core.collectorReservedInstanceIDs)
+        XCTAssertEqual(restored.collectors.cashEarned, offer.cashReward)
         XCTAssertEqual(restored.instances, core.instances)
         let legacy = try JSONDecoder().decode(GameCore.self, from: Data(#"{"cash":42,"instances":[{"cardId":"S1-001"}]}"#.utf8))
         XCTAssertEqual(legacy.cash, 42)
@@ -236,20 +259,42 @@ final class CollectorTests: XCTestCase {
     func testNewRunResetsDealsButNotLifetimeRecord() throws {
         var core = GameCore()
         core.stats.packsOpened = 8
-        let goal = try request(.mira, core: core).goal
-        try core.setCollectorGoalTracked(goal, tracked: true)
+        let offer = try request(.mira, core: core)
+        supply(offer, to: &core)
+        let preview = try XCTUnwrap(core.collectorPreview(for: offer.goal))
+        _ = try core.completeCollectorDeal(offer.goal, expectedInstanceIDs: preview.suppliedIDs)
         core.collectors.tradesCompletedBySet[1] = 2
         let fresh = core.startingNewRun()
         XCTAssertEqual(fresh.collectors, CollectorProgress())
         XCTAssertEqual(fresh.lifetime.packsOpened, 8)
+        XCTAssertEqual(fresh.lifetime.collectorRequestsCompleted, 1)
+        XCTAssertEqual(fresh.lifetime.collectorTradesCompleted, 2)
+        XCTAssertEqual(fresh.lifetime.collectorCashEarned, offer.cashReward)
+        XCTAssertEqual(fresh.lifetimeIncludingCurrentRun.collectorTradesCompleted, 2,
+                       "display-time totals must not double-count the previous run")
     }
 
-    func testSanitizerReleasesInvalidDuplicateAndOverflowGoals() {
-        var core = GameCore()
-        core.collectors.trackedGoals = [.request("retired"), .trade("S1-050"),
-                                       .trade("S1-050"), .trade("S1-049"), .trade("S1-048")]
-        let clean = core.sanitized().core
-        XCTAssertEqual(clean.collectors.trackedGoals, [.trade("S1-050"), .trade("S1-049")])
+    func testLegacyTrackingMetadataIsIgnoredAndRequestEarningsAreRecovered() throws {
+        let data = Data(#"""
+        {
+          "cash":42,
+          "instances":[{"cardId":"S1-001"},{"cardId":"S1-001"}],
+          "collectors":{
+            "completedRequestIDs":["1-mira-0","1-rowan-0"],
+            "tradesCompletedBySet":{"1":1},
+            "trackedGoals":[{"request":{"_0":"1-mira-1"}},{"trade":{"_0":"S1-050"}}]
+          }
+        }
+        """#.utf8)
+        var core = try JSONDecoder().decode(GameCore.self, from: data).sanitized().core
+        XCTAssertEqual(core.cash, 42)
+        XCTAssertEqual(core.collectors.requestsCompleted, 2)
+        XCTAssertEqual(core.collectors.tradesCompleted, 1)
+        XCTAssertEqual(core.collectors.cashEarned, Economy.packPrice(set: 1) * 1.5)
+        XCTAssertEqual(core.lifetimeIncludingCurrentRun.collectorRequestsCompleted, 2)
+        XCTAssertEqual(core.lifetimeIncludingCurrentRun.collectorTradesCompleted, 1)
+        XCTAssertEqual(core.sellDuplicates(of: ["S1-001"]).count, 1, "old goals cannot hold cards")
+        XCTAssertEqual(core.count(of: "S1-001"), 1)
     }
 }
 
@@ -273,30 +318,31 @@ final class CollectorStateTests: XCTestCase {
                   store: SaveStore(directory: directory))
     }
 
-    func testTrackingAndDealsPersistAcrossRelaunch() throws {
+    func testDealsAndStatisticsPersistAcrossRelaunch() throws {
         let state = game()
         let goal = try XCTUnwrap(state.collectorRequests(inSet: 1).first?.goal)
-        try state.setCollectorGoalTracked(goal, tracked: true)
+        let preview = try XCTUnwrap(state.collectorPreview(for: goal))
+        _ = try state.completeCollectorDeal(goal, expectedInstanceIDs: preview.suppliedIDs)
         let loaded = GameState(store: SaveStore(directory: directory))
-        XCTAssertEqual(loaded.collectorProgress.trackedGoals, [goal])
-        let preview = try XCTUnwrap(loaded.collectorPreview(for: goal))
-        _ = try loaded.completeCollectorDeal(goal, expectedInstanceIDs: preview.suppliedIDs)
-        XCTAssertEqual(GameState(store: SaveStore(directory: directory)).collectorProgress.requestsCompleted, 1)
+        XCTAssertEqual(loaded.collectorProgress.requestsCompleted, 1)
+        XCTAssertEqual(loaded.collectorProgress.cashEarned, preview.deal.cashReward)
+        XCTAssertEqual(loaded.lifetimeStats.collectorRequestsCompleted, 1)
+        loaded.newGame()
+        let reset = GameState(store: SaveStore(directory: directory))
+        XCTAssertEqual(reset.collectorProgress.requestsCompleted, 0)
+        XCTAssertEqual(reset.lifetimeStats.collectorRequestsCompleted, 1)
+        XCTAssertEqual(reset.lifetimeStats.collectorCashEarned, preview.deal.cashReward)
     }
 
-    func testPaidDealsAreBlockedAndUntrackingRemainsAvailable() throws {
-        var core = DebugLaunchState.collectorScenario(finalCard: true)
+    func testPaidDealsAreBlockedAndNeverCountAsReady() throws {
+        let core = DebugLaunchState.collectorScenario(finalCard: true)
         let paid = try XCTUnwrap(core.collectorRequests(inSet: 2).first?.goal)
-        try core.setCollectorGoalTracked(paid, tracked: true)
         let state = GameState(core: core, store: SaveStore(directory: directory))
-        XCTAssertThrowsError(try state.setCollectorGoalTracked(paid, tracked: true)) {
-            XCTAssertEqual($0 as? CollectorError, .lockedSet)
-        }
         XCTAssertThrowsError(try state.completeCollectorDeal(paid, expectedInstanceIDs: [])) {
             XCTAssertEqual($0 as? CollectorError, .lockedSet)
         }
-        try state.setCollectorGoalTracked(paid, tracked: false)
-        XCTAssertTrue(state.collectorProgress.trackedGoals.isEmpty)
+        XCTAssertEqual(state.collectorReadyCount(inSet: 2), 0)
+        XCTAssertEqual(state.collectorReadyCount, state.collectorReadyCount(inSet: 1))
     }
 
     func testInaccessiblePaidDealDoesNotStrandAFreeRun() throws {
@@ -328,7 +374,7 @@ final class CollectorStateTests: XCTestCase {
         state.endReveal()
         _ = try state.completeCollectorDeal(goal, expectedInstanceIDs: preview.suppliedIDs)
         XCTAssertTrue(state.collectorReceiptInFlight)
-        XCTAssertThrowsError(try state.setCollectorGoalTracked(.trade("S1-050"), tracked: true)) {
+        XCTAssertThrowsError(try state.completeCollectorDeal(.trade("S1-050"), expectedInstanceIDs: [])) {
             XCTAssertEqual($0 as? CollectorError, .finishDeal)
         }
         state.endCollectorReceipt()
@@ -371,7 +417,7 @@ final class CollectorStateTests: XCTestCase {
         XCTAssertEqual(state.cash, cash)
         XCTAssertEqual(state.collectorProgress.requestsCompleted, 0)
         XCTAssertFalse(state.collectorReceiptInFlight)
-        XCTAssertThrowsError(try state.setCollectorGoalTracked(goal, tracked: true))
-        XCTAssertTrue(state.collectorProgress.trackedGoals.isEmpty)
+        XCTAssertEqual(state.collectorProgress.cashEarned, 0)
+        XCTAssertEqual(state.lifetimeStats.collectorRequestsCompleted, 0)
     }
 }

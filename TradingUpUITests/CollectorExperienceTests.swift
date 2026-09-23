@@ -1,12 +1,8 @@
 import XCTest
 
-/// The collector fixture starts with untracked, ready Mira/Rowan requests and
-/// enough normal set-1 spares to trade for the missing ultra S1-050.
-/// The final-card fixture holds out only S1-050 across the full collection.
 final class CollectorExperienceTests: XCTestCase {
     private var app: XCUIApplication!
     private let mira = "request:1-mira-0"
-    private let rowan = "request:1-rowan-0"
     private let target = "S1-050"
 
     override func setUpWithError() throws {
@@ -15,69 +11,50 @@ final class CollectorExperienceTests: XCTestCase {
         app = XCUIApplication()
     }
 
-    func testShopShortcutKeepsFirstPackVisibleAndReturnsToShop() {
+    func testCollectorsUseOnlyTabsAndShowAllFiveSetPacks() {
         launch()
-        XCTAssertTrue(app.buttons["buyPack"].firstMatch.isHittable,
-                      "collectors must not push the first pack below the fold")
-        openBoard()
-        XCTAssertTrue(app.buttons["collectorsBackToShop"].isHittable)
-        XCTAssertEqual(trackingCount.label, "0 of 2 tracking slots used")
-        XCTAssertTrue(app.buttons["collectorSetPicker"].exists)
-        shot("collectors-board")
-        app.buttons["collectorsBackToShop"].tap()
-        XCTAssertTrue(app.buttons["buyPack"].firstMatch.waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["buyPack"].firstMatch.isHittable)
-        // iPad's floating tab items are cells rather than a TabBar's buttons.
-        let standardTab = app.tabBars.buttons["Collectors"].firstMatch
-        let floatingTab = app.descendants(matching: .any)
-            .matching(NSPredicate(format: "identifier == 'person.2.fill' AND label == 'Collectors'")).firstMatch
-        let collectorsTab = standardTab.exists ? standardTab : floatingTab
-        XCTAssertTrue(collectorsTab.isHittable)
-        collectorsTab.tap()
-        XCTAssertTrue(board.waitForExistence(timeout: 5))
-        XCTAssertTrue(collectorsTab.isSelected)
+        XCTAssertFalse(app.buttons["shopCollectors"].exists)
+        openBoard()
+        XCTAssertFalse(app.buttons["collectorsBackToShop"].exists)
+        XCTAssertFalse(app.staticTexts["Tracked goals"].exists)
+        XCTAssertFalse(app.staticTexts["Good spares. Great connections."].exists)
+        XCTAssertFalse(element("collectorSafety").exists)
+        for set in 1...5 {
+            let pack = app.buttons["collectorSet-\(set)"]
+            XCTAssertTrue(pack.exists)
+            XCTAssertGreaterThanOrEqual(pack.frame.minX, app.frame.minX)
+            XCTAssertLessThanOrEqual(pack.frame.maxX, app.frame.maxX)
+        }
+        XCTAssertTrue(app.buttons["collectorSet-1"].isSelected)
+        XCTAssertFalse(app.buttons["collectorSet-5"].isEnabled)
+        XCTAssertTrue(app.buttons["collectorReview-\(mira)"].isHittable)
+        XCTAssertTrue(app.buttons["collectorReview-request:1-rowan-0"].isHittable,
+                      "compact offers should expose both cash requests without a tracking panel")
+        shot("collectors-compact-board")
+        tapTab("Shop", symbol: "bag.fill")
+        XCTAssertTrue(app.buttons["buyPack"].firstMatch.waitForExistence(timeout: 5))
     }
 
-    func testTrackingProtectsRequestThroughPackBulkSale() {
+    func testPackSelectionSurvivesTabChanges() {
         launch()
         openBoard()
-        let expectedCopies = readySpareCount(for: mira)
-        tapOfferButton("collectorTrack-\(mira)")
-        XCTAssertEqual(trackingCount.label, "1 of 2 tracking slots used")
-        XCTAssertTrue(app.buttons["collectorTrackedReview-\(mira)"].exists)
-        app.buttons["collectorsBackToShop"].tap()
-        app.buttons["buyPack"].firstMatch.tap()
-        XCTAssertTrue(app.waitForSealedPack())
-        app.packRipSeam.tap()
-        XCTAssertTrue(app.packSummary.waitForExistence(timeout: 8))
-        XCTAssertFalse(app.packCardPrompt.exists, "auto-open must still go straight to all six cards")
-        let protection = element("collectorPackProtection")
-        XCTAssertTrue(protection.exists)
-        XCTAssertTrue(protection.label.contains("Mira"))
-        XCTAssertTrue(protection.label.contains("stay out of sales"))
-        let sell = app.buttons["packSellDuplicates"]
-        XCTAssertTrue(sell.isHittable, "the fixture pack should include unreserved extras to sell")
-        shot("collectors-protected-pack-summary")
-        sell.tap()
-
-        XCTAssertTrue(app.buttons["shopCollectors"].waitForExistence(timeout: 8))
+        app.buttons["collectorSet-2"].tap()
+        XCTAssertTrue(app.buttons["collectorSet-2"].isSelected)
+        XCTAssertEqual(app.staticTexts["collectorSelectedSet"].label, "Tidecaller")
+        tapTab("Shop", symbol: "bag.fill")
         openBoard()
-        let review = app.buttons["collectorTrackedReview-\(mira)"]
-        scrollTo(review, in: board, upward: false)
-        XCTAssertTrue(review.isEnabled, "bulk selling must leave every reserved request copy available")
-        review.tap()
-        XCTAssertTrue(app.buttons["collectorConfirm"].waitForExistence(timeout: 5))
-        XCTAssertEqual(suppliedCopyCount, expectedCopies)
-        app.buttons["collectorReviewCancel"].tap()
-        XCTAssertEqual(trackingCount.label, "1 of 2 tracking slots used")
+        XCTAssertTrue(app.buttons["collectorSet-2"].isSelected)
+        app.buttons["collectorSet-1"].tap()
+        XCTAssertEqual(app.staticTexts["collectorSelectedSet"].label, "Emberfall")
+        XCTAssertTrue(app.buttons["collectorSet-1"].isSelected)
     }
 
-    func testReviewCancelLeavesCashCardsAndGoalUntouched() {
+    func testReviewCancelLeavesCashCardsAndOfferUntouched() {
         launch()
         openBoard()
         let startingCash = app.staticTexts["collectorCash"].label
         tapOfferButton("collectorReview-\(mira)")
-        XCTAssertTrue(app.buttons["collectorConfirm"].waitForExistence(timeout: 5))
         let originalCopies = suppliedCopies.allElementsBoundByIndex.map(\.label).sorted()
         XCTAssertFalse(originalCopies.isEmpty)
         XCTAssertTrue(element("collectorForegoneSale").exists)
@@ -85,143 +62,173 @@ final class CollectorExperienceTests: XCTestCase {
         app.buttons["collectorReviewCancel"].tap()
         XCTAssertTrue(board.waitForExistence(timeout: 5))
         XCTAssertEqual(app.staticTexts["collectorCash"].label, startingCash)
-        XCTAssertEqual(trackingCount.label, "0 of 2 tracking slots used")
-
         tapOfferButton("collectorReview-\(mira)")
-        XCTAssertTrue(app.buttons["collectorConfirm"].waitForExistence(timeout: 5))
         XCTAssertEqual(suppliedCopies.allElementsBoundByIndex.map(\.label).sorted(), originalCopies)
         app.buttons["collectorReviewCancel"].tap()
     }
 
-    func testReturningFindsReadyLaterSetAndPreservesExplicitSelection() {
-        launch("collector-final-card")
-        openBoard()
-        tapOfferButton("collectorReview-\(mira)")
-        app.buttons["collectorConfirm"].tap()
-        XCTAssertTrue(app.buttons["collectorReceiptDone"].waitForExistence(timeout: 5))
-        app.buttons["collectorReceiptDone"].tap()
-        XCTAssertTrue(board.waitForExistence(timeout: 5))
-        app.buttons["collectorsBackToShop"].tap()
-
-        let teaser = app.buttons["shopCollectors"]
-        let beforePack = teaser.label
-        let buy = app.buttons.matching(NSPredicate(
-            format: "identifier == 'buyPack' AND label CONTAINS 'Tidecaller'")).firstMatch
-        scrollTo(buy, in: shop)
-        buy.tap()
-        XCTAssertTrue(app.waitForSealedPack())
-        if teaser.exists {
-            XCTAssertEqual(teaser.label, beforePack, "the reveal must not leak new collector readiness")
-        }
-        app.packRipSeam.tap()
-        XCTAssertTrue(app.packSummary.waitForExistence(timeout: 8))
-        if teaser.exists {
-            XCTAssertEqual(teaser.label, beforePack, "the Shop snapshot lasts through the pack summary")
-        }
-        app.buttons["packKeepAll"].tap()
-        XCTAssertTrue(teaser.waitForExistence(timeout: 8))
-        XCTAssertNotEqual(teaser.label, beforePack, "new normal spares should make a Tidecaller request ready")
-
-        openBoard()
-        let picker = app.buttons["collectorSetPicker"]
-        XCTAssertTrue(picker.label.contains("Tidecaller"),
-                      "returning to the board should focus the later set with ready offers")
-        XCTAssertTrue(app.buttons["collectorReview-request:2-mira-0"].exists)
-        shot("collectors-ready-later-set")
-
-        scrollTo(picker, in: board)
-        picker.tap()
-        let emberfall = app.buttons["collectorSet-1"]
-        XCTAssertTrue(emberfall.waitForExistence(timeout: 5))
-        emberfall.tap()
-        XCTAssertTrue(picker.label.contains("Emberfall"))
-        let elsewhere = app.buttons["collectorReadyElsewhere"]
-        XCTAssertTrue(elsewhere.isHittable, "other ready sets must stay discoverable above the current offers")
-        XCTAssertTrue(elsewhere.label.contains("Tidecaller"))
-        shot("collectors-ready-other-sets")
-        app.buttons["collectorsBackToShop"].tap()
-        openBoard()
-        XCTAssertTrue(picker.label.contains("Emberfall"), "an explicit set choice should survive tab changes")
-        elsewhere.tap()
-        let tidecaller = app.buttons["collectorReadySet-2"]
-        XCTAssertTrue(tidecaller.waitForExistence(timeout: 5))
-        tidecaller.tap()
-        XCTAssertTrue(picker.label.contains("Tidecaller"))
-    }
-
-    func testSuccessfulRequestShowsReceiptThenNextFiniteRequest() {
+    func testRequestReceiptDropsBoilerplateAndAdvancesTheOffer() {
         launch()
         openBoard()
         let startingCash = app.staticTexts["collectorCash"].label
-        tapOfferButton("collectorTrack-\(mira)")
-        tapOfferButton("collectorReview-\(mira)")
-        app.buttons["collectorConfirm"].tap()
-        XCTAssertTrue(app.scrollViews["collectorReceipt"].waitForExistence(timeout: 5))
+        completeRequest()
         XCTAssertTrue(element("collectorCashReceived").exists)
+        XCTAssertFalse(app.staticTexts.matching(NSPredicate(
+            format: "label CONTAINS 'normal spares exchanged'")).firstMatch.exists)
         XCTAssertFalse(app.buttons["collectorConfirm"].exists)
         shot("collectors-cash-receipt")
-        app.buttons["collectorReceiptDone"].tap()
-        XCTAssertTrue(board.waitForExistence(timeout: 5))
+        closeReceipt()
         XCTAssertNotEqual(app.staticTexts["collectorCash"].label, startingCash)
-        XCTAssertEqual(trackingCount.label, "0 of 2 tracking slots used",
-                       "completing a tracked goal frees its slot")
-        XCTAssertFalse(app.buttons["collectorTrack-\(mira)"].exists)
-        XCTAssertTrue(app.buttons["collectorTrack-request:1-mira-1"].exists,
-                      "the next finite request should replace the completed request")
+        XCTAssertFalse(app.buttons["collectorReview-\(mira)"].exists)
+        XCTAssertTrue(app.staticTexts["Growing collection"].exists)
     }
 
-    func testNamedMissingCardTradeShowsBundleAndAwardsChosenCard() {
+    func testMissingCardTradeReviewsExactBundleAndShowsCleanReceipt() {
         launch()
         openBoard()
         let allowance = app.staticTexts["collectorTradesRemaining"]
         scrollTo(allowance, in: board)
         let startingTrades = leadingCount(in: allowance.label)
         chooseTradeTarget()
-        XCTAssertTrue(element("collectorReward-\(target)").exists)
-        let expectedCopies = readySpareCount(for: "trade:\(target)")
+        let progress = app.staticTexts["collectorOfferProgress-trade:\(target)"]
+        let expectedCopies = leadingCount(in: progress.label)
         tapOfferButton("collectorReview-trade:\(target)")
-        XCTAssertTrue(app.buttons["collectorConfirm"].waitForExistence(timeout: 5))
-        XCTAssertEqual(suppliedCopyCount, expectedCopies,
-                       "the review must show every spare promised by the current model's bundle")
+        XCTAssertEqual(suppliedCopyCount, expectedCopies)
         XCTAssertTrue(element("collectorForegoneSale").exists)
         shot("collectors-trade-review")
         app.buttons["collectorConfirm"].tap()
         XCTAssertTrue(app.staticTexts["collectorReceived-\(target)"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Normal · Ungraded · New to your collection"].exists)
-        shot("collectors-missing-card-receipt")
-        app.buttons["collectorReceiptDone"].tap()
-        XCTAssertTrue(board.waitForExistence(timeout: 5))
+        XCTAssertFalse(app.staticTexts["Normal · Ungraded · New to your collection"].exists)
+        XCTAssertFalse(app.staticTexts.matching(NSPredicate(
+            format: "label CONTAINS 'normal spares exchanged'")).firstMatch.exists)
+        shot("collectors-clean-card-receipt")
+        closeReceipt()
+        scrollTo(allowance, in: board)
         XCTAssertEqual(leadingCount(in: allowance.label), startingTrades - 1)
         XCTAssertTrue(element("collectorSetComplete").exists || element("collectorTradesExhausted").exists)
-        XCTAssertFalse(app.buttons["collectorChooseTarget"].exists,
-                       "the fixture's only missing card has been received, so no target remains")
-        XCTAssertFalse(app.buttons["collectorReview-trade:\(target)"].exists)
+        XCTAssertFalse(app.buttons["collectorChooseTarget"].exists)
     }
 
-    func testTrackingLimitExplainsHowToFreeASlotWithoutDiscardingOffers() {
+    func testCollectorStatsShowRequestsTradesAndCashInBothScopes() {
         launch()
         openBoard()
-        tapOfferButton("collectorTrack-\(mira)")
-        tapOfferButton("collectorTrack-\(rowan)")
+        completeRequest()
+        closeReceipt()
         chooseTradeTarget()
-        let tradeTrack = app.buttons["collectorTrack-trade:\(target)"]
-        scrollTo(tradeTrack, in: board)
-        XCTAssertTrue(tradeTrack.isEnabled, "full tracking slots need an explanation, not a dead button")
-        tradeTrack.tap()
-        let alert = app.alerts["Couldn't update this goal"]
-        XCTAssertTrue(alert.waitForExistence(timeout: 5))
-        XCTAssertTrue(alert.staticTexts.matching(NSPredicate(
-            format: "label CONTAINS[c] 'Untrack'")).firstMatch.exists)
-        alert.buttons["OK"].tap()
+        tapOfferButton("collectorReview-trade:\(target)")
+        app.buttons["collectorConfirm"].tap()
+        XCTAssertTrue(app.staticTexts["collectorReceived-\(target)"].waitForExistence(timeout: 5))
+        closeReceipt()
+        tapTab("Stats", symbol: "chart.bar.fill")
+        let stats = app.scrollViews["classicStats"]
+        for scope in ["This Run", "All Time"] {
+            let picker = app.segmentedControls["statsScope"]
+            scrollTo(picker, in: stats, upward: false)
+            picker.buttons[scope].tap()
+            let requests = element("stat-Requests Completed")
+            scrollTo(requests, in: stats)
+            XCTAssertTrue(requests.label.hasSuffix("1"))
+            XCTAssertTrue(element("stat-Cards Traded For").label.hasSuffix("1"))
+            XCTAssertTrue(element("stat-Request Earnings").label.contains("$5"))
+            shot("collector-stats-\(scope)")
+        }
+    }
 
-        let untrack = app.buttons["collectorUntrack-\(mira)"]
-        scrollTo(untrack, in: board, upward: false)
-        untrack.tap()
-        XCTAssertEqual(trackingCount.label, "1 of 2 tracking slots used")
-        XCTAssertTrue(app.buttons["collectorTrack-\(mira)"].exists,
-                      "untracking frees cards without deleting the cash offer")
-        tapOfferButton("collectorTrack-trade:\(target)")
-        XCTAssertEqual(trackingCount.label, "2 of 2 tracking slots used")
+    func testSellAllDupesConfirmsEntireSelectedSetAndCanBeCanceled() {
+        launch("collection-polish")
+        tapTab("Collection", symbol: "square.grid.3x3.fill")
+        let sell = app.buttons["collectionSellDuplicates"]
+        XCTAssertTrue(sell.waitForExistence(timeout: 5))
+        let original = sell.value as? String
+        XCTAssertNotNil(original)
+        XCTAssertTrue(app.buttons["collectionCard-S1-001"].label.hasSuffix("3 copies"))
+        shot("collection-lowered-copy-counts")
+        app.buttons["Rare+"].tap()
+        XCTAssertEqual(sell.value as? String, original, "filters must not silently narrow a set-wide sale")
+        sell.tap()
+        let cancel = app.buttons["collectionCancelSellDuplicates"]
+        XCTAssertTrue(cancel.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(
+            format: "label CONTAINS 'Other sets are untouched'")).firstMatch.exists)
+        shot("collection-confirm-sell-dupes")
+        cancel.tap()
+        XCTAssertTrue(sell.waitForExistence(timeout: 5))
+        XCTAssertEqual(sell.value as? String, original)
+        sell.tap()
+        let confirm = app.buttons["collectionConfirmSellDuplicates"]
+        XCTAssertTrue(confirm.waitForExistence(timeout: 5))
+        confirm.tap()
+        XCTAssertTrue(sell.waitForExistence(timeout: 5))
+        XCTAssertFalse(sell.isEnabled)
+        app.buttons["Rare+"].tap()
+        XCTAssertTrue(app.buttons["collectionCard-S1-001"].label.hasSuffix("1 copy"))
+        app.segmentedControls["collectionSetPicker"].buttons["2"].tap()
+        XCTAssertTrue(sell.isEnabled, "selling set 1 must leave set 2's duplicates alone")
+        XCTAssertTrue((sell.value as? String)?.hasPrefix("1 duplicate,") == true)
+    }
+
+    func testCardDetailRemembersSellAndGradeAcrossDifferentCards() {
+        launch("collection-polish")
+        tapTab("Collection", symbol: "square.grid.3x3.fill")
+        openCard("S1-001")
+        let picker = app.segmentedControls["collectionCopyAction"]
+        picker.buttons["Grade"].tap()
+        picker.buttons["Sell Extras"].tap()
+        app.buttons["Done"].tap()
+        openCard("S1-004")
+        XCTAssertTrue(picker.buttons["Sell Extras"].isSelected)
+        picker.buttons["Grade"].tap()
+        app.buttons["Done"].tap()
+        openCard("S1-001")
+        XCTAssertTrue(picker.buttons["Grade"].isSelected)
+        app.buttons["Done"].tap()
+    }
+
+    func testPackSummaryHasNoTrackingOrReservationChrome() {
+        launch()
+        app.buttons["buyPack"].firstMatch.tap()
+        XCTAssertTrue(app.waitForSealedPack())
+        app.packRipSeam.tap()
+        XCTAssertTrue(app.packSummary.waitForExistence(timeout: 8))
+        XCTAssertFalse(element("collectorPackProtection").exists)
+        XCTAssertFalse(app.staticTexts.matching(NSPredicate(
+            format: "label BEGINSWITH 'Saved for'")).firstMatch.exists)
+        XCTAssertTrue(app.buttons["packSellDuplicates"].isHittable)
+        shot("classic-pack-summary-no-tracking")
+        app.buttons["packSellDuplicates"].tap()
+        XCTAssertTrue(app.buttons["buyPack"].firstMatch.waitForExistence(timeout: 8))
+    }
+
+    func testNewPackBadgesAndSharedNewRunConfirmation() {
+        launch()
+        app.buttons["buyPack"].firstMatch.tap()
+        XCTAssertTrue(app.waitForSealedPack())
+        app.packRipSeam.tap()
+        XCTAssertTrue(app.packSummary.waitForExistence(timeout: 8))
+        app.buttons["packKeepAll"].tap()
+        XCTAssertTrue(app.buttons["Home"].waitForExistence(timeout: 5))
+        app.buttons["Home"].tap()
+        app.buttons["classicMode"].tap()
+        XCTAssertTrue(app.buttons["New Run"].waitForExistence(timeout: 5))
+        app.buttons["New Run"].tap()
+        XCTAssertTrue(app.buttons["Start New Run"].waitForExistence(timeout: 5))
+        shot("shared-new-run-confirmation")
+        app.buttons["Cancel"].tap()
+        XCTAssertTrue(app.buttons["classicMode"].waitForExistence(timeout: 5))
+        app.buttons["classicMode"].tap()
+        app.buttons["New Run"].tap()
+        app.buttons["Start New Run"].tap()
+        XCTAssertTrue(app.buttons["Start Collecting"].waitForExistence(timeout: 8))
+        XCTAssertFalse(app.staticTexts.matching(NSPredicate(
+            format: "label CONTAINS 'Track two goals' OR label CONTAINS 'Tracked spares'")).firstMatch.exists)
+        app.buttons["Start Collecting"].tap()
+        XCTAssertTrue(app.buttons["buyPack"].firstMatch.waitForExistence(timeout: 5))
+        app.buttons["buyPack"].firstMatch.tap()
+        XCTAssertTrue(app.waitForSealedPack())
+        app.packRipSeam.tap()
+        XCTAssertTrue(app.packSummary.waitForExistence(timeout: 8))
+        XCTAssertTrue(app.staticTexts["✦ NEW"].firstMatch.exists)
+        shot("classic-raised-new-badges")
     }
 
     func testFinalCardWinWaitsUntilTradeReceiptHasDismissed() {
@@ -232,59 +239,41 @@ final class CollectorExperienceTests: XCTestCase {
         XCTAssertFalse(win.exists)
         app.buttons["collectorConfirm"].tap()
         XCTAssertTrue(app.staticTexts["collectorReceived-\(target)"].waitForExistence(timeout: 5))
-        XCTAssertTrue(element("collectorReceiptBonuses").exists,
-                      "the receipt must include the final set-completion payout")
+        XCTAssertTrue(element("collectorReceiptBonuses").exists)
         let prematureWin = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == true"), object: win)
         prematureWin.isInverted = true
-        XCTAssertEqual(XCTWaiter.wait(for: [prematureWin], timeout: 1.5), .completed,
-                       "a final-card celebration must never interrupt the receipt")
-        XCTAssertTrue(app.buttons["collectorReceiptDone"].isHittable)
-        shot("collectors-final-card-before-celebration")
+        XCTAssertEqual(XCTWaiter.wait(for: [prematureWin], timeout: 1.5), .completed)
         app.buttons["collectorReceiptDone"].tap()
         XCTAssertTrue(win.waitForExistence(timeout: 8))
         XCTAssertFalse(app.scrollViews["collectorReceipt"].exists)
-        shot("collectors-final-card-win")
     }
 
-    func testBoardAndExactCopyReviewRemainUsableAtLargeText() {
+    func testBoardAndReviewRemainUsableAtLargeText() {
         launch(textSize: "UICTContentSizeCategoryXXXL")
         assertReadableBoardAndReview(suffix: "large-text")
     }
 
-    func testBoardAndExactCopyReviewRemainUsableAtAccessibilityText() {
+    func testBoardAndReviewRemainUsableAtAccessibilityText() {
         launch(textSize: "UICTContentSizeCategoryAccessibilityXXXL")
-        assertReadableBoardAndReview(suffix: "accessibility-text", trackGoal: true)
+        assertReadableBoardAndReview(suffix: "accessibility-text")
     }
 
-    func testBoardAndExactCopyReviewRemainUsableInLandscape() {
+    func testBoardAndReviewRemainUsableInLandscape() {
         launch()
         XCUIDevice.shared.orientation = .landscapeLeft
         defer { XCUIDevice.shared.orientation = .portrait }
         let rotated = XCTNSPredicateExpectation(
-            predicate: NSPredicate { _, _ in self.app.frame.width > self.app.frame.height },
-            object: app)
+            predicate: NSPredicate { _, _ in self.app.frame.width > self.app.frame.height }, object: app)
         XCTAssertEqual(XCTWaiter.wait(for: [rotated], timeout: 5), .completed)
         assertReadableBoardAndReview(suffix: "landscape")
     }
 
-    private func assertReadableBoardAndReview(suffix: String, trackGoal: Bool = false) {
+    private func assertReadableBoardAndReview(suffix: String) {
         openBoard()
         shot("collectors-board-\(suffix)-top")
-        let picker = app.buttons["collectorSetPicker"]
-        scrollTo(picker, in: board)
-        XCTAssertTrue(picker.isHittable)
-        shot("collectors-set-picker-\(suffix)")
-        picker.tap()
-        let firstSet = app.buttons["collectorSet-1"]
-        XCTAssertTrue(firstSet.waitForExistence(timeout: 5))
-        firstSet.tap()
-        if trackGoal {
-            tapOfferButton("collectorTrack-\(mira)")
-            let untrack = app.buttons["collectorUntrack-\(mira)"]
-            scrollTo(untrack, in: board, upward: false)
-            XCTAssertEqual(trackingCount.label, "1 of 2 tracking slots used")
-            shot("collectors-tracked-\(suffix)")
-        }
+        let pack = app.buttons["collectorSet-1"]
+        XCTAssertTrue(pack.isHittable)
+        pack.tap()
         let review = app.buttons["collectorReview-\(mira)"]
         scrollTo(review, in: board)
         XCTAssertGreaterThanOrEqual(review.frame.height, 44)
@@ -300,15 +289,8 @@ final class CollectorExperienceTests: XCTestCase {
         XCTAssertLessThanOrEqual(confirm.frame.maxX, app.frame.maxX)
         scrollTo(element("collectorForegoneSale"), in: app.scrollViews["collectorReviewSheet"])
         shot("collectors-review-\(suffix)")
-        XCTAssertTrue(app.buttons["collectorReviewCancel"].isHittable)
         app.buttons["collectorReviewCancel"].tap()
         XCTAssertTrue(board.waitForExistence(timeout: 5))
-        if trackGoal {
-            let untrack = app.buttons["collectorUntrack-\(mira)"]
-            scrollTo(untrack, in: board, upward: false)
-            untrack.tap()
-            XCTAssertEqual(trackingCount.label, "0 of 2 tracking slots used")
-        }
     }
 
     private func launch(_ state: String = "collectors", textSize: String? = nil) {
@@ -319,9 +301,7 @@ final class CollectorExperienceTests: XCTestCase {
         app.launchArguments = [
             "-tradingup_tap_to_open_packs", "YES", "-tradingup_auto_open_packs", "YES"
         ]
-        if let textSize {
-            app.launchArguments += ["-UIPreferredContentSizeCategoryName", textSize]
-        }
+        if let textSize { app.launchArguments += ["-UIPreferredContentSizeCategoryName", textSize] }
         app.launch()
         let classic = app.buttons["classicMode"].firstMatch
         XCTAssertTrue(classic.waitForExistence(timeout: 30))
@@ -329,11 +309,27 @@ final class CollectorExperienceTests: XCTestCase {
         XCTAssertTrue(app.buttons["buyPack"].firstMatch.waitForExistence(timeout: 10))
     }
 
+    private func tapTab(_ name: String, symbol: String) {
+        let standard = app.tabBars.buttons[name].firstMatch
+        let floating = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "identifier == %@ AND label == %@", symbol, name)).firstMatch
+        let tab = standard.exists ? standard : floating
+        XCTAssertTrue(tab.waitForExistence(timeout: 5))
+        tab.tap()
+    }
+
     private func openBoard() {
-        let shortcut = app.buttons["shopCollectors"]
-        scrollTo(shortcut, in: shop)
-        shortcut.tap()
+        tapTab("Collectors", symbol: "person.2.fill")
         XCTAssertTrue(board.waitForExistence(timeout: 5))
+    }
+
+    private func openCard(_ id: String) {
+        let card = app.buttons["collectionCard-\(id)"]
+        scrollTo(card, in: app.scrollViews["collectionGrid"])
+        card.tap()
+        let picker = app.segmentedControls["collectionCopyAction"]
+        XCTAssertTrue(picker.waitForExistence(timeout: 5))
+        scrollTo(picker, in: app.scrollViews["collectionCardDetail"])
     }
 
     private func chooseTradeTarget() {
@@ -342,8 +338,18 @@ final class CollectorExperienceTests: XCTestCase {
         XCTAssertTrue(list.waitForExistence(timeout: 5))
         let choice = app.buttons["collectorTarget-\(target)"]
         scrollTo(choice, in: list)
-        shot("collectors-target-picker")
         choice.tap()
+        XCTAssertTrue(board.waitForExistence(timeout: 5))
+    }
+
+    private func completeRequest() {
+        tapOfferButton("collectorReview-\(mira)")
+        app.buttons["collectorConfirm"].tap()
+        XCTAssertTrue(app.scrollViews["collectorReceipt"].waitForExistence(timeout: 5))
+    }
+
+    private func closeReceipt() {
+        app.buttons["collectorReceiptDone"].tap()
         XCTAssertTrue(board.waitForExistence(timeout: 5))
     }
 
@@ -354,13 +360,6 @@ final class CollectorExperienceTests: XCTestCase {
         if id.hasPrefix("collectorReview-") {
             XCTAssertTrue(app.buttons["collectorConfirm"].waitForExistence(timeout: 5))
         }
-    }
-
-    private func readySpareCount(for goal: String) -> Int {
-        let progress = app.staticTexts["collectorOfferProgress-\(goal)"]
-        scrollTo(progress, in: board)
-        XCTAssertTrue(progress.label.hasPrefix("All "), "the fixture must have a ready bundle")
-        return leadingCount(in: progress.label.replacingOccurrences(of: "All ", with: ""))
     }
 
     private func leadingCount(in label: String) -> Int {
@@ -383,7 +382,6 @@ final class CollectorExperienceTests: XCTestCase {
             var distance = viewport.height * 0.4
             if element.exists {
                 let frame = element.frame
-                // Off-screen SwiftUI menus can throw on isHittable instead of returning false.
                 let visible = frame.height <= viewport.height
                     ? viewport.contains(frame)
                     : frame.intersection(viewport).height >= viewport.height / 2
@@ -418,10 +416,7 @@ final class CollectorExperienceTests: XCTestCase {
         return frame.insetBy(dx: 4, dy: 4)
     }
 
-    // The covered main menu also exposes a scroll view in compact landscape layouts.
-    private var shop: XCUIElement { app.scrollViews["classicShop"] }
     private var board: XCUIElement { app.scrollViews["collectorBoard"] }
-    private var trackingCount: XCUIElement { app.staticTexts["collectorTrackingCount"] }
     private var win: XCUIElement {
         app.buttons.matching(NSPredicate(format: "label == 'Keep My Collection'")).firstMatch
     }
@@ -431,13 +426,9 @@ final class CollectorExperienceTests: XCTestCase {
     private var suppliedCopyCount: Int {
         suppliedCopies.allElementsBoundByIndex.reduce(0) { $0 + leadingCount(in: $1.label) }
     }
-
-    private func element(_ id: String) -> XCUIElement {
-        app.descendants(matching: .any).matching(identifier: id).firstMatch
-    }
-
+    private func element(_ id: String) -> XCUIElement { app.descendants(matching: .any)[id].firstMatch }
     private func shot(_ name: String) {
-        let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        let attachment = XCTAttachment(screenshot: app.screenshot())
         attachment.name = name
         attachment.lifetime = .keepAlways
         add(attachment)

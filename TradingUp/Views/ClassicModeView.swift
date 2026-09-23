@@ -16,11 +16,10 @@ struct ClassicModeView: View {
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            ShopView(onHome: { Sound.play(.uiBack); dismiss() },
-                     onCollectors: { selectedTab = .collectors })
+            ShopView(onHome: { Sound.play(.uiBack); dismiss() })
                 .tabItem { Label("Shop", systemImage: "bag.fill") }
                 .tag(AppTab.shop)
-            CollectorsView(isSelected: selectedTab == .collectors, onShop: { selectedTab = .shop })
+            CollectorsView(isSelected: selectedTab == .collectors)
                 .tabItem { Label("Collectors", systemImage: "person.2.fill") }
                 .badge(collectorBadgeCount)
                 .tag(AppTab.collectors)
@@ -58,7 +57,7 @@ struct ClassicModeView: View {
     /// two separate presentations.
     private var activeOverlay: AppOverlay? {
         if game.shouldShowWelcome { return .welcome }
-        // Pack summaries and collector receipts own the screen until fully
+        // Summaries, receipts, and sale confirmations own the screen until fully
         // dismissed. The model defers both endings through those transitions.
         if game.presentsWin { return .win }
         if game.presentsGameOver { return .lose }

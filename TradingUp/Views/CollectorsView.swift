@@ -4,7 +4,6 @@ struct CollectorsView: View {
     @Environment(GameState.self) private var game: GameState
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     var isSelected = true
-    var onShop: () -> Void
 
     @State private var set = 1
     @State private var hasChosenSet = false
@@ -31,11 +30,8 @@ struct CollectorsView: View {
     }
 
     private var readyCountsBySet: [Int: Int] {
-        let tracked = game.collectorTrackedPreviews
-        return availableSets.reduce(into: [:]) { counts, choice in
-            let goals = Set(game.collectorRequests(inSet: choice).map(\.goal)
-                            + tracked.filter { $0.deal.set == choice }.map(\.deal.goal))
-            counts[choice] = goals.filter { game.collectorPreview(for: $0)?.isReady == true }.count
+        availableSets.reduce(into: [:]) { counts, choice in
+            counts[choice] = game.collectorReadyCount(inSet: choice)
         }
     }
 
@@ -43,21 +39,17 @@ struct CollectorsView: View {
         if let id = tradeTargets[set], let preview = game.collectorPreview(for: .trade(id)) {
             return preview
         }
-        return game.collectorTrackedPreviews.first { $0.deal.set == set && $0.deal.collector == .tess }
+        return nil
     }
 
     var body: some View {
         NavigationStack {
             ScrollViewReader { scroll in
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 18) {
-                        introduction.id("collectorBoardTop")
-                        readyElsewhere
-                        trackedGoals
-                        setPicker
+                    VStack(alignment: .leading, spacing: 12) {
+                        setPicker.id("collectorBoardTop")
                         cashRequests
                         trader
-                        CollectorSafetyNote()
                     }
                     .padding(16)
                     .readableWidth()
@@ -71,15 +63,6 @@ struct CollectorsView: View {
             .navigationTitle("Collectors")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button {
-                        Haptics.play(.light)
-                        onShop()
-                    } label: {
-                        Label("Shop", systemImage: "bag.fill")
-                    }
-                    .accessibilityIdentifier("collectorsBackToShop")
-                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Text(game.cash.money)
                         .font(.subheadline.bold().monospacedDigit())
@@ -105,7 +88,7 @@ struct CollectorsView: View {
                     PaywallView()
                 }
             }
-            .alert("Couldn't update this goal", isPresented: errorPresented) {
+            .alert("Couldn't review this offer", isPresented: errorPresented) {
                 Button("OK", role: .cancel) {}
             } message: {
                 Text(errorMessage ?? "")
@@ -131,234 +114,104 @@ struct CollectorsView: View {
         }
     }
 
-    private var introduction: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Good spares. Great connections.")
-                .font(.title2.bold())
-                .foregroundStyle(Palette.text)
-            Text("Help Mira and Rowan for cash, or trade with Tess for a card you're missing.")
-                .font(.subheadline)
-                .foregroundStyle(Palette.subtle)
-                .fixedSize(horizontal: false, vertical: true)
-            Label("Always here · No timers · Works offline", systemImage: "heart.fill")
-                .font(.caption.weight(.medium))
-                .foregroundStyle(Palette.money)
-        }
-    }
-
-    private var trackedGoals: some View {
-        let header = dynamicTypeSize.isAccessibilitySize
-            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
-            : AnyLayout(HStackLayout())
-        return VStack(alignment: .leading, spacing: 10) {
-            header {
-                Label("Tracked goals", systemImage: "bookmark.fill")
-                    .font(.headline)
-                if !dynamicTypeSize.isAccessibilitySize { Spacer(minLength: 8) }
-                Text("\(game.collectorProgress.trackedGoals.count)/\(CollectorEconomy.maximumTrackedGoals)")
-                    .font(.subheadline.bold().monospacedDigit())
-                    .accessibilityLabel("\(game.collectorProgress.trackedGoals.count) of \(CollectorEconomy.maximumTrackedGoals) tracking slots used")
-                    .accessibilityIdentifier("collectorTrackingCount")
-            }
-            .foregroundStyle(Palette.text)
-
-            if game.collectorTrackedPreviews.isEmpty {
-                Text("Track up to two goals across all sets. Their spare cards are saved automatically, even when you sell duplicates.")
-                    .font(.subheadline)
-                    .foregroundStyle(Palette.subtle)
-                    .fixedSize(horizontal: false, vertical: true)
-            } else {
-                ForEach(game.collectorTrackedPreviews) { preview in
-                    trackedRow(preview)
-                }
-                Text("Earlier goals get first pick. Untracking releases the cards, not the offer.")
-                    .font(.caption)
-                    .foregroundStyle(Palette.subtle)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-        .panel(14)
-    }
-
-    @ViewBuilder private var readyElsewhere: some View {
-        let counts = readyCountsBySet
-        let choices = availableSets.filter { $0 != set && counts[$0, default: 0] > 0 }
-        if !choices.isEmpty {
-            Menu {
-                ForEach(choices, id: \.self) { choice in
-                    Button("\(CardDatabase.setName(choice)) · \(counts[choice, default: 0]) ready") {
-                        selectSet(choice)
-                    }
-                    .accessibilityIdentifier("collectorReadySet-\(choice)")
-                }
-            } label: {
-                HStack(spacing: 10) {
-                    Image(systemName: "checkmark.circle.fill")
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("Ready in other sets").font(.subheadline.bold())
-                        Text(choices.map { "\(CardDatabase.setName($0)): \(counts[$0, default: 0])" }
-                            .joined(separator: " · "))
-                            .font(.caption)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    Spacer(minLength: 0)
-                    Image(systemName: "chevron.down").font(.caption.bold())
-                }
-                .foregroundStyle(Palette.money)
-                .frame(minHeight: 44)
-                .panel(12, corner: 14)
-            }
-            .accessibilityLabel("Ready in other sets. " + choices.map {
-                "\(CardDatabase.setName($0)), \(counts[$0, default: 0]) ready"
-            }.joined(separator: ". "))
-            .accessibilityHint("Choose a set to see its ready offers.")
-            .accessibilityIdentifier("collectorReadyElsewhere")
-        }
-    }
-
-    private func trackedRow(_ preview: CollectorPreview) -> some View {
-        let locked = game.requiresFullUnlock(set: preview.deal.set)
-        let layout = dynamicTypeSize.isAccessibilitySize
-            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 10))
-            : AnyLayout(HStackLayout(alignment: .top, spacing: 10))
-        return VStack(alignment: .leading, spacing: 6) {
-            Divider().overlay(Palette.stroke)
-            layout {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("\(preview.deal.collector.name) · \(CardDatabase.setName(preview.deal.set))")
-                        .font(.subheadline.bold())
-                        .foregroundStyle(preview.deal.collector.tint)
-                    Text(preview.deal.title)
-                        .font(.subheadline)
-                        .foregroundStyle(Palette.text)
-                        .fixedSize(horizontal: false, vertical: true)
-                    Text("\(preview.collectedCount)/\(preview.deal.requiredCount) spares saved")
-                        .font(.caption.monospacedDigit())
-                        .foregroundStyle(Palette.subtle)
-                        .accessibilityIdentifier("collectorTrackedProgress-\(preview.id)")
-                }
-                if !dynamicTypeSize.isAccessibilitySize { Spacer(minLength: 0) }
-                Button {
-                    toggleTracking(preview.deal.goal)
-                } label: {
-                    Text("Untrack")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Palette.subtle)
-                        .frame(minWidth: 64, minHeight: 44)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Untrack \(preview.deal.title) for \(preview.deal.collector.name)")
-                .accessibilityHint("Releases held cards. The offer stays available.")
-                .accessibilityIdentifier("collectorUntrack-\(preview.id)")
-            }
-            if locked {
-                Label("Full unlock needed to exchange. You can still untrack.", systemImage: "lock.fill")
-                    .font(.caption)
-                    .foregroundStyle(Palette.subtle)
-            } else if preview.isReady {
-                Button {
-                    review(preview.deal.goal)
-                } label: {
-                    Label("Ready to review", systemImage: "checkmark.circle.fill")
-                        .font(.subheadline.bold())
-                        .frame(minHeight: 44)
-                        .contentShape(Rectangle())
-                }
-                .foregroundStyle(Palette.money)
-                .accessibilityIdentifier("collectorTrackedReview-\(preview.id)")
-            }
-        }
-    }
-
     private var setPicker: some View {
         let counts = readyCountsBySet
-        let readyCount = counts[set, default: 0]
-        let readyBadge = Text("\(readyCount) ready")
-            .font(.caption.bold())
-            .foregroundStyle(Palette.money)
-            .fixedSize()
-        return VStack(alignment: .leading, spacing: 8) {
-            Menu {
-                ForEach(availableSets, id: \.self) { choice in
-                    let title = "Set \(choice) · \(CardDatabase.setName(choice))"
-                        + (counts[choice, default: 0] > 0 ? " · \(counts[choice, default: 0]) ready" : "")
-                    Button {
-                        selectSet(choice)
-                    } label: {
-                        if set == choice {
-                            Label(title, systemImage: "checkmark")
-                        } else {
-                            Text(title)
-                        }
-                    }
-                    .accessibilityIdentifier("collectorSet-\(choice)")
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 6) {
+                ForEach(1...CardDatabase.setCount, id: \.self) { choice in
+                    setButton(choice, ready: counts[choice, default: 0])
                 }
-            } label: {
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack(spacing: 10) {
-                        if !dynamicTypeSize.isAccessibilitySize {
-                            Image(systemName: Element.theme(forSet: set).glyphSymbol)
-                                .foregroundStyle(Element.theme(forSet: set).badgeTint)
-                        }
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("SET \(set)").font(.caption.bold())
-                            Text(CardDatabase.setName(set)).font(.headline)
-                        }
-                        Spacer(minLength: 8)
-                        if readyCount > 0 && !dynamicTypeSize.isAccessibilitySize { readyBadge }
-                        Image(systemName: "chevron.up.chevron.down")
-                            .font(.subheadline.bold())
-                    }
-                    if readyCount > 0 && dynamicTypeSize.isAccessibilitySize { readyBadge }
-                }
-                .foregroundStyle(Palette.text)
-                .frame(minHeight: 44)
-                .panel(12, corner: 14)
             }
-            .accessibilityLabel("Collector set, \(CardDatabase.setName(set))")
-            .accessibilityValue("\(counts[set, default: 0]) offers ready in this set")
-            .accessibilityHint("Choose a playable set. Each choice shows its ready offers.")
-            .accessibilityIdentifier("collectorSetPicker")
-
-            if let next = (1...game.collectorSetLimit).first(where: { !game.isSetUnlocked($0) }) {
-                Text("Collect \(game.uniquesToUnlock(set: next)) unique cards to meet collectors in \(CardDatabase.setName(next)).")
-                    .font(.caption)
-                    .foregroundStyle(Palette.subtle)
-            }
-            if game.collectorSetLimit < CardDatabase.setCount {
-                Button {
-                    Sound.play(.panelOpen)
-                    sheet = .unlock
-                } label: {
-                    Label("More sets use the same one-time full unlock", systemImage: "lock.fill")
-                        .font(.caption.weight(.semibold))
-                        .frame(minHeight: 44, alignment: .leading)
+            let layout = dynamicTypeSize.isAccessibilitySize
+                ? AnyLayout(VStackLayout(alignment: .leading, spacing: 4))
+                : AnyLayout(HStackLayout())
+            layout {
+                Text(CardDatabase.setName(set))
+                    .font(.headline)
+                    .foregroundStyle(Palette.text)
+                    .accessibilityIdentifier("collectorSelectedSet")
+                if !dynamicTypeSize.isAccessibilitySize { Spacer(minLength: 4) }
+                if counts[set, default: 0] > 0 {
+                    Text("\(counts[set, default: 0]) ready")
+                        .font(.caption.bold())
+                        .foregroundStyle(Palette.money)
                 }
-                .foregroundStyle(Palette.tapCue)
-                .accessibilityIdentifier("collectorFullUnlock")
             }
         }
+    }
+
+    private func setButton(_ choice: Int, ready: Int) -> some View {
+        let unlocked = game.isSetUnlocked(choice)
+        let paid = game.requiresFullUnlock(set: choice)
+        let playable = unlocked && !paid
+        let tint = Element.theme(forSet: choice).badgeTint
+        return Button {
+            if paid {
+                Sound.play(.panelOpen)
+                sheet = .unlock
+            } else {
+                selectSet(choice)
+            }
+        } label: {
+            VStack(spacing: 6) {
+                PackWrapper(set: choice, width: 50, detail: .mini)
+                    .saturation(playable ? 1 : 0)
+                    .opacity(playable ? 1 : 0.35)
+                    .overlay {
+                        if !playable {
+                            Image(systemName: "lock.fill")
+                                .font(.subheadline.bold())
+                                .foregroundStyle(Palette.subtle)
+                        }
+                    }
+                    .overlay(alignment: .topTrailing) {
+                        if ready > 0 {
+                            Text("\(ready)")
+                                .font(.system(size: 10, weight: .black))
+                                .foregroundStyle(Palette.bg0)
+                                .frame(width: 18, height: 18)
+                                .background(Circle().fill(Palette.money))
+                                .offset(x: 3, y: -3)
+                        }
+                    }
+                Text("\(choice)")
+                    .font(.caption)
+                    .fontWeight(.bold)
+                    .foregroundStyle(playable ? tint : Palette.subtle)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
+            .background(RoundedRectangle(cornerRadius: 12).fill(set == choice ? tint.opacity(0.12) : .clear))
+            .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(set == choice ? tint : .clear, lineWidth: 2))
+            .contentShape(Rectangle())
+            .accessibilityElement(children: .ignore)
+        }
+        .buttonStyle(.plain)
+        .disabled(!unlocked)
+        .accessibilityLabel("Set \(choice), \(CardDatabase.setName(choice))")
+        .accessibilityValue(!unlocked ? "Locked, \(game.uniquesToUnlock(set: choice)) unique cards needed"
+                            : paid ? "Full unlock required" : "\(ready) offers ready")
+        .accessibilityHint(!unlocked ? "Collect more unique cards to unlock this set."
+                           : paid ? "Opens the full-collection unlock." : "Shows this set's collector offers.")
+        .accessibilityAddTraits(set == choice ? .isSelected : [])
+        .accessibilityIdentifier("collectorSet-\(choice)")
     }
 
     private var cashRequests: some View {
-        VStack(spacing: 14) {
+        VStack(spacing: 12) {
             ForEach([Collector.mira, .rowan], id: \.self) { collector in
                 if let deal = game.collectorRequests(inSet: set).first(where: { $0.collector == collector }),
                    let preview = game.collectorPreview(for: deal.goal) {
                     offer(preview)
                 } else {
-                    VStack(alignment: .leading, spacing: 12) {
-                        CollectorIdentity(collector: collector)
+                    VStack(alignment: .leading, spacing: 8) {
+                        CollectorIdentity(collector: collector, compact: true)
                         Label("All \(CollectorEconomy.requestsPerCollector) requests complete", systemImage: "checkmark.seal.fill")
-                            .font(.headline)
+                            .font(.subheadline.bold())
                             .foregroundStyle(Palette.money)
-                        Text("You've helped \(collector.name) finish \(CardDatabase.setName(set)). Other sets have their own requests.")
-                            .font(.subheadline)
-                            .foregroundStyle(Palette.subtle)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .panel()
+                    .panel(12)
                 }
             }
         }
@@ -368,11 +221,8 @@ struct CollectorsView: View {
         if let preview = selectedTrade {
             offer(preview, onChooseTarget: chooseTarget)
         } else {
-            VStack(alignment: .leading, spacing: 14) {
-                CollectorIdentity(collector: .tess)
-                Text("A missing piece, not another gamble.")
-                    .font(.headline)
-                    .foregroundStyle(Palette.text)
+            VStack(alignment: .leading, spacing: 10) {
+                CollectorIdentity(collector: .tess, compact: true)
                 Text("\(game.collectorTradesRemaining(inSet: set)) of \(CollectorEconomy.tradesPerSet) trades left in this set")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(Collector.tess.tint)
@@ -382,34 +232,25 @@ struct CollectorsView: View {
                         .font(.subheadline.bold())
                         .foregroundStyle(Palette.money)
                         .accessibilityIdentifier("collectorTradesExhausted")
-                    Text("Tess has a fresh trade allowance in each new set.")
-                        .font(.subheadline)
-                        .foregroundStyle(Palette.subtle)
                 } else if game.collectorTradeTargets(inSet: set).isEmpty {
                     Label("You own every card in this set", systemImage: "checkmark.circle.fill")
                         .font(.subheadline.bold())
                         .foregroundStyle(Palette.money)
                         .accessibilityIdentifier("collectorSetComplete")
                 } else {
-                    Text("Choose a missing card from \(CardDatabase.setName(set)). Give a bundle of different normal spares from this same set.")
-                        .font(.subheadline)
-                        .foregroundStyle(Palette.subtle)
                     CollectorAction(title: "Choose a missing card", symbol: "rectangle.on.rectangle", tint: Collector.tess.tint,
                                     action: chooseTarget)
                         .accessibilityIdentifier("collectorChooseTarget")
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .panel()
+            .panel(12)
         }
     }
 
     private func offer(_ preview: CollectorPreview, onChooseTarget: (() -> Void)? = nil) -> some View {
         CollectorOfferCard(
             preview: preview,
-            isTracked: game.collectorProgress.trackedGoals.contains(preview.deal.goal),
-            trackingFull: game.collectorProgress.trackedGoals.count >= CollectorEconomy.maximumTrackedGoals,
-            onTrack: { toggleTracking(preview.deal.goal) },
             onReview: { review(preview.deal.goal) },
             onChooseTarget: onChooseTarget
         )
@@ -431,11 +272,6 @@ struct CollectorsView: View {
     private func focusRelevantSet() {
         guard !hasChosenSet, sheet == nil, !game.revealInFlight, !game.collectorReceiptInFlight else { return }
         let choices = availableSets
-        let tracked = game.collectorTrackedPreviews.filter { choices.contains($0.deal.set) }
-        if let priority = tracked.first(where: \.isReady) ?? tracked.first {
-            set = priority.deal.set
-            return
-        }
         let counts = readyCountsBySet
         if counts[set, default: 0] > 0 { return }
         if let readySet = choices.reversed().first(where: { counts[$0, default: 0] > 0 }) {
@@ -447,17 +283,6 @@ struct CollectorsView: View {
 
     private func hasOffers(in choice: Int) -> Bool {
         !game.collectorRequests(inSet: choice).isEmpty || !game.collectorTradeTargets(inSet: choice).isEmpty
-    }
-
-    private func toggleTracking(_ goal: CollectorGoal) {
-        do {
-            let tracked = game.collectorProgress.trackedGoals.contains(goal)
-            try game.setCollectorGoalTracked(goal, tracked: !tracked)
-            Haptics.play(.light)
-            Sound.play(tracked ? .uiBack : .toggleOn)
-        } catch {
-            report(error)
-        }
     }
 
     private func review(_ goal: CollectorGoal) {
@@ -490,83 +315,62 @@ struct CollectorsView: View {
 }
 
 private struct CollectorOfferCard: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let preview: CollectorPreview
-    let isTracked: Bool
-    let trackingFull: Bool
-    let onTrack: () -> Void
     let onReview: () -> Void
     var onChooseTarget: (() -> Void)?
 
     private var deal: CollectorDeal { preview.deal }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            CollectorIdentity(collector: deal.collector)
-            VStack(alignment: .leading, spacing: 4) {
-                Text(deal.title)
-                    .font(.title3.bold())
-                    .foregroundStyle(Palette.text)
-                Text(deal.rewardCard == nil
-                     ? "Request \(deal.sequence) of \(deal.total) · \(CardDatabase.setName(deal.set))"
-                     : "Trade \(deal.sequence) of \(deal.total) · \(CardDatabase.setName(deal.set))")
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(Palette.subtle)
+        let layout = dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
+            : AnyLayout(HStackLayout(spacing: 10))
+        return VStack(alignment: .leading, spacing: 10) {
+            layout {
+                CollectorIdentity(collector: deal.collector, compact: true,
+                                  subtitle: "\(deal.rewardCard == nil ? "Request" : "Trade") \(deal.sequence) of \(deal.total)")
+                if deal.rewardCard == nil {
+                    if !dynamicTypeSize.isAccessibilitySize { Spacer(minLength: 4) }
+                    Text(deal.cashReward.money + " cash")
+                        .font(.headline.monospacedDigit())
+                        .foregroundStyle(Palette.money)
+                }
             }
-
-            VStack(alignment: .leading, spacing: 9) {
-                CollectorSectionLabel(title: "You give", symbol: "arrow.up.right")
+            if deal.rewardCard == nil {
+                Text(deal.title)
+                    .font(.subheadline.bold())
+                    .foregroundStyle(Palette.text)
+            } else {
+                CollectorReward(deal: deal)
+            }
+            VStack(alignment: .leading, spacing: 6) {
                 ForEach(preview.requirements) { progress in
                     CollectorRequirementRow(progress: progress)
                         .accessibilityIdentifier("collectorRequirement-\(deal.id)-\(progress.id)")
                 }
-                ProgressBar(value: Double(preview.collectedCount), total: Double(deal.requiredCount),
-                            tint: deal.collector.tint, height: 5)
-                    .accessibilityHidden(true)
-                Text(preview.isReady ? "All \(deal.requiredCount) normal spares ready to review"
-                     : "\(preview.missingCount) more normal spare\(preview.missingCount == 1 ? "" : "s") needed")
+                Text(preview.isReady ? "\(deal.requiredCount) spares ready"
+                     : "\(preview.missingCount) more spare\(preview.missingCount == 1 ? "" : "s") needed")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(preview.isReady ? Palette.money : Palette.subtle)
                     .accessibilityIdentifier("collectorOfferProgress-\(deal.id)")
             }
 
-            CollectorReward(deal: deal)
-            Text("Best and last copies stay with you. Only ungraded, non-foil spares go.")
-                .font(.caption)
-                .foregroundStyle(Palette.subtle)
-                .fixedSize(horizontal: false, vertical: true)
-
-            if preview.isReady {
-                CollectorAction(title: "Review exchange", symbol: "arrow.left.arrow.right",
-                                tint: deal.collector.tint, prominent: true, action: onReview)
-                    .accessibilityLabel("Review \(deal.title) with \(deal.collector.name)")
-                    .accessibilityIdentifier("collectorReview-\(deal.id)")
-            }
-            CollectorAction(title: isTracked ? "Untrack goal" : "Track goal",
-                            symbol: isTracked ? "bookmark.slash" : "bookmark",
-                            tint: isTracked ? Palette.subtle : deal.collector.tint,
-                            action: onTrack)
-                .accessibilityHint(isTracked
-                                   ? "Releases held cards without removing the offer."
-                                   : "Automatically protects the required spares from selling and grading.")
-                .accessibilityIdentifier("collectorTrack-\(deal.id)")
-            if !isTracked && trackingFull {
-                Text("Both tracking slots are in use. Untrack a goal above to make room.")
-                    .font(.caption)
-                    .foregroundStyle(Palette.subtle)
-            }
-            if let onChooseTarget {
-                Button(action: onChooseTarget) {
-                    Text("Choose another missing card")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(deal.collector.tint)
-                        .frame(maxWidth: .infinity, minHeight: 44)
-                        .contentShape(Rectangle())
+            layout {
+                if preview.isReady {
+                    CollectorAction(title: "Review exchange", symbol: "arrow.left.arrow.right",
+                                    tint: deal.collector.tint, prominent: true, action: onReview)
+                        .accessibilityLabel("Review \(deal.title) with \(deal.collector.name)")
+                        .accessibilityIdentifier("collectorReview-\(deal.id)")
                 }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("collectorChooseTarget")
+                if let onChooseTarget {
+                    CollectorAction(title: "Change card", symbol: "rectangle.on.rectangle",
+                                    tint: deal.collector.tint, action: onChooseTarget)
+                        .accessibilityIdentifier("collectorChooseTarget")
+                }
             }
         }
-        .panel()
+        .panel(12)
         .overlay(alignment: .top) {
             RoundedRectangle(cornerRadius: 2)
                 .fill(deal.collector.tint.opacity(0.75))
@@ -588,13 +392,13 @@ private struct CollectorRequirementRow: View {
         layout {
             HStack(spacing: 10) {
                 if let card = progress.requirement.card {
-                    CardView(card: card, width: 34, pipsGlow: false)
+                    CardView(card: card, width: 28, pipsGlow: false)
                         .accessibilityHidden(true)
                 } else {
                     Image(systemName: "rectangle.stack.fill")
-                        .font(.title3)
+                        .font(.subheadline)
                         .foregroundStyle(progress.requirement.rarity?.accent ?? Palette.subtle)
-                        .frame(minWidth: 34, minHeight: 44)
+                        .frame(minWidth: 28, minHeight: 28)
                         .accessibilityHidden(true)
                 }
                 Text(progress.requirement.label)
@@ -842,9 +646,6 @@ private struct CollectorExchangeSheet: View {
                             .font(.title3.bold())
                             .foregroundStyle(Palette.text)
                             .accessibilityIdentifier("collectorReceived-\(received.cardId)")
-                        Text("Normal · Ungraded · New to your collection")
-                            .font(.caption)
-                            .foregroundStyle(Palette.subtle)
                     }
                     .frame(maxWidth: .infinity)
                     .panel()
@@ -855,10 +656,6 @@ private struct CollectorExchangeSheet: View {
                         .accessibilityLabel("\(receipt.deal.cashReward.money) cash received")
                         .accessibilityIdentifier("collectorCashReceived")
                 }
-                Text("\(receipt.supplied.count) normal spares exchanged. Your last copies, best copies, foils, and graded cards stayed safe.")
-                    .font(.subheadline)
-                    .foregroundStyle(Palette.subtle)
-                    .fixedSize(horizontal: false, vertical: true)
                 if !receipt.bonuses.isEmpty {
                     VStack(alignment: .leading, spacing: 10) {
                         CollectorSectionLabel(title: "Bonuses earned", symbol: "gift.fill")
@@ -984,13 +781,15 @@ private struct CollectorReward: View {
 
 private struct CollectorIdentity: View {
     let collector: Collector
+    var compact = false
+    var subtitle: String? = nil
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: compact ? 8 : 12) {
             Image(systemName: collector.symbol)
-                .font(.system(size: 20, weight: .bold))
+                .font(.system(size: compact ? 16 : 20, weight: .bold))
                 .foregroundStyle(collector.tint)
-                .frame(width: 46, height: 46)
+                .frame(width: compact ? 36 : 46, height: compact ? 36 : 46)
                 .background(Circle().fill(collector.tint.opacity(0.14)))
                 .overlay(Circle().strokeBorder(collector.tint.opacity(0.35), lineWidth: 1))
                 .accessibilityHidden(true)
@@ -998,7 +797,7 @@ private struct CollectorIdentity: View {
                 Text(collector.name)
                     .font(.headline)
                     .foregroundStyle(Palette.text)
-                Text(collector.specialty)
+                Text(subtitle ?? collector.specialty)
                     .font(.caption)
                     .foregroundStyle(Palette.subtle)
             }

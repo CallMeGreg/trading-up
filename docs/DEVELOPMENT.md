@@ -121,7 +121,7 @@ TradingUp/
     Card.swift               Card, Rarity, Element, CardDatabase
     Economy.swift            Prices, grading table, value math — all tuning lives here
     GameCore.swift           Deterministic game state: buy / open / sell / grade / bonuses
-    Collector.swift          Classic NPC requests, protected goals, exact-copy barter, and CollectorEconomy tuning
+    Collector.swift          Classic NPC requests, exact-copy barter, trade stats, and CollectorEconomy tuning
     Persistence.swift        Versioned save envelope, load hygiene, corrupt-save quarantine
     GameState.swift          @Observable wrapper: randomness + autosave; owns the full-version entitlement gate and the Binder
     Binder.swift             All-time showcase model: best copy ever owned of each Spryte (survives New Game)
@@ -193,14 +193,29 @@ after any economy change — it enforces the target difficulty curve, not just
 correctness.
 
 **Classic collectors** live in `Models/Collector.swift`. `CollectorEconomy`
-controls finite request rewards, per-set trade limits, and tracked-goal capacity.
+controls finite request rewards and per-set trade limits.
 Offers are rebuilt deterministically from the catalogue and saved completion
 IDs; viewing or reopening the board cannot reroll them. The pure engine owns
-eligibility, distinct-card requirements, reservation allocation, previews, and
+eligibility, distinct-card requirements, previews, and
 atomic exchange. `GameState` adds entitlement/reveal gates and commits collector
 mutations to disk before publishing them. The UI must use those previews, not
 reimplement card selection. An old save defaults the additive `collectors`
-payload without resetting the run.
+payload without resetting the run. Previews do not reserve copies: selling and
+grading remain available, and a confirmation rechecks the exact outgoing IDs.
+Legacy tracking metadata is ignored. Collector request/trade counts and request
+earnings feed both the current-run Stats section and additive lifetime totals;
+missing earnings in older saves are recovered from completed request IDs.
+
+**Classic collection actions** share the model's duplicate selection: retain the
+highest-value copy of each card and sell the others at the existing spread.
+`GameState.duplicateSalePreview(inSet:)` snapshots the whole selected set, never
+the UI's filters. Its confirmation uses the same `ActionPopupCard` and
+`PopupActionButton` styling as the new-run prompt. The confirmed sale rejects
+stale copies and commits to disk before publishing cards, cash, or stats.
+Endings wait for that confirmation to finish dismissing, since selling a
+recoverable duplicate below pack price can end the run.
+The card-detail Grade/Sell selection is a UI preference stored under
+`tradingup_copy_action_mode`, not part of a run save.
 
 **Gauntlet Mode has its own knobs, kept out of `Economy.swift`.** Tier configs, the
 target-Aura curve, interest rate/ceiling, stipend curve, and the `RunMods` aggregator

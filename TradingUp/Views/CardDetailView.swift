@@ -3,17 +3,17 @@ import SwiftUI
 /// Card detail sheet: big art, evolution line, and per-copy sell / grade actions.
 struct CardDetailView: View {
     private enum CopyActionMode: String, CaseIterable, Identifiable {
-        case grade = "Grade"
-        case sell = "Sell Extras"
+        case grade, sell
 
         var id: Self { self }
+        var title: String { self == .grade ? "Grade" : "Sell Extras" }
     }
 
     let card: Card
     @Environment(GameState.self) var game: GameState
     @Environment(\.dismiss) private var dismiss
     @State private var gradeResult: GradeResult?
-    @State private var copyActionMode: CopyActionMode = .grade
+    @AppStorage("tradingup_copy_action_mode") private var copyActionMode: CopyActionMode = .grade
 
     private var copies: [CardInstance] {
         game.instances(of: card.id).sorted { $0.currentValue > $1.currentValue }
@@ -37,6 +37,7 @@ struct CardDetailView: View {
                 .padding(16)
                 .readableWidth()
             }
+            .accessibilityIdentifier("collectionCardDetail")
             .background(Palette.screen.ignoresSafeArea())
             .navigationTitle(card.name)
             .navigationBarTitleDisplayMode(.inline)
@@ -61,10 +62,11 @@ struct CardDetailView: View {
             sectionHeader("Your Copies (\(copies.count))")
             Picker("Copy action", selection: $copyActionMode) {
                 ForEach(CopyActionMode.allCases) { mode in
-                    Text(mode.rawValue).tag(mode)
+                    Text(mode.title).tag(mode)
                 }
             }
             .pickerStyle(.segmented)
+            .accessibilityIdentifier("collectionCopyAction")
             .onChange(of: copyActionMode) { _, _ in
                 Haptics.play(.light)
                 Sound.play(.uiTap)
@@ -133,19 +135,6 @@ struct CardDetailView: View {
                     }
                     .accessibilityIdentifier("sellCopy-\(inst.id)")
                 }
-            }
-            if let reservation = game.collectorReservation(for: inst) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Label("Saved for \(reservation.collector.name) · \(reservation.title)", systemImage: "bookmark.fill")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Palette.tapCue)
-                    Text("Untrack this goal in Collectors to sell or grade this copy. The offer will still be there.")
-                        .font(.caption)
-                        .foregroundStyle(Palette.subtle)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .accessibilityElement(children: .combine)
-                .accessibilityIdentifier("collectorHeldCopy-\(inst.id)")
             }
         }
         .padding(.vertical, 4)

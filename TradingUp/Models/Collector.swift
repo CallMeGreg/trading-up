@@ -35,7 +35,7 @@ enum CollectorGoal: Codable, Equatable, Hashable, Identifiable {
 struct CollectorProgress: Codable, Equatable {
     var completedRequestIDs: Set<String> = []
     var tradesCompletedBySet: [Int: Int] = [:]
-    var trackedGoals: [CollectorGoal] = []
+    var cashEarned = 0.0
 
     init() {}
 
@@ -43,7 +43,11 @@ struct CollectorProgress: Codable, Equatable {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         completedRequestIDs = try c.decodeIfPresent(Set<String>.self, forKey: .completedRequestIDs) ?? []
         tradesCompletedBySet = try c.decodeIfPresent([Int: Int].self, forKey: .tradesCompletedBySet) ?? [:]
-        trackedGoals = try c.decodeIfPresent([CollectorGoal].self, forKey: .trackedGoals) ?? []
+        // Older saves retain completed requests, so their rewards can be recovered.
+        cashEarned = try c.decodeIfPresent(Double.self, forKey: .cashEarned)
+            ?? completedRequestIDs.reduce(0) {
+                $0 + (CollectorCatalog.requestsByGoal[.request($1)]?.cashReward ?? 0)
+            }
     }
 
     var requestsCompleted: Int { completedRequestIDs.count }
@@ -51,7 +55,6 @@ struct CollectorProgress: Codable, Equatable {
 }
 
 enum CollectorEconomy {
-    static let maximumTrackedGoals = 2
     static let requestsPerCollector = 3
     static let tradesPerSet = 2
     static let starterRewardMultiplier = 0.5
@@ -162,7 +165,6 @@ struct CollectorReceipt: Identifiable {
 
 enum CollectorError: LocalizedError, Equatable {
     case unavailable
-    case trackingFull
     case missingCopies
     case changedOffer
     case lockedSet
@@ -174,8 +176,6 @@ enum CollectorError: LocalizedError, Equatable {
         switch self {
         case .unavailable:
             return "This offer is no longer available. Your cards have not been changed."
-        case .trackingFull:
-            return "You can track two goals. Untrack one to make room; its offer will still be here."
         case .missingCopies:
             return "You still need more spare cards. Only ungraded, non-foil duplicates can go to collectors."
         case .changedOffer:
@@ -187,7 +187,7 @@ enum CollectorError: LocalizedError, Equatable {
         case .finishDeal:
             return "Close the deal receipt before making another collector deal."
         case .couldNotSave:
-            return "Your progress couldn't be saved, so no cards, cash, or tracked goals were changed. Please try again."
+            return "Your progress couldn't be saved, so no cards, cash, or offers were changed. Please try again."
         }
     }
 }
@@ -259,47 +259,9 @@ extension GameCore {
         a.currentValue > b.currentValue
     }
 
-    var collectorTrackedPreviews: [CollectorPreview] {
-        guard !collectors.trackedGoals.isEmpty else { return [] }
-        var available = collectorEligibleExtras
-        return collectors.trackedGoals.compactMap { goal in
-            guard let deal = collectorDeal(for: goal) else { return nil }
-            let preview = allocateCollectorCopies(to: deal, from: available)
-            available.removeAll { preview.suppliedIDs.contains($0.id) }
-            return preview
-        }
-    }
-
-    var collectorReservedInstanceIDs: Set<UUID> {
-        Set(collectorTrackedPreviews.flatMap { $0.supplied.map(\.id) })
-    }
-
-    func collectorReservation(for instance: CardInstance) -> CollectorDeal? {
-        collectorTrackedPreviews.first { $0.suppliedIDs.contains(instance.id) }?.deal
-    }
-
-    func collectorPreview(for goal: CollectorGoal, respectingReservations: Bool = true) -> CollectorPreview? {
+    func collectorPreview(for goal: CollectorGoal, excluding instanceIDs: Set<UUID> = []) -> CollectorPreview? {
         guard let deal = collectorDeal(for: goal) else { return nil }
-        let tracked = respectingReservations ? collectorTrackedPreviews : []
-        if let preview = tracked.first(where: { $0.deal.goal == goal }) {
-            return preview
-        }
-        let reserved = Set(tracked.flatMap { $0.supplied.map(\.id) })
-        return allocateCollectorCopies(to: deal, from: collectorEligibleExtras.filter { !reserved.contains($0.id) })
-    }
-
-    mutating func setCollectorGoalTracked(_ goal: CollectorGoal, tracked: Bool) throws {
-        if !tracked {
-            collectors.trackedGoals.removeAll { $0 == goal }
-            return
-        }
-        refreshCollectorGoals()
-        guard collectorDeal(for: goal) != nil else { throw CollectorError.unavailable }
-        guard !collectors.trackedGoals.contains(goal) else { return }
-        guard collectors.trackedGoals.count < CollectorEconomy.maximumTrackedGoals else {
-            throw CollectorError.trackingFull
-        }
-        collectors.trackedGoals.append(goal)
+        return allocateCollectorCopies(to: deal, from: collectorEligibleExtras.filter { !instanceIDs.contains($0.id) })
     }
 
     mutating func completeCollectorDeal(_ goal: CollectorGoal, expectedInstanceIDs: Set<UUID>) throws -> CollectorReceipt {
@@ -310,6 +272,7 @@ extension GameCore {
         instances.removeAll { expectedInstanceIDs.contains($0.id) }
         cash += deal.cashReward
         stats.moneyEarned += deal.cashReward
+        collectors.cashEarned += deal.cashReward
         let received = deal.rewardCard.map { CardInstance(cardId: $0.id) }
         if let received {
             instances.append(received)
@@ -319,35 +282,27 @@ extension GameCore {
         case .request(let id): collectors.completedRequestIDs.insert(id)
         case .trade: collectors.tradesCompletedBySet[deal.set, default: 0] += 1
         }
-        collectors.trackedGoals.removeAll { $0 == goal }
         let bonuses = checkBonuses()
         return CollectorReceipt(deal: deal, supplied: preview.supplied, received: received, bonuses: bonuses)
     }
 
-    mutating func refreshCollectorGoals() {
-        guard !collectors.trackedGoals.isEmpty else { return }
-        var seen: Set<CollectorGoal> = []
-        let valid = collectors.trackedGoals.filter {
-            collectorDeal(for: $0) != nil && seen.insert($0).inserted
+    func collectorReadyCount(inSet set: Int) -> Int {
+        let requests = collectorRequests(inSet: set).filter {
+            collectorPreview(for: $0.goal)?.isReady == true
+        }.count
+        let targets = collectorTradeTargets(inSet: set)
+        // Tess counts once, regardless of how many missing cards share a bundle.
+        let tradeReady = Rarity.allCases.contains { rarity in
+            guard let card = targets.first(where: { $0.rarity == rarity }) else { return false }
+            return collectorPreview(for: .trade(card.id))?.isReady == true
         }
-        collectors.trackedGoals = Array(valid.prefix(CollectorEconomy.maximumTrackedGoals))
+        return requests + (tradeReady ? 1 : 0)
     }
 
     func hasAvailableCollectorDeal(setLimit: Int = CardDatabase.setCount) -> Bool {
-        for set in 1...max(1, min(setLimit, CardDatabase.setCount)) where isUnlocked(set: set) {
-            let requests = collectorRequests(inSet: set).map(\.goal)
-            // Requirements depend on rarity, not the target's individual identity.
-            let targets = collectorTradeTargets(inSet: set)
-            let trades = Rarity.allCases.compactMap { rarity in
-                targets.first { $0.rarity == rarity }.map { CollectorGoal.trade($0.id) }
-            }
-            if (requests + trades).contains(where: {
-                collectorPreview(for: $0, respectingReservations: false)?.isReady == true
-            }) {
-                return true
-            }
+        (1...max(1, min(setLimit, CardDatabase.setCount))).contains {
+            collectorReadyCount(inSet: $0) > 0
         }
-        return false
     }
 
     private func allocateCollectorCopies(to deal: CollectorDeal, from copies: [CardInstance]) -> CollectorPreview {
