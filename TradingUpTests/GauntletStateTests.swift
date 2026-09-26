@@ -69,10 +69,12 @@ final class GauntletStateTests: XCTestCase {
 
     // MARK: Intro explainer gating
 
-    func testFirstEverOpenShowsIntroAndRemembersDismissal() {
+    func testFirstEverOpenStartsAtTrainerSelectAndKeepsReferenceAvailable() {
         let (s, _) = makeState(seed: 1, seenIntro: false)
-        XCTAssertEqual(s.phase, .intro, "the how-to shows on the first ever open")
+        XCTAssertEqual(s.phase, .trainerSelect, "the tutorial teaches on the real controls")
 
+        s.showIntro()
+        XCTAssertEqual(s.phase, .intro)
         s.dismissIntro()
         XCTAssertEqual(s.phase, .trainerSelect)
         XCTAssertTrue(s.progress.hasSeenIntro)

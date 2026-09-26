@@ -1034,10 +1034,39 @@ The **shape** of the mode is now decided; what's left is numeric tuning the harn
 9. **Pack rail** — ✅ pick **which unlocked element** to rip each rip; every locked set is
    opened in the **between-rounds shop** with cash, **independently priced and in any order**
    (not a forced ladder). Replaced the single rip button (§14.7).
-10. **First-run explainer** — ✅ a one-time intro screen (re-openable from the ⓘ button)
-    walks the target, scoring & evolution lines, Trainers, Catalysts, the shop, and prizes
-    before the first run, so the loop is legible without a tutorial mode. Gated on a
-    `hasSeenIntro` flag in `GauntletProgress`.
+10. **First-run guidance** — each mode teaches on its real controls instead of
+    opening an information page. A glowing spotlight and short explanation
+    identify the required action; the dimmed background cannot be tapped.
+    The full rules remain available from each mode's ⓘ button.
+
+### First-play tutorials
+
+**Classic:** buy a Set 1 pack, open it with the normal pack-opening controls,
+keep the pulls, visit Collection, inspect a card, try one affordable grade,
+look at Sell Extras, then visit Collectors and choose a missing-card trade goal.
+The guide explains protected copies, evolution/set bonuses, collector cash
+requests, and the collection/cash goals without forcing a trade the player
+cannot afford. The final tap returns to Shop and restores the normal tabs.
+
+**Gauntlet:** choose the starter Trainer and Easy, spend a rip, keep a strong
+pull, sell a lower-value pull, and decide the remaining cards freely. The guide
+highlights Attune if a Catalyst appears, then inspects a kept card and tries
+one affordable grade before finishing the first pack. Short explanations cover
+Aura, evolution lines, Catalyst elements, and Swap versus Sell. A final
+contextual prompt in the first between-round shop buys an extra Showcase slot
+if affordable, then explains interest and carrying the Showcase forward.
+No tutorial-only cards, odds, cash, or guaranteed victories are introduced;
+grading still has its normal risk.
+
+Progress is independent per mode and stored outside run saves in
+`tradingup_tutorial_v1_<mode>` preferences. It survives relaunch and completed
+tutorials do not repeat on New Run. Existing players who have already seen a
+mode's old introduction or played it are not forced through onboarding again.
+An interrupted Classic pack resumes at Collection without buying another pack;
+Gauntlet resumes its normally persisted pending decisions. Steps never require
+a randomly unavailable Catalyst, a duplicate, or an unaffordable grade.
+The spotlight uses actual view bounds, blocks unrelated accessibility actions,
+and has a static glow for Reduce Motion and a scrollable explanation for large text.
 
 🔧 **Left for the harness** (§14.8): the magnitudes — target-dollar bars per round, the
 interest ceiling, the round-clear payout curve, and the per-skill tuning magnitudes —

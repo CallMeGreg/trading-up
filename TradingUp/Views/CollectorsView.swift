@@ -3,11 +3,12 @@ import SwiftUI
 struct CollectorsView: View {
     @Environment(GameState.self) private var game: GameState
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.modeTutorial) private var tutorial
     var isSelected = true
 
     @State private var set = 1
     @State private var hasChosenSet = false
-    @State private var tradeTargets: [Int: String] = [:]
+    @Binding var tradeTargets: [Int: String]
     @State private var sheet: CollectorSheet?
     @State private var errorMessage: String?
 
@@ -49,14 +50,20 @@ struct CollectorsView: View {
                     VStack(alignment: .leading, spacing: 12) {
                         setPicker.id("collectorBoardTop")
                         cashRequests
-                        trader
+                        trader.id("tutorial-trader")
                     }
                     .padding(16)
                     .readableWidth()
                 }
                 .accessibilityIdentifier("collectorBoard")
+                .accessibilityHidden(tutorial?.isActive == true)
                 .onChange(of: set) { _, _ in
                     scroll.scrollTo("collectorBoardTop", anchor: .top)
+                }
+                .onAppear {
+                    if tutorial?.needs(.classicTradeTarget) == true {
+                        scroll.scrollTo("tutorial-trader", anchor: .center)
+                    }
                 }
             }
             .background(Palette.screen.ignoresSafeArea())
@@ -80,6 +87,7 @@ struct CollectorsView: View {
                 case .targets(let targetSet):
                     CollectorTargetPicker(set: targetSet) { card in
                         tradeTargets[targetSet] = card.id
+                        tutorial?.record(.classicTradeTarget)
                         sheet = nil
                     }
                 case .review(let preview):
@@ -241,6 +249,7 @@ struct CollectorsView: View {
                     CollectorAction(title: "Choose a missing card", symbol: "rectangle.on.rectangle", tint: Collector.tess.tint,
                                     action: chooseTarget)
                         .accessibilityIdentifier("collectorChooseTarget")
+                        .tutorialTarget("classic-choose-trade", action: chooseTarget)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -260,6 +269,7 @@ struct CollectorsView: View {
     }
 
     private func chooseTarget() {
+        tutorial?.record(.classicChooseTrade)
         Haptics.play(.light)
         Sound.play(.panelOpen)
         sheet = .targets(set)
@@ -438,6 +448,7 @@ private struct CollectorRequirementRow: View {
 private struct CollectorTargetPicker: View {
     @Environment(GameState.self) private var game: GameState
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modeTutorial) private var tutorial
     let set: Int
     let onChoose: (Card) -> Void
     @State private var search = ""
@@ -452,61 +463,84 @@ private struct CollectorTargetPicker: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: 12) {
-                    Text("Choose your missing piece")
-                        .font(.title2.bold())
-                        .foregroundStyle(Palette.text)
-                    let remaining = game.collectorTradesRemaining(inSet: set)
-                    Text("\(remaining) trade\(remaining == 1 ? "" : "s") left in \(CardDatabase.setName(set)). You'll review the exact spares before exchanging anything.")
+            ScrollViewReader { scroll in
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 12) {
+                        Text("Choose your missing piece")
+                            .font(.title2.bold())
+                            .foregroundStyle(Palette.text)
+                        let remaining = game.collectorTradesRemaining(inSet: set)
+                        Text(
+                            "\(remaining) trade\(remaining == 1 ? "" : "s") left in \(CardDatabase.setName(set)). You'll review the exact spares before exchanging anything."
+                        )
                         .font(.subheadline)
                         .foregroundStyle(Palette.subtle)
-                    Picker("Rarity", selection: $rarity) {
-                        Text("All rarities").tag(Rarity?.none)
-                        ForEach(Rarity.allCases, id: \.self) { choice in
-                            Text(choice.display).tag(Optional(choice))
+                        Picker("Rarity", selection: $rarity) {
+                            Text("All rarities").tag(Rarity?.none)
+                            ForEach(Rarity.allCases, id: \.self) { choice in
+                                Text(choice.display).tag(Optional(choice))
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .tint(Collector.tess.tint)
+                        .frame(minHeight: 44)
+                        .accessibilityIdentifier("collectorTargetRarity")
+                        ForEach(targets) { card in
+                            if let preview = game.collectorPreview(for: .trade(card.id)) {
+                                targetRow(card, preview: preview)
+                                    .id(card.id)
+                            }
+                        }
+                        if targets.isEmpty {
+                            ContentUnavailableView(
+                                "No missing cards match", systemImage: "magnifyingglass",
+                                description: Text("Try another rarity or clear your search."))
                         }
                     }
-                    .pickerStyle(.menu)
-                    .tint(Collector.tess.tint)
-                    .frame(minHeight: 44)
-                    .accessibilityIdentifier("collectorTargetRarity")
-                    ForEach(targets) { card in
-                        if let preview = game.collectorPreview(for: .trade(card.id)) {
-                            targetRow(card, preview: preview)
+                    .padding(16)
+                    .readableWidth()
+                }
+                .accessibilityIdentifier("collectorTargetList")
+                .accessibilityHidden(tutorial?.needs(.classicTradeTarget) == true)
+                .onAppear {
+                    if tutorial?.needs(.classicTradeTarget) == true, let card = targets.first {
+                        scroll.scrollTo(card.id, anchor: .center)
+                    }
+                }
+                .background(Palette.screen.ignoresSafeArea())
+                .navigationTitle("Trade with \(Collector.tess.name)")
+                .navigationBarTitleDisplayMode(.inline)
+                .searchable(text: $search, prompt: "Find a missing card")
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        if tutorial?.isActive != true {
+                            Button("Cancel") {
+                                Sound.play(.uiBack); dismiss()
+                            }
+                            .accessibilityIdentifier("collectorTargetCancel")
                         }
                     }
-                    if targets.isEmpty {
-                        ContentUnavailableView("No missing cards match", systemImage: "magnifyingglass",
-                                               description: Text("Try another rarity or clear your search."))
-                    }
-                }
-                .padding(16)
-                .readableWidth()
-            }
-            .accessibilityIdentifier("collectorTargetList")
-            .background(Palette.screen.ignoresSafeArea())
-            .navigationTitle("Trade with \(Collector.tess.name)")
-            .navigationBarTitleDisplayMode(.inline)
-            .searchable(text: $search, prompt: "Find a missing card")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { Sound.play(.uiBack); dismiss() }
-                        .accessibilityIdentifier("collectorTargetCancel")
                 }
             }
+            .tutorialHost(
+                tutorial?.prompt(
+                    .classicTradeTarget, target: "classic-trade-\(targets.first?.id ?? "")", title: "Save a trade goal",
+                    message:
+                        "Choose this missing card. Gather the shown normal spares, then review the trade. Your last and best copies stay safe."
+                )
+            )
+            .interactiveDismissDisabled(tutorial?.isActive == true)
         }
     }
 
     private func targetRow(_ card: Card, preview: CollectorPreview) -> some View {
         Button {
-            Haptics.play(.light)
-            Sound.play(.uiTap)
-            onChoose(card)
+            choose(card)
         } label: {
             HStack(spacing: 14) {
                 CardView(card: card, width: 66, pipsGlow: false)
                     .accessibilityHidden(true)
+                    .tutorialTarget("classic-trade-\(card.id)") { choose(card) }
                 VStack(alignment: .leading, spacing: 5) {
                     Text(card.name)
                         .font(.headline)
@@ -535,6 +569,12 @@ private struct CollectorTargetPicker: View {
         .accessibilityLabel("Choose \(card.name), \(card.rarity.display). Give \(preview.requirements.map(\.requirement.label).joined(separator: ", ")). \(preview.collectedCount) of \(preview.deal.requiredCount) spares available.")
         .accessibilityHint("Selects your target. No cards are exchanged yet.")
         .accessibilityIdentifier("collectorTarget-\(card.id)")
+    }
+
+    private func choose(_ card: Card) {
+        Haptics.play(.light)
+        Sound.play(.uiTap)
+        onChoose(card)
     }
 }
 

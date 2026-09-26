@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Classic's intro and replayable help. Explains the core loop plus how you
+/// Classic's replayable help. Explains the core loop plus how you
 /// win and lose without changing the current run when opened as a reference.
 struct WelcomeView: View {
     @Environment(GameState.self) var game: GameState

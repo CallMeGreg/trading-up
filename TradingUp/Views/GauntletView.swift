@@ -11,6 +11,7 @@ struct GauntletView: View {
     @Environment(GameState.self) private var game
     @Environment(\.dismiss) private var dismiss
     @State private var state: GauntletState?
+    @State private var tutorial = ModeTutorial(mode: .gauntlet)
 
     var body: some View {
         ZStack {
@@ -26,7 +27,14 @@ struct GauntletView: View {
                     }
             }
         }
-        .task { if state == nil { state = GauntletState(game: game) } }
+        .task {
+            guard state == nil else { return }
+            let newState = GauntletState(game: game)
+            tutorial.prepare(hasPlayed: newState.progress.hasSeenIntro || newState.run != nil)
+            if !newState.progress.hasSeenIntro, newState.run == nil { newState.dismissIntro() }
+            state = newState
+        }
+        .environment(\.modeTutorial, tutorial)
         // The run screen carries its own inline Home button in the HUD row, so the
         // floating corner button steps aside during ripping (req 11).
         .overlay(alignment: .topLeading) {
@@ -46,6 +54,28 @@ struct GauntletView: View {
                 }
                 .padding(10)
             }
+        }
+        .tutorialHost(prompt)
+        .onChange(of: state?.phase) { _, phase in
+            if phase == .lost || phase == .results { tutorial.finish() }
+        }
+    }
+
+    private var prompt: TutorialPrompt? {
+        guard let state, tutorial.isActive else { return nil }
+        switch state.phase {
+        case .trainerSelect:
+            return TutorialPrompt(target: "gauntlet-trainer-\(Trainer.neutral.id)", title: "Choose your Trainer",
+                                  message: "Start with \(Trainer.neutral.name). Trainers change your run's strengths; unlock more by reaching milestones.")
+        case .tierSelect:
+            return TutorialPrompt(target: "gauntlet-tier-easy", title: "Start on Easy",
+                                  message: "Reach each round's Aura target before your rips run out. Clearing a difficulty unlocks the next one for this Trainer.")
+        case .ripping:
+            guard !state.revealActive else { return nil }
+            return tutorial.prompt(.gauntletRip, target: "gauntlet-pack-1", title: "Use your first rip",
+                                   message: "Each pack costs one rip, not cash. Keep strong cards to build Aura and beat the target above.")
+        case .shop: return state.shopTutorialPrompt(tutorial)
+        default: return nil
         }
     }
 
