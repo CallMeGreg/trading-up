@@ -338,17 +338,17 @@ currency, or paid random rewards are involved.
 
 | Collector | Offer in each unlocked set | Reward | Run-long limit |
 | --- | --- | --- | --- |
-| **Mira** | Three, then four, then five different common duplicates | Half that set's pack price per request | Three requests per set |
-| **Rowan** | A named base and middle-stage duplicate from an evolution family; the next family follows a completed request | That set's pack price per request | Three requests per set |
-| **Tess** | A bundle of different normal duplicates from the target's set | One **chosen, missing** Spryte, non-foil and ungraded | Two trades per set |
+| **Matthew** | Three, then four, then five different common duplicates | Half that set's pack price per request | Three requests per set |
+| **Emilie** | A named base and middle-stage duplicate from an evolution family; the next family follows a completed request | That set's pack price per request | Three requests per set |
+| **Jonny** | A bundle of different normal duplicates from the target's set | One **chosen, missing** Spryte, non-foil and ungraded | Two trades per set |
 
-Mira and Rowan show their next request, its exact requirements, live progress,
+Matthew and Emilie show their next request, its exact requirements, live progress,
 and fixed payout. Their combined maximum payout is **4.5 pack prices per set**.
 Completing a request advances that collector's sequence; leaving the board
 never changes the offer. Requests are separate from automatic evolution/set
 bonuses and consume real spare copies.
 
-Tess's target picker lists missing cards, not another random selection. The
+Jonny's target picker lists missing cards, not another random selection. The
 price depends on the target's rarity:
 
 | Target | Same-set duplicate bundle |
@@ -369,14 +369,14 @@ Offers do **not** reserve cards. Players can keep useful spares for a future
 exchange or sell/grade them normally. Multiple previews can show the same spare,
 but confirmation always revalidates the live bundle, so a copy cannot be spent
 twice. Pulling a chosen trade target removes that offer without spending a trade.
-The ready count includes each cash request and at most one Tess trade per set,
+The ready count includes each cash request and at most one Jonny trade per set,
 even when several missing cards are affordable.
 
 **Safety and clarity:** only non-foil, ungraded duplicates qualify, with the
 highest-value copy of every identity always left behind. The all-time Binder
-is never consumed. A review shows the exact outgoing copies, their alternative
-shop payout, and the cash or named-card reward. Confirmation revalidates the
-offer and exact instance IDs atomically. A stale/double submission or failed
+is never consumed. A review shows the exact outgoing copies and the cash or
+named-card reward without repeating a shop-sale comparison. Confirmation
+revalidates the offer and exact instance IDs atomically. A stale/double submission or failed
 save pays nothing and consumes nothing. Receipts include earned bonuses; win
 and loss screens wait until the receipt is dismissed, just as they wait for a
 pack summary. Deals cannot interrupt an open pack.
@@ -624,7 +624,8 @@ and explains whether finishing the pack returns to the round, banks unused rips,
 opens a last-chance grade, or ends the run. An offered Catalyst is the **first decision row** in the
 summary, above the Sprytes, so its run-wide effect can inform keep/sell/swap choices.
 The card-by-card reveal order is unchanged, and players can still decide items in
-any order.
+any order. The summary's slightly larger card thumbnails open a detail view
+with the full card and evolution line before the keep, sell, or swap decision.
 
 **Pack-summary evolution pips.** The existing card-header pips keep their set's
 color: **solid** means in the Showcase, **half-filled** means available among the
@@ -636,7 +637,7 @@ as another stage. Keeping or swapping in a card makes its stage solid on the
 remaining pulls; selling it makes that stage missing unless a held copy remains.
 Only the summary receives the whole pending pack: individual reveals do not
 give away unrevealed cards, and settled Showcase pips remain held-only. Card
-order, pip size, connectors, summary layout, and keep/sell/swap behavior are unchanged.
+order, pip size, connectors, and keep/sell/swap behavior are unchanged.
 
 **Shop planning.** Spendable cash stays separate from the expandable **earned last
 round** breakdown. Purchases must never rewrite historical payout amounts. The shop
@@ -716,9 +717,12 @@ Catalyst; selling an undecided pull is still a separate, paying action.
 The incoming card and every replacement option show the shared stage pips,
 the card's stage, and the number of distinct stages currently in the Showcase.
 Filled pips show held stages; gold marks the incoming stage but does **not** count
-it as already collected. Completed series are labeled **Series complete** and
-standalone cards simply **Single card**. The sheet does not repeat separate
-line-completion or line-breakage badges; the confirmation still says **No cash paid**.
+it as already collected. A set-colored cue names cards from the incoming line
+already in the Showcase, and matching replacement choices carry a **Same line**
+tag. Completed series are labeled **Series complete** and
+standalone cards simply **Single card**. The sheet omits a separate gold-pip
+legend and does not repeat line-completion or line-breakage badges; the
+confirmation still says **No cash paid**.
 
 In the neutral, ungraded `swap` test fixture, replacing Emberpup in its
 completed three-stage line with Ignarok loses **14.82 Aura** even though the incoming
@@ -726,8 +730,9 @@ ultra costs more. Completing
 Pebblit/Boulderkin with Magmalith while replacing Smoldfin in that original fixture
 gains **29.53 Aura**.
 These previews use the same scoring engine as the actual swap, including foils,
-grades, Trainers, Catalysts, and duplicate stages. Card details show only the
-evolution stages currently in the Showcase, not an always-complete line.
+grades, Trainers, Catalysts, and duplicate stages. Showcase card details show only
+evolution stages currently in the Showcase; pending-card details also reveal
+the undecided pack's stages but explain they do not score until kept.
 
 ### 14.3 Trainers — the meta progression
 

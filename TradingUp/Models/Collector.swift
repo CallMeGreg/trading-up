@@ -5,9 +5,9 @@ enum Collector: String, CaseIterable, Codable {
 
     var name: String {
         switch self {
-        case .mira: return "Mira"
-        case .rowan: return "Rowan"
-        case .tess: return "Tess"
+        case .mira: return "Matthew"
+        case .rowan: return "Emilie"
+        case .tess: return "Jonny"
         }
     }
 
@@ -152,7 +152,6 @@ struct CollectorPreview: Identifiable {
     var isReady: Bool { requirements.allSatisfy(\.isComplete) }
     var collectedCount: Int { requirements.reduce(0) { $0 + $1.count } }
     var missingCount: Int { deal.requiredCount - collectedCount }
-    var sellValue: Double { supplied.reduce(0) { $0 + $1.sellValue } }
 }
 
 struct CollectorReceipt: Identifiable {
@@ -291,7 +290,7 @@ extension GameCore {
             collectorPreview(for: $0.goal)?.isReady == true
         }.count
         let targets = collectorTradeTargets(inSet: set)
-        // Tess counts once, regardless of how many missing cards share a bundle.
+        // Jonny counts once, regardless of how many missing cards share a bundle.
         let tradeReady = Rarity.allCases.contains { rarity in
             guard let card = targets.first(where: { $0.rarity == rarity }) else { return false }
             return collectorPreview(for: .trade(card.id))?.isReady == true

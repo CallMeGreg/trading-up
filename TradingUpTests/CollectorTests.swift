@@ -15,6 +15,13 @@ final class CollectorTests: XCTestCase {
         }
     }
 
+    func testCollectorDisplayNamesKeepPersistedIdentifiersStable() {
+        XCTAssertEqual(Collector.allCases.map(\.name), ["Matthew", "Emilie", "Jonny"])
+        XCTAssertEqual(Collector.allCases.map(\.rawValue), ["mira", "rowan", "tess"])
+        XCTAssertEqual(GameCore().collectorRequests(inSet: 1).map(\.id),
+                       ["request:1-mira-0", "request:1-rowan-0"])
+    }
+
     func testFreshBoardIsFiniteStableAndProgressionGated() throws {
         let core = GameCore()
         let offers = core.collectorRequests(inSet: 1)

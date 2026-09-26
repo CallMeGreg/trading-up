@@ -489,6 +489,7 @@ private struct PullPanel: View {
     let state: GauntletState
     let run: GauntletRun
     let onSwap: (CardInstance) -> Void
+    let onInspect: (CardInstance) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -497,7 +498,7 @@ private struct PullPanel: View {
                 CatalystOfferRow(state: state, catalyst: cat)
             }
             ForEach(state.pendingCards) { inst in
-                PullRow(state: state, run: run, inst: inst, onSwap: onSwap)
+                PullRow(state: state, run: run, inst: inst, onSwap: onSwap, onInspect: onInspect)
             }
         }
         .panel()
@@ -509,12 +510,24 @@ private struct PullRow: View {
     let run: GauntletRun
     let inst: CardInstance
     let onSwap: (CardInstance) -> Void
+    let onInspect: (CardInstance) -> Void
+
+    private var series: CardSeries {
+        .gauntlet(inst.card, showcase: run.showcase, pendingCards: state.pendingCards)
+    }
 
     var body: some View {
         HStack(spacing: 12) {
-            CardView(card: inst.card, instance: inst, width: 76,
-                     series: .gauntlet(inst.card, showcase: run.showcase,
-                                      pendingCards: state.pendingCards))
+            Button {
+                Haptics.play(.light)
+                onInspect(inst)
+            } label: {
+                CardView(card: inst.card, instance: inst, width: 84, series: series)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Inspect \(inst.card.name). \(series.accessibilityText)")
+            .accessibilityHint("Shows card details and its evolution line without deciding what to do with it.")
+            .accessibilityIdentifier("gauntletInspect-\(inst.cardId)")
             VStack(alignment: .leading, spacing: 6) {
                 Text(inst.card.name)
                     .font(.system(size: 14, weight: .heavy, design: .rounded))
@@ -598,6 +611,7 @@ private struct ShowcaseSwapPicker: View {
                                 .foregroundStyle(Palette.money)
                             SwapSeriesProgress(card: incoming.card, showcase: run.showcase, incoming: true)
                                 .accessibilityIdentifier("gauntletSwapIncomingSeries")
+                            SwapLineCue(card: incoming.card, showcase: run.showcase)
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -662,6 +676,13 @@ private struct ShowcaseSwapPicker: View {
                     Text(preview.outgoing.card.name)
                         .font(.subheadline.weight(.bold))
                         .foregroundStyle(.white)
+                    if incoming.card.stageCount > 1 && preview.outgoing.card.lineId == incoming.card.lineId {
+                        Label("SAME LINE", systemImage: "link")
+                            .font(.system(size: 9, weight: .heavy))
+                            .foregroundStyle(Element.theme(forSet: incoming.card.set).badgeTint)
+                            .padding(.horizontal, 7).padding(.vertical, 3)
+                            .background(Capsule().fill(Element.theme(forSet: incoming.card.set).badgeTint.opacity(0.16)))
+                    }
                     Text("Current price \(preview.outgoing.currentValue.money)")
                         .font(.caption)
                         .foregroundStyle(Palette.subtle)
@@ -702,6 +723,38 @@ private struct ShowcaseSwapPicker: View {
     }
 }
 
+private struct SwapLineCue: View {
+    let card: Card
+    let showcase: [CardInstance]
+
+    private var linemates: [Card] {
+        let held = Set(showcase.map(\.cardId))
+        return CardDatabase.line(card.lineId).filter { held.contains($0.id) }
+    }
+
+    var body: some View {
+        if card.stageCount > 1 {
+            let tint = Element.theme(forSet: card.set).badgeTint
+            HStack(spacing: 6) {
+                Image(systemName: "link")
+                Text(linemates.isEmpty ? "No linemates in Showcase"
+                     : "In Showcase: \(linemates.map(\.name).joined(separator: " · "))")
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .font(.caption2.weight(.bold))
+            .foregroundStyle(tint)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(8)
+            .background(RoundedRectangle(cornerRadius: 9).fill(tint.opacity(0.14)))
+            .overlay(RoundedRectangle(cornerRadius: 9).strokeBorder(tint.opacity(0.35)))
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(linemates.isEmpty ? "No cards in this evolution line are in the Showcase"
+                                : "In this evolution line in the Showcase: \(linemates.map(\.name).joined(separator: ", "))")
+            .accessibilityIdentifier("gauntletSwapLinemates")
+        }
+    }
+}
+
 private struct SwapSeriesProgress: View {
     let card: Card
     let showcase: [CardInstance]
@@ -720,8 +773,6 @@ private struct SwapSeriesProgress: View {
                         .foregroundStyle(Palette.text)
                     if series.ownedStages.count == series.line.count {
                         Text("Series complete").foregroundStyle(tint)
-                    } else if incoming {
-                        Text("Gold pip = incoming stage").foregroundStyle(Palette.subtle)
                     }
                 } else {
                     Text("Single card").foregroundStyle(Palette.subtle)
@@ -734,7 +785,7 @@ private struct SwapSeriesProgress: View {
         .accessibilityLabel(series.line.count > 1
             ? "Stage \(card.stage) of \(series.line.count), \(series.ownedStages.count) of \(series.line.count) stages in Showcase"
                 + (series.ownedStages.count == series.line.count ? ", series complete" : "")
-                + (incoming ? ". Gold pip marks the incoming stage" : "")
+                + (incoming ? ". Incoming card: \(card.name)" : "")
             : "Single card")
     }
 }
@@ -1081,6 +1132,100 @@ struct ShowcaseSelection: Identifiable {
     var id: Int { index }
 }
 
+private struct GauntletCardOverview: View {
+    let run: GauntletRun
+    let inst: CardInstance
+    var pendingCards: [CardInstance]? = nil
+
+    private var visibleCardIDs: Set<String> {
+        Set(run.showcase.map(\.cardId)).union(pendingCards?.map(\.cardId) ?? [])
+    }
+
+    var body: some View {
+        CardView(card: inst.card, instance: inst, width: 188,
+                 series: .gauntlet(inst.card, showcase: run.showcase,
+                                   pendingCards: pendingCards, pull: pendingCards != nil),
+                 pipsGlow: pendingCards != nil)
+            .padding(.top, 12)
+
+        VStack(spacing: 8) {
+            Text(inst.card.name)
+                .font(.system(size: 22, weight: .black, design: .rounded))
+                .foregroundStyle(.white)
+                .multilineTextAlignment(.center)
+            HStack(spacing: 8) {
+                badge(inst.card.rarity.display.uppercased(), inst.card.rarity.accent)
+                if inst.foil { badge("FOIL", Color(hex: "ffd54a")) }
+                if let g = inst.grade { badge("PSA \(g)", gradeColor(g)) }
+            }
+        }
+
+        HStack(spacing: 8) {
+            StatTile(label: "Value", value: inst.currentValue.moneyShort, tint: Palette.money)
+            StatTile(label: "Base", value: inst.card.baseValue.moneyShort)
+            StatTile(label: "Element", value: inst.card.element.display,
+                     tint: inst.card.element.badgeTint)
+        }
+
+        EvolutionLineView(line: CardDatabase.line(inst.card.lineId),
+                          currentCardId: inst.card.id) { visibleCardIDs.contains($0) }
+        if pendingCards != nil && inst.card.stageCount > 1 {
+            Text("Cards in this pack count toward the evolution bonus only after you keep them.")
+                .font(.caption)
+                .foregroundStyle(Palette.subtle)
+        } else if inst.card.stageCount > 1 && !run.isInCompletedLine(inst) {
+            Text("Only stages in your Showcase count toward the evolution bonus.")
+                .font(.caption)
+                .foregroundStyle(Palette.subtle)
+        }
+    }
+
+    private func badge(_ text: String, _ tint: Color) -> some View {
+        Text(text)
+            .font(.system(size: 10, weight: .heavy))
+            .foregroundStyle(tint)
+            .padding(.horizontal, 8).padding(.vertical, 3)
+            .background(Capsule().fill(tint.opacity(0.16)))
+    }
+}
+
+private struct PendingCardDetail: View {
+    let state: GauntletState
+    let inst: CardInstance
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        ZStack {
+            GauntletBackdrop()
+            if let run = state.run, state.pendingCards.contains(where: { $0.id == inst.id }) {
+                ScrollView {
+                    VStack(spacing: 16) {
+                        GauntletCardOverview(run: run, inst: inst, pendingCards: state.pendingCards)
+                    }
+                    .padding(20)
+                    .readableWidth()
+                }
+                .accessibilityIdentifier("gauntletPendingCardDetails")
+            } else {
+                Color.clear.onAppear { dismiss() }
+            }
+        }
+        .overlay(alignment: .topTrailing) {
+            Button { dismiss() } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: 26))
+                    .symbolRenderingMode(.hierarchical)
+                    .foregroundStyle(Palette.subtle)
+            }
+            .buttonStyle(.plain)
+            .padding(14)
+            .accessibilityLabel("Close card")
+            .accessibilityIdentifier("gauntletClosePendingDetail")
+        }
+        .onAppear { Sound.play(.panelOpen) }
+    }
+}
+
 /// The expanded view for a Showcase card: a large render with its foil/grade
 /// treatment, the numbers behind its score, its full evolution line, and the
 /// grade action — the tap target that used to be a bare confirmation dialog.
@@ -1125,39 +1270,7 @@ private struct ShowcaseCardDetail: View {
     private func content(run: GauntletRun, inst: CardInstance) -> some View {
         ScrollView {
             VStack(spacing: 16) {
-                CardView(card: inst.card, instance: inst, width: 188,
-                         series: .gauntlet(inst.card, showcase: run.showcase),
-                         pipsGlow: false)
-                    .padding(.top, 12)
-
-                VStack(spacing: 8) {
-                    Text(inst.card.name)
-                        .font(.system(size: 22, weight: .black, design: .rounded))
-                        .foregroundStyle(.white)
-                        .multilineTextAlignment(.center)
-                    HStack(spacing: 8) {
-                        badge(inst.card.rarity.display.uppercased(), inst.card.rarity.accent)
-                        if inst.foil { badge("FOIL", Color(hex: "ffd54a")) }
-                        if let g = inst.grade { badge("PSA \(g)", gradeColor(g)) }
-                    }
-                }
-
-                HStack(spacing: 8) {
-                    StatTile(label: "Value", value: inst.currentValue.moneyShort, tint: Palette.money)
-                    StatTile(label: "Base", value: inst.card.baseValue.moneyShort)
-                    StatTile(label: "Element", value: inst.card.element.display,
-                             tint: inst.card.element.badgeTint)
-                }
-
-                EvolutionLineView(line: CardDatabase.line(inst.card.lineId),
-                                  currentCardId: inst.card.id) { id in
-                    run.showcase.contains { $0.cardId == id }
-                }
-                if inst.card.stageCount > 1 && !run.isInCompletedLine(inst) {
-                    Text("Only stages in your Showcase count toward the evolution bonus.")
-                        .font(.caption)
-                        .foregroundStyle(Palette.subtle)
-                }
+                GauntletCardOverview(run: run, inst: inst)
 
                 if run.isInCompletedLine(inst) {
                     completedLineBanner(set: inst.card.set, mult: run.evoLineMultiplier(forSet: inst.card.set))
@@ -1206,14 +1319,6 @@ private struct ShowcaseCardDetail: View {
                 .accessibilityIdentifier("gauntletGradeCard")
             }
         }
-    }
-
-    private func badge(_ text: String, _ tint: Color) -> some View {
-        Text(text)
-            .font(.system(size: 10, weight: .heavy))
-            .foregroundStyle(tint)
-            .padding(.horizontal, 8).padding(.vertical, 3)
-            .background(Capsule().fill(tint.opacity(0.16)))
     }
 
     /// The evolution-line ("set") multiplier cue in the detail view: a set-coloured
@@ -1625,9 +1730,21 @@ struct GauntletRevealView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var phase: Phase = .sealed
     @State private var items: [RevealItem] = []
-    @State private var swapCandidate: CardInstance?
+    @State private var summarySheet: SummarySheet?
 
     private enum Phase: Equatable { case sealed, revealing(Int), summary }
+
+    private enum SummarySheet: Identifiable {
+        case inspect(CardInstance)
+        case swap(CardInstance)
+
+        var id: String {
+            switch self {
+            case .inspect(let inst): return "inspect-\(inst.id)"
+            case .swap(let inst): return "swap-\(inst.id)"
+            }
+        }
+    }
 
     /// A pull entry to reveal — a real card, or the Catalyst that took a slot.
     private enum RevealItem: Identifiable {
@@ -1772,7 +1889,9 @@ struct GauntletRevealView: View {
 
                     if let run = state.run {
                         if !resolved {
-                            PullPanel(state: state, run: run) { card in swapCandidate = card }
+                            PullPanel(state: state, run: run,
+                                      onSwap: { summarySheet = .swap($0) },
+                                      onInspect: { summarySheet = .inspect($0) })
                         }
                         ShowcasePanel(run: run, interactive: false, titlePrefix: "Showcase") { _ in }
                         if !run.attunedCatalysts.isEmpty { AttunedPanel(run: run) }
@@ -1784,9 +1903,14 @@ struct GauntletRevealView: View {
             .accessibilityIdentifier("gauntletSummaryScroll")
             continueBar
         }
-        .sheet(item: $swapCandidate) { candidate in
-            ShowcaseSwapPicker(state: state, incoming: candidate) {
-                swapCandidate = nil
+        .sheet(item: $summarySheet) { destination in
+            switch destination {
+            case .inspect(let card):
+                PendingCardDetail(state: state, inst: card)
+            case .swap(let card):
+                ShowcaseSwapPicker(state: state, incoming: card) {
+                    summarySheet = nil
+                }
             }
         }
     }
