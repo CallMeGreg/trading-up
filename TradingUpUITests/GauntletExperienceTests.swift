@@ -43,6 +43,17 @@ final class GauntletExperienceTests: XCTestCase {
         XCTAssertTrue(completing.label.contains("Single card"))
         XCTAssertTrue(element("gauntletSwapIncomingSeries").label
             .contains("Stage 3 of 3, 2 of 3 stages in Showcase"))
+        XCTAssertFalse(element("gauntletSwapIncomingSeries").label.contains("Gold pip"))
+        XCTAssertFalse(app.staticTexts["Gold pip = incoming stage"].exists)
+        XCTAssertFalse(element("gauntletSwapLinemates").exists)
+        XCTAssertFalse(app.staticTexts.matching(NSPredicate(
+            format: "label BEGINSWITH %@", "In Showcase:")).firstMatch.exists)
+        let matchingOption = app.buttons["gauntletReplace-3"]
+        XCTAssertTrue(matchingOption.label.contains("SAME LINE"))
+        XCTAssertFalse(completing.label.contains("SAME LINE"))
+        scrollTo(matchingOption, in: app.scrollViews["gauntletSwapOptions"])
+        shot("gauntlet-swap-line-cue")
+        scrollTo(completing, in: app.scrollViews["gauntletSwapOptions"])
         completing.tap()
         shot("after-completing-a-line")
         app.buttons["gauntletConfirmSwap"].tap()
@@ -213,7 +224,11 @@ final class GauntletExperienceTests: XCTestCase {
         )).firstMatch
         XCTAssertTrue(initial.waitForExistence(timeout: 5))
         app.buttons["gauntletAttuneCatalyst"].tap()
-        shot("half-fill-pending-linemates")
+        let inspect = app.buttons["gauntletInspect-S1-003"]
+        XCTAssertTrue(inspect.waitForExistence(timeout: 5))
+        XCTAssertGreaterThanOrEqual(inspect.frame.width, 84)
+        XCTAssertLessThan(inspect.frame.width, 94)
+        shot("gauntlet-larger-summary-cards")
         app.buttons["gauntletKeep-S1-002"].tap()
         let updated = app.descendants(matching: .any).matching(NSPredicate(
             format: "label == %@",
@@ -222,6 +237,17 @@ final class GauntletExperienceTests: XCTestCase {
         )).firstMatch
         scrollTo(app.buttons["gauntletKeep-S1-003"], in: app.scrollViews["gauntletSummaryScroll"])
         XCTAssertTrue(updated.waitForExistence(timeout: 5))
+        inspect.tap()
+        let detail = app.scrollViews["gauntletPendingCardDetails"]
+        XCTAssertTrue(detail.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["EVOLUTION LINE"].exists)
+        XCTAssertTrue(app.staticTexts["Emberpup"].exists)
+        XCTAssertTrue(app.staticTexts["Cinderhound"].exists)
+        XCTAssertTrue(app.staticTexts["Pyrewolf"].exists)
+        XCTAssertFalse(app.buttons["gauntletGradeCard"].exists)
+        shot("gauntlet-expanded-pull")
+        app.buttons["gauntletClosePendingDetail"].tap()
+        XCTAssertTrue(app.buttons["gauntletKeep-S1-003"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.buttons["gauntletKeep-S1-002"].exists)
         XCTAssertFalse(app.buttons["gauntletFinishPack"].isEnabled)
         shot("half-fill-linemate-kept")

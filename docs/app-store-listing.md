@@ -121,7 +121,7 @@ Buy a pack, rip it, and find out what you got. Six cards - three commons, two un
 THE LOOP
 
 - Rip packs. Every pack opens card by card, and the hit slot is always saved for last.
-- Make a plan. Mira and Rowan pay for collector requests; Tess trades spare bundles for a missing card you choose. You have two trades per set, so each target matters.
+- Make a plan. Matthew and Emilie pay for collector requests; Jonny trades spare bundles for a missing card you choose. You have two trades per set, so each target matters.
 - Keep useful copies. Save ordinary, ungraded extras for your next exchange, or sell them for cash. Deals never take your best copy. Offers never expire and work offline.
 - Sell your extras. Quick sales pay 60% of market value. Cash now competes with keeping useful duplicates for your next deal.
 - Grade your best. Pay a fee, roll a PSA score. A 10 is a 5x payday and a 1 is a freak 10x jackpot, but anything from 2 to 7 is worth less than the card you put in.

@@ -245,6 +245,9 @@ struct CollectorsView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .panel(12)
+            .overlay(alignment: .top) {
+                CollectorAccent(tint: Collector.tess.tint)
+            }
         }
     }
 
@@ -372,12 +375,20 @@ private struct CollectorOfferCard: View {
         }
         .panel(12)
         .overlay(alignment: .top) {
-            RoundedRectangle(cornerRadius: 2)
-                .fill(deal.collector.tint.opacity(0.75))
-                .frame(width: 42, height: 3)
-                .padding(.top, 1)
-                .accessibilityHidden(true)
+            CollectorAccent(tint: deal.collector.tint)
         }
+    }
+}
+
+private struct CollectorAccent: View {
+    let tint: Color
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: 2)
+            .fill(tint.opacity(0.75))
+            .frame(width: 42, height: 3)
+            .padding(.top, 1)
+            .accessibilityHidden(true)
     }
 }
 
@@ -475,7 +486,7 @@ private struct CollectorTargetPicker: View {
             }
             .accessibilityIdentifier("collectorTargetList")
             .background(Palette.screen.ignoresSafeArea())
-            .navigationTitle("Trade with Tess")
+            .navigationTitle("Trade with \(Collector.tess.name)")
             .navigationBarTitleDisplayMode(.inline)
             .searchable(text: $search, prompt: "Find a missing card")
             .toolbar {
@@ -598,11 +609,6 @@ private struct CollectorExchangeSheet: View {
                 VStack(alignment: .leading, spacing: 12) {
                     CollectorSectionLabel(title: "You give · \(preview.supplied.count) exact copies", symbol: "arrow.up.right")
                     CollectorSuppliedCopies(instances: preview.supplied)
-                    Text("These copies would sell to the shop for \(preview.sellValue.money). You give up that sale payout when you exchange them.")
-                        .font(.subheadline)
-                        .foregroundStyle(Palette.subtle)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .accessibilityIdentifier("collectorForegoneSale")
                 }
                 .panel()
                 CollectorReward(deal: preview.deal)
@@ -679,8 +685,8 @@ private struct CollectorExchangeSheet: View {
     private func nextStep(_ receipt: CollectorReceipt) -> String {
         if receipt.received != nil {
             let left = game.collectorTradesRemaining(inSet: receipt.deal.set)
-            return left == 0 ? "You've used all of Tess's trades in this set."
-                : "\(left) trade\(left == 1 ? "" : "s") left with Tess in \(CardDatabase.setName(receipt.deal.set))."
+            return left == 0 ? "You've used all of \(receipt.deal.collector.name)'s trades in this set."
+                : "\(left) trade\(left == 1 ? "" : "s") left with \(receipt.deal.collector.name) in \(CardDatabase.setName(receipt.deal.set))."
         }
         return receipt.deal.sequence < receipt.deal.total
             ? "\(receipt.deal.collector.name)'s next request is waiting on the board."

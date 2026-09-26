@@ -32,6 +32,12 @@ final class CollectorExperienceTests: XCTestCase {
         XCTAssertTrue(app.buttons["collectorReview-request:1-rowan-0"].isHittable,
                       "compact offers should expose both cash requests without a tracking panel")
         shot("collectors-compact-board")
+        for name in ["Matthew", "Emilie", "Jonny"] {
+            XCTAssertTrue(app.descendants(matching: .any)
+                .matching(NSPredicate(format: "label CONTAINS %@", name)).firstMatch.exists)
+        }
+        scrollTo(element("collectorTradesRemaining"), in: board)
+        shot("collectors-initial-trader")
         tapTab("Shop", symbol: "bag.fill")
         XCTAssertTrue(app.buttons["buyPack"].firstMatch.waitForExistence(timeout: 5))
     }
@@ -57,7 +63,7 @@ final class CollectorExperienceTests: XCTestCase {
         tapOfferButton("collectorReview-\(mira)")
         let originalCopies = suppliedCopies.allElementsBoundByIndex.map(\.label).sorted()
         XCTAssertFalse(originalCopies.isEmpty)
-        XCTAssertTrue(element("collectorForegoneSale").exists)
+        XCTAssertFalse(element("collectorForegoneSale").exists)
         shot("collectors-exact-copy-review")
         app.buttons["collectorReviewCancel"].tap()
         XCTAssertTrue(board.waitForExistence(timeout: 5))
@@ -89,12 +95,13 @@ final class CollectorExperienceTests: XCTestCase {
         let allowance = app.staticTexts["collectorTradesRemaining"]
         scrollTo(allowance, in: board)
         let startingTrades = leadingCount(in: allowance.label)
-        chooseTradeTarget()
+        chooseTradeTarget(capture: true)
         let progress = app.staticTexts["collectorOfferProgress-trade:\(target)"]
         let expectedCopies = leadingCount(in: progress.label)
         tapOfferButton("collectorReview-trade:\(target)")
         XCTAssertEqual(suppliedCopyCount, expectedCopies)
-        XCTAssertTrue(element("collectorForegoneSale").exists)
+        XCTAssertFalse(element("collectorForegoneSale").exists)
+        scrollTo(element("collectorReward-\(target)"), in: app.scrollViews["collectorReviewSheet"])
         shot("collectors-trade-review")
         app.buttons["collectorConfirm"].tap()
         XCTAssertTrue(app.staticTexts["collectorReceived-\(target)"].waitForExistence(timeout: 5))
@@ -290,7 +297,7 @@ final class CollectorExperienceTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(confirm.frame.height, 44)
         XCTAssertGreaterThanOrEqual(confirm.frame.minX, app.frame.minX)
         XCTAssertLessThanOrEqual(confirm.frame.maxX, app.frame.maxX)
-        scrollTo(element("collectorForegoneSale"), in: app.scrollViews["collectorReviewSheet"])
+        scrollTo(suppliedCopies.firstMatch, in: app.scrollViews["collectorReviewSheet"])
         shot("collectors-review-\(suffix)")
         app.buttons["collectorReviewCancel"].tap()
         XCTAssertTrue(board.waitForExistence(timeout: 5))
@@ -335,10 +342,14 @@ final class CollectorExperienceTests: XCTestCase {
         scrollTo(picker, in: app.scrollViews["collectionCardDetail"])
     }
 
-    private func chooseTradeTarget() {
+    private func chooseTradeTarget(capture: Bool = false) {
         tapOfferButton("collectorChooseTarget")
         let list = app.scrollViews["collectorTargetList"]
         XCTAssertTrue(list.waitForExistence(timeout: 5))
+        if capture {
+            XCTAssertTrue(app.navigationBars["Trade with Jonny"].exists)
+            shot("collectors-jonny-card-trade")
+        }
         let choice = app.buttons["collectorTarget-\(target)"]
         scrollTo(choice, in: list)
         choice.tap()

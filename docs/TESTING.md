@@ -275,8 +275,8 @@ players or globally optimal play. Cap hits and premature-loss counts must be
 zero. Do not hide a failed run by changing its outcome or choosing a seed after
 seeing the result.
 
-Measured with the shipping 60% quick-sale rate, half-pack Mira payouts,
-one-pack Rowan payouts, and two trades per set:
+Measured with the shipping 60% quick-sale rate, half-pack Matthew payouts,
+one-pack Emilie payouts, and two trades per set:
 
 | Policy | Wins | Mean packs opened | Mean requests / trades |
 | --- | --- | --- | --- |

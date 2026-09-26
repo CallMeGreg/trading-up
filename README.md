@@ -42,6 +42,8 @@ purchase unlocks the other four sets.
 Tactile card sounds and original background music give Classic and Gauntlet
 their own feel. Music and sound effects have separate volume sliders and
 one-tap mute, so you can keep the mix comfortable or play quietly.
+In Gauntlet, tap a pulled card to inspect its evolution line before you decide
+whether to keep, sell, or swap it into your Showcase.
 
 ## Screenshots
 
@@ -98,8 +100,8 @@ collection is always safe.
 
 ### 🤝 Meet the collectors
 
-Visit **Collectors** to give your extras a purpose. **Mira** pays for starter
-collections; **Rowan** wants specific evolution-family cards. **Tess** offers a
+Visit **Collectors** to give your extras a purpose. **Matthew** pays for starter
+collections; **Emilie** wants specific evolution-family cards. **Jonny** offers a
 card you choose from the ones you're missing, in exchange for a bundle of spare
 cards from the same set. You get **two trades per set**, so choose what matters.
 
