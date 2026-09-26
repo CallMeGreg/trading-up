@@ -611,7 +611,6 @@ private struct ShowcaseSwapPicker: View {
                                 .foregroundStyle(Palette.money)
                             SwapSeriesProgress(card: incoming.card, showcase: run.showcase, incoming: true)
                                 .accessibilityIdentifier("gauntletSwapIncomingSeries")
-                            SwapLineCue(card: incoming.card, showcase: run.showcase)
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -720,38 +719,6 @@ private struct ShowcaseSwapPicker: View {
         .overlay(RoundedRectangle(cornerRadius: 18)
             .strokeBorder(selectedId == preview.id ? Color(hex: "b06cf7") : .clear, lineWidth: 2))
         .accessibilityElement(children: .combine)
-    }
-}
-
-private struct SwapLineCue: View {
-    let card: Card
-    let showcase: [CardInstance]
-
-    private var linemates: [Card] {
-        let held = Set(showcase.map(\.cardId))
-        return CardDatabase.line(card.lineId).filter { held.contains($0.id) }
-    }
-
-    var body: some View {
-        if card.stageCount > 1 {
-            let tint = Element.theme(forSet: card.set).badgeTint
-            HStack(spacing: 6) {
-                Image(systemName: "link")
-                Text(linemates.isEmpty ? "No linemates in Showcase"
-                     : "In Showcase: \(linemates.map(\.name).joined(separator: " · "))")
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .font(.caption2.weight(.bold))
-            .foregroundStyle(tint)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(8)
-            .background(RoundedRectangle(cornerRadius: 9).fill(tint.opacity(0.14)))
-            .overlay(RoundedRectangle(cornerRadius: 9).strokeBorder(tint.opacity(0.35)))
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel(linemates.isEmpty ? "No cards in this evolution line are in the Showcase"
-                                : "In this evolution line in the Showcase: \(linemates.map(\.name).joined(separator: ", "))")
-            .accessibilityIdentifier("gauntletSwapLinemates")
-        }
     }
 }
 

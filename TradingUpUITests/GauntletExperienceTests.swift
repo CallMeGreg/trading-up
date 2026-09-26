@@ -45,10 +45,9 @@ final class GauntletExperienceTests: XCTestCase {
             .contains("Stage 3 of 3, 2 of 3 stages in Showcase"))
         XCTAssertFalse(element("gauntletSwapIncomingSeries").label.contains("Gold pip"))
         XCTAssertFalse(app.staticTexts["Gold pip = incoming stage"].exists)
-        let linemates = element("gauntletSwapLinemates")
-        XCTAssertTrue(linemates.waitForExistence(timeout: 5))
-        XCTAssertTrue(linemates.label.contains("Pebblit"))
-        XCTAssertTrue(linemates.label.contains("Boulderkin"))
+        XCTAssertFalse(element("gauntletSwapLinemates").exists)
+        XCTAssertFalse(app.staticTexts.matching(NSPredicate(
+            format: "label BEGINSWITH %@", "In Showcase:")).firstMatch.exists)
         let matchingOption = app.buttons["gauntletReplace-3"]
         XCTAssertTrue(matchingOption.label.contains("SAME LINE"))
         XCTAssertFalse(completing.label.contains("SAME LINE"))
