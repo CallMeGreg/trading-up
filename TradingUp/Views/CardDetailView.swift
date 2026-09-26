@@ -12,6 +12,7 @@ struct CardDetailView: View {
     let card: Card
     @Environment(GameState.self) var game: GameState
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modeTutorial) private var tutorial
     @State private var gradeResult: GradeResult?
     @AppStorage("tradingup_copy_action_mode") private var copyActionMode: CopyActionMode = .grade
 
@@ -22,37 +23,93 @@ struct CardDetailView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 18) {
-                    CardView(card: card, instance: copies.first, width: 250,
-                             series: CardSeries(for: card, pull: true) { game.owns($0.id) },
-                             pipsGlow: false)
+            ScrollViewReader { scroll in
+                ScrollView {
+                    VStack(spacing: 18) {
+                        CardView(
+                            card: card, instance: copies.first, width: 250,
+                            series: CardSeries(for: card, pull: true) { game.owns($0.id) },
+                            pipsGlow: false
+                        )
                         .padding(.top, 8)
 
-                    if line.count > 1 {
-                        EvolutionLineView(line: line, currentCardId: card.id) { game.owns($0) }
+                        if line.count > 1 {
+                            EvolutionLineView(line: line, currentCardId: card.id) { game.owns($0) }
+                        }
+                        copiesSection
+                            .id("copies")
+                        if tutorial?.needs(.classicDetailDone) == true {
+                            Button("Back to Collection", action: closeTutorialDetail)
+                                .buttonStyle(.borderedProminent)
+                                .tint(Palette.money)
+                                .tutorialTarget("classic-detail-done", action: closeTutorialDetail)
+                                .id("classic-detail-done")
+                        }
                     }
-                    copiesSection
+                    .padding(16)
+                    .readableWidth()
                 }
-                .padding(16)
-                .readableWidth()
-            }
-            .accessibilityIdentifier("collectionCardDetail")
-            .background(Palette.screen.ignoresSafeArea())
-            .navigationTitle(card.name)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { Sound.play(.uiBack); dismiss() }
+                .accessibilityIdentifier("collectionCardDetail")
+                .accessibilityHidden(detailPrompt != nil)
+                .onAppear {
+                    if tutorial?.needs(.classicDetailDone) == true {
+                        copyActionMode = tutorial?.needs(.classicSell) == true ? .grade : .sell
+                        scroll.scrollTo("copies", anchor: .center)
+                    }
                 }
-            }
-            .overlay {
-                if let r = gradeResult {
-                    GradeRevealOverlay(result: r) { gradeResult = nil }
+                .onChange(of: detailPrompt?.target) { _, target in
+                    guard let target else { return }
+                    scroll.scrollTo(target == "classic-detail-done" ? target : "copies", anchor: .center)
                 }
+                .background(Palette.screen.ignoresSafeArea())
+                .navigationTitle(card.name)
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        if tutorial?.isActive != true {
+                            Button("Done") {
+                                Sound.play(.uiBack); dismiss()
+                            }
+                        }
+                    }
+                }
+                .tutorialHost(detailPrompt)
+                .overlay {
+                    if let r = gradeResult {
+                        GradeRevealOverlay(result: r) { gradeResult = nil }
+                    }
+                }
+                .onAppear { Sound.play(.panelOpen) }
             }
-            .onAppear { Sound.play(.panelOpen) }
         }
+        .interactiveDismissDisabled(tutorial?.isActive == true)
+    }
+
+    private var tutorialCopy: CardInstance? { copies.first { game.canGrade($0) } }
+
+    private var detailPrompt: TutorialPrompt? {
+        guard tutorial?.needs(.classicDetailDone) == true, gradeResult == nil else { return nil }
+        if tutorial?.needs(.classicGrade) == true, let copy = tutorialCopy {
+            return TutorialPrompt(target: "classic-grade-\(copy.id)", title: "Try grading",
+                                  message: "Pay \(Economy.gradeFee(set: card.set).money) for a grade. It can raise or lower this card's value, and each copy gets one try.")
+        }
+        if tutorial?.needs(.classicSell) == true {
+            return TutorialPrompt(target: "classic-sell-tab", title: "Selling extras",
+                                  message: "Switch to Sell Extras. Spare copies sell for 60% of value; your last copy can't be sold.")
+        }
+        return TutorialPrompt(target: "classic-detail-done", title: "Build complete lines",
+                              message: "Collect every stage of an evolution line for a cash bonus. Let's visit the collectors next.")
+    }
+
+    private func closeTutorialDetail() {
+        tutorial?.record(.classicDetailDone)
+        Sound.play(.uiBack)
+        dismiss()
+    }
+
+    private func showSellExtras() {
+        copyActionMode = .sell
+        tutorial?.record(.classicSell)
     }
 
     // MARK: Copies
@@ -67,6 +124,13 @@ struct CardDetailView: View {
             }
             .pickerStyle(.segmented)
             .accessibilityIdentifier("collectionCopyAction")
+            .background {
+                HStack(spacing: 0) {
+                    Color.clear
+                    Color.clear.tutorialTarget("classic-sell-tab", action: showSellExtras)
+                }
+                .allowsHitTesting(false)
+            }
             .onChange(of: copyActionMode) { _, _ in
                 Haptics.play(.light)
                 Sound.play(.uiTap)
@@ -119,11 +183,10 @@ struct CardDetailView: View {
                         miniButton("Grade \(Economy.gradeFee(set: card.set).money)", "seal.fill",
                                    Color(hex: "6d5cf7"),
                                    enabled: game.canGrade(inst)) {
-                            if let r = game.grade(inst.id) {
-                                Haptics.play(.rigid); Sound.play(.gradeStart); gradeResult = r
-                            } else { Haptics.play(.error); Sound.play(.blocked) }
+                            grade(inst)
                         }
                         .accessibilityIdentifier("gradeCopy-\(inst.id)")
+                        .tutorialTarget("classic-grade-\(inst.id)") { grade(inst) }
                     } else {
                         actionStatus("Already Graded", "checkmark.seal.fill")
                     }
@@ -141,6 +204,18 @@ struct CardDetailView: View {
     }
 
     // MARK: Helpers
+
+    private func grade(_ inst: CardInstance) {
+        if let result = game.grade(inst.id) {
+            tutorial?.record(.classicGrade)
+            Haptics.play(.rigid)
+            Sound.play(.gradeStart)
+            gradeResult = result
+        } else {
+            Haptics.play(.error)
+            Sound.play(.blocked)
+        }
+    }
 
     private func sectionHeader(_ t: String) -> some View {
         Text(t.uppercased())

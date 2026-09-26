@@ -3,6 +3,7 @@ import SwiftUI
 struct ShopView: View {
     @Environment(GameState.self) var game: GameState
     @Environment(PurchaseStore.self) private var purchases: PurchaseStore
+    @Environment(\.modeTutorial) private var tutorial
     /// Sends the player back to the main menu. Provided by `ClassicModeView`; the
     /// Shop's wallet header hosts the only home button in Classic mode.
     var onHome: (() -> Void)? = nil
@@ -40,6 +41,7 @@ struct ShopView: View {
                 }
                 .accessibilityIdentifier("classicShop")
             }
+            .accessibilityHidden(tutorial?.isActive == true)
             .background(Palette.screen.ignoresSafeArea())
             .toolbar(.hidden, for: .navigationBar)
         }
@@ -60,6 +62,7 @@ struct ShopView: View {
         )
         guard !wasBlocked else { return }   // reveal already in flight: silent no-op
         if started {
+            tutorial?.record(.classicBuy)
             game.beginReveal()
             Haptics.play(.medium)
             Sound.play(.purchase)
@@ -355,6 +358,7 @@ struct SetShelfRow: View {
             .disabled(!canBuyPack)
             .accessibilityIdentifier("buyPack")
             .accessibilityLabel("Buy a pack, \(CardDatabase.setName(set)), 6 cards, \(packPrice.money)")
+            .tutorialTarget("classic-buy-\(set)", action: onBuyPack)
 
             if FeatureFlags.boosterBoxesAvailable {
                 Button(action: onBuyBox) {

@@ -29,6 +29,7 @@ final class IAPReviewScreenshotTests: XCTestCase {
         // Render the real configured price without a live StoreKit product
         // (DEBUG-only seam; compiled out of release).
         app.launchEnvironment["TU_FAKE_PRICE"] = "$2.99"
+        app.launchArguments = ["-tradingup_tutorial_v1_classic", "complete"]
         app.launch()
 
         // First-launch explainer, then into the shop with the starting bankroll.
@@ -36,9 +37,6 @@ final class IAPReviewScreenshotTests: XCTestCase {
         let classic = app.buttons["classicMode"].firstMatch
         XCTAssertTrue(classic.waitForExistence(timeout: 30), "main menu never appeared")
         classic.tap()
-
-        let start = app.buttons["Start Collecting"]
-        if start.waitForExistence(timeout: 30) { start.tap() }
 
         XCTAssertTrue(app.buttons["buyPack"].firstMatch.waitForExistence(timeout: 20),
                       "shop never appeared")

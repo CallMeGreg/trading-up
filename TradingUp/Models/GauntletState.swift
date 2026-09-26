@@ -13,7 +13,7 @@ final class GauntletState {
 
     /// Where the player is in the Gauntlet flow. The UI switches on this.
     enum Phase: Equatable {
-        case intro              // first-time (or replayed) how-to explainer
+        case intro              // replayable how-to reference
         case trainerSelect      // pick a Trainer for the run
         case tierSelect         // pick an unlocked difficulty
         case ripping            // an active round: rip, then keep/sell/grade/attune
@@ -109,11 +109,11 @@ final class GauntletState {
         self.rng = AppRNG()
         #endif
         // Resume an in-progress run if one was saved on the last exit (req 11);
-        // otherwise show the how-to once, the first time Gauntlet is ever opened.
+        // otherwise begin at Trainer select; first-run teaching is contextual UI.
         if let snapshot = runStore.load() {
             restore(from: snapshot)
         } else {
-            self.phase = progress.hasSeenIntro ? .trainerSelect : .intro
+            self.phase = .trainerSelect
         }
     }
 

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct CollectionView: View {
     @Environment(GameState.self) var game: GameState
+    @Environment(\.modeTutorial) private var tutorial
     @State private var set = 1
     @State private var selected: Card?
     @State private var activeFilters: Set<CardFilter> = []
@@ -10,6 +11,7 @@ struct CollectionView: View {
     private var cards: [Card] { CardDatabase.cards(inSet: set) }
     private var owned: Int { game.ownedCount(inSet: set) }
     private var filteredCards: [Card] { cards.filter(matches) }
+    private var tutorialCard: Card? { cards.first { game.owns($0.id) } }
 
     /// A card is shown only if it satisfies *every* active filter (AND).
     private func matches(_ card: Card) -> Bool {
@@ -47,25 +49,36 @@ struct CollectionView: View {
                 }
                 .padding(.horizontal, 16)
 
-                filterBar
-                sellDuplicatesButton
+                if tutorial?.isActive != true {
+                    filterBar
+                    sellDuplicatesButton
+                }
 
-                ScrollView {
-                    if filteredCards.isEmpty {
-                        emptyState
-                    } else {
-                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 104), spacing: 12)], spacing: 14) {
-                            ForEach(filteredCards) { card in
-                                slot(for: card)
+                ScrollViewReader { scroll in
+                    ScrollView {
+                        if filteredCards.isEmpty {
+                            emptyState
+                        } else {
+                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 104), spacing: 12)], spacing: 14) {
+                                ForEach(filteredCards) { card in
+                                    slot(for: card)
+                                        .id(card.id)
+                                }
                             }
+                            .padding(16)
                         }
-                        .padding(16)
+                    }
+                    .accessibilityIdentifier("collectionGrid")
+                    .onAppear {
+                        if tutorial?.needs(.classicDetailDone) == true, let card = tutorialCard {
+                            scroll.scrollTo(card.id, anchor: .center)
+                        }
                     }
                 }
-                .accessibilityIdentifier("collectionGrid")
             }
             .padding(.top, 8)
             .readableWidth(900)
+            .accessibilityHidden(tutorial?.isActive == true)
             .background(Palette.screen.ignoresSafeArea())
             .toolbar(.hidden, for: .navigationBar)
             .sheet(item: $selected) { card in
@@ -144,8 +157,7 @@ struct CollectionView: View {
             let best = bestInstance(card)
             let n = game.count(of: card.id)
             Button {
-                Haptics.play(.light)
-                selected = card
+                inspect(card)
             } label: {
                 ZStack(alignment: .topTrailing) {
                     CardView(card: card, instance: best, width: 104,
@@ -165,9 +177,17 @@ struct CollectionView: View {
             .buttonStyle(.plain)
             .accessibilityLabel("\(card.name), \(n) \(n == 1 ? "copy" : "copies")")
             .accessibilityIdentifier("collectionCard-\(card.id)")
+            .tutorialTarget("classic-card-\(card.id)") { inspect(card) }
         } else {
             LockedCardView(card: card, width: 104)
         }
+
+    }
+
+    private func inspect(_ card: Card) {
+        Haptics.play(.light)
+        tutorial?.record(.classicInspect)
+        selected = card
     }
 
     private struct DuplicateSaleConfirmation: View {
