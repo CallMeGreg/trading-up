@@ -718,8 +718,8 @@ The incoming card and every replacement option show the shared stage pips,
 the card's stage, and the number of distinct stages currently in the Showcase.
 Filled pips show held stages; gold marks the incoming stage but does **not** count
 it as already collected. Replacement choices belonging to the incoming card's
-line carry a set-colored **Same line** tag instead of repeating their names in
-the header. Completed series are labeled **Series complete** and
+line carry a set-colored **Same line** tag beside their names instead of repeating
+those names in the header. Completed series are labeled **Series complete** and
 standalone cards simply **Single card**. The sheet omits a separate gold-pip
 legend and does not repeat line-completion or line-breakage badges; the
 confirmation still says **No cash paid**.

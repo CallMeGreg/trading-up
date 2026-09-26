@@ -672,15 +672,20 @@ private struct ShowcaseSwapPicker: View {
                 Image(systemName: selectedId == preview.id ? "checkmark.circle.fill" : "circle")
                     .foregroundStyle(selectedId == preview.id ? Color(hex: "b06cf7") : Palette.subtle)
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(preview.outgoing.card.name)
-                        .font(.subheadline.weight(.bold))
-                        .foregroundStyle(.white)
-                    if incoming.card.stageCount > 1 && preview.outgoing.card.lineId == incoming.card.lineId {
-                        Label("SAME LINE", systemImage: "link")
-                            .font(.system(size: 9, weight: .heavy))
-                            .foregroundStyle(Element.theme(forSet: incoming.card.set).badgeTint)
-                            .padding(.horizontal, 7).padding(.vertical, 3)
-                            .background(Capsule().fill(Element.theme(forSet: incoming.card.set).badgeTint.opacity(0.16)))
+                    HStack(spacing: 6) {
+                        Text(preview.outgoing.card.name)
+                            .font(.subheadline.weight(.bold))
+                            .foregroundStyle(.white)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                        if incoming.card.stageCount > 1 && preview.outgoing.card.lineId == incoming.card.lineId {
+                            Label("SAME LINE", systemImage: "link")
+                                .font(.system(size: 9, weight: .heavy))
+                                .foregroundStyle(Element.theme(forSet: incoming.card.set).badgeTint)
+                                .padding(.horizontal, 7).padding(.vertical, 3)
+                                .background(Capsule().fill(Element.theme(forSet: incoming.card.set).badgeTint.opacity(0.16)))
+                                .fixedSize()
+                        }
                     }
                     Text("Current price \(preview.outgoing.currentValue.money)")
                         .font(.caption)
