@@ -1052,9 +1052,10 @@ cannot afford. The final tap returns to Shop and restores the normal tabs.
 pull, sell a lower-value pull, and decide the remaining cards freely. The guide
 highlights Attune if a Catalyst appears, then inspects a kept card and tries
 one affordable grade before finishing the first pack. Short explanations cover
-Aura, evolution lines, Catalyst elements, and Swap versus Sell. A final
-contextual prompt in the first between-round shop buys an extra Showcase slot
-if affordable, then explains interest and carrying the Showcase forward.
+Aura, evolution lines, each attuned Catalyst's unique run-long boost, and Swap
+versus Sell. A final contextual prompt in the first between-round shop buys an
+extra Showcase slot if affordable, then explains interest and carrying the
+Showcase forward.
 No tutorial-only cards, odds, cash, or guaranteed victories are introduced;
 grading still has its normal risk.
 
