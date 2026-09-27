@@ -102,7 +102,12 @@ change it only when the public version changes.
 Include the bump in the existing work's PR. Recheck it before merging to avoid
 collisions with other PRs; do not bump on every push or again after merging.
 After **every PR merge**, the `/build` skill creates **both signed archives from
-the same merged source**, then uploads **only the test app** to internal TestFlight.
+the same merged source**, then uploads **only the test app** to internal TestFlight
+through **Xcode Organizer → Distribute App**. Verify that the same local archive
+shows Organizer's successful distribution status/checkmark; a silent CLI upload
+is not a substitute. Keep the committed version/build unchanged in the upload
+options. If Organizer cannot be operated, report the pending upload instead of
+using a headless fallback.
 `/build production` and
 `/build test` are aliases for that paired workflow, not independent counters.
 Production stays archived locally unless an upload is explicitly requested.

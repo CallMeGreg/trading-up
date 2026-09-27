@@ -82,16 +82,7 @@ class AppIdentityConfigurationTests(unittest.TestCase):
                 self.assertEqual(len(set(values.values())), 1,
                                  f"All app configurations must share {key}: {values}")
 
-    def test_testflight_upload_preserves_build_and_isolates_internal_test_app(self):
-        with (ROOT / "tools/TestFlightExportOptions.plist").open("rb") as stream:
-            settings = plistlib.load(stream)
-        self.assertEqual(settings["method"], "app-store-connect")
-        self.assertEqual(settings["destination"], "upload")
-        self.assertEqual(settings["distributionBundleIdentifier"], "com.callmegreg.tradingup.test")
-        self.assertEqual(settings["signingStyle"], "automatic")
-        self.assertIs(settings["manageAppVersionAndBuildNumber"], False)
-        self.assertIs(settings["testFlightInternalTestingOnly"], True)
-        self.assertIs(settings["uploadSymbols"], True)
+    def test_manual_export_options_do_not_silently_upload(self):
         with (ROOT / "tools/ExportOptions.plist").open("rb") as stream:
             self.assertEqual(plistlib.load(stream)["destination"], "export")
 

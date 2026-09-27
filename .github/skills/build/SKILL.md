@@ -1,6 +1,6 @@
 ---
 name: build
-description: "Handle Trading Up's per-PR release workflow: bump the shared production/test build in each PR, then after merge create matching signed Organizer archives and upload only the test app to TestFlight. /build, /build production, and /build test all use this paired workflow. Use when opening or merging a PR, running /build, or producing or uploading builds."
+description: "Handle Trading Up's per-PR release workflow: bump the shared production/test build in each PR, then after merge create matching signed local archives and upload only the test app through Xcode Organizer, verifying its visible upload status. /build, /build production, and /build test all use this paired workflow. Use when opening or merging a PR, running /build, or producing or uploading builds."
 user-invocable: true
 ---
 
@@ -31,8 +31,9 @@ variables; carry resolved values forward explicitly in later calls.
 Use the existing app-managed session branch/worktree, not the primary checkout. Never
 force a test scheme to `Release`: that would select the production identity.
 After each merge, keep both archives locally and upload **only the test app** to
-TestFlight. Never upload production or submit either app for public release
-unless explicitly requested. TestFlight setup is documented in
+TestFlight **through Xcode Organizer**, not a headless uploader. Never upload
+production or submit either app for public release unless explicitly requested.
+TestFlight setup is documented in
 `docs/APP_STORE.md#separate-test-app-testflight`.
 
 ## Prerequisites (verify, do not assume)
@@ -44,6 +45,9 @@ unless explicitly requested. TestFlight setup is documented in
 - Xcode has App Store Connect access to the existing **Trading Up Test** record,
   with permission to sign and upload. Do not print credentials, create an account,
   or change access permissions to work around a missing grant; report the blocker.
+- The Organizer UI is available, with computer-use access for an agent-driven
+  upload. If it cannot be operated, stop at the verified local archives and report
+  the pending UI step; do not fall back to a silent command-line upload.
 - Always put Homebrew on `PATH` first: `export PATH="/opt/homebrew/bin:$PATH"`.
 - Inspect the working tree. Include current-task changes when the user has asked to
   release them; do not discard or commit unrelated edits. If their ownership or release
@@ -242,37 +246,63 @@ from the same unchanged commit and shared version/build; do not bump again or ov
 the successful archive. If source changes are needed, start a new shared release number
 and create both archives again.
 
-## Step 6 — Upload the test archive to TestFlight
+## Step 6 — Upload through Organizer and verify its visible status
 
-Use only the verified `TradingUpTest` archive from Step 5. Set `TEST_ARCHIVE` to
-its exact path and `EXPORT_PATH` to a new session-artifact directory. Recheck the
-identity and committed version/build immediately before upload:
+Use only the verified local `TradingUpTest` archive from Step 5. Set
+`TEST_ARCHIVE` to its exact path. Recheck the identity and committed version/build
+immediately before upload:
 
 ```sh
 set -euo pipefail
 [ "$(/usr/libexec/PlistBuddy -c 'Print :ApplicationProperties:CFBundleIdentifier' "$TEST_ARCHIVE/Info.plist")" = "com.callmegreg.tradingup.test" ]
 [ "$(/usr/libexec/PlistBuddy -c 'Print :ApplicationProperties:CFBundleVersion' "$TEST_ARCHIVE/Info.plist")" = "$NEW" ]
 [ "$(/usr/libexec/PlistBuddy -c 'Print :ApplicationProperties:CFBundleShortVersionString' "$TEST_ARCHIVE/Info.plist")" = "$VERSION" ]
-xcodebuild -exportArchive -archivePath "$TEST_ARCHIVE" \
-  -exportOptionsPlist tools/TestFlightExportOptions.plist \
-  -exportPath "$EXPORT_PATH" -allowProvisioningUpdates
 ```
 
-The export options use automatic distribution signing and Xcode's authenticated
-Apple account, upload to App Store Connect for **internal TestFlight only**, and
-disable Xcode's automatic build-number management so the uploaded build stays
-identical to the committed pair. `tools/ExportOptions.plist` remains the separate
-local-export configuration; do not substitute a production archive.
+Keep command-line archiving in Step 5, but perform distribution in **Xcode's UI**
+using the available computer-use tools. Do not use shell UI workarounds.
 
-Require a successful upload result from Apple, not just a successful archive or
-local IPA export. Preserve the upload log/receipt. If processing status is
-available, confirm the matching version/build on the test app's TestFlight tab;
-otherwise report **uploaded, awaiting processing**, not ready for testers.
+1. Open **Xcode → Window → Organizer → Archives**. Select the test app's exact
+   local archive, checking bundle ID, version/build, and creation date against
+   Step 5. Do not select a same-version production archive or rebuild another copy.
+2. Choose **Distribute App** and the **TestFlight Internal Only** distribution
+   flow. Keep automatic distribution signing and the existing Apple account.
+   Use the distribution options (Custom if needed) to disable **Manage Version
+   and Build Number**; never allow Xcode to silently increment the committed
+   build or broaden distribution to production, external testers, or the App Store.
+   If the UI does not expose enough information to confirm these settings, stop
+   and report the blocker rather than using a different uploader.
+3. Confirm the upload review identifies `com.callmegreg.tradingup.test` and
+   exactly `$VERSION ($NEW)`, then complete **Upload**. Follow the computer-use
+   tool's applicable approval rules before the state-changing action.
+4. Wait for Xcode's success result. Return to the **same archive** in Organizer
+   and verify its successful uploaded/distributed status or checkmark in its
+   distribution history. Preserve the Organizer receipt/log or observed success
+   details along with the archive path.
+
+Both **Apple accepting the upload** and **Organizer showing that archive's
+distribution record** are required to call this workflow complete. A local
+archive alone is not an upload; a successful CLI upload alone does not satisfy
+the visible Organizer-history requirement. Do not silently fall back to
+`xcodebuild -exportArchive`, `altool`, Transporter, or another headless uploader.
+`tools/ExportOptions.plist` remains a local-export option for separately requested
+manual distribution, not the post-merge upload path.
+
+If a build was already accepted by Apple without an Organizer record (including
+the earlier build 47), do not upload it again or edit archive metadata to fake a
+checkmark. Report that distinction and use the Organizer flow on the next new
+build. For an ambiguous failure, check both Apple's state and Organizer's history
+before retrying the same archive.
+
+Upload status is separate from processing and tester availability. If processing
+status is available, confirm the matching version/build on the test app's
+TestFlight tab; otherwise report **uploaded, awaiting processing**, not ready
+for testers.
 Do not create testing groups, invite testers, or submit Beta App Review as part
 of this workflow; existing internal automatic-distribution settings apply.
 If signing, authentication, app setup, or upload fails, report the exact blocker
-and resume that step with the same verified archive. Check for an accepted upload
-before retrying an ambiguous network failure to avoid duplicate submissions.
+and resume that step with the same verified archive.
 
 Report the common version/build, both archive paths and bundle IDs, and the test
-upload outcome. The production archive stays in Organizer, unuploaded.
+upload outcome including Organizer's visible status. The production archive stays
+in Organizer, unuploaded.
