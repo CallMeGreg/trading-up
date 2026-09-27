@@ -313,11 +313,11 @@ those builds still have the production bundle ID and replace that installation.
    your existing team under **Signing & Capabilities**. Use automatic signing
    for the test configurations. Select **Any iOS Device** and choose
    **Product → Archive**. In Organizer, confirm the archive's bundle ID is
-   **`com.callmegreg.tradingup.test`** before choosing **Distribute App**.
-   For just you and other App Store Connect users, choose **TestFlight Internal
-   Only**. That upload cannot later be submitted to the public App Store or
-   external testers. If you need external testers, use **App Store Connect →
-   Upload** instead, still with the test bundle ID.
+   **`com.callmegreg.tradingup.test`** before choosing **Distribute App → App Store
+   Connect** and uploading. Do not choose **TestFlight Internal Only** for this
+   workflow. Keep the committed version/build unchanged. An App Store Connect
+   upload makes the build available for TestFlight; it does not submit the app
+   for public release or authorize external testing.
 5. Once processing finishes, open the **new test app's TestFlight tab**. Supply
    its test information, create an **Internal Testing** group, add the uploaded
    build, and invite your own App Store Connect user. Enable automatic
@@ -391,8 +391,8 @@ Before upload, inspect the archive's `Info.plist`:
 
 After verifying the bundle ID and shared version/build, select that **same local
 archive** in **Xcode → Window → Organizer → Archives**. Choose **Distribute App →
-TestFlight Internal Only**, with automatic signing and the existing Apple
-account. In the distribution options (Custom if needed), disable **Manage Version
+App Store Connect**, not **TestFlight Internal Only**, with automatic signing and
+the existing Apple account. In the distribution options (Custom if needed), disable **Manage Version
 and Build Number** and confirm the review still shows the committed version/build
 and `com.callmegreg.tradingup.test` before uploading. Keep the production archive
 local; do not broaden distribution to external testers or the App Store.
