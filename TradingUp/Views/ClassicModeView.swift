@@ -133,7 +133,7 @@ struct ClassicModeView: View {
                                   message: "Tap an owned card to see its evolution line, grade it, or sell spare copies.")
         case .collectors:
             return tutorial.prompt(.classicTradeTarget, target: "classic-choose-trade", title: "Pick a missing card",
-                                   message: "Mira and Rowan pay cash for spares. Tess trades them for a card you choose. Set a goal with Tess.")
+                                   message: "\(Collector.mira.name) and \(Collector.rowan.name) pay cash for spares. \(Collector.tess.name) trades them for a card you choose. Set a goal with \(Collector.tess.name).")
         case .stats: return nil
         }
     }

@@ -1284,7 +1284,7 @@ private struct ShowcaseCardDetail: View {
                                   message: "Spend cash to grade this card once. A good grade boosts Aura, but a low grade can reduce it.")
         }
         return TutorialPrompt(target: "gauntlet-detail-done", title: "Build combos",
-                              message: "Complete evolution lines for more Aura. Catalysts boost their matching element. Close this card to finish your pack.")
+                              message: "Complete evolution lines for more Aura. Each attuned Catalyst gives its own unique boost for the rest of the run. Close this card to finish your pack.")
     }
 
     private func close() {

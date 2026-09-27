@@ -106,7 +106,8 @@ xcodebuild test -project TradingUp.xcodeproj -scheme TradingUpScreenshots \
 
 `TutorialExperienceTests` follows the actual highlighted actions in both modes,
 checks blocked outside taps, grading, interrupted-pack recovery, completion
-persistence, replayable Classic help, and compact/large-text reachability.
+persistence, replayable Classic help, and compact/large-text reachability. It also
+checks the current collector names and the Catalyst run-long boost explanation.
 Its DEBUG-only `TU_TEST_TUTORIAL=fresh` fixture resets both tutorial preferences
 and run stores; use it **only on a disposable simulator**. Normal relaunches omit
 that flag so recovery exercises real persistence. Fast UI cases use temporary
