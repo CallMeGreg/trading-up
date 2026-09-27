@@ -185,8 +185,11 @@ there is the individual's ID, which is a different value and will fail to sign.
 Every upload needs a build number App Store Connect has never seen for that app.
 Production and test share one build-number sequence: bump `CURRENT_PROJECT_VERSION`
 in all four app configurations together, above both apps' project values,
-Organizer archives, and any known uploads from another Mac. `/build` creates
-the matching signed production/test pair from the same source commit.
+Organizer archives, and any known uploads from another Mac. Include that bump
+in **every PR**, including documentation-only work. After merge, `/build` creates
+the matching signed production/test pair from the same merged source and uploads
+only the test app to internal TestFlight. Production upload remains an explicit,
+separate action.
 `MARKETING_VERSION` stays equal across all four configurations and only changes
 when the public version number does.
 
@@ -346,12 +349,18 @@ App Store Connect. To exercise purchase, restore, or refund behavior, use
 
 ### Subsequent test builds
 
-Use **`/build`** to choose the next shared build number, commit/PR/merge the bump,
-and create **both** signed production and test archives in Organizer.
+Every PR must include the next shared build number. Use **`/build`** to commit
+that bump in the work's existing PR, merge it when requested, create **both**
+signed production and test archives in Organizer, and upload **only the test
+archive** to internal TestFlight. This post-merge distribution is required for
+every merged PR; it runs on the agent's signing-capable Mac, not hosted CI.
 `/build test` and `/build production` use the same paired workflow. Matching
 version/build numbers identify matching source, beginning with **1.2.2 (42)**.
 Numbers already used by either app are never reused for a new release, including
 uploads from another Mac that are absent from local archives.
+Recheck the number against the latest base before merging. Do not bump it again
+after merge; an interrupted archive/upload resumes from the same merged source,
+version, and build. Keep successful archives rather than overwriting them.
 
 For manual archives, first bump `CURRENT_PROJECT_VERSION` in **all four app
 configurations** to the same next number and keep `MARKETING_VERSION` aligned.
@@ -376,6 +385,27 @@ Before upload, inspect the archive's `Info.plist`:
   "/path/to/TradingUpTest.xcarchive/Info.plist"
 # Must match the production archive's build number.
 ```
+
+After verifying the bundle ID and shared version/build, upload with Xcode's
+authenticated Apple account:
+
+```bash
+xcodebuild -exportArchive \
+  -archivePath "/path/to/TradingUpTest.xcarchive" \
+  -exportOptionsPlist tools/TestFlightExportOptions.plist \
+  -exportPath "/path/to/session-artifacts/testflight-upload" \
+  -allowProvisioningUpdates
+```
+
+`TestFlightExportOptions.plist` uploads with automatic distribution signing,
+limits the build to internal TestFlight, and disables automatic build-number
+changes. Keep the production archive local. Require Apple's successful upload
+result and retain the log; a successful local export alone is not an upload.
+Processing and tester availability are separate: report an accepted upload as
+awaiting processing until App Store Connect confirms otherwise. Existing internal
+automatic-distribution settings apply; this workflow does not create groups,
+invite testers, or submit either app for public release. Missing Apple account
+access or test-app setup is a blocker, not a reason to upload production instead.
 
 Apple references: [register an App ID](https://developer.apple.com/help/account/identifiers/register-an-app-id/),
 [add an app record](https://developer.apple.com/help/app-store-connect/create-an-app-record/add-a-new-app/),

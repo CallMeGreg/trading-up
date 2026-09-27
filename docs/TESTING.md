@@ -41,6 +41,7 @@ Or just press `⌘U` in Xcode.
 | `WinAndUnlockTests.swift` | Winning shows once, doesn't erase the collection; set unlocks |
 | `FullUnlockGateTests.swift` | The free-tier/full-version IAP gate: Set 1 free, paid sets refuse a buy until unlocked, and the unlock never skips progression |
 | `RevealFlowTests.swift` | The win/Game Over overlay waits for a pack reveal to finish; summaries omit repeated evolution banners but retain them when auto-open skips the reveal; the DEBUG fast‑travel seed |
+| `ModeTutorialTests.swift` | Independent first-run tutorials, existing-player migration, durable completion and interrupted-run recovery, and spotlight safe-area/target geometry |
 | `PackRipMotionTests.swift` | Both horizontal opening directions, the pack-width-relative threshold, rejected/cancelled/reversed drags, and a physical-distance cut trail clamped to the wrapper rather than its padded hit target |
 | `PackOpeningPreferencesTests.swift` | Both preferences default off, all four persisted combinations, independent toggles, and opting back out without changing the other preference |
 | `AudioTests.swift` | Independent persisted Music/SFX channels and legacy migration; continuous-drag mute/restore; one-shot Gauntlet audio priorities; all 60 Studio effects and both selected music loops decode from the app bundle, with exact authored loop durations |
@@ -88,6 +89,29 @@ progress remains unchanged. Re-read container paths after installation: iOS can
 relocate the updated app's container, so compare saved contents rather than
 assuming its directory UUID stays fixed. Never run destructive save fixtures
 against the App Store installation on your phone.
+
+### First-play tutorials
+
+```bash
+xcodebuild test -project TradingUp.xcodeproj -scheme TradingUp \
+  -destination 'platform=iOS Simulator,name=iPhone 16' \
+  -only-testing:TradingUpTests/ModeTutorialTests \
+  -only-testing:TradingUpTests/GauntletStateTests \
+  -only-testing:TradingUpTests/RevealFlowTests CODE_SIGNING_ALLOWED=NO
+
+xcodebuild test -project TradingUp.xcodeproj -scheme TradingUpScreenshots \
+  -destination 'platform=iOS Simulator,name=iPhone 16' \
+  -only-testing:TradingUpUITests/TutorialExperienceTests CODE_SIGNING_ALLOWED=NO
+```
+
+`TutorialExperienceTests` follows the actual highlighted actions in both modes,
+checks blocked outside taps, grading, interrupted-pack recovery, completion
+persistence, replayable Classic help, and compact/large-text reachability.
+Its DEBUG-only `TU_TEST_TUTORIAL=fresh` fixture resets both tutorial preferences
+and run stores; use it **only on a disposable simulator**. Normal relaunches omit
+that flag so recovery exercises real persistence. Fast UI cases use temporary
+pack-opening preference launch arguments; normal swipe/reveal behavior remains
+covered by the pack-opening tests below.
 
 ### Pack opening
 

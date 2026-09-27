@@ -28,6 +28,7 @@ final class ScreenshotTests: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = false
         app = XCUIApplication()
+        app.launchArguments = ["-tradingup_tutorial_v1_classic", "complete"]
         app.launch()
     }
 
@@ -101,18 +102,21 @@ final class ScreenshotTests: XCTestCase {
 
     // MARK: Steps
 
-    /// The first-launch explainer, then into the shop with the starting $100.
+    /// The replayable reference, then the shop with the starting $100.
     private func onboarding() throws {
         // v2.0.0 opens on the main menu; capture it, then step into Classic Mode
-        // where the welcome explainer and the game itself live.
+        // where the rules reference and the game itself live.
         let classic = classicModeButton
         XCTAssertTrue(classic.waitForExistence(timeout: 30), "main menu never appeared")
         shot("main-menu", settle: 1.4)
         classic.tap()
 
-        let start = button(labeled: "Start Collecting")
-        XCTAssertTrue(start.waitForExistence(timeout: 30), "welcome screen never appeared")
-        shot("welcome", settle: 1.2)
+        let info = app.buttons["classicInfo"]
+        XCTAssertTrue(info.waitForExistence(timeout: 15))
+        info.tap()
+        let start = button(labeled: "Back to Game")
+        XCTAssertTrue(start.waitForExistence(timeout: 15), "rules reference never appeared")
+        shot("how-to-play", settle: 1.2)
 
         start.tap()
         XCTAssertTrue(buyPack.waitForExistence(timeout: 15), "shop never appeared")

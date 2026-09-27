@@ -228,10 +228,10 @@ final class CollectorExperienceTests: XCTestCase {
         app.buttons["classicMode"].tap()
         app.buttons["New Run"].tap()
         app.buttons["Start New Run"].tap()
-        XCTAssertTrue(app.buttons["Start Collecting"].waitForExistence(timeout: 8))
+        XCTAssertTrue(app.buttons["buyPack"].firstMatch.waitForExistence(timeout: 8))
+        XCTAssertFalse(app.buttons["Start Collecting"].exists)
         XCTAssertFalse(app.staticTexts.matching(NSPredicate(
             format: "label CONTAINS 'Track two goals' OR label CONTAINS 'Tracked spares'")).firstMatch.exists)
-        app.buttons["Start Collecting"].tap()
         XCTAssertTrue(app.buttons["buyPack"].firstMatch.waitForExistence(timeout: 5))
         app.buttons["buyPack"].firstMatch.tap()
         XCTAssertTrue(app.waitForSealedPack())

@@ -8,6 +8,7 @@ struct TradingUpApp: App {
     init() {
         #if DEBUG
         DebugGauntletScenario.prepare()
+        DebugTutorialScenario.prepare()
         #endif
         // One shared GameState, with the StoreKit layer built on top of it so it
         // can push the verified entitlement in. Both are @MainActor; App.init

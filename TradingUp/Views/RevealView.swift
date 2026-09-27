@@ -258,6 +258,7 @@ enum PackSlot: Equatable { case newCard, keeperExisting, pendingDup, keptDup, so
 
 private struct SummaryView: View {
     @Environment(GameState.self) var game: GameState
+    @Environment(\.modeTutorial) private var tutorial
     let result: OpenResult
     let set: Int
     var packCounter: PackCounter? = nil
@@ -373,6 +374,9 @@ private struct SummaryView: View {
             .frame(width: geo.size.width, height: geo.size.height)
         }
         .background(Palette.bg0.ignoresSafeArea())
+        .tutorialHost(tutorial?.prompt(
+            .classicSummary, target: "classic-keep", title: "Keep your first pulls",
+            message: "New cards stay safe. Later, sell spare copies here or save them for collector trades."))
         .onAppear {
             guard !announcedBonuses else { return }
             announcedBonuses = true
@@ -479,14 +483,16 @@ private struct SummaryView: View {
                     }
                     .accessibilityIdentifier("packSellDuplicates")
                     BigButton(title: "Keep All", systemImage: "tray.and.arrow.down.fill", tint: blue) {
-                        Haptics.play(.light); Sound.play(.keepCard); onDone()
+                        keepPack()
                     }
                     .accessibilityIdentifier("packKeepAll")
+                    .tutorialTarget("classic-keep", action: keepPack)
                 } else {
                     BigButton(title: "Add to Collection", systemImage: "checkmark.circle.fill", tint: blue) {
-                        Haptics.play(.light); Sound.play(.keepCard); onDone()
+                        keepPack()
                     }
                     .accessibilityIdentifier("packAddToCollection")
+                    .tutorialTarget("classic-keep", action: keepPack)
                 }
             } else {
                 let pending = pendingDuplicates
@@ -498,14 +504,16 @@ private struct SummaryView: View {
                     }
                     .accessibilityIdentifier("packSellDuplicates")
                     BigButton(title: "Keep All", systemImage: "tray.and.arrow.down.fill", tint: blue) {
-                        Haptics.play(.light); Sound.play(.keepCard); onDone()
+                        keepPack()
                     }
                     .accessibilityIdentifier("packKeepAll")
+                    .tutorialTarget("classic-keep", action: keepPack)
                 } else {
                     BigButton(title: "Add to Collection", systemImage: "checkmark.circle.fill", tint: blue) {
-                        Haptics.play(.light); Sound.play(.keepCard); onDone()
+                        keepPack()
                     }
                     .accessibilityIdentifier("packAddToCollection")
+                    .tutorialTarget("classic-keep", action: keepPack)
                 }
             }
             if showSpreadHint { spreadHint }
@@ -513,6 +521,13 @@ private struct SummaryView: View {
     }
 
     // MARK: Classification + live state
+
+    private func keepPack() {
+        tutorial?.record(.classicSummary)
+        Haptics.play(.light)
+        Sound.play(.keepCard)
+        onDone()
+    }
 
     private func slot(for inst: CardInstance) -> PackSlot {
         switch baseKind[inst.id] ?? .duplicate {

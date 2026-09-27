@@ -56,6 +56,7 @@ private func rewardBlurb(for tier: GauntletTier) -> String {
 
 struct TrainerSelectScreen: View {
     let state: GauntletState
+    @Environment(\.modeTutorial) private var tutorial
 
     /// Unlocked Trainers first (in roster order), then locked ones — so the
     /// playable roster always sits up top. (req 12)
@@ -75,12 +76,17 @@ struct TrainerSelectScreen: View {
                             unlocked: state.isTrainerUnlocked(trainer),
                             unlockProgress: state.unlockProgress(for: trainer),
                             clearedTiers: state.clearedTiers(for: trainer)
-                        ) { state.chooseTrainer(trainer) }
+                        ) { choose(trainer) }
                     }
+
                 }
                 .padding(.bottom, 8)
             }
         }
+    }
+    private func choose(_ trainer: Trainer) {
+        state.chooseTrainer(trainer)
+        if state.selectedTrainer != nil { tutorial?.record(.gauntletTrainer) }
     }
 }
 
@@ -121,6 +127,7 @@ struct TrainerCard: View {
                                 .foregroundStyle(Palette.subtle)
                         }
                     }
+                    .tutorialTarget("gauntlet-trainer-\(trainer.id)", action: action)
                     if unlocked {
                         Text(trainer.blurb)
                             .font(.system(size: 13, weight: .medium))
@@ -402,6 +409,7 @@ private struct TrainerEmblem: View {
 
 struct TierSelectScreen: View {
     let state: GauntletState
+    @Environment(\.modeTutorial) private var tutorial
 
     var body: some View {
         VStack(spacing: 16) {
@@ -412,10 +420,10 @@ struct TierSelectScreen: View {
                 VStack(spacing: 12) {
                     ForEach(GauntletTier.allCases, id: \.self) { tier in
                         TierCard(tier: tier, unlocked: state.isUnlocked(tier), trainer: state.selectedTrainer) {
-                            Sound.play(.tierSelect)
-                            state.startRun(tier: tier)
+                            start(tier)
                         }
                     }
+
                 }
             }
             Button {
@@ -428,6 +436,11 @@ struct TierSelectScreen: View {
             }
             .buttonStyle(.plain)
         }
+    }
+    private func start(_ tier: GauntletTier) {
+        Sound.play(.tierSelect)
+        state.startRun(tier: tier)
+        if state.run != nil { tutorial?.record(.gauntletTier) }
     }
 }
 
@@ -463,6 +476,8 @@ private struct TierCard: View {
                         Image(systemName: "lock.fill").foregroundStyle(Palette.subtle)
                     }
                 }
+                .frame(minHeight: 44)
+                .tutorialTarget("gauntlet-tier-\(tier.rawValue)", action: action)
                 if unlocked {
                     HStack(spacing: 6) {
                         Image(systemName: "gift.fill").font(.system(size: 11))

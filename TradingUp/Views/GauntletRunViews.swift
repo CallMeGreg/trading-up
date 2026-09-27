@@ -311,6 +311,7 @@ private struct PackRail: View {
 }
 
 private struct PackTile: View {
+    @Environment(\.modeTutorial) private var tutorial
     let state: GauntletState
     let run: GauntletRun
     let set: Int
@@ -339,6 +340,7 @@ private struct PackTile: View {
         .disabled(!enabled)
         .accessibilityIdentifier("gauntletPack-\(set)")
         .accessibilityLabel("\(CardDatabase.setName(set)) pack — \(statusLine)")
+        .tutorialTarget("gauntlet-pack-\(set)", action: act)
     }
 
     /// A miniature of the Classic pack wrapper, dimmed and locked when it isn't
@@ -380,6 +382,7 @@ private struct PackTile: View {
         // Locked sets are unlocked in the between-rounds shop, never mid-round.
         guard unlocked else { return }
         Haptics.play(.medium); state.rip(set: set)
+        if state.revealActive { tutorial?.record(.gauntletRip) }
     }
 }
 
@@ -506,6 +509,7 @@ private struct PullPanel: View {
 }
 
 private struct PullRow: View {
+    @Environment(\.modeTutorial) private var tutorial
     let state: GauntletState
     let run: GauntletRun
     let inst: CardInstance
@@ -550,11 +554,11 @@ private struct PullRow: View {
                     if state.canKeepPending {
                         MiniButton(title: "Keep", systemImage: "tray.and.arrow.down.fill",
                                    tint: Color(hex: "3fbf7f")) {
-                            let pending = state.pendingCards.count
-                            Haptics.play(.light); state.keep(inst)
-                            Sound.play(state.pendingCards.count < pending ? .keepCard : .blocked)
+                            keep()
                         }
                         .accessibilityIdentifier("gauntletKeep-\(inst.cardId)")
+                        .tutorialTarget("gauntlet-keep-\(inst.id)", action: keep)
+                        .id("gauntlet-keep-\(inst.id)")
                     } else {
                         MiniButton(title: "Swap", systemImage: "arrow.left.arrow.right",
                                    tint: Color(hex: "3b82f6")) { Sound.play(.panelOpen); onSwap(inst) }
@@ -562,16 +566,34 @@ private struct PullRow: View {
                     }
                     MiniButton(title: "Sell \(sellPreview)", systemImage: "dollarsign.circle.fill",
                                tint: Color(hex: "6d5cf7")) {
-                        Haptics.play(.light)
-                        Sound.play(state.sell(inst) > 0 ? .coin : .blocked)
+                        sell()
                     }
                     .accessibilityIdentifier("gauntletSell-\(inst.cardId)")
+                    .tutorialTarget("gauntlet-sell-\(inst.id)", action: sell)
+                    .id("gauntlet-sell-\(inst.id)")
                 }
+
             }
             Spacer(minLength: 0)
         }
         .padding(10)
         .background(RoundedRectangle(cornerRadius: 14).fill(Palette.bg0.opacity(0.4)))
+    }
+
+    private func keep() {
+        let pending = state.pendingCards.count
+        Haptics.play(.light)
+        state.keep(inst)
+        let kept = state.pendingCards.count < pending
+        if kept { tutorial?.record(.gauntletKeep) }
+        Sound.play(kept ? .keepCard : .blocked)
+    }
+
+    private func sell() {
+        Haptics.play(.light)
+        let sold = state.sell(inst) > 0
+        if sold { tutorial?.record(.gauntletSell) }
+        Sound.play(sold ? .coin : .blocked)
     }
 
     private var sellPreview: String {
@@ -763,6 +785,7 @@ private struct SwapSeriesProgress: View {
 }
 
 private struct CatalystOfferRow: View {
+    @Environment(\.modeTutorial) private var tutorial
     let state: GauntletState
     let catalyst: Catalyst
 
@@ -790,11 +813,11 @@ private struct CatalystOfferRow: View {
                     if state.canAttunePending {
                         MiniButton(title: "Attune", systemImage: "sparkles",
                                    tint: Color(hex: "b06cf7")) {
-                            let offered = state.pendingCatalyst != nil
-                            Haptics.play(.success); state.attunePendingCatalyst()
-                            if offered && state.pendingCatalyst == nil { Sound.play(.catalystAttune) }
+                            attune()
                         }
                         .accessibilityIdentifier("gauntletAttuneCatalyst")
+                        .tutorialTarget("gauntlet-attune", action: attune)
+                        .id("gauntlet-attune")
                     } else if state.canSwapPending {
                         MiniButton(title: "Swap", systemImage: "arrow.left.arrow.right",
                                    tint: Color(hex: "b06cf7")) {
@@ -827,6 +850,16 @@ private struct CatalystOfferRow: View {
         .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(catalyst.element.badgeTint.opacity(0.35), lineWidth: 1))
         .sheet(isPresented: $swapping) {
             CatalystSwapPicker(state: state, incoming: catalyst) { swapping = false }
+        }
+    }
+
+    private func attune() {
+        let offered = state.pendingCatalyst != nil
+        Haptics.play(.success)
+        state.attunePendingCatalyst()
+        if offered && state.pendingCatalyst == nil {
+            tutorial?.record(.gauntletCatalyst)
+            Sound.play(.catalystAttune)
         }
     }
 }
@@ -954,6 +987,8 @@ private struct ShowcasePanel: View {
                             }
                             .buttonStyle(.plain)
                             .accessibilityIdentifier("gauntletShowcase-\(idx)")
+                            .tutorialTarget("gauntlet-showcase-\(idx)") { onTapCard(idx) }
+                            .id("gauntlet-showcase-\(idx)")
                         } else {
                             ShowcaseCardCell(run: run, inst: inst, width: 92)
                         }
@@ -1202,6 +1237,7 @@ private struct PendingCardDetail: View {
 /// treatment, the numbers behind its score, its full evolution line, and the
 /// grade action — the tap target that used to be a bare confirmation dialog.
 private struct ShowcaseCardDetail: View {
+    @Environment(\.modeTutorial) private var tutorial
     let state: GauntletState
     let index: Int
     let onClose: () -> Void
@@ -1217,7 +1253,7 @@ private struct ShowcaseCardDetail: View {
             }
         }
         .overlay(alignment: .topTrailing) {
-            Button(action: onClose) {
+            Button(action: close) {
                 Image(systemName: "xmark.circle.fill")
                     .font(.system(size: 26))
                     .symbolRenderingMode(.hierarchical)
@@ -1226,8 +1262,10 @@ private struct ShowcaseCardDetail: View {
             .buttonStyle(.plain)
             .padding(14)
             .accessibilityLabel("Close card")
+            .tutorialTarget("gauntlet-detail-done", action: close)
         }
         .onAppear { Sound.play(.panelOpen) }
+        .tutorialHost(detailPrompt)
         .overlay {
             if let result = gradeResult {
                 GradeRevealOverlay(result: result) {
@@ -1236,24 +1274,60 @@ private struct ShowcaseCardDetail: View {
                 }
             }
         }
+        .interactiveDismissDisabled(tutorial?.needs(.gauntletDetailDone) == true)
+    }
+
+    private var detailPrompt: TutorialPrompt? {
+        guard tutorial?.needs(.gauntletDetailDone) == true, gradeResult == nil else { return nil }
+        if tutorial?.needs(.gauntletGrade) == true, state.canGrade(showcaseIndex: index) {
+            return TutorialPrompt(target: "gauntlet-grade", title: "Try a grade",
+                                  message: "Spend cash to grade this card once. A good grade boosts Aura, but a low grade can reduce it.")
+        }
+        return TutorialPrompt(target: "gauntlet-detail-done", title: "Build combos",
+                              message: "Complete evolution lines for more Aura. Catalysts boost their matching element. Close this card to finish your pack.")
+    }
+
+    private func close() {
+        tutorial?.record(.gauntletDetailDone)
+        onClose()
+    }
+
+    private func grade() {
+        Haptics.play(.medium)
+        if let result = state.grade(showcaseIndex: index, deferResolution: true) {
+            tutorial?.record(.gauntletGrade)
+            Sound.play(.gradeStart)
+            gradeResult = result
+        } else {
+            Haptics.play(.error)
+            Sound.play(.blocked)
+        }
     }
 
     @ViewBuilder
     private func content(run: GauntletRun, inst: CardInstance) -> some View {
-        ScrollView {
-            VStack(spacing: 16) {
-                GauntletCardOverview(run: run, inst: inst)
+        ScrollViewReader { scroll in
+            ScrollView {
+                VStack(spacing: 16) {
+                    GauntletCardOverview(run: run, inst: inst)
 
-                if run.isInCompletedLine(inst) {
-                    completedLineBanner(set: inst.card.set, mult: run.evoLineMultiplier(forSet: inst.card.set))
+                    if run.isInCompletedLine(inst) {
+                        completedLineBanner(set: inst.card.set, mult: run.evoLineMultiplier(forSet: inst.card.set))
+                    }
+
+                    gradeSection(run: run, inst: inst)
+                        .id("gauntlet-grade")
                 }
-
-                gradeSection(run: run, inst: inst)
+                .padding(20)
+                .readableWidth()
             }
-            .padding(20)
-            .readableWidth()
+            .accessibilityIdentifier("gauntletCardDetails")
+            .onAppear {
+                if tutorial?.needs(.gauntletDetailDone) == true {
+                    scroll.scrollTo("gauntlet-grade", anchor: .center)
+                }
+            }
         }
-        .accessibilityIdentifier("gauntletCardDetails")
     }
 
     @ViewBuilder
@@ -1279,16 +1353,10 @@ private struct ShowcaseCardDetail: View {
                           systemImage: "seal.fill",
                           tint: [Color(hex: "6d5cf7")],
                           enabled: state.canGrade(showcaseIndex: index)) {
-                    Haptics.play(.medium)
-                    if let result = state.grade(showcaseIndex: index, deferResolution: true) {
-                        Sound.play(.gradeStart)
-                        gradeResult = result
-                    } else {
-                        Haptics.play(.error)
-                        Sound.play(.blocked)
-                    }
+                    grade()
                 }
                 .accessibilityIdentifier("gauntletGradeCard")
+                .tutorialTarget("gauntlet-grade", action: grade)
             }
         }
     }
@@ -1328,6 +1396,7 @@ private struct ShowcaseCardDetail: View {
 
 struct ShopScreen: View {
     let state: GauntletState
+    @Environment(\.modeTutorial) private var tutorial
     @State private var showingAllPacks = false
 
     private var paidPacks: [Int] { state.packTiers.filter { $0 > 1 } }
@@ -1344,68 +1413,93 @@ struct ShopScreen: View {
                 RoundClearedHero(run: run)
                     .id(run.round)
 
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 10) {
-                        nextRoundPreview(run)
+                ScrollViewReader { scroll in
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 10) {
+                            nextRoundPreview(run)
 
-                        SectionTitle(text: "Unlock packs · this run only")
-                            .padding(.top, 4)
-                        ForEach(featuredPacks, id: \.self) { set in
-                            packRow(set, run: run)
-                        }
+                            SectionTitle(text: "Unlock packs · this run only")
+                                .padding(.top, 4)
+                            ForEach(featuredPacks, id: \.self) { set in
+                                packRow(set, run: run)
+                            }
 
-                        SectionTitle(text: "Grow your build")
-                            .padding(.top, 8)
-                        ShopRow(glyph: .symbol("square.stack.3d.up.fill", tint: Color(hex: "6d5cf7")),
+                            SectionTitle(text: "Grow your build")
+                                .padding(.top, 8)
+                            ShopRow(
+                                glyph: .symbol("square.stack.3d.up.fill", tint: Color(hex: "6d5cf7")),
                                 title: "Add Showcase Slot",
                                 subtitle: "Now \(run.effectiveSlots) → \(run.effectiveSlots + 1)",
-                                cost: run.nextSlotCost, cash: run.cash) {
-                            Haptics.play(.light)
-                            Sound.play(state.buySlot() ? .showcaseExpand : .blocked)
-                        }
-                        .accessibilityIdentifier("gauntletBuyShowcaseSlot")
-                        ShopRow(glyph: .symbol("bolt.circle.fill", tint: Color(hex: "ff9500")),
+                                cost: run.nextSlotCost, cash: run.cash
+                            ) {
+                                buyShowcaseSlot()
+                            }
+                            .accessibilityIdentifier("gauntletBuyShowcaseSlot")
+                            .tutorialTarget("gauntlet-buy-slot", action: buyShowcaseSlot)
+                            .id("gauntlet-buy-slot")
+                            ShopRow(
+                                glyph: .symbol("bolt.circle.fill", tint: Color(hex: "ff9500")),
                                 title: "Add Catalyst Slot",
                                 subtitle: "Now \(run.effectiveCatalystSlots) → \(run.effectiveCatalystSlots + 1)",
-                                cost: run.nextCatalystSlotCost, cash: run.cash) {
-                            Haptics.play(.light)
-                            Sound.play(state.buyCatalystSlot() ? .catalystExpand : .blocked)
-                        }
-                        .accessibilityIdentifier("gauntletBuyCatalystSlot")
-
-                        if !otherPacks.isEmpty {
-                            DisclosureGroup(isExpanded: $showingAllPacks) {
-                                VStack(spacing: 10) {
-                                    ForEach(otherPacks, id: \.self) { set in
-                                        packRow(set, run: run)
-                                    }
-                                }
-                                .padding(.top, 10)
-                            } label: {
-                                Text("More pack sets (\(otherPacks.count))")
-                                    .font(.subheadline.weight(.semibold))
-                                    .foregroundStyle(Palette.text)
-                                    .frame(minHeight: 44)
+                                cost: run.nextCatalystSlotCost, cash: run.cash
+                            ) {
+                                Haptics.play(.light)
+                                Sound.play(state.buyCatalystSlot() ? .catalystExpand : .blocked)
                             }
-                            .tint(Palette.subtle)
+                            .accessibilityIdentifier("gauntletBuyCatalystSlot")
+
+                            if !otherPacks.isEmpty {
+                                DisclosureGroup(isExpanded: $showingAllPacks) {
+                                    VStack(spacing: 10) {
+                                        ForEach(otherPacks, id: \.self) { set in
+                                            packRow(set, run: run)
+                                        }
+                                    }
+                                    .padding(.top, 10)
+                                } label: {
+                                    Text("More pack sets (\(otherPacks.count))")
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(Palette.text)
+                                        .frame(minHeight: 44)
+                                }
+                                .tint(Palette.subtle)
+                            }
                         }
+                        .padding(.bottom, 8)
                     }
-                    .padding(.bottom, 8)
+                    .scrollBounceBehavior(.basedOnSize)
+                    .accessibilityIdentifier("gauntletShopOffers")
+                .onChange(of: state.shopTutorialPrompt(tutorial)?.target, initial: true) { _, target in
+                    if let target { scroll.scrollTo(target, anchor: .center) }
                 }
-                .scrollBounceBehavior(.basedOnSize)
-                .accessibilityIdentifier("gauntletShopOffers")
+                }
 
                 BigButton(title: nextRoundTitle, systemImage: "play.fill",
                           tint: run.isFinalRound ? GauntletTheme.championship : GauntletTheme.tint) {
-                    Haptics.play(.medium); state.continueFromShop()
+                    nextRound()
                 }
                 .shadow(color: state.nextRoundTargetMet ? Palette.money.opacity(0.65) : .clear,
                         radius: 10)
                 .accessibilityIdentifier("gauntletNextRound")
                 .accessibilityLabel(nextRoundTitle)
+                .tutorialTarget("gauntlet-next-round", action: nextRound)
             }
             .task(id: run.round) { await Sound.after(0.65, play: .roundPayout) }
         }
+    }
+
+    private func buyShowcaseSlot() {
+        Haptics.play(.light)
+        let bought = state.buySlot()
+        if bought { tutorial?.record(.gauntletUpgrade) }
+        Sound.play(bought ? .showcaseExpand : .blocked)
+    }
+
+    private func nextRound() {
+        tutorial?.record(.gauntletShop)
+        tutorial?.finish()
+        Haptics.play(.medium)
+        state.continueFromShop()
     }
 
     @ViewBuilder
@@ -1700,6 +1794,7 @@ struct GauntletRevealView: View {
     let set: Int
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.modeTutorial) private var tutorial
     @State private var phase: Phase = .sealed
     @State private var items: [RevealItem] = []
     @State private var summarySheet: SummarySheet?
@@ -1709,11 +1804,13 @@ struct GauntletRevealView: View {
     private enum SummarySheet: Identifiable {
         case inspect(CardInstance)
         case swap(CardInstance)
+        case showcase(Int)
 
         var id: String {
             switch self {
             case .inspect(let inst): return "inspect-\(inst.id)"
             case .swap(let inst): return "swap-\(inst.id)"
+            case .showcase(let index): return "showcase-\(index)"
             }
         }
     }
@@ -1853,29 +1950,42 @@ struct GauntletRevealView: View {
                     .frame(maxWidth: .infinity)
                     .background(.ultraThinMaterial)
             }
-            ScrollView {
-                VStack(spacing: 14) {
-                    Text("Build your Showcase")
-                        .font(.system(size: 22, weight: .black, design: .rounded))
-                        .foregroundStyle(.white)
+            ScrollViewReader { scroll in
+                ScrollView {
+                    VStack(spacing: 14) {
+                        Text("Build your Showcase")
+                            .font(.system(size: 22, weight: .black, design: .rounded))
+                            .foregroundStyle(.white)
 
-                    if let run = state.run {
-                        if !resolved {
-                            PullPanel(state: state, run: run,
-                                      onSwap: { summarySheet = .swap($0) },
-                                      onInspect: { summarySheet = .inspect($0) })
+                        if let run = state.run {
+                            if !resolved {
+                                PullPanel(
+                                    state: state, run: run,
+                                    onSwap: { summarySheet = .swap($0) },
+                                    onInspect: { summarySheet = .inspect($0) })
+                            }
+                            ShowcasePanel(
+                                run: run, interactive: tutorial?.needs(.gauntletDetailDone) == true,
+                                titlePrefix: "Showcase"
+                            ) { index in
+                                tutorial?.record(.gauntletInspect)
+                                summarySheet = .showcase(index)
+                            }
+                            if !run.attunedCatalysts.isEmpty { AttunedPanel(run: run) }
                         }
-                        ShowcasePanel(run: run, interactive: false, titlePrefix: "Showcase") { _ in }
-                        if !run.attunedCatalysts.isEmpty { AttunedPanel(run: run) }
                     }
+                    .padding(16)
+                    .readableWidth()
                 }
-                .padding(16)
-                .readableWidth()
+                .accessibilityIdentifier("gauntletSummaryScroll")
+                .onChange(of: summaryPrompt?.target, initial: true) { _, target in
+                    if let target { scroll.scrollTo(target, anchor: .center) }
+                }
             }
-            .accessibilityIdentifier("gauntletSummaryScroll")
             continueBar
         }
-        .sheet(item: $summarySheet) { destination in
+        .tutorialHost(summarySheet == nil ? summaryPrompt : nil)
+        .sheet(item: $summarySheet, onDismiss: { state.finishGrading() }) { destination in
             switch destination {
             case .inspect(let card):
                 PendingCardDetail(state: state, inst: card)
@@ -1883,8 +1993,37 @@ struct GauntletRevealView: View {
                 ShowcaseSwapPicker(state: state, incoming: card) {
                     summarySheet = nil
                 }
+            case .showcase(let index):
+                ShowcaseCardDetail(state: state, index: index) { summarySheet = nil }
             }
         }
+    }
+
+    private var summaryPrompt: TutorialPrompt? {
+        guard let tutorial, tutorial.isActive else { return nil }
+        if tutorial.needs(.gauntletCatalyst), state.canAttunePending {
+            return TutorialPrompt(target: "gauntlet-attune", title: "Attune a Catalyst",
+                                  message: "Catalysts boost cards of their element for this run. Attune this one instead of selling it.")
+        }
+        if tutorial.needs(.gauntletKeep), state.canKeepPending,
+           let card = state.pendingCards.max(by: { $0.currentValue < $1.currentValue }) {
+            return TutorialPrompt(target: "gauntlet-keep-\(card.id)", title: "Keep a strong card",
+                                  message: "This pull adds Aura to your Showcase. Keep it to move toward the round's target.")
+        }
+        if tutorial.needs(.gauntletSell),
+           let card = state.pendingCards.min(by: { $0.currentValue < $1.currentValue }) {
+            return TutorialPrompt(target: "gauntlet-sell-\(card.id)", title: "Turn a pull into cash",
+                                  message: "Sell this lower-value card for upgrade money. Then choose Keep or Sell for the remaining pulls.")
+        }
+        if resolved, tutorial.needs(.gauntletDetailDone), state.run?.showcase.isEmpty == false {
+            return TutorialPrompt(target: "gauntlet-showcase-0", title: "Inspect your Showcase",
+                                  message: "Tap a kept card to see its Aura, evolution line, and grading option.")
+        }
+        if resolved {
+            return tutorial.prompt(.gauntletPack, target: "gauntlet-finish-pack", title: "Ready for the round",
+                                   message: "Meet the Aura target before rips run out. When slots fill, Swap replaces a card without paying cash; Sell earns cash.")
+        }
+        return nil
     }
 
     private var continueBar: some View {
@@ -1899,9 +2038,15 @@ struct GauntletRevealView: View {
                       tint: GauntletTheme.gold,
                       enabled: resolved) {
                 Haptics.play(.success)
+                tutorial?.record(.gauntletPack)
                 state.finishReveal()
             }
             .accessibilityIdentifier("gauntletFinishPack")
+            .tutorialTarget("gauntlet-finish-pack") {
+                Haptics.play(.success)
+                tutorial?.record(.gauntletPack)
+                state.finishReveal()
+            }
         }
         .padding(16)
         .background(.ultraThinMaterial)
