@@ -91,18 +91,24 @@ For TestFlight, follow [the one-time Apple setup](APP_STORE.md#separate-test-app
 A test archive must use `Release-Test`; overriding it with plain `Release`
 would build the production identity even with the test scheme selected.
 
-**Build numbers are shared across production and test.** For each new release
-pair, choose one more than the highest build in either app's project settings
+**Every PR increments the shared production/test build number**, including
+documentation-only changes. Choose one more than the highest build in either app's project settings
 or local Organizer archives, also accounting for any higher uploads from
 another Mac. Set `CURRENT_PROJECT_VERSION` to that number in **all four app
 configurations** (`Debug`, `Release`, `Debug-Test`, `Release-Test`), never in the
 XCTest/UI-test targets. Keep `MARKETING_VERSION` equal across all four too, and
 change it only when the public version changes.
 
-The `/build` skill creates **both signed archives from the same source commit**,
-with one PR and one shared build-number bump. `/build production` and
+Include the bump in the existing work's PR. Recheck it before merging to avoid
+collisions with other PRs; do not bump on every push or again after merging.
+After **every PR merge**, the `/build` skill creates **both signed archives from
+the same merged source**, then uploads **only the test app** to internal TestFlight.
+`/build production` and
 `/build test` are aliases for that paired workflow, not independent counters.
-Neither app is uploaded automatically. Starting with **1.2.2 (42)**, matching
+Production stays archived locally unless an upload is explicitly requested.
+This is the agent's post-merge workflow on a signing-capable Mac, not a GitHub
+Actions deployment. See [TestFlight upload](APP_STORE.md#subsequent-test-builds).
+Starting with **1.2.2 (42)**, matching
 production/test build numbers identify the matching release pair; the older
 production 41 and test 5 sequences are historical.
 

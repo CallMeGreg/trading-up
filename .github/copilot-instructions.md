@@ -86,6 +86,32 @@ swiftc -O TradingUp/Models/Card.swift TradingUp/Models/Economy.swift \
 difficulty curve statistically, not just correctness — unit tests won't catch a
 balance regression. CI runs both on every push and PR.
 
+## Pull requests and releases
+
+**Every PR, including documentation-only PRs, must increment the shared app
+build number.** Follow [the build skill](skills/build/SKILL.md): choose a number
+above both apps' project settings, local Organizer archives, and any higher
+known App Store Connect uploads. Change `CURRENT_PROJECT_VERSION` in all four
+**app-target** configurations together; leave XCTest/UI-test targets and
+`MARKETING_VERSION` unchanged unless a version change was requested.
+Include the bump in the work's existing PR, not a separate release PR. Recheck
+before merging in case another PR consumed that number; do not bump on every
+push or again merely because the PR merged.
+
+**Every merged PR must produce a new matched pair of signed archives and upload
+the test app to TestFlight.** Once GitHub confirms the merge, follow the build
+skill's archive/upload steps from a clean worktree matching the merged source:
+`TradingUp` / `Release` and `TradingUpTest` / `Release-Test`, using the PR's
+shared version/build. Keep both archives in Xcode Organizer, but upload **only**
+`com.callmegreg.tradingup.test`, using `tools/TestFlightExportOptions.plist`.
+Never upload production or submit either app for public release unless explicitly
+requested. Verify Apple's upload acceptance; distinguish processing from tester
+availability, and report any signing, authentication, or upload blocker.
+If resuming after a merge, continue the same release rather than creating another
+bump/PR; retry failed steps without duplicating a successful archive or upload.
+These are agent workflow instructions, not a hosted CI distribution service:
+post-merge work needs this Mac's Xcode and Apple account access.
+
 ## Saves
 
 `Persistence.swift` uses a versioned save envelope. Schema changes must stay
