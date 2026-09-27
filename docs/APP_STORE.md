@@ -188,7 +188,9 @@ in all four app configurations together, above both apps' project values,
 Organizer archives, and any known uploads from another Mac. Include that bump
 in **every PR**, including documentation-only work. After merge, `/build` creates
 the matching signed production/test pair from the same merged source and uploads
-only the test app to internal TestFlight. Production upload remains an explicit,
+only the test app to internal TestFlight through Organizer, including its visible
+distribution record. The manual export/upload alternatives below are not the
+post-merge workflow. Production upload remains an explicit,
 separate action.
 `MARKETING_VERSION` stays equal across all four configurations and only changes
 when the public version number does.
@@ -352,8 +354,9 @@ App Store Connect. To exercise purchase, restore, or refund behavior, use
 Every PR must include the next shared build number. Use **`/build`** to commit
 that bump in the work's existing PR, merge it when requested, create **both**
 signed production and test archives in Organizer, and upload **only the test
-archive** to internal TestFlight. This post-merge distribution is required for
-every merged PR; it runs on the agent's signing-capable Mac, not hosted CI.
+archive through Organizer's UI** to internal TestFlight. This post-merge
+distribution is required for every merged PR; it runs on the agent's
+signing-capable Mac, not hosted CI.
 `/build test` and `/build production` use the same paired workflow. Matching
 version/build numbers identify matching source, beginning with **1.2.2 (42)**.
 Numbers already used by either app are never reused for a new release, including
@@ -386,21 +389,29 @@ Before upload, inspect the archive's `Info.plist`:
 # Must match the production archive's build number.
 ```
 
-After verifying the bundle ID and shared version/build, upload with Xcode's
-authenticated Apple account:
+After verifying the bundle ID and shared version/build, select that **same local
+archive** in **Xcode → Window → Organizer → Archives**. Choose **Distribute App →
+TestFlight Internal Only**, with automatic signing and the existing Apple
+account. In the distribution options (Custom if needed), disable **Manage Version
+and Build Number** and confirm the review still shows the committed version/build
+and `com.callmegreg.tradingup.test` before uploading. Keep the production archive
+local; do not broaden distribution to external testers or the App Store.
 
-```bash
-xcodebuild -exportArchive \
-  -archivePath "/path/to/TradingUpTest.xcarchive" \
-  -exportOptionsPlist tools/TestFlightExportOptions.plist \
-  -exportPath "/path/to/session-artifacts/testflight-upload" \
-  -allowProvisioningUpdates
-```
+Wait for Xcode to report success, then verify the selected archive's successful
+distribution history/status checkmark in Organizer. Retain the receipt/log or
+observed success details. **The visible Organizer record is part of completion**,
+not just Apple's upload acceptance. Command-line uploads can deliver a build
+without recording its distribution in Organizer; do not silently substitute
+`xcodebuild -exportArchive`, `altool`, Transporter, or another uploader for this
+step. If UI automation is unavailable, report that the local archives are ready
+but the Organizer upload remains pending.
 
-`TestFlightExportOptions.plist` uploads with automatic distribution signing,
-limits the build to internal TestFlight, and disables automatic build-number
-changes. Keep the production archive local. Require Apple's successful upload
-result and retain the log; a successful local export alone is not an upload.
+Do not re-upload builds already accepted by Apple just to obtain a checkmark
+(build 47 was uploaded before this workflow change), and never edit archive
+metadata to fabricate uploaded status. Use this flow for the next new build.
+Before retrying an ambiguous upload failure, check Apple's status and the local
+archive's distribution history to avoid duplicates.
+
 Processing and tester availability are separate: report an accepted upload as
 awaiting processing until App Store Connect confirms otherwise. Existing internal
 automatic-distribution settings apply; this workflow does not create groups,

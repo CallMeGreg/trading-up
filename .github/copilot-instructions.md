@@ -103,12 +103,22 @@ the test app to TestFlight.** Once GitHub confirms the merge, follow the build
 skill's archive/upload steps from a clean worktree matching the merged source:
 `TradingUp` / `Release` and `TradingUpTest` / `Release-Test`, using the PR's
 shared version/build. Keep both archives in Xcode Organizer, but upload **only**
-`com.callmegreg.tradingup.test`, using `tools/TestFlightExportOptions.plist`.
+`com.callmegreg.tradingup.test` **through Organizer's Distribute App flow** for
+internal TestFlight. Preserve the committed build number and verify that the
+same local archive shows Organizer's successful distribution status/checkmark.
+An accepted upload without that Organizer record is not the desired completed
+workflow. Do not silently substitute `xcodebuild -exportArchive`, `altool`,
+Transporter, or another headless uploader. If UI automation is unavailable,
+leave the verified local archives ready and report that the Organizer upload
+needs to be completed.
 Never upload production or submit either app for public release unless explicitly
 requested. Verify Apple's upload acceptance; distinguish processing from tester
 availability, and report any signing, authentication, or upload blocker.
 If resuming after a merge, continue the same release rather than creating another
 bump/PR; retry failed steps without duplicating a successful archive or upload.
+Do not re-upload a build already accepted by Apple just to obtain a checkmark,
+or edit archive metadata to fabricate one; apply the Organizer flow to the next
+new build instead.
 These are agent workflow instructions, not a hosted CI distribution service:
 post-merge work needs this Mac's Xcode and Apple account access.
 
