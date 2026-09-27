@@ -103,8 +103,10 @@ the test app to TestFlight.** Once GitHub confirms the merge, follow the build
 skill's archive/upload steps from a clean worktree matching the merged source:
 `TradingUp` / `Release` and `TradingUpTest` / `Release-Test`, using the PR's
 shared version/build. Keep both archives in Xcode Organizer, but upload **only**
-`com.callmegreg.tradingup.test` **through Organizer's Distribute App flow** for
-internal TestFlight. Preserve the committed build number and verify that the
+`com.callmegreg.tradingup.test` **through Organizer's Distribute App → App Store
+Connect flow** for internal TestFlight, not the **TestFlight Internal Only**
+option. Uploading to App Store Connect does not authorize a public release.
+Preserve the committed build number and verify that the
 same local archive shows Organizer's successful distribution status/checkmark.
 An accepted upload without that Organizer record is not the desired completed
 workflow. Do not silently substitute `xcodebuild -exportArchive`, `altool`,

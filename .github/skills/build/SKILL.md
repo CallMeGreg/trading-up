@@ -31,7 +31,8 @@ variables; carry resolved values forward explicitly in later calls.
 Use the existing app-managed session branch/worktree, not the primary checkout. Never
 force a test scheme to `Release`: that would select the production identity.
 After each merge, keep both archives locally and upload **only the test app** to
-TestFlight **through Xcode Organizer**, not a headless uploader. Never upload
+TestFlight **through Xcode Organizer → Distribute App → App Store Connect**,
+not the **TestFlight Internal Only** option or a headless uploader. Never upload
 production or submit either app for public release unless explicitly requested.
 TestFlight setup is documented in
 `docs/APP_STORE.md#separate-test-app-testflight`.
@@ -265,8 +266,10 @@ using the available computer-use tools. Do not use shell UI workarounds.
 1. Open **Xcode → Window → Organizer → Archives**. Select the test app's exact
    local archive, checking bundle ID, version/build, and creation date against
    Step 5. Do not select a same-version production archive or rebuild another copy.
-2. Choose **Distribute App** and the **TestFlight Internal Only** distribution
-   flow. Keep automatic distribution signing and the existing Apple account.
+2. Choose **Distribute App → App Store Connect** (not **TestFlight Internal
+   Only**) and upload to the existing test-app record. Keep automatic
+   distribution signing and the existing Apple account. An App Store Connect
+   upload does not authorize public release or external testing.
    Use the distribution options (Custom if needed) to disable **Manage Version
    and Build Number**; never allow Xcode to silently increment the committed
    build or broaden distribution to production, external testers, or the App Store.
