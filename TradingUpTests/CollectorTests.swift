@@ -15,6 +15,131 @@ final class CollectorTests: XCTestCase {
         }
     }
 
+    private func assertFreshProgress(_ progress: CollectorProgress,
+                                     file: StaticString = #filePath, line: UInt = #line) {
+        XCTAssertTrue(progress.completedRequestIDs.isEmpty, file: file, line: line)
+        XCTAssertTrue(progress.tradesCompletedBySet.isEmpty, file: file, line: line)
+        XCTAssertEqual(progress.cashEarned, 0, file: file, line: line)
+        XCTAssertEqual(progress.familyLineIDsBySet.count, CardDatabase.setCount, file: file, line: line)
+        for ids in progress.familyLineIDsBySet.values {
+            XCTAssertEqual(ids.count, 3, file: file, line: line)
+            XCTAssertEqual(Set(ids).count, 3, file: file, line: line)
+        }
+    }
+
+    func testStarterProgressionPaysMoreThanEveryPossibleSaleBundleInEverySet() throws {
+        var core = GameCore()
+        core.instances = CardDatabase.all.map { CardInstance(cardId: $0.id) }
+        _ = core.checkBonuses()
+        let expected: [(Rarity, Int, Double)] = [(.common, 5, 0.5), (.uncommon, 4, 0.75), (.rare, 3, 1)]
+        for set in 1...CardDatabase.setCount {
+            for (step, (rarity, count, multiplier)) in expected.enumerated() {
+                let offer = try request(.mira, core: core, set: set)
+                let requirement = try XCTUnwrap(offer.requirements.first)
+                XCTAssertEqual(offer.sequence, step + 1)
+                XCTAssertEqual(offer.requirements.count, 1)
+                XCTAssertEqual(requirement.rarity, rarity)
+                XCTAssertEqual(requirement.count, count)
+                XCTAssertTrue(requirement.distinct)
+                let cards = CardDatabase.cards(inSet: set).filter { $0.rarity == rarity }
+                XCTAssertEqual(requirement.cardIDs, Set(cards.map(\.id)))
+                let mostValuable = cards.sorted { $0.baseValue > $1.baseValue }.prefix(count)
+                let maximumSale = mostValuable.reduce(0) { $0 + Economy.sellback($1.baseValue) }
+                XCTAssertEqual(offer.cashReward, Economy.packPrice(set: set) * multiplier)
+                XCTAssertGreaterThan(offer.cashReward, maximumSale, "set \(set), \(rarity)")
+                core.instances += mostValuable.map { CardInstance(cardId: $0.id) }
+                let preview = try XCTUnwrap(core.collectorPreview(for: offer.goal))
+                XCTAssertTrue(preview.isReady)
+                XCTAssertEqual(preview.supplied.reduce(0) { $0 + $1.sellValue }, maximumSale, accuracy: 0.001)
+                let cash = core.cash
+                _ = try core.completeCollectorDeal(offer.goal, expectedInstanceIDs: preview.suppliedIDs)
+                XCTAssertEqual(core.cash - cash, offer.cashReward, accuracy: 0.001)
+            }
+            XCTAssertFalse(core.collectorRequests(inSet: set).contains { $0.collector == .mira })
+        }
+    }
+
+    func testFamilyRequestsStayStableAcrossPreviewsSavesAndCompletionsWithoutRepeats() throws {
+        var rng = SeededRNG(42)
+        var core = GameCore(collectors: CollectorProgress(using: &rng))
+        core.instances = CardDatabase.all.map { CardInstance(cardId: $0.id) }
+        _ = core.checkBonuses()
+        var seen: Set<String> = []
+        for set in 1...CardDatabase.setCount {
+            for step in 0..<CollectorEconomy.requestsPerCollector {
+                let offer = try request(.rowan, core: core, set: set)
+                let ids = offer.requirements.map(\.id)
+                let firstCard = try XCTUnwrap(offer.requirements.first?.card)
+                XCTAssertTrue(seen.insert(firstCard.lineId).inserted)
+                XCTAssertEqual(firstCard.set, set)
+                XCTAssertEqual(offer.sequence, step + 1)
+                XCTAssertEqual(ids, CardDatabase.line(firstCard.lineId).prefix(2).map(\.id))
+                XCTAssertEqual(offer.cashReward, Economy.packPrice(set: set))
+                XCTAssertEqual(core.collectorDeal(for: offer.goal)?.requirements.map(\.id), ids)
+                XCTAssertEqual(core.collectorPreview(for: offer.goal)?.deal.requirements.map(\.id), ids)
+                let data = try JSONEncoder().encode(SaveFile(core: core))
+                core = try JSONDecoder().decode(SaveFile.self, from: data).core
+                XCTAssertEqual(try request(.rowan, core: core, set: set).requirements.map(\.id), ids)
+                supply(offer, to: &core)
+                let preview = try XCTUnwrap(core.collectorPreview(for: offer.goal))
+                _ = try core.completeCollectorDeal(offer.goal, expectedInstanceIDs: preview.suppliedIDs)
+                XCTAssertNil(core.collectorDeal(for: offer.goal))
+            }
+            XCTAssertFalse(core.collectorRequests(inSet: set).contains { $0.collector == .rowan })
+        }
+        XCTAssertEqual(seen.count, CardDatabase.setCount * CollectorEconomy.requestsPerCollector)
+    }
+
+    func testEveryEvolutionFamilyHasEqualChanceAtEveryRequestPosition() {
+        let trials = 13_000
+        var rng = SeededRNG(0xC011EC70)
+        var counts: [String: Int] = [:]
+        for _ in 0..<trials {
+            let progress = CollectorProgress(using: &rng)
+            for (set, ids) in progress.familyLineIDsBySet {
+                XCTAssertEqual(Set(ids).count, 3)
+                for (step, id) in ids.enumerated() {
+                    XCTAssertEqual(CardDatabase.evolutionLines[id]?.first?.set, set)
+                    counts["\(step):\(id)", default: 0] += 1
+                }
+            }
+        }
+        for set in 1...CardDatabase.setCount {
+            let lines = CardDatabase.evolutionLines.values.filter { $0.first?.set == set }
+            XCTAssertEqual(lines.count, 13, "both two- and three-stage families participate")
+            let expected = Double(trials) / Double(lines.count)
+            for line in lines {
+                for step in 0..<CollectorEconomy.requestsPerCollector {
+                    XCTAssertEqual(Double(counts["\(step):\(line[0].lineId)", default: 0]),
+                                   expected, accuracy: expected * 0.15)
+                }
+            }
+        }
+    }
+
+    func testSeededFamilySelectionIsReproducibleAndNewRunsReshuffle() {
+        var firstRNG = SeededRNG(42)
+        var secondRNG = SeededRNG(42)
+        let core = GameCore(collectors: CollectorProgress(using: &firstRNG))
+        XCTAssertEqual(core.collectors, CollectorProgress(using: &secondRNG))
+        XCTAssertNotEqual(core.collectors.familyLineIDsBySet,
+                          core.startingNewRun().collectors.familyLineIDsBySet)
+    }
+
+    func testInvalidPersistedFamilySchedulesAreRejectedRatherThanRerolled() throws {
+        let original = try JSONEncoder().encode(CollectorProgress())
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: original) as? [String: Any])
+        let valid = try XCTUnwrap(object["familyLineIDsBySet"] as? [String: [String]])
+        for badIDs in [Array(repeating: valid["1"]![0], count: 3),
+                       Array(valid["1"]!.prefix(2)), valid["2"]!, ["missing", "unknown", "retired"]] {
+            var invalid = valid
+            invalid["1"] = badIDs
+            object["familyLineIDsBySet"] = invalid
+            let data = try JSONSerialization.data(withJSONObject: object)
+            XCTAssertThrowsError(try JSONDecoder().decode(CollectorProgress.self, from: data))
+        }
+    }
+
     func testCollectorDisplayNamesKeepPersistedIdentifiersStable() {
         XCTAssertEqual(Collector.allCases.map(\.name), ["Matthew", "Emilie", "Jonny"])
         XCTAssertEqual(Collector.allCases.map(\.rawValue), ["mira", "rowan", "tess"])
@@ -65,7 +190,7 @@ final class CollectorTests: XCTestCase {
     func testLastCopiesAndPremiumExtrasCannotFillRequests() throws {
         var core = GameCore()
         let offer = try request(.mira, core: core)
-        for id in offer.requirements[0].cardIDs.sorted().prefix(3) {
+        for id in offer.requirements[0].cardIDs.sorted().prefix(offer.requiredCount) {
             core.instances += [CardInstance(cardId: id), CardInstance(cardId: id, foil: true),
                                CardInstance(cardId: id, grade: 10)]
         }
@@ -95,11 +220,11 @@ final class CollectorTests: XCTestCase {
         let offer = try request(.mira, core: core)
         supply(offer, to: &core)
         let preview = try XCTUnwrap(core.collectorPreview(for: offer.goal))
-        XCTAssertEqual(preview.supplied.count, 3)
+        XCTAssertEqual(preview.supplied.count, 5)
         XCTAssertTrue(preview.supplied.allSatisfy { core.isSellable($0) })
-        XCTAssertEqual(core.duplicateSummary(of: core.uniqueOwnedIds).count, 3)
+        XCTAssertEqual(core.duplicateSummary(of: core.uniqueOwnedIds).count, 5)
         var selling = core
-        XCTAssertEqual(selling.sellDuplicates(of: selling.uniqueOwnedIds).count, 3)
+        XCTAssertEqual(selling.sellDuplicates(of: selling.uniqueOwnedIds).count, 5)
         XCTAssertEqual(selling.uniqueOwnedIds, core.uniqueOwnedIds)
         var rng = SeededRNG(4)
         for id in preview.suppliedIDs {
@@ -112,8 +237,12 @@ final class CollectorTests: XCTestCase {
         var core = GameCore()
         let mira = try request(.mira, core: core)
         let rowan = try request(.rowan, core: core)
-        supply(mira, to: &core)
         supply(rowan, to: &core)
+        let familyBase = try XCTUnwrap(rowan.requirements.first?.card?.id)
+        core.instances.append(CardInstance(cardId: familyBase))
+        for id in mira.requirements[0].cardIDs.sorted().filter({ $0 != familyBase }).prefix(mira.requiredCount - 1) {
+            core.instances += [CardInstance(cardId: id), CardInstance(cardId: id)]
+        }
         let first = try XCTUnwrap(core.collectorPreview(for: mira.goal))
         let second = try XCTUnwrap(core.collectorPreview(for: rowan.goal))
         XCTAssertFalse(first.suppliedIDs.isDisjoint(with: second.suppliedIDs))
@@ -259,8 +388,16 @@ final class CollectorTests: XCTestCase {
         let legacy = try JSONDecoder().decode(GameCore.self, from: Data(#"{"cash":42,"instances":[{"cardId":"S1-001"}]}"#.utf8))
         XCTAssertEqual(legacy.cash, 42)
         XCTAssertTrue(legacy.owns("S1-001"))
-        XCTAssertEqual(legacy.collectors, CollectorProgress())
-        XCTAssertEqual(try JSONDecoder().decode(CollectorProgress.self, from: Data("{}".utf8)), CollectorProgress())
+        assertFreshProgress(legacy.collectors)
+        let legacyProgress = try JSONDecoder().decode(CollectorProgress.self, from: Data("{}".utf8))
+        assertFreshProgress(legacyProgress)
+        XCTAssertEqual(legacy.collectors, legacyProgress, "saves predating collectors keep a stable legacy schedule")
+        XCTAssertEqual(try JSONDecoder().decode(GameCore.self, from: Data("{}".utf8)).collectors, legacyProgress)
+        for set in 1...CardDatabase.setCount {
+            let oldLines = CardDatabase.evolutionLines.values.filter { $0.first?.set == set && $0.count == 3 }
+                .sorted { $0[0].id < $1[0].id }.prefix(3).map { $0[0].lineId }
+            XCTAssertEqual(legacyProgress.familyLineIDsBySet[set], oldLines)
+        }
     }
 
     func testNewRunResetsDealsButNotLifetimeRecord() throws {
@@ -272,7 +409,7 @@ final class CollectorTests: XCTestCase {
         _ = try core.completeCollectorDeal(offer.goal, expectedInstanceIDs: preview.suppliedIDs)
         core.collectors.tradesCompletedBySet[1] = 2
         let fresh = core.startingNewRun()
-        XCTAssertEqual(fresh.collectors, CollectorProgress())
+        assertFreshProgress(fresh.collectors)
         XCTAssertEqual(fresh.lifetime.packsOpened, 8)
         XCTAssertEqual(fresh.lifetime.collectorRequestsCompleted, 1)
         XCTAssertEqual(fresh.lifetime.collectorTradesCompleted, 2)
@@ -300,8 +437,22 @@ final class CollectorTests: XCTestCase {
         XCTAssertEqual(core.collectors.cashEarned, Economy.packPrice(set: 1) * 1.5)
         XCTAssertEqual(core.lifetimeIncludingCurrentRun.collectorRequestsCompleted, 2)
         XCTAssertEqual(core.lifetimeIncludingCurrentRun.collectorTradesCompleted, 1)
+        let nextFamily = try request(.rowan, core: core)
+        XCTAssertEqual(nextFamily.requirements.map(\.id), ["S1-004", "S1-005"])
+        XCTAssertEqual(nextFamily.sequence, 2)
+        let restored = try JSONDecoder().decode(GameCore.self, from: JSONEncoder().encode(core))
+        XCTAssertEqual(restored.collectors, core.collectors)
         XCTAssertEqual(core.sellDuplicates(of: ["S1-001"]).count, 1, "old goals cannot hold cards")
         XCTAssertEqual(core.count(of: "S1-001"), 1)
+    }
+
+    func testLegacyLaterRequestsRecoverOriginalRewardsNotNewPayouts() throws {
+        let data = Data(#"""
+        {"completedRequestIDs":["1-mira-0","1-mira-1","1-mira-2","1-rowan-0","1-rowan-1","1-rowan-2"]}
+        """#.utf8)
+        let progress = try JSONDecoder().decode(CollectorProgress.self, from: data)
+        XCTAssertEqual(progress.cashEarned, Economy.packPrice(set: 1) * 4.5)
+        XCTAssertEqual(progress.requestsCompleted, 6)
     }
 }
 
@@ -331,6 +482,9 @@ final class CollectorStateTests: XCTestCase {
         let preview = try XCTUnwrap(state.collectorPreview(for: goal))
         _ = try state.completeCollectorDeal(goal, expectedInstanceIDs: preview.suppliedIDs)
         let loaded = GameState(store: SaveStore(directory: directory))
+        XCTAssertEqual(loaded.collectorProgress.familyLineIDsBySet, state.collectorProgress.familyLineIDsBySet)
+        XCTAssertEqual(loaded.collectorRequests(inSet: 1).last?.requirements.map(\.id),
+                       state.collectorRequests(inSet: 1).last?.requirements.map(\.id))
         XCTAssertEqual(loaded.collectorProgress.requestsCompleted, 1)
         XCTAssertEqual(loaded.collectorProgress.cashEarned, preview.deal.cashReward)
         XCTAssertEqual(loaded.lifetimeStats.collectorRequestsCompleted, 1)
@@ -406,7 +560,9 @@ final class CollectorStateTests: XCTestCase {
         XCTAssertEqual(reloaded.collectorProgress.tradesCompleted, 1)
         state.newGame()
         XCTAssertTrue(state.binder.hasCard("S1-050"), "new runs never consume the permanent Binder")
-        XCTAssertEqual(state.collectorProgress, CollectorProgress())
+        XCTAssertTrue(state.collectorProgress.completedRequestIDs.isEmpty)
+        XCTAssertTrue(state.collectorProgress.tradesCompletedBySet.isEmpty)
+        XCTAssertEqual(state.collectorProgress.cashEarned, 0)
     }
 
     func testFailedSaveDoesNotConsumeCardsOrPayRewards() throws {

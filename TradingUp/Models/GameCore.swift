@@ -250,9 +250,11 @@ struct GameCore: Codable {
     /// whether the celebration overlay is still being presented.
     var winAcknowledged = false
     var welcomeSeen = false
-    var collectors = CollectorProgress()
+    var collectors: CollectorProgress
 
-    init() {}
+    init(collectors: CollectorProgress = CollectorProgress()) {
+        self.collectors = collectors
+    }
 
     /// Decode leniently, like `Stats`: Swift's synthesized `init(from:)` ignores
     /// property defaults and throws on any missing key, so adding a field here
@@ -270,7 +272,7 @@ struct GameCore: Codable {
         hasWon          = try c.decodeIfPresent(Bool.self,           forKey: .hasWon)          ?? false
         winAcknowledged = try c.decodeIfPresent(Bool.self,           forKey: .winAcknowledged) ?? false
         welcomeSeen     = try c.decodeIfPresent(Bool.self,           forKey: .welcomeSeen)     ?? false
-        collectors      = try c.decodeIfPresent(CollectorProgress.self, forKey: .collectors) ?? CollectorProgress()
+        collectors      = try c.decodeIfPresent(CollectorProgress.self, forKey: .collectors) ?? .legacy
     }
 
     // MARK: Resetting

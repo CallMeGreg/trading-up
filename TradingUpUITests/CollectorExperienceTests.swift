@@ -89,6 +89,26 @@ final class CollectorExperienceTests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Growing collection"].exists)
     }
 
+    func testMatthewRequestsProgressThroughCommonsUncommonsAndRares() {
+        launch()
+        openBoard()
+        let stages = [(5, "commons", "$5.00"), (4, "uncommons", "$7.50"), (3, "rares", "$10.00")]
+        for (step, (count, rarity, payout)) in stages.enumerated() {
+            let requirement = app.descendants(matching: .any).matching(NSPredicate(
+                format: "label BEGINSWITH %@", "\(count) different \(rarity),")).firstMatch
+            XCTAssertTrue(requirement.waitForExistence(timeout: 5))
+            tapOfferButton("collectorReview-request:1-mira-\(step)")
+            XCTAssertEqual(suppliedCopyCount, count)
+            app.buttons["collectorConfirm"].tap()
+            let receipt = element("collectorCashReceived")
+            XCTAssertTrue(receipt.waitForExistence(timeout: 5))
+            XCTAssertTrue(receipt.label.contains(payout))
+            closeReceipt()
+        }
+        XCTAssertTrue(app.staticTexts["All 3 requests complete"].exists)
+        XCTAssertFalse(app.buttons["collectorReview-request:1-mira-2"].exists)
+    }
+
     func testMissingCardTradeReviewsExactBundleAndShowsCleanReceipt() {
         launch()
         openBoard()

@@ -108,6 +108,8 @@ enum DebugLaunchState {
 
     static func collectorScenario(finalCard: Bool, cash: Double? = nil) -> GameCore {
         var core = finalCard ? almostWon(missing: "S1-050") : GameCore()
+        var rng = AppRNG(seed: 0)
+        core.collectors = CollectorProgress(using: &rng)
         core.welcomeSeen = true
         if !finalCard {
             core.instances = CardDatabase.cards(inSet: 1).filter { $0.id != "S1-050" }
@@ -115,9 +117,14 @@ enum DebugLaunchState {
             _ = core.checkBonuses()
         }
         for rarity in [Rarity.common, .uncommon, .rare] {
-            let count = rarity == .common ? 6 : (rarity == .uncommon ? 4 : 2)
+            let count = rarity == .common ? 8 : (rarity == .uncommon ? 4 : 3)
             let cards = CardDatabase.cards(inSet: 1).filter { $0.rarity == rarity }.prefix(count)
             core.instances += cards.map { CardInstance(cardId: $0.id) }
+        }
+        if let family = core.collectorRequests(inSet: 1).first(where: { $0.collector == .rowan }) {
+            for card in family.requirements.compactMap(\.card) where core.count(of: card.id) < 2 {
+                core.instances.append(CardInstance(cardId: card.id))
+            }
         }
         core.cash = cash ?? 250
         return core

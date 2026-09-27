@@ -33,7 +33,7 @@ Or just press `⌘U` in Xcode.
 | `PurchaseStoreTests.swift` | Production starts purchase-gated; the test app unlocks immediately, stays unlocked without StoreKit, never caches its automatic grant, and preserves progression |
 | `DataIntegrityTests.swift` | The generated catalogue: 250 cards, unique names/ids, rarity splits |
 | `EconomyRulesTests.swift` | The economy knobs are exactly as designed (prices, fees, sellback rate) |
-| `CollectorTests.swift` | Finite collector requests/trades, unreserved previews, exact confirmations, bonus payouts, run/lifetime trade stats, legacy saves, rollback, access-aware recovery, and receipt sequencing |
+| `CollectorTests.swift` | Rarity/count progression and payouts above every eligible sale bundle, uniform nonrepeating family draws, saved schedules, finite requests/trades, unreserved previews, exact confirmations, run/lifetime stats, legacy saves, rollback, access-aware recovery, and receipt sequencing |
 | `CollectionSaleTests.swift` | Set-wide duplicate previews and confirmed sales, cheapest-copy retention and maximum proceeds, premium extras and ties, stale confirmations, persistence rollback, and reveal/receipt gates |
 | `GameplaySimulationTests.swift` | Buy/open/sell/grade flows against a seeded, reproducible RNG |
 | `SaveFormatTests.swift` | Old saves decode, schema changes stay additive, retired cards are stripped |
@@ -277,7 +277,9 @@ The complete harness runs this same benchmark in CI.
 
 `tools/verify/classic_sim.swift` executes the shipping model, including actual
 normal-copy requirements, finite rewards, same-set trade
-limits, and grade fees. All policies work the cheapest unlocked incomplete set,
+limits, and grade fees. Family schedules use a separate deterministic RNG
+(the trial seed XOR `0xFA1711E5`) so the random offers are reproducible without
+changing the pack/grade RNG stream. All policies work the cheapest unlocked incomplete set,
 falling back to an affordable pack when liquidity is short; they do not read
 future RNG state. Failed runs must really be out of legal recovery actions,
 not just unable to afford their preferred set.
@@ -300,18 +302,19 @@ players or globally optimal play. Cap hits and premature-loss counts must be
 zero. Do not hide a failed run by changing its outcome or choosing a seed after
 seeing the result.
 
-Measured with the shipping 60% quick-sale rate, half-pack Matthew payouts,
-one-pack Emilie payouts, and two trades per set:
+Measured with the shipping 60% quick-sale rate, Matthew's 5-common / 4-uncommon /
+3-rare progression paying 0.5 / 0.75 / 1 pack prices, uniformly drawn one-pack
+Emilie requests, and two trades per set:
 
 | Policy | Wins | Mean packs opened | Mean requests / trades |
 | --- | --- | --- | --- |
 | Careless | **125 / 1,000 (12.5%)** | 127.4 | 0 / 0 |
 | Grading only | 47 / 200 (23.5%) | 143.9 | 0 / 0 |
-| Requests only | 69 / 200 (34.5%) | 161.3 | 19.0 / 0 |
+| Requests only | 75 / 200 (37.5%) | 156.9 | 18.7 / 0 |
 | Trades only | 61 / 200 (30.5%) | 140.1 | 0 / 7.5 |
-| Focused | **769 / 1,000 (76.9%)** | 165.9 | 21.1 / 9.3 |
+| Focused | **776 / 1,000 (77.6%)** | 166.9 | 21.1 / 9.3 |
 
-The focused/careless gap is **64.4 percentage points**. Every policy resolved
+The focused/careless gap is **65.1 percentage points**. Every policy resolved
 without a cap hit or premature loss. Means include losses, not just winning
 runs. The separate initial 1,000-run careless sample at seed `0xA11CE` won
 11.5%; the table uses the independent validation range above. Combining
@@ -330,6 +333,14 @@ previews, cheapest-copy retention and maximum proceeds, premium duplicates and
 equal-value ties, permanent Binder preservation, stale confirmations,
 autosave rollback, receipt/reveal blocking, and loss deferral until the sale
 confirmation finishes dismissing.
+
+Trader regression cases complete Matthew's 5-common / 4-uncommon / 3-rare
+sequence in every set using the most valuable eligible bundles and compare
+each payout with actual sell-back proceeds. Emilie's distribution test samples
+13,000 seeded schedules, checks all 13 families at every request position in
+every set, and rejects repeated lines. Additional cases cover stable previews,
+save/relaunch continuity, new-run reshuffling, legacy schedules/payouts, and
+rejection of malformed saved schedules rather than silent rerolls.
 
 ```bash
 xcodebuild test -project TradingUp.xcodeproj -scheme TradingUpTest \
@@ -350,6 +361,7 @@ and start at $250 (overridable with `TU_TEST_CASH`).
 duplicate for set-wide selling and card-detail preference checks. These fixtures
 do not exist in Release.
 `CollectorExperienceTests` exercises the actual board, confirmations, receipts,
+all three Matthew rarity/count stages and their displayed payouts,
 five-pack selection, tab-only navigation, run/lifetime trade stats, remembered
 Grade/Sell selection, confirmed set-wide sales independent of filters, and
 last-card win using these fixtures. It also checks large Dynamic Type, the

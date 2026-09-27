@@ -46,7 +46,8 @@ enum ClassicSim {
 
     static func play(policy: Policy, seed: UInt64) throws -> Outcome {
         var rng = SeededRNG(seed)
-        var core = GameCore()
+        var collectorRNG = SeededRNG(seed ^ 0xFA1711E5)
+        var core = GameCore(collectors: CollectorProgress(using: &collectorRNG))
         func outcome(capped: Bool = false) -> Outcome {
             Outcome(won: core.hasWon, capped: capped, stranded: !core.hasWon && !capped && !core.isGameOver,
                     packs: core.stats.packsOpened,
