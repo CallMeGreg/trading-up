@@ -36,18 +36,48 @@ struct CollectorProgress: Codable, Equatable {
     var completedRequestIDs: Set<String> = []
     var tradesCompletedBySet: [Int: Int] = [:]
     var cashEarned = 0.0
+    private(set) var familyLineIDsBySet: [Int: [String]]
 
-    init() {}
+    static let legacy = CollectorProgress(familyLineIDsBySet: CollectorCatalog.legacyFamilyLineIDsBySet)
+
+    private init(familyLineIDsBySet: [Int: [String]]) {
+        self.familyLineIDsBySet = familyLineIDsBySet
+    }
+
+    init() {
+        var rng = SystemRandomNumberGenerator()
+        self.init(using: &rng)
+    }
+
+    init<G: RandomNumberGenerator>(using rng: inout G) {
+        familyLineIDsBySet = Dictionary(uniqueKeysWithValues: (1...CardDatabase.setCount).map { set in
+            let lines = CollectorCatalog.familyLinesBySet[set, default: []]
+                .shuffled(using: &rng).prefix(CollectorEconomy.requestsPerCollector)
+            return (set, lines.map { $0[0].lineId })
+        })
+    }
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         completedRequestIDs = try c.decodeIfPresent(Set<String>.self, forKey: .completedRequestIDs) ?? []
         tradesCompletedBySet = try c.decodeIfPresent([Int: Int].self, forKey: .tradesCompletedBySet) ?? [:]
-        // Older saves retain completed requests, so their rewards can be recovered.
+        // Preserve the old run's assigned families and historical payouts.
+        familyLineIDsBySet = try c.decodeIfPresent([Int: [String]].self, forKey: .familyLineIDsBySet)
+            ?? CollectorCatalog.legacyFamilyLineIDsBySet
         cashEarned = try c.decodeIfPresent(Double.self, forKey: .cashEarned)
-            ?? completedRequestIDs.reduce(0) {
-                $0 + (CollectorCatalog.requestsByGoal[.request($1)]?.cashReward ?? 0)
+            ?? completedRequestIDs.reduce(0) { total, id in
+                guard let location = CollectorCatalog.requestLocations[.request(id)] else { return total }
+                return total + Economy.packPrice(set: location.set) * (location.collector == .mira ? 0.5 : 1)
             }
+        for set in 1...CardDatabase.setCount {
+            let validIDs = Set(CollectorCatalog.familyLinesBySet[set, default: []].map { $0[0].lineId })
+            guard let ids = familyLineIDsBySet[set],
+                  ids.count == CollectorEconomy.requestsPerCollector,
+                  Set(ids).count == ids.count, Set(ids).isSubset(of: validIDs) else {
+                throw DecodingError.dataCorruptedError(forKey: .familyLineIDsBySet, in: c,
+                                                       debugDescription: "Invalid collector families for set \(set)")
+            }
+        }
     }
 
     var requestsCompleted: Int { completedRequestIDs.count }
@@ -57,7 +87,9 @@ struct CollectorProgress: Codable, Equatable {
 enum CollectorEconomy {
     static let requestsPerCollector = 3
     static let tradesPerSet = 2
-    static let starterRewardMultiplier = 0.5
+    static let starterRequests: [(rarity: Rarity, count: Int, rewardMultiplier: Double)] = [
+        (.common, 5, 0.5), (.uncommon, 4, 0.75), (.rare, 3, 1.0)
+    ]
     static let familyRewardMultiplier = 1.0
 }
 
@@ -87,6 +119,29 @@ struct CollectorDeal: Identifiable {
 }
 
 private enum CollectorCatalog {
+    static let familyLinesBySet: [Int: [[Card]]] =
+        Dictionary(uniqueKeysWithValues: (1...CardDatabase.setCount).map { set in
+            (set, CardDatabase.evolutionLines.values.filter { $0.first?.set == set }
+                .sorted { $0[0].id < $1[0].id })
+        })
+
+    static let legacyFamilyLineIDsBySet: [Int: [String]] = familyLinesBySet.mapValues { lines in
+        lines.filter { $0.count == 3 }.prefix(CollectorEconomy.requestsPerCollector).map { $0[0].lineId }
+    }
+
+    static func requestGoal(collector: Collector, set: Int, step: Int) -> CollectorGoal {
+        .request("\(set)-\(collector.rawValue)-\(step)")
+    }
+
+    static let requestLocations: [CollectorGoal: (set: Int, collector: Collector)] =
+        Dictionary(uniqueKeysWithValues: (1...CardDatabase.setCount).flatMap { set in
+            [Collector.mira, .rowan].flatMap { collector in
+                (0..<CollectorEconomy.requestsPerCollector).map { step in
+                    (requestGoal(collector: collector, set: set, step: step), (set, collector))
+                }
+            }
+        })
+
     static func rarityRequirement(_ rarity: Rarity, count: Int, set: Int) -> CollectorRequirement {
         let plural: String
         switch rarity {
@@ -101,38 +156,31 @@ private enum CollectorCatalog {
                                     count: count, distinct: true, rarity: rarity)
     }
 
-    static let requests: [Int: [CollectorDeal]] = Dictionary(uniqueKeysWithValues: (1...CardDatabase.setCount).map { set in
-        let lines = CardDatabase.evolutionLines.values
-            .filter { $0.first?.set == set && $0.count == 3 }.sorted { $0[0].id < $1[0].id }
-        let deals = [Collector.mira, .rowan].flatMap { collector in
-            (0..<CollectorEconomy.requestsPerCollector).compactMap { step -> CollectorDeal? in
-                let requirements: [CollectorRequirement]
-                let title: String
-                let reward: Double
-                if collector == .mira {
-                    requirements = [rarityRequirement(.common, count: 3 + step, set: set)]
-                    title = ["First binder", "Growing collection", "Collector's gift"][step]
-                    reward = Economy.packPrice(set: set) * CollectorEconomy.starterRewardMultiplier
-                } else {
-                    guard lines.indices.contains(step) else { return nil }
-                    requirements = lines[step].prefix(2).map { card in
-                        CollectorRequirement(id: card.id, label: card.name, cardIDs: [card.id],
-                                             count: 1, distinct: true, card: card, rarity: card.rarity)
-                    }
-                    title = "\(lines[step][0].name)'s family"
-                    reward = Economy.packPrice(set: set) * CollectorEconomy.familyRewardMultiplier
-                }
-                return CollectorDeal(goal: .request("\(set)-\(collector.rawValue)-\(step)"),
-                                     collector: collector, set: set, title: title,
-                                     requirements: requirements, cashReward: reward, rewardCard: nil,
-                                     sequence: step + 1, total: CollectorEconomy.requestsPerCollector)
+    static func request(collector: Collector, set: Int, step: Int, progress: CollectorProgress) -> CollectorDeal {
+        let requirements: [CollectorRequirement]
+        let title: String
+        let reward: Double
+        if collector == .mira {
+            let request = CollectorEconomy.starterRequests[step]
+            requirements = [rarityRequirement(request.rarity, count: request.count, set: set)]
+            title = ["First binder", "Growing collection", "Collector's gift"][step]
+            reward = Economy.packPrice(set: set) * request.rewardMultiplier
+        } else {
+            // New runs generate these IDs once; decoded schedules are validated above.
+            let lineID = progress.familyLineIDsBySet[set]![step]
+            let line = CardDatabase.evolutionLines[lineID]!
+            requirements = line.prefix(2).map { card in
+                CollectorRequirement(id: card.id, label: card.name, cardIDs: [card.id],
+                                     count: 1, distinct: true, card: card, rarity: card.rarity)
             }
+            title = "\(line[0].name)'s family"
+            reward = Economy.packPrice(set: set) * CollectorEconomy.familyRewardMultiplier
         }
-        return (set, deals)
-    })
-
-    static let requestsByGoal: [CollectorGoal: CollectorDeal] =
-        Dictionary(uniqueKeysWithValues: requests.values.flatMap { $0 }.map { ($0.goal, $0) })
+        return CollectorDeal(goal: requestGoal(collector: collector, set: set, step: step),
+                             collector: collector, set: set, title: title,
+                             requirements: requirements, cashReward: reward, rewardCard: nil,
+                             sequence: step + 1, total: CollectorEconomy.requestsPerCollector)
+    }
 }
 
 struct CollectorRequirementProgress: Identifiable {
@@ -195,10 +243,12 @@ extension GameCore {
     func collectorRequests(inSet set: Int) -> [CollectorDeal] {
         guard (1...CardDatabase.setCount).contains(set), isUnlocked(set: set) else { return [] }
         return [Collector.mira, .rowan].compactMap { collector in
-            CollectorCatalog.requests[set]?.first { deal in
-                guard deal.collector == collector, case .request(let id) = deal.goal else { return false }
+            guard let step = (0..<CollectorEconomy.requestsPerCollector).first(where: { step in
+                guard case .request(let id) = CollectorCatalog.requestGoal(collector: collector, set: set, step: step)
+                else { return false }
                 return !collectors.completedRequestIDs.contains(id)
-            }
+            }) else { return nil }
+            return CollectorCatalog.request(collector: collector, set: set, step: step, progress: collectors)
         }
     }
 
@@ -219,9 +269,8 @@ extension GameCore {
     func collectorDeal(for goal: CollectorGoal) -> CollectorDeal? {
         switch goal {
         case .request:
-            guard let request = CollectorCatalog.requestsByGoal[goal],
-                  collectorRequests(inSet: request.set).contains(where: { $0.goal == goal }) else { return nil }
-            return request
+            guard let location = CollectorCatalog.requestLocations[goal] else { return nil }
+            return collectorRequests(inSet: location.set).first { $0.goal == goal }
         case .trade(let id):
             guard let card = CardDatabase.card(id), isUnlocked(set: card.set), !owns(id),
                   collectorTradesRemaining(inSet: card.set) > 0 else { return nil }

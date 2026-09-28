@@ -338,15 +338,26 @@ currency, or paid random rewards are involved.
 
 | Collector | Offer in each unlocked set | Reward | Run-long limit |
 | --- | --- | --- | --- |
-| **Matthew** | Three, then four, then five different common duplicates | Half that set's pack price per request | Three requests per set |
-| **Emilie** | A named base and middle-stage duplicate from an evolution family; the next family follows a completed request | That set's pack price per request | Three requests per set |
+| **Matthew** | Five different common duplicates, then four different uncommons, then three different rares | 0.5, 0.75, then 1 times that set's pack price | Three requests per set |
+| **Emilie** | Duplicates of the first two stages of a randomly selected evolution family; the next family follows a completed request | That set's pack price per request | Three requests per set, with no repeated family |
 | **Jonny** | A bundle of different normal duplicates from the target's set | One **chosen, missing** Spryte, non-foil and ungraded | Two trades per set |
 
 Matthew and Emilie show their next request, its exact requirements, live progress,
-and fixed payout. Their combined maximum payout is **4.5 pack prices per set**.
+and fixed payout. Matthew's payout always exceeds the combined quick-sale value
+of even the most valuable eligible bundle in that set. Their combined maximum
+payout is **5.25 pack prices per set**.
 Completing a request advances that collector's sequence; leaving the board
 never changes the offer. Requests are separate from automatic evolution/set
 bonuses and consume real spare copies.
+
+At the start of each new run, Emilie's three families are drawn uniformly
+without replacement from all 13 two- and three-stage lines in each set. Each
+remaining line has the same chance at the next position: 1 in 13, then 1 in 12,
+then 1 in 11. The saved schedule survives tab changes and app relaunches;
+starting another run draws a new schedule. Older saves without a schedule keep
+their original three assigned families until that run ends, so completed or
+in-progress requests are never rerolled or repeated. Historical cash earnings
+also retain their original payouts.
 
 Jonny's target picker lists missing cards, not another random selection. The
 price depends on the target's rarity:
