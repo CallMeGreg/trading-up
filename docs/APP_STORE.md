@@ -90,7 +90,9 @@ python3 tools/check_icon.py
 
 `check_icon.py` is what proves the icon is submittable: exactly 1024×1024, 8‑bit,
 **no alpha channel**, and full‑bleed to the edges (iOS applies the rounded‑corner
-mask itself, so a baked‑in one shows up as dark wedges). Details in
+mask itself, so a baked‑in one shows up as dark wedges). The text-free World Orbit
+design uses the home screen's five set emblems; regenerating it requires macOS,
+Xcode and `rsvg-convert`, and also updates the website's matching icon. Details in
 [DEVELOPMENT.md](DEVELOPMENT.md#app-icon).
 
 ## In-app purchase promo image
@@ -106,7 +108,7 @@ offer code, and on win-back offers. It's shown in every region, so the art carri
 no localizable marketing sentence — it says *"unlock everything"* purely visually:
 a fan of the five set signature legendaries, one per element (Emberfall fire →
 Umbral Reach shadow), drawn with the **same art engine that draws the cards
-in-game** (`tools/generate_art.py`), the same way the app icon reuses it. So the
+in-game** (`tools/generate_art.py`). So the
 promo can never drift from the real artwork.
 
 Apple's rules for this image — JPG or PNG, 1024×1024, 72 dpi, RGB, flattened (no

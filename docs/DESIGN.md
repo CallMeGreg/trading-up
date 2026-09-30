@@ -30,8 +30,9 @@ We can't commission real creature art for 250 characters, and we must not copy
 anyone else's. So every Spryte is **drawn in code**: `tools/generate_art.py` builds a
 flat‑vector creature and stands it on a per‑set scene. It is deterministic,
 name‑aligned, scales to 250 cards for free, and can be swapped for commissioned art
-later without changing the game. The app icon is built from the same code, so the two
-can't drift apart.
+later without changing the game. The text-free **World Orbit** app icon instead
+reuses the five set landscapes that float around the home-screen title, rendered
+directly from `SetArt.swift` so the icon and those scenes stay aligned.
 
 **No card is a recolour of another.** Each of the five sets has its own *design
 language* that changes the actual geometry — silhouette, limbs, head, eyes, mouth,

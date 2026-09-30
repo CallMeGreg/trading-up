@@ -90,6 +90,23 @@ relocate the updated app's container, so compare saved contents rather than
 assuming its directory UUID stays fixed. Never run destructive save fixtures
 against the App Store installation on your phone.
 
+### App icon
+
+```bash
+python3 -B -m unittest discover -s tools -p test_generate_icon.py
+python3 -B tools/check_icon.py
+```
+
+The composition tests guard all five emblems in set order, their spacing and
+safe margins, the full-bleed square without a wordmark, rejection of missing or
+extra worlds, and the website's byte-identical icon. The submission check covers
+the generated PNG's dimensions, bit depth, alpha channel and corners. Both checks
+run in CI without rendering new artwork.
+
+After changing the design or `SetArt.swift`, regenerate with
+`python3 tools/generate_icon.py` on macOS with Xcode and `rsvg-convert`, then run
+these checks. See [DEVELOPMENT.md](DEVELOPMENT.md#app-icon).
+
 ### First-play tutorials
 
 ```bash
@@ -380,7 +397,8 @@ xcodebuild test -project TradingUp.xcodeproj -scheme TradingUpScreenshots \
 `.github/workflows/ci.yml` runs these checks on every push to `main` and every pull
 request, on `macos-15` with Xcode 16.4:
 
-1. **Verify harness** — checks app identity configuration, then compiles with
+1. **Verify harness** — checks app identity configuration and the app icon's
+   composition, matching website copy and submission format, then compiles with
    `swiftc -O` and runs `tools/verify/main.swift`.
 2. **Build (iOS Simulator)** and **Build test app (iOS Simulator)** — build
    `Release` and `Release-Test` respectively, with code signing off.
