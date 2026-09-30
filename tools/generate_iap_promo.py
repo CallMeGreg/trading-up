@@ -9,8 +9,7 @@ set signature legendaries, one per element (Emberfall fire -> Umbral Reach
 shadow), drawn with the exact same art engine that draws the cards in-game, so
 the promo can never drift from the real artwork.
 
-Reuses `tools/generate_art.py` for every creature and scene, the same way
-`tools/generate_icon.py` reuses it for the app icon. Stdlib-only Python 3 plus
+Reuses `tools/generate_art.py` for every creature and scene. Stdlib-only Python 3 plus
 `rsvg-convert` from librsvg (`brew install librsvg`) — no Pillow, no pip.
 
     python3 tools/generate_iap_promo.py

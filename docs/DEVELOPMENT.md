@@ -174,7 +174,8 @@ docs/                        Everything in this folder — design, dev, testing,
 tools/
   generate_cards.py          Regenerates data/cards.json AND Generated/CardData.swift
   generate_art.py            Regenerates the 250 card illustrations (needs rsvg-convert)
-  generate_icon.py           Regenerates the app icon (needs rsvg-convert)
+  generate_icon.py           Regenerates app + website icons (needs macOS/Xcode + rsvg-convert)
+  render_set_emblems.swift   Renders the actual SwiftUI set scenes for the icon generator
   generate_trainer_art.py    Regenerates the 7 Gauntlet Trainer emblems (needs rsvg-convert)
   generate_iap_promo.py      Regenerates the IAP promo image (needs rsvg-convert)
   generate_sfx.py            Publishes hash-pinned, approved Studio takes into the app
@@ -188,6 +189,7 @@ tools/
   check_icon.py              Checks the 1024² icon against App Store rules
   check_screenshots.py       Checks captured screenshots against App Store sizes
   test_app_identity.py       Guards app identities, scheme routing, catalogs, build parity, and compiled test-unlock isolation
+  test_generate_icon.py      Guards the five-world orbit, text-free square, and matching website icon
   verify/main.swift          The Foundation-only simulation harness (see TESTING.md)
   verify/classic_sim.swift   Reachable Classic policies, collector ablations, and 75% / 10% balance guardrails
 ```
@@ -362,8 +364,9 @@ in SVG (`set_emblem`) — change one, change the other.
 
 ### App icon
 
-The icon is Emberpup, card 001, drawn by the *same* code that draws his card art,
-so the icon can never drift away from the game's look:
+The **World Orbit** icon uses the five glowing set emblems from the home screen,
+arranged around a central sparkle on a dark navy background. There is no wordmark
+inside the icon: iOS already displays the app name underneath it.
 
 ```bash
 brew install librsvg                         # one-time: provides rsvg-convert
@@ -371,10 +374,16 @@ python3 tools/generate_icon.py
 python3 tools/check_icon.py                  # App Store rules: 1024², no alpha, no baked corners
 ```
 
-`generate_icon.py` imports the creature straight out of `generate_art.py`, measures
-its bounding box from a throwaway render so it can't end up off‑centre or cropped,
-and composes it over a square Emberfall backdrop. Both scripts are stdlib‑only
-apart from `rsvg-convert`.
+Regeneration needs **macOS with Xcode** as well as `rsvg-convert`.
+`generate_icon.py` compiles `tools/render_set_emblems.swift` alongside the app's
+`TradingUp/Views/SetArt.swift`, then uses SwiftUI's `ImageRenderer` to capture the
+actual five scenes. It composes those images into the orbit using SVG and
+`rsvg-convert`, so scene changes are picked up without maintaining duplicate art.
+The Python driver is stdlib-only and the renderer uses Apple's SwiftUI and AppKit;
+there are no third-party dependencies beyond `rsvg-convert`.
+
+The generator writes both `TradingUp/Assets.xcassets/AppIcon.appiconset/icon-1024.png`
+and the website's identical `site/icon.png`. Do not edit either output by hand.
 
 `check_icon.py` is what proves the marketing icon is submittable: exactly
 1024×1024, 8‑bit, **no alpha channel**, and full‑bleed to the edges (iOS applies
